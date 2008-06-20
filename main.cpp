@@ -1,56 +1,46 @@
-#include "booksim.hpp"
 #include <string>
 #include <stdlib.h>
 #include <fstream>
 
+#include "booksim.hpp"
 #include "routefunc.hpp"
 #include "traffic.hpp"
 #include "booksim_config.hpp"
 #include "trafficmanager.hpp"
 #include "random_utils.hpp"
 #include "network.hpp"
+#include "injection.hpp"
+#include "tcctrafficmanager.hpp"
+#include "characterize.hpp"
+
+///////////////////////////////////////////////////////////////////////////////
+//include new network here//
+
 #include "singlenet.hpp"
 #include "kncube.hpp"
 #include "fly.hpp"
-#include "injection.hpp"
 #include "isolated_mesh.hpp"
-#include "qtree.hpp"
-#include "tree4.hpp"
-#include "fattree.hpp"
-#include "power.hpp"
+#include "cmo.hpp"
+#include "crossbar.hpp"
 #include "cmesh.hpp"
 #include "cmeshx2.hpp"
 #include "flatfly_onchip.hpp"
-#include "crossbar.hpp"
-#include "tcctrafficmanager.hpp"
-#include "characterize.hpp"
-#include "cmo.hpp"
-//god help me
+#include "qtree.hpp"
+#include "tree4.hpp"
+#include "fattree.hpp"
+///////////////////////////////////////////////////////////////////////////////
+
 
 void AllocatorSim( const Configuration& config )
 {
   Network *net;
   string topo;
 
-
-  SHORT_FLIT_WIDTH = 144;
-  LONG_FLIT_WIDTH =  144;
-//   switch ( config.GetInt("read_reply_size") ){
-//     case 2: LONG_FLIT_WIDTH = 288; break;
-//     case 3: LONG_FLIT_WIDTH = 192; break;
-//     case 4: LONG_FLIT_WIDTH = 144; break;
-//     case 5: LONG_FLIT_WIDTH = 116; break;
-//     case 6: LONG_FLIT_WIDTH =  96; break;
-//     case 7: LONG_FLIT_WIDTH =  83; break;
-//     case 8: LONG_FLIT_WIDTH =  72; break;
-//     case 9: LONG_FLIT_WIDTH =  64; break;
-//     default:
-//       cout << "WARNING: flit width set to 64-bit default" << endl ;
-//       LONG_FLIT_WIDTH = 64 ;
-//   }
-
   config.GetStr( "topology", topo );
 
+  /*To include a new network, must register the network here
+   *add an else if statement with the name of the network
+   */
   if ( topo == "torus" ) {
     net = new KNCube( config, true );
   } else if ( topo == "mesh" ) {
@@ -82,30 +72,37 @@ void AllocatorSim( const Configuration& config )
     exit(-1);
   }
 
+  /*legacy code that insert random faults in the networks
+   *not sure how to use this
+   */
   if ( config.GetInt( "link_failures" ) ) {
     net->InsertRandomFaults( config );
   }
 
-  cout << "fClk = " << fClk << endl
-       << "tClk = " << tClk << endl;
-
   string traffic ;
   config.GetStr( "traffic", traffic ) ;
 
+  /*tcc and characterize are legacy
+   *not sure how to use them 
+   */
   TrafficManager *trafficManager ;
-  if ( traffic == "tcc" )
+  if ( traffic == "tcc" ){
     trafficManager = new TccTrafficManager( config, net ) ;
-  else if ( traffic == "characterize" )
+  }else if ( traffic == "characterize" ){
     trafficManager = new CharacterizeTrafficManager( config, net ) ;
-  else
+  }else{
     trafficManager = new TrafficManager( config, net ) ;
+  }
 
+  /*Start the simulation run
+   */
   trafficManager->Run() ;
 
   delete trafficManager ;
   delete net;
-
 }
+
+
 
 int main( int argc, char **argv )
 {
@@ -116,6 +113,8 @@ int main( int argc, char **argv )
     return 0;
   }
 
+  /*print the configuration file at the begining of the reprot
+   */
   ifstream in(argv[1]);
   char c;
   cout << "BEGIN Configuration File" << endl;
@@ -126,16 +125,22 @@ int main( int argc, char **argv )
   }
   cout << "END Configuration File" << endl;
 
+  //FUCKneed to consolidate these routing functions
   CMesh::RegisterRoutingFunctions() ;
   CMeshX2::RegisterRoutingFunctions() ;
   FlatFlyOnChip::RegisterRoutingFunctions();
   CMO::RegisterRoutingFunctions();
+
+  /*initialize routing, traffic, injection functions
+   */
   InitializeRoutingMap( );
   InitializeTrafficMap( );
   InitializeInjectionMap( );
 
   RandomSeed( config.GetInt("seed") );
 
+  /*configure and run the simulator
+   */
   AllocatorSim( config );
 
   return 0;
