@@ -1,3 +1,13 @@
+/*main.cpp
+ *
+ *The starting point of the network simulator
+ *-Include all network header files
+ *-initilize the network
+ *-initialize the traffic manager and set it to run
+ *
+ *
+ */
+
 #include <string>
 #include <stdlib.h>
 #include <fstream>
