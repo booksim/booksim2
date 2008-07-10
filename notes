@@ -1,3 +1,13 @@
 7/10//2008
  I tried to combine the allocator files, though the files are identical between nocsim and booksim, but I have no idea how it actually works =(
 
+ I don't really understand the arbiter code either, added a update function to priority arbiter. There was minor differences between the two (an if) statement, but functionally should be identical
+
+
+
+
+
+
+
+
+

@@ -88,6 +88,7 @@ ${OBJDIR}/%.o: networks/%.cpp
 clean:
 	rm -f $(OBJS) 
 	rm -f $(PROG)
+	rm -f *~
 
 #purify: $(OBJS)
 #	$(PURIFY) -always-use-cache-dir $(CPP) $(OBJS) -o $(PROG) -L/usr/pubsw/lib
