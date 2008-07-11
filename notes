@@ -34,6 +34,7 @@
 
  This is disturbing but what outputset used for? It seems to ttrack all the output port and vcs that a flit goes through
 
+ the nocsim vc class has more possible vc states to accommondate speculation
 
 
 
