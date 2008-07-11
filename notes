@@ -26,6 +26,8 @@
 
  allocators stayed largely the same. To clean things up a bit, I created a allocators directory in similar fashion to networks and ahve changed the make file to compile them. Also, matrix allocator were added by nocsim which needs matrix arbiters. Also roundrobin allocator were added with roundrobin arbiter
 
+ misc util has either log2 or log_two....... yeah... looking forward to those "function log2 doesn exists" I am keeping the log_two
+
 
 
 
