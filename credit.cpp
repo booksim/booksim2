@@ -1,3 +1,8 @@
+/*credit.cpp
+ *
+ *A class for credits
+ */
+
 #include "booksim.hpp"
 #include "credit.hpp"
 
