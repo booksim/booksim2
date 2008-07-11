@@ -20,6 +20,7 @@
 
  Need to make sure every flit variable has a default valule, this can be done by calling the flit constructor. But how often is that actually used in the rest of the code
 
+ As expected, the nocsim routers uses flitchannel and credit channels instead of array of flits and credits However, the old booksim uses vc_router (which I assume is the equivalent of iq_router) and chaos router. It had no event routers. Back in the days routers were categorized by its flow control techniques, such as vc, chaos, etc. 
 
 
 
