@@ -90,8 +90,8 @@ drwxrwx--x  2 qtedq qtedq    4096 Jun 18 14:34 obj
 //////////////-rwxrwx--x  1 qtedq qtedq    1608 May 10 12:30 router.hpp
 //////////////-rwxrwx--x  1 qtedq qtedq    4297 Jun 27  2007 selalloc.cpp
 //////////////-rwxrwx--x  1 qtedq qtedq     347 Jun 27  2007 selalloc.hpp
--rwxrwx--x  1 qtedq qtedq    1457 Jun 27  2007 stats.cpp
--rwxrwx--x  1 qtedq qtedq     576 Jun 27  2007 stats.hpp
+//////////////-rwxrwx--x  1 qtedq qtedq    1457 Jun 27  2007 stats.cpp
+//////////////-rwxrwx--x  1 qtedq qtedq     576 Jun 27  2007 stats.hpp
 -rwxrwx--x  1 qtedq qtedq   21111 Jun 27  2007 tcctrafficmanager.cpp
 -rwxrwx--x  1 qtedq qtedq    2955 Jun 27  2007 tcctrafficmanager.hpp
 -rwxrwx--x  1 qtedq qtedq    7576 Jun 18 14:29 traffic.cpp
