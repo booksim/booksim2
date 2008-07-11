@@ -3,6 +3,17 @@
 
  I don't really understand the arbiter code either, added a update function to priority arbiter. There was minor differences between the two (an if) statement, but functionally should be identical
 
+ Configuration files such as lex, yacc and stuff has been moved, strangely config.tab.* are not required before compilate was sucessful. Also config_tab.* seem to be doing the same job that config.tab.* does, did someone compiled them using _ in stead of .
+
+ Ah configuration file resolved. Make file has line cp -f $*.tab.c $*_tab.cpp therefore these files shoudl be identical. And they are 
+
+-rwxrwx--x  1 qtedq qtedq 30915 Jun 27  2007 config.tab.c
+-rwxrwx--x  1 qtedq qtedq 30915 Jun 27  2007 config_tab.cpp
+-rwxrwx--x  1 qtedq qtedq  1816 Jun 27  2007 config.tab.h
+-rwxrwx--x  1 qtedq qtedq  1816 Jun 27  2007 config_tab.hpp
+
+ Nocsim uses flitchannel and credit channel classes to simulate channel latency, book sim does not and alway asume latency of 1. This will generate shit storm later
+
 
 
 
