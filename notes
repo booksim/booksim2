@@ -22,7 +22,7 @@
 
  As expected, the nocsim routers uses flitchannel and credit channels instead of array of flits and credits However, the old booksim uses vc_router (which I assume is the equivalent of iq_router) and chaos router. It had no event routers. Back in the days routers were categorized by its flow control techniques, such as vc, chaos, etc. 
 
-
+ The original injection rate is flit rate, the current rate is packet rate. 
 
 
 
