@@ -28,6 +28,8 @@
 
  misc util has either log2 or log_two....... yeah... looking forward to those "function log2 doesn exists" I am keeping the log_two
 
+ booksima and nocsim uses two different random number generators. I will keep the nocsim version using knuth's code
+
 
 
 
