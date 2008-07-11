@@ -6,7 +6,7 @@ YACC   = /usr/bin/bison -d
 LEX    = /usr/bin/flex
 PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
-CPPFLAGS = -O3 -I. -Inetworks -ggdb
+CPPFLAGS = -O3 -I. -Iallocators -Inetworks -ggdb 
 # LFLAGS = -static-libgcc -static
 
 OBJDIR := obj
@@ -33,10 +33,7 @@ CPP_SRCS = main.cpp \
    random_utils.cpp \
    buffer_state.cpp \
    stats.cpp \
-   pim.cpp \
-   islip.cpp \
    loa.cpp \
-   wavefront.cpp \
    misc_utils.cpp \
    credit.cpp \
    outputset.cpp \
@@ -50,21 +47,21 @@ CPP_SRCS = main.cpp \
    tcctrafficmanager.cpp  \
    characterize.cpp \
    channelfile.cpp \
-   matrix.cpp \
-   matrix_arb.cpp \
-   roundrobin.cpp \
-   roundrobin_arb.cpp
+   matrix.cpp matrix_arb.cpp \
+   roundrobin.cpp roundrobin_arb.cpp
 
 LEX_OBJS  = ${OBJDIR}/configlex.o
 YACC_OBJS = ${OBJDIR}/config_tab.o
 
 # networks 
 NETWORKS := $(wildcard networks/*.cpp) 
+ALLOCATORS:= $(wildcard allocators/*.cpp)
 
 #--- Make rules ---
 OBJS :=  $(LEX_OBJS) $(YACC_OBJS)\
  $(CPP_SRCS:%.cpp=${OBJDIR}/%.o)\
- $(NETWORKS:networks/%.cpp=${OBJDIR}/%.o)
+ $(NETWORKS:networks/%.cpp=${OBJDIR}/%.o)\
+ $(ALLOCATORS:allocators/%.cpp=${OBJDIR}/%.o)
 
 .PHONY: clean
 .PRECIOUS: %_tab.cpp %_tab.hpp %lex.cpp
@@ -85,10 +82,13 @@ $(PROG): $(OBJS)
 ${OBJDIR}/%.o: networks/%.cpp 
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
+# rules to compile allocators
+${OBJDIR}/%.o: allocators/%.cpp 
+	$(CPP) $(CPPFLAGS) -c $< -o $@
+
 clean:
 	rm -f $(OBJS) 
 	rm -f $(PROG)
-	rm -f *~
 
 #purify: $(OBJS)
 #	$(PURIFY) -always-use-cache-dir $(CPP) $(OBJS) -o $(PROG) -L/usr/pubsw/lib
