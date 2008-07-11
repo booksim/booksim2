@@ -1,5 +1,5 @@
 7/10//2008
- I tried to combine the allocator files, though the files are identical between nocsim and booksim, but I have no idea how it actually works =(
+ I tried to combine the allocator files, though the files are identical between nocsim and booksim, but I have no idea how it actually works =( Matrix and roundrobin allocators were added by nocsim
 
  I don't really understand the arbiter code either, added a update function to priority arbiter. There was minor differences between the two (an if) statement, but functionally should be identical
 
@@ -24,7 +24,7 @@
 
  The original injection rate is flit rate, the current rate is packet rate. 
 
-
+ allocators stayed largely the same. To clean things up a bit, I created a allocators directory in similar fashion to networks and ahve changed the make file to compile them. Also, matrix allocator were added by nocsim which needs matrix arbiters. Also roundrobin allocator were added with roundrobin arbiter
 
 
 

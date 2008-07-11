@@ -32,12 +32,10 @@ CPP_SRCS = main.cpp \
    random_utils.cpp \
    buffer_state.cpp \
    stats.cpp \
-   loa.cpp \
    misc_utils.cpp \
    credit.cpp \
    outputset.cpp \
    flit.cpp \
-   selalloc.cpp \
    arbiter.cpp \
    injection.cpp \
    rng_wrapper.cpp \
@@ -46,7 +44,6 @@ CPP_SRCS = main.cpp \
    tcctrafficmanager.cpp  \
    characterize.cpp \
    channelfile.cpp \
-   matrix.cpp matrix_arb.cpp \
    roundrobin.cpp roundrobin_arb.cpp
 
 LEX_OBJS  = ${OBJDIR}/configlex.o
@@ -88,6 +85,7 @@ ${OBJDIR}/%.o: allocators/%.cpp
 clean:
 	rm -f $(OBJS) 
 	rm -f $(PROG)
+	rm -f *~
 
 #purify: $(OBJS)
 #	$(PURIFY) -always-use-cache-dir $(CPP) $(OBJS) -o $(PROG) -L/usr/pubsw/lib
