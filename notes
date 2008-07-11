@@ -18,6 +18,8 @@
 
  Bufferstate start the introduction of flit types and specific virtual channels set aside for them. _vc_range_* stores their range. Also,somethin looks strange with the take buffer function, why would it set a vc to in use
 
+ Need to make sure every flit variable has a default valule, this can be done by calling the flit constructor. But how often is that actually used in the rest of the code
+
 
 
 
