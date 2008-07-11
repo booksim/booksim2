@@ -65,8 +65,8 @@ drwxrwx--x  2 qtedq qtedq    4096 Jun 10 15:47 networks
 -rwxrwxr-x  1 qtedq qtedq   24714 May 10 15:20 nocviewer4.pl
 -rwxrwxr-x  1 qtedq qtedq   12859 May  7 16:32 nocviewer.pl
 drwxrwx--x  2 qtedq qtedq    4096 Jun 18 14:34 obj
--rwxrwx--x  1 qtedq qtedq    2555 Jun 27  2007 outputset.cpp
--rwxrwx--x  1 qtedq qtedq     674 Jun 27  2007 outputset.hpp
+//////////////-rwxrwx--x  1 qtedq qtedq    2555 Jun 27  2007 outputset.cpp
+//////////////-rwxrwx--x  1 qtedq qtedq     674 Jun 27  2007 outputset.hpp
 -rw-rw-r--  1 qtedq qtedq    1355 Jun 10 16:06 parser.pl
 //////////////-rwxrwx--x  1 qtedq qtedq    1978 Jun 27  2007 pim.cpp
 //////////////-rwxrwx--x  1 qtedq qtedq     298 Jun 27  2007 pim.hpp

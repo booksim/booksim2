@@ -32,6 +32,8 @@
 
  Flit channel has a lot of power related variables that could be removed Set length is useless. Use set latency!!!!!! This same applies to credit channel
 
+ This is disturbing but what outputset used for? It seems to ttrack all the output port and vcs that a flit goes through
+
 
 
 
