@@ -24,7 +24,6 @@ CPP_SRCS = main.cpp \
    routefunc.cpp \
    traffic.cpp \
    allocator.cpp \
-   maxsize.cpp \
    flitchannel.cpp \
    creditchannel.cpp \
    network.cpp \
