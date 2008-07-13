@@ -52,8 +52,8 @@ total 504
 -rw-rw-r--  1 qtedq qtedq   914 May 22  2003 README
 //////////////-rw-rw-r--  1 qtedq qtedq  4098 May 22  2003 rng.cpp
 -rw-rw-r--  1 qtedq qtedq  4342 May 22  2003 rng_double.cpp
--r--r--r--  1 qtedq qtedq 24171 May 22  2003 routefunc.cpp
--r--r--r--  1 qtedq qtedq   383 May 22  2003 routefunc.hpp
+//////////////-r--r--r--  1 qtedq qtedq 24171 May 22  2003 routefunc.cpp
+//////////////-r--r--r--  1 qtedq qtedq   383 May 22  2003 routefunc.hpp
 //////////////-r--r--r--  1 qtedq qtedq  2822 May 22  2003 router.cpp
 //////////////-r--r--r--  1 qtedq qtedq  1425 May 22  2003 router.hpp
 -rw-rw-r--  1 qtedq qtedq  5028 May 22  2003 saf_router.cpp

@@ -27,7 +27,6 @@ CPP_SRCS = main.cpp \
    flitchannel.cpp \
    creditchannel.cpp \
    network.cpp \
-   singlenet.cpp \
    trafficmanager.cpp \
    random_utils.cpp \
    buffer_state.cpp \
@@ -37,14 +36,7 @@ CPP_SRCS = main.cpp \
    outputset.cpp \
    flit.cpp \
    arbiter.cpp \
-   injection.cpp \
-   rng_wrapper.cpp \
-   rng_double_wrapper.cpp \
-   power.cpp \
-   tcctrafficmanager.cpp  \
-   characterize.cpp \
-   channelfile.cpp \
-   roundrobin.cpp roundrobin_arb.cpp
+   injection.cpp
 
 LEX_OBJS  = ${OBJDIR}/configlex.o
 YACC_OBJS = ${OBJDIR}/config_tab.o

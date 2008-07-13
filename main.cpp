@@ -20,8 +20,6 @@
 #include "random_utils.hpp"
 #include "network.hpp"
 #include "injection.hpp"
-#include "tcctrafficmanager.hpp"
-#include "characterize.hpp"
 
 ///////////////////////////////////////////////////////////////////////////////
 //include new network here//
@@ -96,13 +94,7 @@ void AllocatorSim( const Configuration& config )
    *not sure how to use them 
    */
   TrafficManager *trafficManager ;
-  if ( traffic == "tcc" ){
-    trafficManager = new TccTrafficManager( config, net ) ;
-  }else if ( traffic == "characterize" ){
-    trafficManager = new CharacterizeTrafficManager( config, net ) ;
-  }else{
-    trafficManager = new TrafficManager( config, net ) ;
-  }
+  trafficManager = new TrafficManager( config, net ) ;
 
   /*Start the simulation run
    */
