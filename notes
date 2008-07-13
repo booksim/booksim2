@@ -40,3 +40,26 @@
 7/12/2008
 
  The routefunc files between the versions are heavily ediited as expected. Since nocsim now recognize different flit types, the routing functions should be adding flits to the right virtual channel. This is included in some of the routing funcitons. I should add a funciton "registertopologyRF" to networks, and have it called by main after routing funciton initialization. This way we can either include routing in routefunc or with the toplogies. 
+
+ trafficwise, tornado and neighbor nees "realgK" and etc. need to somehow make this clear and add them to the topology functions. Perhaps similarly to routing functions, allow network specific traffic patterns to be registered independently by the topolgoies.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
