@@ -6,7 +6,7 @@ YACC   = /usr/bin/bison -d
 LEX    = /usr/bin/flex
 PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
-CPPFLAGS = -O3 -I. -Iallocators -Inetworks -ggdb 
+CPPFLAGS = -O3 -I. -Iallocators -Irouters -Inetworks -ggdb 
 # LFLAGS = -static-libgcc -static
 
 OBJDIR := obj
@@ -17,13 +17,9 @@ CPP_SRCS = main.cpp \
    config_utils.cpp \
    booksim_config.cpp \
    module.cpp \
-   router.cpp \
-   iq_router.cpp \
-   event_router.cpp \
    vc.cpp \
    routefunc.cpp \
    traffic.cpp \
-   allocator.cpp \
    flitchannel.cpp \
    creditchannel.cpp \
    network.cpp \
@@ -35,7 +31,6 @@ CPP_SRCS = main.cpp \
    credit.cpp \
    outputset.cpp \
    flit.cpp \
-   arbiter.cpp \
    injection.cpp
 
 LEX_OBJS  = ${OBJDIR}/configlex.o
@@ -44,12 +39,15 @@ YACC_OBJS = ${OBJDIR}/config_tab.o
 # networks 
 NETWORKS := $(wildcard networks/*.cpp) 
 ALLOCATORS:= $(wildcard allocators/*.cpp)
+ROUTERS:=$(wildcard routers/*.cpp)
 
 #--- Make rules ---
 OBJS :=  $(LEX_OBJS) $(YACC_OBJS)\
  $(CPP_SRCS:%.cpp=${OBJDIR}/%.o)\
  $(NETWORKS:networks/%.cpp=${OBJDIR}/%.o)\
- $(ALLOCATORS:allocators/%.cpp=${OBJDIR}/%.o)
+ $(ALLOCATORS:allocators/%.cpp=${OBJDIR}/%.o)\
+ $(ROUTERS:routers/%.cpp=${OBJDIR}/%.o)
+
 
 .PHONY: clean
 .PRECIOUS: %_tab.cpp %_tab.hpp %lex.cpp
@@ -72,6 +70,10 @@ ${OBJDIR}/%.o: networks/%.cpp
 
 # rules to compile allocators
 ${OBJDIR}/%.o: allocators/%.cpp 
+	$(CPP) $(CPPFLAGS) -c $< -o $@
+
+# rules to compile routers
+${OBJDIR}/%.o: routers/%.cpp 
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
 clean:

@@ -30,7 +30,17 @@ FlitChannel::~FlitChannel() {
   // Activity Factor 
   const double AFs = double(_active[0] + _active[3]) / NC;
   const double AFl = double(_active[1] + _active[2]) / NC;
-
+  /*
+  cout << "FlitChannel: " 
+       << "[" 
+       << _routerSource
+       <<  " -> " 
+       << _routerSink
+       << "] " 
+       << "[Latency: " << _delay << "] "
+       << "(" << _active[0] << "," << _active[1] << "," << _active[2] 
+       << "," << _active[3] << ") (I#" << _idle << ")" << endl ;
+  */
 }
 
 void FlitChannel::SetSource( Router* router ) {

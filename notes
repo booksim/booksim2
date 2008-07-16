@@ -43,10 +43,16 @@
 
  trafficwise, tornado and neighbor nees "realgK" and etc. need to somehow make this clear and add them to the topology functions. Perhaps similarly to routing functions, allow network specific traffic patterns to be registered independently by the topolgoies.
 
+  I have moved the different routers into their own directory like allocators and netowkrs. 
+ 
+ What is chaos router?? Event router?? Whats the difference between vc and iq_router
 
 
+7/16/2008
 
+   What are select functions?
 
+   It seems vc routers are just iq routers. There is a vc router new in the old version of the booksim, but that seems to access vcs as pointers instead of objects...... Iq routers added the "pretty output" to parse network activities, speculation. Lots of speculation, I dont' even understand
 
 
 
