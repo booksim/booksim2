@@ -55,7 +55,7 @@
    It seems vc routers are just iq routers. There is a vc router new in the old version of the booksim, but that seems to access vcs as pointers instead of objects...... Iq routers added the "pretty output" to parse network activities, speculation. Lots of speculation, I dont' even understand
 
 
-
+   The long mysterious batchmanager, seems to be and extension of the traffic manager. Interestingly I seen many of the functions exist in the dragonfly simulators... Perhaps comeback to this after incorporating the dragonfly.
 
 
 

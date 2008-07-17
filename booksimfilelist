@@ -56,11 +56,11 @@ total 504
 //////////////-r--r--r--  1 qtedq qtedq   383 May 22  2003 routefunc.hpp
 //////////////-r--r--r--  1 qtedq qtedq  2822 May 22  2003 router.cpp
 //////////////-r--r--r--  1 qtedq qtedq  1425 May 22  2003 router.hpp
--rw-rw-r--  1 qtedq qtedq  5028 May 22  2003 saf_router.cpp
+//unnecessary//-rw-rw-r--  1 qtedq qtedq  5028 May 22  2003 saf_router.cpp
 //////////////-r--r--r--  1 qtedq qtedq  4583 May 22  2003 selalloc.cpp
 //////////////-r--r--r--  1 qtedq qtedq   383 May 22  2003 selalloc.hpp
--r--r--r--  1 qtedq qtedq  2197 May 22  2003 selectfunc.cpp
--r--r--r--  1 qtedq qtedq   458 May 22  2003 selectfunc.hpp
+//unnecessary//-r--r--r--  1 qtedq qtedq  2197 May 22  2003 selectfunc.cpp
+//unnecessary//-r--r--r--  1 qtedq qtedq   458 May 22  2003 selectfunc.hpp
 //////////////-r--r--r--  1 qtedq qtedq  1413 May 22  2003 stats.cpp
 //////////////-r--r--r--  1 qtedq qtedq   573 May 22  2003 stats.hpp
 //////////////-r--r--r--  1 qtedq qtedq  6424 May 22  2003 traffic.cpp
@@ -69,8 +69,8 @@ total 504
 -r--r--r--  1 qtedq qtedq  2712 May 22  2003 trafficmanager.hpp
 //////////////-r--r--r--  1 qtedq qtedq  2929 May 22  2003 vc.cpp
 //////////////-r--r--r--  1 qtedq qtedq  1471 May 22  2003 vc.hpp
--r--r--r--  1 qtedq qtedq 14843 May 22  2003 vc_router.cpp
--r--r--r--  1 qtedq qtedq  1556 May 22  2003 vc_router.hpp
+//////////////-r--r--r--  1 qtedq qtedq 14843 May 22  2003 vc_router.cpp
+//////////////-r--r--r--  1 qtedq qtedq  1556 May 22  2003 vc_router.hpp
 //unnecessary//-r--r--r--  1 qtedq qtedq 15745 May 22  2003 vc_router_new.cpp
 //unnecessary//-r--r--r--  1 qtedq qtedq  1640 May 22  2003 vc_router_new.hpp
 //////////////-r--r--r--  1 qtedq qtedq  1341 May 22  2003 wavefront.cpp
