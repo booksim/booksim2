@@ -42,8 +42,8 @@ void CMO::_ComputeSize( const Configuration &config )
   gC = _c;
 
   //this assume c= 4 nodes, need to change this
-  realgK = 8;
-  realgN = 2;
+  realgk = 8;
+  realgk = 2;
 
   _size     = 8*2; //16 routers
   _channels = 2*12*2 + 2*8;// ocatagon bidirectional*slice + slice connect

@@ -5,7 +5,6 @@
 //
 /////
 #include "creditchannel.hpp"
-#include "power.hpp"
 
 CreditChannel::CreditChannel() {
   _delay = 0;

@@ -645,7 +645,7 @@ bool TrafficManager::_SingleSim( )
     cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 
     cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
-    _net->Display();
+    //_net->Display();
     _latency_stats[0]->Display();
     cout << "thru(" << total_phases + 1 << ",:) = [ ";
     for ( int d = 0; d < _dests; ++d ) {

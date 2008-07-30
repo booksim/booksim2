@@ -76,10 +76,10 @@ drwxrwx--x  2 qtedq qtedq    4096 Jun 10 15:47 networks
 //////////////-rwxrwx--x  1 qtedq qtedq     438 Jun 27  2007 random_utils.cpp
 //////////////-rwxrwx--x  1 qtedq qtedq     526 Jun 27  2007 random_utils.hpp
 //////////////-rwxrwx--x  1 qtedq qtedq    3988 Jun 27  2007 rng.cpp
-///unneccessary////-rwxrwx--x  1 qtedq qtedq    4224 Jun 27  2007 rng_double.cpp
-///unneccessary////-rwxrwx--x  1 qtedq qtedq     127 Jun 27  2007 rng_double_wrapper.cpp
+///////-rwxrwx--x  1 qtedq qtedq    4224 Jun 27  2007 rng_double.cpp
+///////-rwxrwx--x  1 qtedq qtedq     127 Jun 27  2007 rng_double_wrapper.cpp
 //////////////-rwxrwx--x  1 qtedq qtedq     146 Jun 27  2007 rng.hpp
-///unneccessary////-rwxrwx--x  1 qtedq qtedq     109 Jun 27  2007 rng_wrapper.cpp
+///////-rwxrwx--x  1 qtedq qtedq     109 Jun 27  2007 rng_wrapper.cpp
 //////////////-rwxrwx--x  1 qtedq qtedq    2408 Jun 27  2007 roundrobin_arb.cpp
 //////////////-rwxrwx--x  1 qtedq qtedq    1327 Jun 27  2007 roundrobin_arb.hpp
 //////////////-rwxrwx--x  1 qtedq qtedq    6219 Jun 27  2007 roundrobin.cpp

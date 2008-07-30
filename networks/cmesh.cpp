@@ -208,11 +208,11 @@ void CMesh::_BuildNet( const Configuration& config ) {
     }
 
     // Short channels traverse two tiles 
-    const int shortLatency = 2 ;
+    int shortLatency = 2 ;
 
     // Long express channels traverse k/2 tiles
     //const int longLatency  = _k/2*2 ;
-    const int longLatency  = 0 ;
+    int longLatency  = 0 ;
     if(_express_channels){
       longLatency = 4;
     }

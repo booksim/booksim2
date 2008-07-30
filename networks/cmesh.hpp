@@ -27,7 +27,7 @@ public:
   static int NodeToRouter( int address ) ;
   static int NodeToPort( int address ) ;
 
-  virtual void RegisterRoutingFunctions() ;
+  void RegisterRoutingFunctions() ;
 
 private:
 

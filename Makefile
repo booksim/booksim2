@@ -31,7 +31,9 @@ CPP_SRCS = main.cpp \
    credit.cpp \
    outputset.cpp \
    flit.cpp \
-   injection.cpp
+   injection.cpp\
+   rng_wrapper.cpp\
+   rng_double_wrapper.cpp
 
 LEX_OBJS  = ${OBJDIR}/configlex.o
 YACC_OBJS = ${OBJDIR}/config_tab.o

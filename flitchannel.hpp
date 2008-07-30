@@ -17,6 +17,7 @@
 // ----------------------------------------------------------------------
 
 #include "flit.hpp"
+#include "globals.hpp"
 #include <queue>
 using namespace std;
 class Router ;

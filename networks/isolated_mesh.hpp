@@ -1,31 +1,31 @@
 ////////////////////////////////////////////////////////////////////////
 //
-// CMeshX2: Two Concentrated Meshes 
+// IsolatedMesh: Provides two independent physical networks for
+//               transporting different message types.
 //
 ////////////////////////////////////////////////////////////////////////
 //
 // RCS Information:
 //  $Author: jbalfour $
-//  $Date: 2007/06/26 22:49:23 $
-//  $Id: cmeshx2.hpp,v 1.2 2007/06/26 22:49:23 jbalfour Exp $
+//  $Date: 2007/05/17 17:14:07 $
+//  $Id: isolated_mesh.hpp,v 1.1 2007/05/17 17:14:07 jbalfour Exp $
 // 
 ////////////////////////////////////////////////////////////////////////
-#ifndef _CMESHX2_HPP_
-#define _CMESHX2_HPP_
+#ifndef _ISOLATED_MESH_HPP_
+#define _ISOLATED_MESH_HPP_
 
 #include "network.hpp"
-#include "cmesh.hpp"
+#include "kncube.hpp"
 
-class CMeshX2 : public Network {
+class IsolatedMesh : public Network {
 
-  int _k ;
-  int _n ;
-  int _c ;
+  int _k;
+  int _n;
   
   int* _f_read_history;
   int* _c_read_history;
 
-  CMesh* _subMesh[2];
+  KNCube* _subMesh[2];
   int _subNetAssignment[Flit::NUM_FLIT_TYPES];
 
   void _ComputeSize(const Configuration& config );
@@ -33,8 +33,9 @@ class CMeshX2 : public Network {
 
 public:
 
-  CMeshX2( const Configuration &config );
-  ~CMeshX2( );
+  IsolatedMesh( const Configuration &config );
+  ~IsolatedMesh( );
+  void RegisterRoutingFunctions() ;
 
   void  WriteFlit( Flit *f, int source );
   Flit* ReadFlit( int dest );
@@ -48,9 +49,6 @@ public:
 
   int GetN( ) const;
   int GetK( ) const;
-
-  void RegisterRoutingFunctions() ;
-
 
 };
 

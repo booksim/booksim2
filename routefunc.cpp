@@ -35,8 +35,6 @@ int gNumVCS;
  *
  */
 
-
-
 // ============================================================
 //  Balfour-Schultz
 int gReadReqBeginVC, gReadReqEndVC;

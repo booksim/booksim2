@@ -7,7 +7,6 @@
 
 #include "random_utils.hpp"
 #include "iq_router.hpp"
-#include "power.hpp"
 
 IQRouter::IQRouter( const Configuration& config,
 		    Module *parent, string name, int id,

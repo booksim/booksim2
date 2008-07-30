@@ -8,7 +8,6 @@
 #include "router.hpp"
 #include "allocator.hpp"
 #include "routefunc.hpp"
-#include "selectfunc.hpp"
 #include "outputset.hpp"
 #include "buffer_state.hpp"
 #include "pipefifo.hpp"
@@ -86,4 +85,4 @@ public:
   void Display( ) const;
 };
 
-#endif _CHAOS_ROUTER_HPP_
+#endif

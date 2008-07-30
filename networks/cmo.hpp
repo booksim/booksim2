@@ -3,6 +3,7 @@
 
 #include "network.hpp"
 #include "routefunc.hpp"
+
 class CMO : public Network {
 
   int _c;    
@@ -35,7 +36,7 @@ public:
   int GetC( ) const;
 
   double Capacity( ) const;
-  virtual void CMO::RegisterRoutingFunctions();
+  void RegisterRoutingFunctions();
   void InsertRandomFaults( const Configuration &config );
   int MapNode(int physical_node) const;
   int UnmapNode(int physical_node) const;
