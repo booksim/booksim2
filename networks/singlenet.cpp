@@ -1,3 +1,10 @@
+/*singlenet.cpp
+ *
+ *single router network
+ *
+ *replaced by crossbar
+ */
+
 #include "booksim.hpp"
 #include <vector>
 
@@ -19,7 +26,9 @@ void SingleNet::_ComputeSize( const Configuration &config )
   _size     = 1;
   _channels = 0;
 }
+void SingleNet::RegisterRoutingFunctions() {
 
+}
 void SingleNet::_BuildNet( const Configuration &config )
 {
   int i;

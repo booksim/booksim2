@@ -60,7 +60,7 @@ public:
   virtual void InsertRandomFaults( const Configuration &config );
   void OutChannelFault( int r, int c, bool fault = true );
 
-  virtual void RegisterRoutingFunctions() = 0;
+  virtual void RegisterRoutingFunctions();
 
   virtual double Capacity( ) const;
 

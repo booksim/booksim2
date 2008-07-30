@@ -38,6 +38,9 @@ void KNCube::_ComputeSize( const Configuration &config )
   _dests   = _size;
 }
 
+void KNCube::RegisterRoutingFunctions() {
+
+}
 void KNCube::_BuildNet( const Configuration &config )
 {
   int left_node;

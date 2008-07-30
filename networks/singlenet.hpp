@@ -11,6 +11,7 @@ class SingleNet : public Network {
 public:
   SingleNet( const Configuration &config );
 
+  virtual void RegisterRoutingFunctions();
   void Display( ) const;
 };
 
