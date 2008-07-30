@@ -11,20 +11,8 @@
 #include "flitchannel.hpp"
 #include "creditchannel.hpp"
 #include "config_utils.hpp"
+#include "globals.hpp"
 
-//////////////////////////////
-//Global variable declarations
-extern int gN;
-extern int gK;
-extern int gC;
-extern int realgk;
-extern int realgn;
-extern int gNodes;
-extern int xrouter;
-extern int yrouter;
-extern int xcount ;
-extern int ycount ;
-//////////////////////////////
 
 
 class Network : public Module {
@@ -71,6 +59,8 @@ public:
 
   virtual void InsertRandomFaults( const Configuration &config );
   void OutChannelFault( int r, int c, bool fault = true );
+
+  virtual void RegisterRoutingFunctions() = 0;
 
   virtual double Capacity( ) const;
 

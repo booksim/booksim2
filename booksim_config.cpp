@@ -75,13 +75,16 @@ BookSimConfig::BookSimConfig( )
   _int_map["yr"] = 1; //number of nodes per router in Y
   _int_map["limit"] = 0; //how many of the nodes are actually used
 
-
   AddStrField( "routing_function", "none" );
   AddStrField( "selection_function", "random" );
 
   _int_map["link_failures"] = 0; //legacy
   _int_map["fail_seed"]     = 0; //legacy
   _int_map["wire_delay"] = 0; //legacy
+
+
+  //==== Cmesh topology options =======================
+  _int_map["express_channels"] = 0; //for Cmesh only, 0=no express channels
 
   //==== Single-node options ===============================
 
@@ -185,4 +188,6 @@ BookSimConfig::BookSimConfig( )
   _int_map["split_packets"]   = 0;  // know what you're doing
 
   _int_map["seed"]            = 0;
+
+  _int_map["print_activity"] = 0;
 }

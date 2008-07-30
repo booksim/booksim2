@@ -10,7 +10,7 @@ CPPFLAGS = -O3 -I. -Iallocators -Irouters -Inetworks -ggdb
 # LFLAGS = -static-libgcc -static
 
 OBJDIR := obj
-PROG   := nocsim
+PROG   := booksim
 
 # simulator source files
 CPP_SRCS = main.cpp \
@@ -80,6 +80,8 @@ clean:
 	rm -f $(OBJS) 
 	rm -f $(PROG)
 	rm -f *~
+	rm -f networks/*~
+	rm -f runfiles/*~
 
 #purify: $(OBJS)
 #	$(PURIFY) -always-use-cache-dir $(CPP) $(OBJS) -o $(PROG) -L/usr/pubsw/lib
@@ -87,7 +89,7 @@ clean:
 #quantify: $(OBJS)
 #	$(QUANT) -always-use-cache-dir $(CPP) $(OBJS) -o $(PROG) -L/usr/pubsw/lib
 
-	$(CPP) $(CPPFLAGS) $(VCSFLAGS) -c $< -o $@
+#	$(CPP) $(CPPFLAGS) $(VCSFLAGS) -c $< -o $@
 
 ##%_tab.cpp: %.y
 ##	$(YACC) -b$* -p$* $<

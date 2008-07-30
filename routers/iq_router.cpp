@@ -144,15 +144,16 @@ IQRouter::IQRouter( const Configuration& config,
 
 IQRouter::~IQRouter( )
 {
-  /*
-  cout << _name << ".bufferMonitor:" << endl ; 
-  cout << bufferMonitor << endl ;
+  if(_print_activity){
+    cout << _name << ".bufferMonitor:" << endl ; 
+    cout << bufferMonitor << endl ;
+    
+    cout << _name << ".switchMonitor:" << endl ; 
+    cout << "Inputs=" << _inputs ;
+    cout << "Outputs=" << _outputs ;
+    cout << switchMonitor << endl ;
+  }
 
-  cout << _name << ".switchMonitor:" << endl ; 
-  cout << "Inputs=" << _inputs ;
-  cout << "Outputs=" << _outputs ;
-  cout << switchMonitor << endl ;
-  */
   for ( int i = 0; i < _inputs; ++i ) {
     delete [] _vc[i];
   }

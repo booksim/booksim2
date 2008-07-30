@@ -11,7 +11,6 @@
 #include <string>
 #include <stdlib.h>
 #include <fstream>
-
 #include "booksim.hpp"
 #include "routefunc.hpp"
 #include "traffic.hpp"
@@ -87,6 +86,9 @@ void AllocatorSim( const Configuration& config )
     net->InsertRandomFaults( config );
   }
 
+    //register routing functions
+  net->RegisterRoutingFunctions() ;
+
   string traffic ;
   config.GetStr( "traffic", traffic ) ;
 
@@ -127,20 +129,15 @@ int main( int argc, char **argv )
   }
   cout << "END Configuration File" << endl;
 
-  //FUCKneed to consolidate these routing functions
-  CMesh::RegisterRoutingFunctions() ;
-  CMeshX2::RegisterRoutingFunctions() ;
-  FlatFlyOnChip::RegisterRoutingFunctions();
-  CMO::RegisterRoutingFunctions();
-
   /*initialize routing, traffic, injection functions
    */
   InitializeRoutingMap( );
   InitializeTrafficMap( );
   InitializeInjectionMap( );
-
   RandomSeed( config.GetInt("seed") );
 
+  _print_activity = (config.GetInt("print_activity")==1);
+  
   /*configure and run the simulator
    */
   AllocatorSim( config );
