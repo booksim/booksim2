@@ -1,0 +1,60 @@
+#!/usr/bin/perl
+use Shell;
+
+#@traffic = ("bitcomp","bitrev","uniform","transpose","shuffle","tornado","neighbor","diagonal");
+#@packetsize=(32,16,8,4,2,1);
+
+$packetsize = 1;
+for($i= 70; $i<80;$i+=10){
+######################DECLARE################################
+    $traffic = "neighbor";
+    $injectionrate = $i/100;
+######################DECLARE################################
+
+    $outputname = "area_mesh"."_"."$traffic"."_"."$injectionrate";
+
+    system ("cp -f immutable temp/meshconfig_$outputname");
+
+    open(inputFile,">>","temp/meshconfig_$outputname") or die "FUCK YOU"; #
+    print inputFile "
+
+//
+// Mesh
+//
+topology = mesh;
+k  = 8;
+n  = 2;
+//
+// Routing
+//
+routing_function = dor;
+
+const_flits_per_packet = $packetsize;
+
+traffic       = $traffic;
+
+injection_rate = $injectionrate;
+
+
+";
+    
+    close(inputFile);
+    
+
+
+    open(qsubfile,">","temp/submit_mesh_$outputname") or die "Can't open mesh submit file";
+    
+    print qsubfile "
+#!/bin/sh
+#\$ -cwd
+#\$ -N $outputname
+#\$ -o ../$outputname
+#\$ -e temp/
+
+../nocsim temp/meshconfig_$outputname
+    ";
+
+system("qsub -S /bin/sh temp/submit_mesh_$outputname");;
+print "Sumbited $outputname\n";
+
+}

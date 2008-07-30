@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+use Shell;
+
+
+#@size = (3,4,5,6,7,8,9,,10,15,16,19,23,25,27,32);
+#@traffic = ("bitcomp","bitrev","uniform","transpose","shuffle","tornado","neighbor","diagonal");
+#@packetsize=(16,8,4,2,1);
+for($i= 1; $i<90;($i=$i+2)){
+######################DECLARE################################
+    $packetsize = 1;
+    $traffic = "uniform";
+    $injectionrate = $i/100;
+######################DECLARE################################
+    system ("cp -f immutable meshconfig");
+    open(inputFile,">>","meshconfig") or die "FUCK YOU";
+    print inputFile "
+
+//
+// CMesh
+//
+topology = mesh;
+k  = 8;
+n  = 2;
+//
+// Routing
+//
+routing_function = dor;
+
+const_flits_per_packet = $packetsize;
+
+traffic       = $traffic;
+
+injection_rate = $injectionrate;
+
+
+
+";
+    
+    close(inputFile);
+  
+    $outputname = "mesh_"."$injectionrate";
+    system("../nocsim meshconfig > ../$outputname");
+    print "** done\n";
+
+    
+}

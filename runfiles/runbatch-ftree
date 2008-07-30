@@ -1,0 +1,48 @@
+#!/usr/bin/perl
+use Shell;
+
+#@traffic = ("bitcomp","bitrev","uniform","transpose","shuffle","tornado","neighbor","diagonal");
+#@packetsize=(32,16,8,4,2);
+for($i= 1; $i<90;($i=$i+100)){
+######################DECLARE################################
+    $traffic = "uniform";
+    $injectionrate = 1.00/100;
+    $packetsize = 27;
+######################DECLARE################################
+    system("cp -f immutable ftreeconfig");
+    open(inputFile,">>","ftreeconfig") or die "FUCK YOU";
+    print inputFile "
+
+
+// Fat tree
+
+topology = fattree;
+
+
+k  = 9;
+n  = 3;
+xr = 9;
+yr = 1;
+
+//
+// Routing
+//
+
+routing_function = nca;
+
+const_flits_per_packet = $packetsize;
+
+traffic       = $traffic;
+
+injection_rate = $injectionrate;
+
+";
+    
+    close(inputFile);
+
+    $outputname = "ftree_"."uniform_729";
+    system("../nocsim ftreeconfig > ../$outputname");
+    print "** done\n";
+
+    
+}

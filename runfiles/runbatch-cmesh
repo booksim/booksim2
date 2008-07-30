@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+use Shell;
+
+#@traffic = ("bitcomp","bitrev","uniform","transpose","shuffle","tornado","neighbor","diagonal");
+#@size = (2,3,4,5,6,7,8,9,10,11,12,13,14,15,16);
+#@packetsize=(8,4,2,1);
+for($i= 1; $i<90;($i=$i+2)){
+######################DECLARE################################
+    $traffic = "uniform";
+    $injectionrate = $i/100;
+    $packetsize = 1;
+######################DECLARE################################
+    system("cp -f immutable cmeshconfig");
+    open(inputFile,">>","cmeshconfig") or die "FUCK YOU";#invariant
+    print inputFile "
+
+//
+// CMesh
+//
+// #node = K^n*c
+//
+topology = cmesh;
+
+k = 4;
+n  = 2;
+c  = 4;
+//
+// Routing
+//
+routing_function = dor_no_express;
+
+const_flits_per_packet = $packetsize;
+
+traffic       = $traffic;
+
+injection_rate = $injectionrate;
+
+";
+    
+    close(inputFile);
+  
+    $outputname = "cmesh_"."$injectionrate";
+    system("../nocsim cmeshconfig > ../$outputname");
+    print "** done\n";
+
+    
+}

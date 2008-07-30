@@ -24,14 +24,14 @@ CPP_SRCS = main.cpp \
    creditchannel.cpp \
    network.cpp \
    trafficmanager.cpp \
-   random_utils.cpp \
    buffer_state.cpp \
    stats.cpp \
-   misc_utils.cpp \
    credit.cpp \
    outputset.cpp \
    flit.cpp \
    injection.cpp\
+   random_utils.cpp\
+   misc_utils.cpp\
    rng_wrapper.cpp\
    rng_double_wrapper.cpp
 
@@ -48,8 +48,7 @@ OBJS :=  $(LEX_OBJS) $(YACC_OBJS)\
  $(CPP_SRCS:%.cpp=${OBJDIR}/%.o)\
  $(NETWORKS:networks/%.cpp=${OBJDIR}/%.o)\
  $(ALLOCATORS:allocators/%.cpp=${OBJDIR}/%.o)\
- $(ROUTERS:routers/%.cpp=${OBJDIR}/%.o)
-
+ $(ROUTERS:routers/%.cpp=${OBJDIR}/%.o)\
 
 .PHONY: clean
 .PRECIOUS: %_tab.cpp %_tab.hpp %lex.cpp

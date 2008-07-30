@@ -1,0 +1,75 @@
+#!/usr/bin/perl
+use Shell;
+
+#@traffic = ("bitcomp","bitrev","uniform","transpose","shuffle","tornado","neighbor","diagonal");
+#@packetsize=(32,16,8,4,2,1);
+
+$packetsize = 1;
+for($i= 1/$packetsize; $i<50/$packetsize;$i=$i+100/$packetsize){
+######################DECLARE################################
+    $traffic = "uniform";
+    $injectionrate = 5/100;
+######################DECLARE################################
+
+    $outputname = "hop4"."_"."1024";
+
+    system ("cp -f immutable temp/flatflyconfig_$outputname");
+
+    open(inputFile,">>","temp/flatflyconfig_$outputname") or die "FUCK YOU"; #
+    print inputFile "
+
+
+// Flatfly 
+//
+// #node = k^(n+1)
+//
+// x, y, specifies the arrangement of routers in x and y dim
+// xr, yr specifiies the arayment of clients in a router
+//
+topology = flatfly;
+
+
+c  = 4;
+k  = 4;
+n  = 4;
+x  = 16;
+y  = 16;
+xr = 2;
+yr = 2;
+limit = 1024;
+
+
+//
+// Routing
+//
+
+routing_function = ugal;
+
+const_flits_per_packet = $packetsize;
+
+traffic       = $traffic;
+
+injection_rate = $injectionrate;
+
+";
+    
+    close(inputFile);
+    
+
+
+    open(qsubfile,">","temp/submit_flatfly_$outputname") or die "Can't open flatfly submit file";
+    
+    print qsubfile "
+#!/bin/sh
+#\$ -cwd
+#\$ -N $outputname
+#\$ -o ../$outputname
+#\$ -e temp/
+
+../nocsim temp/flatflyconfig_$outputname
+    ";
+
+system("qsub -S /bin/sh temp/submit_flatfly_$outputname");;
+print "Sumbited $outputname\n";
+
+}

@@ -1,0 +1,57 @@
+#!/usr/bin/perl
+use Shell;
+
+#@traffic = ("bitcomp","bitrev","uniform","transpose","shuffle","tornado","neighbor","diagonal");
+for($i= 8; $i<80;$i=$i+8){
+######################DECLARE################################
+    $traffic = "uniform";
+    $injectionrate = $i/100;
+######################DECLARE################################
+    system ("cp -f immutabletest flatflyconfig");
+    open(inputFile,">>","flatflyconfig") or die "FUCK YOU"; #
+    print inputFile "
+
+
+// Flatfly 
+//
+// #node = k^(n+1)
+//
+// x, y, specifies the arrangement of routers in x and y dim
+// xr, yr specifiies the arayment of clients in a router
+//
+topology = flatfly;
+
+
+c  = 4;
+k  = 4;
+n  = 2;
+x  = 4;
+y  = 4;
+xr = 2;
+yr = 2;
+limit = 64;
+
+
+//
+// Routing
+//
+
+routing_function = ugal;
+
+const_flits_per_packet = 1;
+
+traffic       = $traffic;
+
+injection_rate = $injectionrate;
+
+
+";
+    
+    close(inputFile);
+  
+    $outputname = "flatfly_1packet_"."$traffic"."$injectionrate";
+    system("../nocsim flatflyconfig > ../$outputname");
+    print "** done\n";
+
+    
+}

@@ -1,0 +1,63 @@
+#!/usr/bin/perl
+use Shell;
+
+#@traffic = ("bitcomp","bitrev","uniform","transpose","shuffle","tornado","neighbor","diagonal");
+#@packetsize=(32,16,8,4,2,1);
+
+$packetsize = 1;
+for($i= 1; $i<80;$i+=3){
+######################DECLARE################################
+    $traffic = "bitcomp";
+    $injectionrate = $i/100;
+######################DECLARE################################
+    
+    $outputname = "area_"."cmesh"."_"."$traffic"."_"."$injectionrate";
+    
+    system ("cp -f immutable temp/cmeshconfig_$outputname");
+    
+    open(inputFile,">>","temp/cmeshconfig_$outputname") or die "FUCK YOU"; #
+    print inputFile "
+
+
+//
+// CMesh
+//
+// #node = K^n*c
+//
+topology = cmesh;
+
+k = 4;
+n  = 2;
+c  = 4;
+//
+// Routing
+//
+routing_function = dor_no_express;
+
+const_flits_per_packet = $packetsize;
+
+traffic       = $traffic;
+
+injection_rate = $injectionrate;
+";
+    
+    close(inputFile);
+    
+
+
+    open(qsubfile,">","temp/submit_cmesh_$outputname") or die "Can't open cmesh submit file";
+    
+    print qsubfile "
+#!/bin/sh
+#\$ -cwd
+#\$ -N $outputname
+#\$ -o ../$outputname
+#\$ -e temp/
+
+../nocsim temp/cmeshconfig_$outputname
+    ";
+
+system("qsub -S /bin/sh temp/submit_cmesh_$outputname");;
+print "Sumbited $outputname\n";
+
+}

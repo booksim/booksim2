@@ -1,0 +1,84 @@
+///////////////////BEGIN IMMUTABLE////////////////////////////////
+//
+// Flow control
+//
+read_request_begin_vc  = 0;
+read_request_end_vc    = 5;
+write_reply_begin_vc   = 2;
+write_reply_end_vc     = 7;
+read_reply_begin_vc    = 8;
+read_reply_end_vc      = 12;
+write_request_begin_vc = 10;
+write_request_end_vc   = 15;
+
+// Total number of VCs must match the above assignments
+num_vcs     = 16;
+vc_buf_size = 8;
+
+wait_for_tail_credit = 1;
+
+//
+// Router architectureq
+//
+vc_allocator = islip; 
+sw_allocator = islip;
+alloc_iters  = 2;
+
+credit_delay   = 2;
+routing_delay  = 0;
+vc_alloc_delay = 0;
+sw_alloc_delay = 1;
+st_final_delay = 1;
+
+input_speedup     = 1;
+output_speedup    = 1;
+internal_speedup  = 1.0;
+
+//
+// Traffic
+//
+
+sim_type = latency;
+
+warmup_periods = 3;
+
+sample_period  = 1000;  
+
+sim_count          = 1;
+
+///////////////////END IMMUTABLE////////////////////////////////
+
+
+
+// Flatfly 
+//
+// #node = k^(n+1)
+//
+// x, y, specifies the arrangement of routers in x and y dim
+// xr, yr specifiies the arayment of clients in a router
+//
+topology = flatfly;
+
+
+c  = 8;
+k  = 8;
+n  = 1;
+x  = 4;
+y  = 2;
+xr = 2;
+yr = 4;
+limit = 64;
+
+
+//
+// Routing
+//
+routing_function = ugal;
+
+const_flits_per_packet = 8;
+
+traffic       = diagonal;
+
+injection_rate = 0.01;
+
+
