@@ -190,4 +190,6 @@ BookSimConfig::BookSimConfig( )
   _int_map["seed"]            = 0;
 
   _int_map["print_activity"] = 0;
+
+  _int_map["viewer trace"] = 0;
 }

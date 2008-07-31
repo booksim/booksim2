@@ -206,8 +206,7 @@ void tree4_nca( const Router *r, const Flit *f,
 //  FATTREE: Nearest Common Ancestor w/ Random  Routing Up
 // ===
 
-extern int xrouter;
-extern int yrouter;
+
 int fattree_transformation(int dest){
   //destination transformation, translate how the nodes are actually arranged
   //to the easier way of routing

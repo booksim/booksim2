@@ -25,7 +25,7 @@
 #include "misc_utils.hpp"
 
 
-bool trace = false;
+
 
 //#define DEBUG_FATFLY
 
@@ -90,18 +90,8 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
   xrouter = config.GetInt("xr");
   yrouter = config.GetInt("yr");
   
-  if(trace){
-    string topo;
-    config.GetStr( "topology", topo );
-    cout<<"Topology "<<topo<<endl;
-    cout<<"Network Width "<<xcount<<endl;
-    cout<<"Network Height "<<ycount<<endl;
-    cout<<"Concentration "<<gC<<endl;
-    cout<<"Router Width "<<xrouter<<endl;
-    cout<<"Router Height "<<yrouter<<endl;
-    int depth = config.GetInt("vc_buf_size");
-    int vcs = config.GetInt("num_vcs");
-    cout<<"Total Storage "<<vcs*depth*_r<<endl;
+  if(_trace){
+
     cout<<"Setup Finished Router"<<endl;
     
   }
@@ -257,14 +247,14 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 	
 	_routers[other]->AddInputChannel( &_chan[_output], &_chan_cred[_output]);
 	
-	if(trace){
+	if(_trace){
 	  cout<<"Link "<<_output<<" "<<node<<" "<<other<<" "<<length<<endl;
 	}
 	
       }
     }
   }
-  if(trace){
+  if(_trace){
     cout<<"Setup Finished Link"<<endl;
   }
 }
@@ -310,20 +300,10 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
   int out_port;
   if ( in_channel < gC ){
     f->ph = 0;
-    if(trace){
-      cout<<"New Flit "<<f->src<<endl;
-    }
 
     f->intm = RandomInt( powi( gK, gN )*gC-1);
   }
-  if(trace){
-    int load = 0;
-    cout<<"Router "<<r->GetID()<<endl;
-    cout<<"Input Channel "<<in_channel<<endl;
-    //need to modify router to report the buffere depth
-    load +=r->GetBuffer(in_channel);
-    cout<<"Rload "<<load<<endl;
-  }
+
   int intm = flatfly_transformation(f->intm);
 
   if((int)(intm/gC) == r->GetID()){
@@ -341,7 +321,6 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
   }
   
   int vcBegin = 0, vcEnd = gNumVCS-1;
-  if(trace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
   outputs->AddRange( out_port , vcBegin, vcEnd );
 
 }
@@ -360,21 +339,8 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
   int ycurr = ((r->GetID())) / gK;
 
   int out_port = -1;
-  
 
-  if ( in_channel < gC ){
-    if(trace){
-      cout<<"New Flit "<<f->src<<endl;
-    }
-  }
-  if(trace){
-    int load = 0;
-    cout<<"Router "<<r->GetID()<<endl;
-    cout<<"Input Channel "<<in_channel<<endl;
-    //need to modify router to report the buffere depth
-    load +=r->GetBuffer(in_channel);
-    cout<<"Rload "<<load<<endl;
-  }
+
 
   int ran = 0;
   if(gN>1){
@@ -498,7 +464,6 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
     vcBegin = gWriteReplyBeginVC;
     vcEnd   = gWriteReplyEndVC;
   }
-  if(trace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
     outputs->AddRange( out_port , vcBegin, vcEnd );
 }
 
@@ -510,8 +475,6 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 {
   outputs->Clear( );
   int dest  = flatfly_transformation(f->dest);
-
-  
 
   int rID =  r->GetID();
   int _radix = gK;
@@ -525,13 +488,13 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   int _min_wire, _nonmin_wire;
 
   if ( in_channel < gC ){
-    if(trace){
+    if(_trace){
       cout<<"New Flit "<<f->src<<endl;
     }
     f->ph   = 0;
   }
 
-  if(trace){
+  if(_trace){
     int load = 0;
     cout<<"Router "<<rID<<endl;
     cout<<"Input Channel "<<in_channel<<endl;
@@ -638,8 +601,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   }
   
   if (debug) cout << "        through output port : " << out_port << endl;
-  //cout<<*f<<"output: "<<out_port<<" "<<f->dest<<" "<<r->GetID()<<endl;
-  if(trace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
+  if(_trace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
   if ( f->type == Flit::READ_REQUEST ) {
     vcBegin = gReadReqBeginVC;
     vcEnd   = gReadReqEndVC;

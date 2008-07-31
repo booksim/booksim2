@@ -35,7 +35,8 @@
 #include "tree4.hpp"
 #include "fattree.hpp"
 ///////////////////////////////////////////////////////////////////////////////
-
+//Global declarations
+//////////////////////
 /* printing activity factor*/
 bool _print_activity = false;
 
@@ -61,6 +62,9 @@ int xrouter = 0;
 int yrouter = 0;
 int xcount  = 0;
 int ycount  = 0;
+
+//generate nocviewer trace
+bool _trace = false;
 /////////////////////////////////////////////////////////////////////////////
 
 void AllocatorSim( const Configuration& config )
@@ -74,29 +78,40 @@ void AllocatorSim( const Configuration& config )
    *add an else if statement with the name of the network
    */
   if ( topo == "torus" ) {
+    KNCube::RegisterRoutingFunctions() ;
     net = new KNCube( config, true );
   } else if ( topo == "mesh" ) {
+    KNCube::RegisterRoutingFunctions() ;
     net = new KNCube( config, false );
   } else if ( topo == "cmesh" ) {
+    CMesh::RegisterRoutingFunctions() ;
     net = new CMesh( config );
   } else if ( topo == "cmeshx2" ) {
+    CMeshX2::RegisterRoutingFunctions() ;
     net = new CMeshX2( config );
   } else if ( topo == "fly" ) {
+    KNFly::RegisterRoutingFunctions() ;
     net = new KNFly( config );
   } else if ( topo == "single" ) {
+    SingleNet::RegisterRoutingFunctions() ;
     net = new SingleNet( config );
   } else if ( topo == "isolated_mesh" ) {
+    IsolatedMesh::RegisterRoutingFunctions() ;
     net = new IsolatedMesh( config );
   } else if ( topo == "qtree" ) {
+    QTree::RegisterRoutingFunctions() ;
     net = new QTree( config );
   } else if ( topo == "tree4" ) {
+    Tree4::RegisterRoutingFunctions() ;
     net = new Tree4( config );
   } else if ( topo == "fattree" ) {
+    FatTree::RegisterRoutingFunctions() ;
     net = new FatTree( config );
   }  else if ( topo == "flatfly" ) {
     FlatFlyOnChip::RegisterRoutingFunctions() ;
     net = new FlatFlyOnChip( config );
   }  else if ( topo == "cmo"){
+    CMO::RegisterRoutingFunctions() ;
     net = new CMO(config);
   } else {
     cerr << "Unknown topology " << topo << endl;
@@ -159,7 +174,8 @@ int main( int argc, char **argv )
   RandomSeed( config.GetInt("seed") );
 
   _print_activity = (config.GetInt("print_activity")==1);
-  
+  _trace = (config.GetInt("viewer trace")==1);
+
   /*configure and run the simulator
    */
   AllocatorSim( config );

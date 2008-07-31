@@ -21,7 +21,7 @@ class KNCube : public Network {
 
 public:
   KNCube( const Configuration &config, bool mesh );
-  void RegisterRoutingFunctions();
+  static void RegisterRoutingFunctions();
 
   int GetN( ) const;
   int GetK( ) const;

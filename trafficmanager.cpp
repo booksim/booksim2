@@ -5,8 +5,7 @@
 #include "trafficmanager.hpp"
 #include "random_utils.hpp" 
 
-//For nocviewer
-extern bool trace;
+
 
 TrafficManager::TrafficManager( const Configuration &config, Network *net )
   : Module( 0, "traffic_manager" )
@@ -315,6 +314,9 @@ void TrafficManager::_GeneratePacket( int source, int size,
     f->time   = time;
     f->record = record;
     
+    if(_trace){
+      cout<<"New Flit "<<f->src<<endl;
+    }
     f->type =(Flit::FlitType)RandomInt(3);
 
     if ( i == 0 ) { // Head flit
@@ -467,7 +469,7 @@ void TrafficManager::_Step( )
   _net->WriteOutputs( );
   
   ++_time;
-  if(trace){
+  if(_trace){
     cout<<"TIME "<<_time<<endl;
   }
   // Eject traffic and send credits

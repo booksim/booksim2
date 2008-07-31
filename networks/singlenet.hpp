@@ -11,7 +11,7 @@ class SingleNet : public Network {
 public:
   SingleNet( const Configuration &config );
 
-  void RegisterRoutingFunctions();
+  static void RegisterRoutingFunctions();
   void Display( ) const;
 };
 

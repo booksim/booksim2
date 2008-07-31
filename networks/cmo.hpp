@@ -36,7 +36,7 @@ public:
   int GetC( ) const;
 
   double Capacity( ) const;
-  void RegisterRoutingFunctions();
+  static void RegisterRoutingFunctions();
   void InsertRandomFaults( const Configuration &config );
   int MapNode(int physical_node) const;
   int UnmapNode(int physical_node) const;

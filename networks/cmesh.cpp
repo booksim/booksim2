@@ -27,9 +27,6 @@ int CMesh::_memo_NodeShiftX = 0 ;
 int CMesh::_memo_NodeShiftY = 0 ;
 int CMesh::_memo_PortShiftY = 0 ;
 
-//generate trace for nocviewer
-extern bool trace;
-
 CMesh::CMesh( const Configuration& config ) 
   : Network(config) 
 {
@@ -81,18 +78,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
   int y_index ;
 
   //standard trace configuration 
-  if(trace){
-    string topo;
-    config.GetStr( "topology", topo );
-    cout<<"Topology "<<topo<<endl;
-    cout<<"Network Width "<<gK<<endl;
-    cout<<"Network Height "<<gK<<endl;
-    cout<<"Concentration "<<gC<<endl;
-    cout<<"Router Width "<<2<<endl;
-    cout<<"Router Height "<<2<<endl;
-    int depth = config.GetInt("vc_buf_size");
-    int vcs = config.GetInt("num_vcs");
-    cout<<"Total Storage "<<vcs*depth*8<<endl;
+  if(_trace){
     cout<<"Setup Finished Router"<<endl;
   }
 
@@ -231,7 +217,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
     _routers[node]->AddOutputChannel( &_chan[px_out], &_chan_cred[px_out] );
     _routers[node]->AddInputChannel( &_chan[px_in], &_chan_cred[px_in] );
     
-    if(trace){
+    if(_trace){
       cout<<"Link "<<" "<<px_out<<" "<<px_in<<" "<<node<<" "<<_chan[px_out].GetLatency()<<endl;
     }
     // Port 1: -x channel
@@ -245,7 +231,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
     }
     _routers[node]->AddOutputChannel( &_chan[nx_out], &_chan_cred[nx_out] );
     _routers[node]->AddInputChannel( &_chan[nx_in], &_chan_cred[nx_in] );
-    if(trace){
+    if(_trace){
       cout<<"Link "<<" "<<nx_out<<" "<<nx_in<<" "<<node<<" "<<_chan[nx_out].GetLatency()<<endl;
     }
     // Port 2: +y channel
@@ -260,7 +246,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
     _routers[node]->AddOutputChannel( &_chan[py_out], &_chan_cred[py_out] );
     _routers[node]->AddInputChannel( &_chan[py_in], &_chan_cred[py_in] );
     
-    if(trace){
+    if(_trace){
       cout<<"Link "<<" "<<py_out<<" "<<py_in<<" "<<node<<" "<<_chan[py_out].GetLatency()<<endl;
     }
     // Port 3: -y channel
@@ -275,7 +261,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
     _routers[node]->AddOutputChannel( &_chan[ny_out], &_chan_cred[ny_out] );
     _routers[node]->AddInputChannel( &_chan[ny_in], &_chan_cred[ny_in] );    
 
-    if(trace){
+    if(_trace){
       cout<<"Link "<<" "<<ny_out<<" "<<ny_in<<" "<<node<<" "<<_chan[ny_out].GetLatency()<<endl;
     }
     
@@ -285,7 +271,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
   for ( int i = 0 ; i < _sources ; i++ ) 
     assert( channel_vector[i] == true ) ;
   
-  if(trace){
+  if(_trace){
     cout<<"Setup Finished Link"<<endl;
   }
 }
@@ -817,20 +803,7 @@ int cmesh_next_no_express( int cur, int dest ) {
 void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel, 
 			   OutputSet *outputs, bool inject )
 {
-  if ( in_channel < gC ){
-    if(trace){
-      cout<<"New Flit "<<f->src<<endl;
-    }
-  }
-  if(trace){
-    int load = 0;
-    cout<<"Router "<<r->GetID()<<endl;
-    //need to modify router to report the buffere dept
-    cout<<"Input Channel "<<in_channel<<endl;
-    load +=r->GetBuffer(in_channel);
-    cout<<"Rload "<<load<<endl;
-  }
-
+ 
   int vc_max = gNumVCS;
   // Destination Router, Destination Port
   int dest_router = CMesh::NodeToRouter( f->dest ) ;  
@@ -850,7 +823,6 @@ void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
     out_port = cmesh_next_no_express( cur_router, dest_router );
   }
   outputs->AddRange( out_port, 0, gNumVCS - 1 );
-  if(trace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
   if (f->type == Flit::READ_REQUEST)
     outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
   if (f->type == Flit::WRITE_REQUEST)

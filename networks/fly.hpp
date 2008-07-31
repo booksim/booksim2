@@ -19,7 +19,7 @@ public:
 
   int GetN( ) const;
   int GetK( ) const;
-  void RegisterRoutingFunctions(){};
+  static void RegisterRoutingFunctions(){};
   double Capacity( ) const;
 };
 

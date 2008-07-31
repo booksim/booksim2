@@ -183,6 +183,8 @@ void IQRouter::ReadInputs( )
 {
   _ReceiveFlits( );
   _ReceiveCredits( );
+
+
 }
 
 void IQRouter::InternalStep( )
@@ -208,6 +210,14 @@ void IQRouter::WriteOutputs( )
 {
   _SendFlits( );
   _SendCredits( );
+  if(_trace){
+    int load = 0;
+    cout<<"Router "<<this->GetID()<<endl;
+    //need to modify router to report the buffere dept
+    //cout<<"Input Channel "<<in_channel<<endl;
+    //load +=r->GetBuffer(in_channel);
+    cout<<"Rload "<<load<<endl;
+  }
 }
 
 void IQRouter::_ReceiveFlits( )
@@ -714,7 +724,7 @@ void IQRouter::_SendFlits( )
     } else {
       f = 0;
     }
-	
+    if(_trace){cout<<"Outport "<<output<<endl;cout<<"Stop Mark"<<endl;}
     (*_output_channels)[output]->SendFlit( f );
   }
 }

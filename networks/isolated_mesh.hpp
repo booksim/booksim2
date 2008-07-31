@@ -35,7 +35,7 @@ public:
 
   IsolatedMesh( const Configuration &config );
   ~IsolatedMesh( );
-  void RegisterRoutingFunctions() ;
+  static void RegisterRoutingFunctions() ;
 
   void  WriteFlit( Flit *f, int source );
   Flit* ReadFlit( int dest );
