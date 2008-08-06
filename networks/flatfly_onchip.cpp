@@ -45,23 +45,17 @@ void FlatFlyOnChip::_ComputeSize( const Configuration &config )
   _c = config.GetInt( "c" );    //concentration, may be different from k
   _r = _c + (_k-1)*_n ;		// total radix of the switch  ( # of inputs/outputs)
 
-
+  //how many routers in the x or y direction
+  xcount = config.GetInt("x");
+  ycount = config.GetInt("y");
+  //configuration of hohw many clients in X and Y per router
+  xrouter = config.GetInt("xr");
+  yrouter = config.GetInt("yr");
   gK = _k; 
   gN = _n;
   gC = _c;
-
-  string fn;
-  char traffic[]= "neighbor";
-  /*hack to get thesee traffic pattern work correctly on the flattened butterfly*/
-  config.GetStr( "traffic", fn, "none" );
-  if(fn.compare("neighbor")==0 || fn.compare("tornado")==0){
-    realgk = 8;
-    realgn = 2;
-  } else {
-    realgk = _k;
-    realgn = _n;
-  }
-  /*end hack*/
+  
+  assert(_c == xrouter*yrouter);
 
   _sources = powi( _k, _n )*_c;   //network size
   _dests   = powi( _k, _n )*_c;
@@ -83,12 +77,7 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
   double _length;
 
   ostringstream router_name;
-  //how many routers in the x or y direction
-  xcount = config.GetInt("x");
-  ycount = config.GetInt("y");
-  //configuration of hohw many clients in X and Y per router
-  xrouter = config.GetInt("xr");
-  yrouter = config.GetInt("yr");
+
   
   if(_trace){
 

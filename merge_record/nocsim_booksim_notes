@@ -28,7 +28,7 @@
 
  misc util has either log2 or log_two....... yeah... looking forward to those "function log2 doesn exists" I am keeping the log_two
 
- booksima and nocsim uses two different random number generators. I will keep the nocsim version using knuth's code. I have no idea why rng_wrapper and rng double wrapper are there.
+ booksima and nocsim uses two different random number generators. I will keep the nocsim version using knuth's code. I have no idea why rng_wrapper and rng double wrapper are there. Ok they are referenced but not compiled. Its like... a ghost....
 
  Flit channel has a lot of power related variables that could be removed Set length is useless. Use set latency!!!!!! This same applies to credit channel
 
@@ -61,7 +61,7 @@
 
 7/29/08
 
-   nocsim kncube has setchannel cookie.
+   nocsim kncube has setchannel cookie.for duplicated networks
 
    Need a better way to set realgK/gN
 
@@ -69,6 +69,19 @@
 
    Flattened butterfly still has an incredible hack for the traffic patterns
 	
+
+7/31/08 all incorporated
+
+
+TODO fixes
+
+resolve the realgk realgn mess
+
+automatically load in channel length information, currently they are calculated according to nocsim
+
+Modify the nocviewer to be compatible with the new way that view traces are generated
+
+Clean up the power calc scripts
 
 
 

@@ -52,8 +52,7 @@ void FatTree::_ComputeSize( const Configuration& config )
  
    
   gK = _k; gN = _n;
-  realgk = _k*xrouter;
-  realgn = 2;
+
   
   
   _sources = powi( _k, _n );

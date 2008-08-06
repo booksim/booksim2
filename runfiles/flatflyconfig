@@ -57,16 +57,19 @@ sim_count          = 1;
 // x, y, specifies the arrangement of routers in x and y dim
 // xr, yr specifiies the arayment of clients in a router
 //
-topology = flatfly;
+topology = cmesh;
 
 
 c  = 4;
 k  = 4;
 n  = 2;
+
 x  = 4;
 y  = 4;
 xr = 2;
 yr = 2;
+
+//the nodes above "limit" does not emit or receiv traffic
 limit = 64;
 
 
@@ -74,9 +77,9 @@ limit = 64;
 // Routing
 //
 
-routing_function = ugal;
+routing_function = dor_no_express;
 
-const_flits_per_packet = 4;
+const_flits_per_packet = 1;
 
 traffic       = uniform;
 

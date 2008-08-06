@@ -295,6 +295,8 @@ int badperm_dflynew( int source, int total_nodes )
 
 void InitializeTrafficMap( )
 {
+
+
   /* Register Traffic functions here */
 
   gTrafficFunctionMap["uniform"]  = &uniform;
@@ -321,9 +323,6 @@ void InitializeTrafficMap( )
 
   gTrafficFunctionMap["bad_dragon"]    = &badperm_dflynew;
 
-
-
-
 }
 
 void ResetTrafficFunction( )
@@ -339,6 +338,22 @@ void StepTrafficFunction( )
 
 tTrafficFunction GetTrafficFunction( const Configuration& config )
 {
+
+  if(config.GetInt( "c" )!=1){
+    int temp =  config.GetInt("xr");
+    realgk = temp*gK;
+    realgn = gN;
+  } else {
+    realgk = gK;
+    realgn = gN;
+  }
+
+  string topo;
+  config.GetStr( "topology", topo );
+  if(topo == "fattree"){
+    cout<<"CAUTION: if  you are doing running NoC simulations, need to set the network dimension to 2"<<endl;
+  }
+
   map<string, tTrafficFunction>::const_iterator match;
   tTrafficFunction tf;
 
@@ -358,5 +373,4 @@ tTrafficFunction GetTrafficFunction( const Configuration& config )
 
   return tf;
 }
-
 

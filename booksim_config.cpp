@@ -22,41 +22,28 @@ BookSimConfig::BookSimConfig( )
   AddStrField( "channel_file", "" ) ;
 
   // Control alloction of VC to packet types
-  AddStrField( "partition_vcs", "1" ) ;
   _int_map["partition_vcs"] = 1 ;
 
-  AddStrField( "read_request_begin_vc", "0");
   _int_map["read_request_begin_vc"] = 0;
-  AddStrField( "read_request_end_vc", "3");
   _int_map["read_request_end_vc"] = 3;
 
-  AddStrField( "write_request_begin_vc", "4");
   _int_map["write_request_begin_vc"] = 4;
-  AddStrField( "write_request_end_vc", "5");
-  _int_map["write_request_end_vc"] = 5;
+  _int_map["write_request_end_vc"] = 7;
 
-  AddStrField( "read_reply_begin_vc", "6");
-  _int_map["read_reply_begin_vc"] = 6;
-  AddStrField( "read_reply_end_vc", "7");
-  _int_map["read_reply_end_vc"] = 7;
+  _int_map["read_reply_begin_vc"] = 8;
+  _int_map["read_reply_end_vc"] = 11;
 
 
-  AddStrField( "write_reply_begin_vc", "8");
-  _int_map["write_reply_begin_vc"] = 8;
-  AddStrField( "write_reply_end_vc", "11");
-  _int_map["write_reply_end_vc"] = 11;
+  _int_map["write_reply_begin_vc"] = 12;
+  _int_map["write_reply_end_vc"] = 15;
 
   // Control Injection of Packets into Replicated Networks
-  AddStrField( "read_request_subnet", "0" );
   _int_map["read_request_subnet"] = 0;
 
-  AddStrField( "read_reply_subnet", "1" );
   _int_map["read_reply_subnet"] = 1;
 
-  AddStrField( "write_request_subnet", "1" );
   _int_map["write_request_subnet"] = 1;
 
-  AddStrField( "write_reply_subnet", "0" );
   _int_map["write_reply_subnet"] = 0;
 
   // TCC Simulation Traffic Trace
@@ -71,8 +58,9 @@ BookSimConfig::BookSimConfig( )
   _int_map["c"] = 1; //concentration
   _int_map["x"] = 1; //number of routers in X
   _int_map["y"] = 1; //number of routers in Y
-  _int_map["xr"] = 1; //number of nodes per router in X
-  _int_map["yr"] = 1; //number of nodes per router in Y
+  _int_map["xr"] = 1; //number of nodes per router in X only if c>1
+  _int_map["yr"] = 1; //number of nodes per router in Y only if c>1
+
   _int_map["limit"] = 0; //how many of the nodes are actually used
 
   AddStrField( "routing_function", "none" );
@@ -80,7 +68,6 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["link_failures"] = 0; //legacy
   _int_map["fail_seed"]     = 0; //legacy
-  _int_map["wire_delay"] = 0; //legacy
 
 
   //==== Cmesh topology options =======================
@@ -90,8 +77,7 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["in_ports"]  = 5;
   _int_map["out_ports"] = 5;
-
-  _int_map["voq"] = 0;
+  _int_map["voq"] = 0; //output queuing
 
   //========================================================
   // Router options
@@ -109,7 +95,6 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["num_vcs"]         = 1;  
   _int_map["vc_buf_size"]     = 4;  
-  _int_map["vc_buffer_pool"]  = 0;
 
   _int_map["wait_for_tail_credit"] = 1; // reallocate a VC before a tail credit?
 

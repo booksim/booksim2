@@ -23,11 +23,10 @@ CMeshX2::CMeshX2( const Configuration &config )
   int n = config.GetInt( "n" ) ;
   int c = config.GetInt( "c" ) ;
 
+
   gK = _k = k ;
   gN = _n = n ;
   gC = _c = c ;
-  realgk = 2*_k;
-  realgn = _n;
   
   _sources  = _c * powi( _k, _n); // Source nodes in network
   _dests    = _c * powi( _k, _n); // Destination nodes in network

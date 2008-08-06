@@ -1,3 +1,10 @@
+#result_compiler.pl
+#
+#This is used to extract data from the booksim output
+#greps for "Overall Latency" and any indication that simulation terminated earl
+#
+#
+
 $inputfilename = $ARGV[0];
 $outputfilename = $ARGV[1];
 $packetsize = $ARGV[2];
