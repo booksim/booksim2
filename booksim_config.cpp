@@ -92,7 +92,7 @@ BookSimConfig::BookSimConfig( )
 
   //==== Input-queued ======================================
 
-  _int_map["num_vcs"]         = 1;  
+  _int_map["num_vcs"]         = 16;  
   _int_map["vc_buf_size"]     = 4;  
 
   _int_map["wait_for_tail_credit"] = 1; // reallocate a VC before a tail credit?

@@ -76,7 +76,12 @@ TrafficManager::TrafficManager( const Configuration &config, Network *net )
   }
 
   _voqing = config.GetInt( "voq" );
-
+  
+  if ( _voqing ) {
+    _use_lagging = false;
+  } else {
+    _use_lagging = true;
+  }
   // ============ Statistics ============ 
 
   _latency_stats   = new Stats * [_classes];

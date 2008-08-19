@@ -44,6 +44,7 @@ protected:
   int                 _total_in_flight;
   map<int,bool> _in_flight;
   bool                _empty_network;
+  bool _use_lagging;
 
   // ============ Statistics ============
 
