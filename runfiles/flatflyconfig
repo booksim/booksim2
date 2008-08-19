@@ -57,7 +57,7 @@ sim_count          = 1;
 // x, y, specifies the arrangement of routers in x and y dim
 // xr, yr specifiies the arayment of clients in a router
 //
-topology = cmesh;
+topology = flatfly;
 
 
 c  = 4;
@@ -77,7 +77,7 @@ limit = 64;
 // Routing
 //
 
-routing_function = dor_no_express;
+routing_function = ugal;
 
 const_flits_per_packet = 1;
 

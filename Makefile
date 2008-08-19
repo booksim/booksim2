@@ -83,6 +83,7 @@ clean:
 	rm -f *~
 	rm -f networks/*~
 	rm -f runfiles/*~
+	rm -f routers/*~
 
 #purify: $(OBJS)
 #	$(PURIFY) -always-use-cache-dir $(CPP) $(OBJS) -o $(PROG) -L/usr/pubsw/lib

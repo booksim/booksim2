@@ -15,8 +15,7 @@ BookSimConfig::BookSimConfig( )
   //========================================================
 
   // Control of virtual channel speculation
-  AddStrField( "speculative", "1" ) ;
-  _int_map["speculative"] = 1 ;
+  _int_map["speculative"] = 0 ;
 
   // Channel length listing file
   AddStrField( "channel_file", "" ) ;

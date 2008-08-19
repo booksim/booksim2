@@ -5,13 +5,13 @@ use Shell;
 #@packetsize=(32,16,8,4,2,1);
 
 $packetsize = 1;
-for($i= 1; $i<80;$i+=3){
+for($i= 1; $i<80;$i+=2){
 ######################DECLARE################################
-    $traffic = "bitcomp";
+    $traffic = "uniform";
     $injectionrate = $i/100;
 ######################DECLARE################################
 
-    $outputname = "area_flatfly"."_"."$traffic"."_"."$injectionrate";
+    $outputname = "nospec_flatfly"."_"."$traffic"."_"."$injectionrate";
 
     system ("cp -f immutable temp/flatflyconfig_$outputname");
 
@@ -51,6 +51,8 @@ traffic       = $traffic;
 
 injection_rate = $injectionrate;
 
+speculative =0;
+
 ";
     
     close(inputFile);
@@ -66,7 +68,7 @@ injection_rate = $injectionrate;
 #\$ -o ../$outputname
 #\$ -e temp/
 
-../nocsim temp/flatflyconfig_$outputname
+../booksim temp/flatflyconfig_$outputname
     ";
 
 system("qsub -S /bin/sh temp/submit_flatfly_$outputname");;

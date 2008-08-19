@@ -125,19 +125,6 @@ IQRouter::IQRouter( const Configuration& config,
     _switch_hold_out[i] = -1;
   }
 
-  //
-  //  Power Model
-  //
-
-  // Switch -- there is a buffer overflow problem somewhere, so
-  //           allocate twice to provide padding...
-  // switchMonitor = new SwitchMonitor( _inputs, _outputs ) ;
-  // switchMonitor = new SwitchMonitor( _inputs, _outputs ) ;
-
-  // Memory -- there is a buffer overflow problem somewhere, so
-  //           allocate twice to provide padding...
-  // bufferMonitor = new BufferMonitor( _inputs ) ;
-  // bufferMonitor = new BufferMonitor( _inputs ) ;
 
 }
 
@@ -526,9 +513,16 @@ void IQRouter::_SWAlloc( )
 	      // allocators).  Switch allocation priorities are strictly 
 	      // determined by the packet priorities.
 	      
-	      _sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
+	      if( _speculative){
+		_sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
 					 1 /*cur_vc->GetPriority( ) */, 
 					 1 /*cur_vc->GetPriority( ) */);
+	      } else {
+		//make sure priority is other wise correct
+	      _sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
+					 cur_vc->GetPriority( ), 
+					 cur_vc->GetPriority( ));
+	      }
 	    }
 	  }
 	}
@@ -557,8 +551,8 @@ void IQRouter::_SWAlloc( )
 	    // of 0 regardless of whether there is buffer space available
 	    // at the downstream router because request is speculative. 
 	    _sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
-				       0/*cur_vc->GetPriority( )*/, 
-				       0/*cur_vc->GetPriority( )*/ );
+				       0, 
+				       0 );
 	  }
 	  
 	}
