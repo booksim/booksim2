@@ -12,7 +12,7 @@ $packetsize = $ARGV[2];
 #output datafile
 open(outfile, ">",$outputfilename) or die "can't open output file $outputfilename";
 #loop through injectionrates
-for($i = 1/$packetsize; $i<80/$packetsize; $i+=2/$packetsize){
+for($i = 1/$packetsize; $i<25/$packetsize; $i+=1/$packetsize){
     $injectionrate = $i/100;
     $inputfile = "$inputfilename"."$injectionrate";
     open(infile , "<",$inputfile) or die "can't open input file $inputfile";

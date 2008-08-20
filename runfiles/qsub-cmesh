@@ -5,13 +5,13 @@ use Shell;
 #@packetsize=(32,16,8,4,2,1);
 
 $packetsize = 1;
-for($i= 1; $i<80;$i+=3){
+for($i= 1; $i<25;$i+=1){
 ######################DECLARE################################
-    $traffic = "bitcomp";
+    $traffic = "uniform";
     $injectionrate = $i/100;
 ######################DECLARE################################
     
-    $outputname = "area_"."cmesh"."_"."$traffic"."_"."$injectionrate";
+    $outputname = ""."cmesh"."_"."$traffic"."_"."$injectionrate";
     
     system ("cp -f immutable temp/cmeshconfig_$outputname");
     
@@ -25,7 +25,10 @@ for($i= 1; $i<80;$i+=3){
 // #node = K^n*c
 //
 topology = cmesh;
-
+xr = 2;
+yr = 2;
+x = 4;
+y = 4;
 k = 4;
 n  = 2;
 c  = 4;
@@ -54,7 +57,7 @@ injection_rate = $injectionrate;
 #\$ -o ../$outputname
 #\$ -e temp/
 
-../nocsim temp/cmeshconfig_$outputname
+../booksim temp/cmeshconfig_$outputname
     ";
 
 system("qsub -S /bin/sh temp/submit_cmesh_$outputname");;

@@ -125,7 +125,7 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["perm_seed"] = 0;         // seed value for random perms traffic
 
-  _float_map["injection_rate"]       = 0.0; //if 0.0 assumes it is batch mode
+  _float_map["injection_rate"]       = 0.1; //if 0.0 assumes it is batch mode
   _int_map["const_flits_per_packet"] = 1; //flits per packet
 
   AddStrField( "injection_process", "bernoulli" );
@@ -135,7 +135,7 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField( "priority", "age" );  // message priorities
 
-  _int_map["batch_size"] = 100;
+  _int_map["batch_size"] = 1000;
   _int_map["max_outstanding_requests"] = 4;
 
   _int_map["read_request_size"]  = 1;
