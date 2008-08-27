@@ -20,9 +20,9 @@ TrafficManager::TrafficManager( const Configuration &config, Network *net )
   _sources = _net->NumSources( );
   _dests   = _net->NumDests( );
   
-  //nodes higher than limit do not produce packets
-  _limit = config.GetInt( "limit" );
+  //nodes higher than limit do not produce or receive packets
   //for default limit = sources
+  _limit = config.GetInt( "limit" );
   if(_limit == 0){
     _limit = _sources;
   }
@@ -50,7 +50,7 @@ TrafficManager::TrafficManager( const Configuration &config, Network *net )
   _buf_states = new BufferState * [_sources];
 
   for ( s = 0; s < _sources; ++s ) {
-    tmp_name << "buf_state_" << s;
+    tmp_name << "terminal_buf_state_" << s;
     _buf_states[s] = new BufferState( config, this, tmp_name.str( ) );
     tmp_name.seekp( 0, ios::beg );
   }
@@ -76,7 +76,6 @@ TrafficManager::TrafficManager( const Configuration &config, Network *net )
   }
 
   _voqing = config.GetInt( "voq" );
-  
   if ( _voqing ) {
     _use_lagging = false;
   } else {
@@ -140,12 +139,9 @@ TrafficManager::TrafficManager( const Configuration &config, Network *net )
   }
 
   _sample_period = config.GetInt( "sample_period" );
-
   _max_samples    = config.GetInt( "max_samples" );
   _warmup_periods = config.GetInt( "warmup_periods" );
-
   _latency_thres = config.GetFloat( "latency_thres" );
-
   _include_queuing = config.GetInt( "include_queuing" );
 }
 
@@ -184,23 +180,15 @@ TrafficManager::~TrafficManager( )
   delete [] _pair_latency;
 }
 
+
 Flit *TrafficManager::_NewFlit( )
 {
   Flit *f;
-  f = new Flit;
-
+  //the constructor should initialize everything
+  f = new Flit();
   f->id    = _cur_id;
-  f->hops  = 0;
-
-  if ( 0 ) {
-    f->watch = true;
-  } else {
-    f->watch = false;
-  }
-
   _in_flight[_cur_id] = true;
   ++_cur_id;
-
   return f;
 }
 
@@ -208,7 +196,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 {
   static int sample_num = 0;
 
-  //hash_map<int, bool>::iterator match;
   map<int, bool>::iterator match;
 
   match = _in_flight.find( f->id );
@@ -223,7 +210,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     Error( "" );
   }
   
-  if ( f->watch ) { //|| (  _time - f->time  > 30 ) ) {
+  if ( f->watch ) { 
     cout << "Ejecting flit " << f->id 
 	 << ",  lat = " << _time - f->time
 	 << ", src = " << f->src 
@@ -272,7 +259,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       }
     }
   }
-
   delete f;
 }
 
@@ -319,7 +305,7 @@ void TrafficManager::_GeneratePacket( int source, int size,
     f->time   = time;
     f->record = record;
     
-    if(_trace){
+    if(_trace || f->watch){
       cout<<"New Flit "<<f->src<<endl;
     }
     f->type =(Flit::FlitType)RandomInt(3);
@@ -477,8 +463,8 @@ void TrafficManager::_Step( )
   if(_trace){
     cout<<"TIME "<<_time<<endl;
   }
-  // Eject traffic and send credits
 
+  // Eject traffic and send credits
   for ( int output = 0; output < _net->NumDests( ); ++output ) {
     f = _net->ReadFlit( output );
 
@@ -712,14 +698,6 @@ bool TrafficManager::_SingleSim( )
       } 
     }
 
-    /*for ( int d = 0; d < _dests; ++d ) {
-      if ( _sim_state == running ) {
-      cout << "a(" << d+1 << "," << total_phases+1 << ") = " 
-      << _accepted_packets[d]->Average( ) << "; ";
-      }
-      }
-      cout << endl;
-      cout << "overall(" << total_phases+1 << ") = " << cur_accepted << endl;*/
 
     prev_latency  = cur_latency;
     prev_accepted = cur_accepted;
@@ -798,29 +776,11 @@ void TrafficManager::Run( )
 
     cout << "Overall min accepted rate = " << _overall_accepted_min->Average( )
 	 << " (" << _overall_accepted_min->NumSamples( ) << " samples)" << endl;
-
-    //_latency_stats[c]->Display( );
     
   }
 
   cout << "Average hops = " << _hop_stats->Average( )
        << " (" << _hop_stats->NumSamples( ) << " samples)" << endl;
-
-  //_hop_stats->Display( );
-    
-  /*for ( int i = 0; i < _dests; ++i ) {
-    cout << "  Average to " << i << " = " << _pair_latency[i]->Average( ) << "( " 
-    << _pair_latency[i]->NumSamples( ) << " samples)" << endl;
-    _pair_latency[i]->Display( );
-    }*/
-  
-  //_net->Display( );
-
-  for ( int i = 0 ; i < _net->NumSources( ); ++i ) {
-    //cout << "input queue " << i << "'s length = " << _partial_packets[i].size( ) << endl;
-    //_buf_states[i]->Display( );
-  }
-
 
 
 }

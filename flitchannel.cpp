@@ -45,13 +45,20 @@ FlitChannel::~FlitChannel() {
 }
 
 void FlitChannel::SetSource( Router* router ) {
-  _routerSource = router->Name() ;
+  _routerSource = router->GetID() ;
+}
+
+int FlitChannel::GetSource(){
+  return _routerSource;
 }
 
 void FlitChannel::SetSink( Router* router ) {
-  _routerSink = router->Name() ;
+  _routerSink = router->GetID() ;
 }
 
+int FlitChannel::GetSink(){
+  return _routerSink;
+}
 
 
 void FlitChannel::SetLatency( int cycles ) {

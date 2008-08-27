@@ -52,7 +52,7 @@ traffic       = $traffic;
 
 injection_rate = $injectionrate;
 
-speculative =0;
+speculative =1;
 
 ";
     

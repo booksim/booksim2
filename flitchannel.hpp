@@ -28,7 +28,9 @@ public:
   ~FlitChannel();
 
   void SetSource( Router* router ) ;
+  int GetSource();
   void SetSink( Router* router ) ;
+  int GetSink();
   // Phsyical Parameters
   void SetLatency( int cycles ) ;
   int GetLatency() { return _delay ; }
@@ -55,8 +57,8 @@ private:
   //
   ////////////////////////////////////////
 
-  string _routerSource ;
-  string _routerSink ;
+  int _routerSource ;
+  int _routerSink ;
   
 
   // Statistics for Activity Factors

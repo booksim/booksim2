@@ -718,7 +718,7 @@ void IQRouter::_SendFlits( )
     } else {
       f = 0;
     }
-    if(_trace){cout<<"Outport "<<output<<endl;cout<<"Stop Mark"<<endl;}
+    if(_trace && f){cout<<"Outport "<<output<<endl;cout<<"Stop Mark"<<endl;}
     (*_output_channels)[output]->SendFlit( f );
   }
 }

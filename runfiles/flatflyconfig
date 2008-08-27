@@ -22,7 +22,7 @@ wait_for_tail_credit = 1;
 //
 vc_allocator = islip; 
 sw_allocator = islip;
-alloc_iters  = 2;
+alloc_iters  = 1;
 
 credit_delay   = 2;
 routing_delay  = 0;
