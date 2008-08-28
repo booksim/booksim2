@@ -38,6 +38,8 @@ public:
   static void RegisterRoutingFunctions() ;
   double Capacity( ) const;
   void InsertRandomFaults( const Configuration &config );
+
+  static short half_vcs;
 };
 
 

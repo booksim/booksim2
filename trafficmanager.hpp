@@ -20,7 +20,7 @@ protected:
   int _sources;
   int _dests;
 
-  Network *_net;
+  Network **_net;
 
   // ============ Message priorities ============ 
 
@@ -31,20 +31,25 @@ protected:
 
   // ============ Injection VC states  ============ 
 
-  BufferState **_buf_states;
+  BufferState ***_buf_states;
 
   // ============ Injection queues ============ 
 
   int          _voqing;
   int          **_qtime;
   bool         **_qdrained;
-  list<Flit *> **_partial_packets;
+  list<Flit *> ***_partial_packets;
 
   int                 _measured_in_flight;
   int                 _total_in_flight;
   map<int,bool> _in_flight;
   bool                _empty_network;
   bool _use_lagging;
+
+  // ============ sub-networks and deadlock ==========
+
+  short duplicate_networks;
+  unsigned char deadlock_counter;
 
   // ============ Statistics ============
 
@@ -92,7 +97,7 @@ protected:
   double _latency_thres;
 
   float _internal_speedup;
-  float _partial_internal_cycles;
+  float *_partial_internal_cycles;
 
   int _cur_id;
   int _time;
@@ -123,10 +128,12 @@ protected:
 
   virtual bool _SingleSim( );
 
+  int DivisionAlgorithm(Flit* f);
+
   void _DisplayRemaining( ) const;
 
 public:
-  TrafficManager( const Configuration &config, Network *net );
+  TrafficManager( const Configuration &config, Network **net );
   ~TrafficManager( );
 
   void Run( );

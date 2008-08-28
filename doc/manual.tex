@@ -20,7 +20,7 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\author{Ted Jiang, Brian Towles and William J. Dally}
+\author{Ted Jiang, Brian Towles, George Michelogiannakis and William J. Dally}
 \title{\simname 2.0 User's Guide}
 
 \begin{document}
@@ -418,6 +418,16 @@ integer value for the \texttt{fail\_seed} parameter --- a fixed seed
 gives a fixed set of failed channels, independent of other
 randomization in the simulation.  Also, note that only certain routing
 functions support this feature (see Section~\ref{sec:routing_algs}).
+
+\subsection{Physical sub-networks}
+\label{sec:physical_subnets}
+
+The \texttt{physical\_subnetworks} parameter defines the number of physical sub-networks present in the network (defaults to one).
+All sub-networks receive the same configuration parameters and thus are identical. Traffic sources
+maintain an injection queue for each sub-network. The packet generation process is unaffected. It enqueues generated packets into the
+proper sub-network queue according to a division function in the traffic manager. At every cycle, flits at the head of each queue attempt to be injected.
+Traffic destinations can eject one flit from each sub-network each cycle.
+
 
 \subsection{Routing algorithms}
 \label{sec:routing_algs}

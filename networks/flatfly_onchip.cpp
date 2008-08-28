@@ -13,7 +13,10 @@
 //
 //More update 3/31/08 to correctly assign the nodes to the routers
 //UGAL now has added a "mapping" to account for this new assignment
-//of the nodes to the routers 
+//of the nodes to the routers
+//
+//Updated by mihelog   27 Aug to add progressive choice of intermediate destination.
+//Also, half of the total vcs are used for non-minimal routing, others for minimal (for UGAL and valiant).
 
 
 #include "booksim.hpp"
@@ -28,6 +31,14 @@
 
 
 //#define DEBUG_FATFLY
+
+// Whether we want progressive choice of intermediate destination. If enabled, at every hop until you reach one, you can
+// choose another intermediate destination which will make you go to a port in the same dimension. In total you take the
+// same number of hops, so you don't loop for example.
+#define PROGRESSIVE true
+
+// Used for UGAL and valiant. Half of the total VCs, to define two traffic classes.
+short FlatFlyOnChip::half_vcs = 0;
 
 FlatFlyOnChip::FlatFlyOnChip( const Configuration &config ) :
   Network( config )
@@ -44,6 +55,8 @@ void FlatFlyOnChip::_ComputeSize( const Configuration &config )
   _n = config.GetInt( "n" );	// dimension
   _c = config.GetInt( "c" );    //concentration, may be different from k
   _r = _c + (_k-1)*_n ;		// total radix of the switch  ( # of inputs/outputs)
+
+  FlatFlyOnChip::half_vcs = (short)config.GetInt("num_vcs") / 2;
 
   //how many routers in the x or y direction
   xcount = config.GetInt("x");
@@ -287,6 +300,7 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
   int dest  = flatfly_transformation(f->dest);
 
   int out_port;
+  int vcBegin = 0, vcEnd = (gNumVCS-1) >> 1; // The first half is used for routing to intermediate destination.
   if ( in_channel < gC ){
     f->ph = 0;
 
@@ -302,6 +316,9 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
   if(f->ph == 0){
     out_port = flatfly_outport(intm, r->GetID());
   } else if(f->ph ==1){
+    // If routing to final destination use the second half of the VCs.
+    vcBegin += FlatFlyOnChip::half_vcs;
+    vcEnd += FlatFlyOnChip::half_vcs;
     out_port = flatfly_outport(dest, r->GetID());
   } else {
     
@@ -309,7 +326,6 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
     exit(-1);
   }
   
-  int vcBegin = 0, vcEnd = gNumVCS-1;
   outputs->AddRange( out_port , vcBegin, vcEnd );
 
 }
@@ -505,8 +521,23 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     dest = f->intm;
   }
 
+  // Using half of the total VCs for non-minimal routing, other half for minimal.
   int vcBegin = 0;
   int vcEnd = gNumVCS - 1;
+  
+  if ( f->type == Flit::READ_REQUEST ) {
+    vcBegin = gReadReqBeginVC >> 1;
+    vcEnd   = gReadReqEndVC >> 1;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    vcBegin = gWriteReqBeginVC >> 1;
+    vcEnd   = gWriteReqEndVC >> 1;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    vcBegin = gReadReplyBeginVC >> 1;
+    vcEnd   = gReadReplyEndVC >> 1;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    vcBegin = gWriteReplyBeginVC >> 1;
+    vcEnd   = gWriteReplyEndVC >> 1;
+  }
 
 
 
@@ -534,7 +565,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
        cout << " MIN tmp_out_port: " << tmp_out_port;
      }
 
-     _min_queucnt =   r->GetCredit(tmp_out_port, vcBegin, vcEnd);
+     _min_queucnt =   r->GetCredit(tmp_out_port, vcBegin + FlatFlyOnChip::half_vcs, vcEnd + FlatFlyOnChip::half_vcs);
 
 
      _nonmin_hop = find_distance(flatfly_transformation(f->src),_ran_intm) +    find_distance(_ran_intm, dest);
@@ -569,10 +600,29 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
        }
      }
    }
+   else if (PROGRESSIVE && f->ph == 1) { // We want progressive adaptive routing. So if you are routing non-minimally you can choose another destination that would yield an output port
+                          // in the same axis, and see if it is a better choice to go there. If so, update your random destination.
+     out_port = flatfly_outport(dest, rID); // The minimal output port to the intermediate destination.
+     do {
+       _ran_intm = find_ran_intm(flatfly_transformation(f->src), dest); // Find another intermediate destination.
+       tmp_out_port = flatfly_outport(_ran_intm, rID); // Loop until we find one with an output in the same axis.
+     } while ((out_port-gC) / (gK-1) != (tmp_out_port-gC) / (gK-1)); // Now we need to know the distance with the old and new intermediate destination
+     _min_hop = find_distance(flatfly_transformation(f->src), f->intm) +    find_distance(f->intm, dest); // Old intermediate destination.
+     _nonmin_hop = find_distance(flatfly_transformation(f->src),_ran_intm) +    find_distance(_ran_intm, dest); // New.
+     if (r->GetCredit(out_port, vcBegin, vcEnd) * _min_hop > r->GetCredit(tmp_out_port, vcBegin, vcEnd) * _nonmin_hop) { // If the queuecnt for the other nonminimal output is smaller.
+       dest = _ran_intm; // We know the distance is equal because
+       f->intm = _ran_intm; // This is now our new intermediate destination.
+     }
+   }
+
    
    
    // find minimal correct dimension to route through
    out_port =  flatfly_outport(dest, rID);
+   if (f->ph == 2) { // Minimal network. Choose VCs of that network. Otherwise f->ph == 1 and you are routing to the intermediate destination.
+     vcBegin += FlatFlyOnChip::half_vcs;
+     vcEnd += FlatFlyOnChip::half_vcs;
+   }
    found = 1;
    
   }
@@ -591,19 +641,6 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   
   if (debug) cout << "        through output port : " << out_port << endl;
   if(_trace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
-  if ( f->type == Flit::READ_REQUEST ) {
-    vcBegin = gReadReqBeginVC;
-    vcEnd   = gReadReqEndVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-    vcBegin = gWriteReqBeginVC;
-    vcEnd   = gWriteReqEndVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-    vcBegin = gReadReplyBeginVC;
-    vcEnd   = gReadReplyEndVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-    vcBegin = gWriteReplyBeginVC;
-    vcEnd   = gWriteReplyEndVC;
-  }  
   outputs->AddRange( out_port , vcBegin, vcEnd );
 }
 

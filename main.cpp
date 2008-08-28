@@ -69,60 +69,63 @@ bool _trace = false;
 
 void AllocatorSim( const Configuration& config )
 {
-  Network *net;
+  Network **net;
   string topo;
 
   config.GetStr( "topology", topo );
-
+  short networks = config.GetInt("physical_subnetworks");
   /*To include a new network, must register the network here
    *add an else if statement with the name of the network
    */
-  if ( topo == "torus" ) {
-    KNCube::RegisterRoutingFunctions() ;
-    net = new KNCube( config, true );
-  } else if ( topo == "mesh" ) {
-    KNCube::RegisterRoutingFunctions() ;
-    net = new KNCube( config, false );
-  } else if ( topo == "cmesh" ) {
-    CMesh::RegisterRoutingFunctions() ;
-    net = new CMesh( config );
-  } else if ( topo == "cmeshx2" ) {
-    CMeshX2::RegisterRoutingFunctions() ;
-    net = new CMeshX2( config );
-  } else if ( topo == "fly" ) {
-    KNFly::RegisterRoutingFunctions() ;
-    net = new KNFly( config );
-  } else if ( topo == "single" ) {
-    SingleNet::RegisterRoutingFunctions() ;
-    net = new SingleNet( config );
-  } else if ( topo == "isolated_mesh" ) {
-    IsolatedMesh::RegisterRoutingFunctions() ;
-    net = new IsolatedMesh( config );
-  } else if ( topo == "qtree" ) {
-    QTree::RegisterRoutingFunctions() ;
-    net = new QTree( config );
-  } else if ( topo == "tree4" ) {
-    Tree4::RegisterRoutingFunctions() ;
-    net = new Tree4( config );
-  } else if ( topo == "fattree" ) {
-    FatTree::RegisterRoutingFunctions() ;
-    net = new FatTree( config );
-  }  else if ( topo == "flatfly" ) {
-    FlatFlyOnChip::RegisterRoutingFunctions() ;
-    net = new FlatFlyOnChip( config );
-  }  else if ( topo == "cmo"){
-    CMO::RegisterRoutingFunctions() ;
-    net = new CMO(config);
-  } else {
-    cerr << "Unknown topology " << topo << endl;
-    exit(-1);
-  }
+  net = new Network*[networks];
+  for (int i = 0; i < networks; ++i) {
+    if ( topo == "torus" ) {
+      KNCube::RegisterRoutingFunctions() ;
+      net[i] = new KNCube( config, true );
+    } else if ( topo == "mesh" ) {
+      KNCube::RegisterRoutingFunctions() ;
+      net[i] = new KNCube( config, false );
+    } else if ( topo == "cmesh" ) {
+      CMesh::RegisterRoutingFunctions() ;
+      net[i] = new CMesh( config );
+    } else if ( topo == "cmeshx2" ) {
+      CMeshX2::RegisterRoutingFunctions() ;
+      net[i] = new CMeshX2( config );
+    } else if ( topo == "fly" ) {
+      KNFly::RegisterRoutingFunctions() ;
+      net[i] = new KNFly( config );
+    } else if ( topo == "single" ) {
+      SingleNet::RegisterRoutingFunctions() ;
+      net[i] = new SingleNet( config );
+    } else if ( topo == "isolated_mesh" ) {
+      IsolatedMesh::RegisterRoutingFunctions() ;
+      net[i] = new IsolatedMesh( config );
+    } else if ( topo == "qtree" ) {
+      QTree::RegisterRoutingFunctions() ;
+      net[i] = new QTree( config );
+    } else if ( topo == "tree4" ) {
+      Tree4::RegisterRoutingFunctions() ;
+      net[i] = new Tree4( config );
+    } else if ( topo == "fattree" ) {
+      FatTree::RegisterRoutingFunctions() ;
+      net[i] = new FatTree( config );
+    } else if ( topo == "flatfly" ) {
+      FlatFlyOnChip::RegisterRoutingFunctions() ;
+      net[i] = new FlatFlyOnChip( config );
+    } else if ( topo == "cmo"){
+      CMO::RegisterRoutingFunctions() ;
+      net[i] = new CMO(config);
+    } else {
+      cerr << "Unknown topology " << topo << endl;
+      exit(-1);
+    }
 
   /*legacy code that insert random faults in the networks
    *not sure how to use this
    */
   if ( config.GetInt( "link_failures" ) ) {
-    net->InsertRandomFaults( config );
+      net[i]->InsertRandomFaults( config );
+    }
   }
 
 
@@ -140,7 +143,9 @@ void AllocatorSim( const Configuration& config )
   trafficManager->Run() ;
 
   delete trafficManager ;
-  delete net;
+  for (int i=0; i<networks; ++i)
+    delete net[i];
+  delete [] net;
 }
 
 

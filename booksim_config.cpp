@@ -32,9 +32,11 @@ BookSimConfig::BookSimConfig( )
   _int_map["read_reply_begin_vc"] = 8;
   _int_map["read_reply_end_vc"] = 11;
 
-
   _int_map["write_reply_begin_vc"] = 12;
   _int_map["write_reply_end_vc"] = 15;
+
+  // Physical sub-networks
+  _int_map["physical_subnetworks"] = 1;
 
   // Control Injection of Packets into Replicated Networks
   _int_map["read_request_subnet"] = 0;

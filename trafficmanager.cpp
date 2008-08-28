@@ -7,7 +7,7 @@
 
 
 
-TrafficManager::TrafficManager( const Configuration &config, Network *net )
+TrafficManager::TrafficManager( const Configuration &config, Network **net )
   : Module( 0, "traffic_manager" )
 {
   int s;
@@ -17,8 +17,8 @@ TrafficManager::TrafficManager( const Configuration &config, Network *net )
   _net    = net;
   _cur_id = 0;
 
-  _sources = _net->NumSources( );
-  _dests   = _net->NumDests( );
+  _sources = _net[0]->NumSources( );
+  _dests   = _net[0]->NumDests( );
   
   //nodes higher than limit do not produce or receive packets
   //for default limit = sources
@@ -27,7 +27,9 @@ TrafficManager::TrafficManager( const Configuration &config, Network *net )
     _limit = _sources;
   }
   assert(_limit<=_sources);
-  
+ 
+  duplicate_networks = config.GetInt("physical_subnetworks");
+ 
   // ============ Message priorities ============ 
 
   config.GetStr( "priority", priority );
@@ -47,13 +49,17 @@ TrafficManager::TrafficManager( const Configuration &config, Network *net )
 
   // ============ Injection VC states  ============ 
 
-  _buf_states = new BufferState * [_sources];
+  _buf_states = new BufferState ** [_sources];
 
   for ( s = 0; s < _sources; ++s ) {
     tmp_name << "terminal_buf_state_" << s;
-    _buf_states[s] = new BufferState( config, this, tmp_name.str( ) );
+    _buf_states[s] = new BufferState * [duplicate_networks];
+    for (int a = 0; a < duplicate_networks; ++a) {
+        _buf_states[s][a] = new BufferState( config, this, tmp_name.str( ) );
+    }
     tmp_name.seekp( 0, ios::beg );
   }
+
 
   // ============ Injection queues ============ 
 
@@ -67,12 +73,14 @@ TrafficManager::TrafficManager( const Configuration &config, Network *net )
 
   _qtime              = new int * [_sources];
   _qdrained           = new bool * [_sources];
-  _partial_packets    = new list<Flit *> * [_sources];
+  _partial_packets    = new list<Flit *> ** [_sources];
 
   for ( s = 0; s < _sources; ++s ) {
     _qtime[s]           = new int [_classes];
     _qdrained[s]        = new bool [_classes];
-    _partial_packets[s] = new list<Flit *> [_classes];
+    _partial_packets[s] = new list<Flit *> * [_classes];
+    for (int a = 0; a < _classes; ++a)
+      _partial_packets[s][a] = new list<Flit *> [duplicate_networks];
   }
 
   _voqing = config.GetInt( "voq" );
@@ -114,6 +122,8 @@ TrafficManager::TrafficManager( const Configuration &config, Network *net )
     tmp_name.seekp( 0, ios::beg );    
   }
 
+  deadlock_counter = 1;
+
   // ============ Simulation parameters ============ 
 
   _load = config.GetFloat( "injection_rate" ); 
@@ -122,7 +132,9 @@ TrafficManager::TrafficManager( const Configuration &config, Network *net )
   _total_sims = config.GetInt( "sim_count" );
 
   _internal_speedup = config.GetFloat( "internal_speedup" );
-  _partial_internal_cycles = 0.0;
+  _partial_internal_cycles = new float[duplicate_networks];
+  for (int i=0; i < duplicate_networks; ++i)
+    _partial_internal_cycles[i] = 0.0;
 
   _traffic_function  = GetTrafficFunction( config );
   _routing_function  = GetRoutingFunction( config );
@@ -150,10 +162,15 @@ TrafficManager::~TrafficManager( )
   for ( int s = 0; s < _sources; ++s ) {
     delete [] _qtime[s];
     delete [] _qdrained[s];
+    for (int a = 0; a < duplicate_networks; ++a) {
+      delete _buf_states[s][a];
+    }
+    for (int a = 0; a < _classes; ++a) {
+      delete [] _partial_packets[s][a];
+    }
     delete [] _partial_packets[s];
-    delete _buf_states[s];
+    delete [] _buf_states[s];
   }
-
   delete [] _buf_states;
   delete [] _qtime;
   delete [] _qdrained;
@@ -178,8 +195,35 @@ TrafficManager::~TrafficManager( )
 
   delete [] _accepted_packets;
   delete [] _pair_latency;
+  delete [] _partial_internal_cycles;
 }
 
+
+// Decides which subnetwork the flit should go to. This should change according to number of duplicate networks
+int TrafficManager::DivisionAlgorithm (Flit* f) {
+
+  if (duplicate_networks == 2) {
+    if (f->type == Flit::WRITE_REQUEST || f->type == Flit::READ_REQUEST) { // Request flit
+          return 1;
+    }
+    else if (f->type == Flit::WRITE_REPLY || f->type == Flit::READ_REPLY) { // Reply flit
+          return 0;
+    }
+  }
+  else if (duplicate_networks == 4) {
+    if (f->type == Flit::WRITE_REQUEST)
+      return 0;
+    else if (f->type == Flit::READ_REQUEST)
+      return 1;
+    else if (f->type == Flit::WRITE_REPLY)
+      return 2;
+    else if (f->type == Flit::READ_REPLY)
+      return 3;
+  }
+  else if (duplicate_networks == 1) {
+    return 0;
+  }
+}
 
 Flit *TrafficManager::_NewFlit( )
 {
@@ -195,6 +239,7 @@ Flit *TrafficManager::_NewFlit( )
 void TrafficManager::_RetireFlit( Flit *f, int dest )
 {
   static int sample_num = 0;
+  deadlock_counter = 1;
 
   map<int, bool>::iterator match;
 
@@ -244,7 +289,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	_latency_stats[0]->AddSample( _time - f->time);
 	break;
       }
-      
       ++sample_num;
    
       if ( f->src == 0 ) {
@@ -284,6 +328,7 @@ void TrafficManager::_GeneratePacket( int source, int size,
 {
   Flit *f;
   bool record;
+  static int type_counter = 0;
 
   //refusing to generate packets for nodes greater than limit
   if(source >=_limit){
@@ -308,7 +353,21 @@ void TrafficManager::_GeneratePacket( int source, int size,
     if(_trace || f->watch){
       cout<<"New Flit "<<f->src<<endl;
     }
-    f->type =(Flit::FlitType)RandomInt(3);
+
+    if (type_counter % 4 == 0) {
+      f->type = Flit::READ_REQUEST;
+    }
+    else if (type_counter % 4 == 1) {
+      f->type = Flit::WRITE_REQUEST;
+    }
+    else if (type_counter % 4 == 2) {
+      f->type = Flit::READ_REPLY;
+    }
+    else {
+      f->type = Flit::WRITE_REPLY;
+    }
+    type_counter++;
+
 
     if ( i == 0 ) { // Head flit
       f->head = true;
@@ -341,7 +400,7 @@ void TrafficManager::_GeneratePacket( int source, int size,
       cout << *f;
     }
 
-    _partial_packets[source][cl].push_back( f );
+    _partial_packets[source][cl][this->DivisionAlgorithm(f)].push_back( f );
   }
 }
 
@@ -352,26 +411,33 @@ void TrafficManager::_GeneratePacket( int source, int size,
 void TrafficManager::_FirstStep( )
 {  
   // Ensure that all outputs are defined before starting simulation
+   for (int i = 0; i < duplicate_networks; ++i) { 
+    _net[i]->WriteOutputs( );
   
-  _net->WriteOutputs( );
-  
-  for ( int output = 0; output < _net->NumDests( ); ++output ) {
-    _net->WriteCredit( 0, output );
+    for ( int output = 0; output < _net[i]->NumDests( ); ++output ) {
+      _net[i]->WriteCredit( 0, output );
+    }
   }
 }
 
 void TrafficManager::_Step( )
 {
+  if(deadlock_counter++ == 0)
+        cout << "WARNING: Possible network deadlock.\n";
+
   Flit   *f, *nf;
   Credit *cred;
   int    psize;
 
+
   // Receive credits and inject new traffic
-  for ( int input = 0; input < _net->NumSources( ); ++input ) {
-    cred = _net->ReadCredit( input );
-    if ( cred ) {
-      _buf_states[input]->ProcessCredit( cred );
-      delete cred;
+  for ( int input = 0; input < _net[0]->NumSources( ); ++input ) {
+    for (int i = 0; i < duplicate_networks; ++i) {
+      cred = _net[i]->ReadCredit( input );
+      if ( cred ) {
+        _buf_states[input][i]->ProcessCredit( cred );
+        delete cred;
+      }
     }
     
     bool write_flit    = false;
@@ -381,7 +447,8 @@ void TrafficManager::_Step( )
     for ( int c = 0; c < _classes; ++c ) {
       // Potentially generate packets for any (input,class)
       // that is currently empty
-      if ( _partial_packets[input][c].empty( ) ) {
+      //if ( _partial_packets[input][c][i].empty( ) ) {
+      if (1) { // Always flip coin because now you have multiple send buffers so you can't choose one only to check.
 	generated = false;
 	  
 	if ( !_empty_network ) {
@@ -411,80 +478,90 @@ void TrafficManager::_Step( )
       }
     }
 
-    // Now, check partially issued packet to
-    // see if it can be issued
-    if ( !_partial_packets[input][highest_class].empty( ) ) {
-      f = _partial_packets[input][highest_class].front( );
+    // Now, check partially issued packets to
+    // see if they can be issued
+    for (int i = 0; i < duplicate_networks; ++i) {
+      write_flit = false;
+      if ( !_partial_packets[input][highest_class][i].empty( ) ) {
+        f = _partial_packets[input][highest_class][i].front( );
+        if ( f->head ) { // Find first available VC
 
-      if ( f->head ) { // Find first available VC
-
-	if ( _voqing ) {
-	  if ( _buf_states[input]->IsAvailableFor( f->dest ) ) {
-	    f->vc = f->dest;
+	  if ( _voqing ) {
+	    if ( _buf_states[input][i]->IsAvailableFor( f->dest ) ) {
+	      f->vc = f->dest;
+  	    }
+	  } else {
+	    f->vc = _buf_states[input][i]->FindAvailable( );
 	  }
-	} else {
-	  f->vc = _buf_states[input]->FindAvailable( );
-	}
 	  
-	if ( f->vc != -1 ) {
-	  _buf_states[input]->TakeBuffer( f->vc );
-	}
+	  if ( f->vc != -1 ) {
+	    _buf_states[input][i]->TakeBuffer( f->vc );
+	  }
+        }
+
+        if ( ( f->vc != -1 ) &&
+	     ( !_buf_states[input][i]->IsFullFor( f->vc ) ) ) {
+
+	  _partial_packets[input][highest_class][i].pop_front( );
+	  _buf_states[input][i]->SendingFlit( f );
+	  write_flit = true;
+
+	  // Pass VC "back"
+	  if ( !_partial_packets[input][highest_class][i].empty( ) && !f->tail ) {
+	    nf = _partial_packets[input][highest_class][i].front( );
+	    nf->vc = f->vc;
+	  }
+        }
       }
 
-      if ( ( f->vc != -1 ) &&
-	   ( !_buf_states[input]->IsFullFor( f->vc ) ) ) {
-
-	_partial_packets[input][highest_class].pop_front( );
-	_buf_states[input]->SendingFlit( f );
-	write_flit = true;
-
-	// Pass VC "back"
-	if ( !_partial_packets[input][highest_class].empty( ) && !f->tail ) {
-	  nf = _partial_packets[input][highest_class].front( );
-	  nf->vc = f->vc;
-	}
-      }
+      _net[i]->WriteFlit( write_flit ? f : 0, input );
     }
-
-    _net->WriteFlit( write_flit ? f : 0, input );
   }
 
-  _net->ReadInputs( );
+  for (int i = 0; i < duplicate_networks; ++i) {
 
-  _partial_internal_cycles += _internal_speedup;
-  while( _partial_internal_cycles >= 1.0 ) {
-    _net->InternalStep( );
-    _partial_internal_cycles -= 1.0;
+    _net[i]->ReadInputs( );
+
+    _partial_internal_cycles[i] += _internal_speedup;
+    while( _partial_internal_cycles[i] >= 1.0 ) {
+      _net[i]->InternalStep( );
+      _partial_internal_cycles[i] -= 1.0;
+    }
   }
 
-  _net->WriteOutputs( );
+  for (int a = 0; a < duplicate_networks; ++a) {
+    _net[a]->WriteOutputs( );
+  }
   
   ++_time;
   if(_trace){
     cout<<"TIME "<<_time<<endl;
   }
 
-  // Eject traffic and send credits
-  for ( int output = 0; output < _net->NumDests( ); ++output ) {
-    f = _net->ReadFlit( output );
 
-    if ( f ) {
-      if ( f->watch ) {
-	cout << "ejected flit " << f->id << " at output " << output << endl;
-	cout << "sending credit for " << f->vc << endl;
+  for (int i = 0; i < duplicate_networks; ++i) {
+    // Eject traffic and send credits
+    for ( int output = 0; output < _net[0]->NumDests( ); ++output ) {
+      f = _net[i]->ReadFlit( output );
+
+      if ( f ) {
+        if ( f->watch ) {
+	  cout << "ejected flit " << f->id << " at output " << output << endl;
+	  cout << "sending credit for " << f->vc << endl;
+        }
+      
+        cred = new Credit( 1 );
+        cred->vc[0] = f->vc;
+        cred->vc_cnt = 1;
+
+        _net[i]->WriteCredit( cred, output );
+        _RetireFlit( f, output );
+      
+        _accepted_packets[output]->AddSample( 1 );
+      } else {
+        _net[i]->WriteCredit( 0, output );
+        _accepted_packets[output]->AddSample( 0 );
       }
-      
-      cred = new Credit( 1 );
-      cred->vc[0] = f->vc;
-      cred->vc_cnt = 1;
-
-      _net->WriteCredit( cred, output );
-      _RetireFlit( f, output );
-      
-      _accepted_packets[output]->AddSample( 1 );
-    } else {
-      _net->WriteCredit( 0, output );
-      _accepted_packets[output]->AddSample( 0 );
     }
   }
 }
