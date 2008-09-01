@@ -4,7 +4,7 @@
 #include "network.hpp"
 
 #include "routefunc.hpp"
-
+#include <assert.h>
 
 
 class FlatFlyOnChip : public Network {

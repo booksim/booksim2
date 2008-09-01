@@ -15,7 +15,7 @@ write_request_end_vc   = 15;
 num_vcs     = 16;
 vc_buf_size = 8;
 
-wait_for_tail_credit = 1;
+wait_for_tail_credit = 0;
 
 //
 // Router architectureq
@@ -79,8 +79,8 @@ limit = 64;
 
 routing_function = ugal;
 
-const_flits_per_packet = 1;
+const_flits_per_packet = 8;
 
-traffic       = uniform;
+traffic       = bitcomp;
 
 injection_rate = 0.15;

@@ -15,6 +15,7 @@
 
 #include "network.hpp"
 #include "cmesh.hpp"
+#include <assert.h>
 
 class CMeshX2 : public Network {
 

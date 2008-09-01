@@ -223,6 +223,10 @@ int TrafficManager::DivisionAlgorithm (Flit* f) {
   else if (duplicate_networks == 1) {
     return 0;
   }
+  else {// Never should be here.
+    assert(0);
+    return -1;
+  }
 }
 
 Flit *TrafficManager::_NewFlit( )
@@ -312,12 +316,12 @@ int TrafficManager::_IssuePacket( int source, int cl ) const
 
   if ( _pri_type == class_based ) {
     if ( cl == 0 ) {
-      class_load = 0.9 * _load;
+      class_load = (float)(0.9 * _load);
     } else {
-      class_load = 0.1 * _load;
+      class_load = (float)(0.1 * _load);
     }
   } else {
-    class_load = _load;
+    class_load = (float)_load;
   }
  
   return _injection_process( source, class_load );
@@ -447,7 +451,7 @@ void TrafficManager::_Step( )
     for ( int c = 0; c < _classes; ++c ) {
       // Potentially generate packets for any (input,class)
       // that is currently empty
-      //if ( _partial_packets[input][c][i].empty( ) ) {
+      //if ( _partial_packets[input][c][0].empty( ) ) {
       if (1) { // Always flip coin because now you have multiple send buffers so you can't choose one only to check.
 	generated = false;
 	  
@@ -513,7 +517,6 @@ void TrafficManager::_Step( )
 	  }
         }
       }
-
       _net[i]->WriteFlit( write_flit ? f : 0, input );
     }
   }
@@ -646,7 +649,6 @@ bool TrafficManager::_SingleSim( )
   int  iter;
   int  total_phases;
   int  converged;
-  int  max_outstanding;
   int  empty_steps;
   
   double cur_latency;
@@ -676,7 +678,6 @@ bool TrafficManager::_SingleSim( )
   warmup_threshold       = 0.05;
   iter            = 0;
   converged       = 0;
-  //max_outstanding = config.GetInt ("max_outstanding_requests");
   total_phases    = 0;
 
   // warm-up ...
@@ -696,7 +697,7 @@ bool TrafficManager::_SingleSim( )
 	 ( ( _sim_state != running ) || 
 	   ( converged < 3 ) ) ) {
 
-    if ( clear_last || ( ( _sim_state == warming_up ) && ( total_phases & 0x1 == 0 ) ) ) {
+    if ( clear_last || (( ( _sim_state == warming_up ) && ( total_phases & 0x1 == 0 ) )) ) {
       clear_last = false;
       _ClearStats( );
     }

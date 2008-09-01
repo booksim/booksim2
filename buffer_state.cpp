@@ -105,6 +105,7 @@ void BufferState::ProcessCredit( Credit *c )
   }
 }
 
+
 void BufferState::SendingFlit( Flit *f )
 {
   assert( f && ( f->vc >= 0 ) && ( f->vc < _vcs ) );
@@ -133,7 +134,6 @@ void BufferState::TakeBuffer( int vc )
     Display( );
     Error( "Buffer taken while in use" );
   }
-
   _in_use[vc]    = true;
   _tail_sent[vc] = false;
 }

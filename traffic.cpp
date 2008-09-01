@@ -350,9 +350,6 @@ tTrafficFunction GetTrafficFunction( const Configuration& config )
 
   string topo;
   config.GetStr( "topology", topo );
-  if(topo == "fattree"){
-    cout<<"CAUTION: if  you are doing running NoC simulations, need to set the network dimension to 2"<<endl;
-  }
 
   map<string, tTrafficFunction>::const_iterator match;
   tTrafficFunction tf;

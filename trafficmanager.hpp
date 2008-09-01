@@ -14,6 +14,7 @@
 #include "routefunc.hpp"
 #include "outputset.hpp"
 #include "injection.hpp"
+#include <assert.h>
 
 class TrafficManager : public Module {
 protected:

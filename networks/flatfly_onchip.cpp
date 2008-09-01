@@ -82,12 +82,6 @@ void FlatFlyOnChip::_ComputeSize( const Configuration &config )
 void FlatFlyOnChip::_BuildNet( const Configuration &config )
 {
   int _output;
-  int _input;
-  int c;
-  int _dim_ID;
-  int _num_ports_per_switch;
-  int _dim_size;
-  double _length;
 
   ostringstream router_name;
 
@@ -485,12 +479,11 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   int _radix = gK;
   int _concentration = gC;
   int out_port;
-  int found, _dim_size, _cur_dim_id, _dest_dim_id;
+  int found;
   //  int debug = f->watch;
   int debug = 0;
   int tmp_out_port, _ran_intm;
   int _min_hop, _nonmin_hop, _min_queucnt, _nonmin_queucnt;
-  int _min_wire, _nonmin_wire;
 
   if ( in_channel < gC ){
     if(_trace){
@@ -726,7 +719,7 @@ int find_ran_intm (int src, int dest) {
 int flatfly_outport(int dest, int rID) {
   int dest_rID;
   int _dim   = gN;
-  int output, dID, sID;
+  int output = -1, dID, sID;
   
   dest_rID = (int) (dest / gC);
   
@@ -756,6 +749,7 @@ int flatfly_outport(int dest, int rID) {
     cout << " ERROR ---- FLATFLY_OUTPORT function : output not found " << endl;
     exit(-1);
   }
+  return -1;
 }
 
 int flatfly_transformation(int dest){

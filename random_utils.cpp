@@ -21,5 +21,5 @@ unsigned long RandomIntLong( )
 float RandomFloat( float max )
   // Returns a random floating-point value in the rage [0,max]
 {
-  return ( ranf_next( ) * max );
+  return ( (float)ranf_next( ) * max );
 }

@@ -15,7 +15,6 @@
 #include "booksim.hpp"
 #include <vector>
 #include <sstream>
-
 #include "qtree.hpp"
 #include "misc_utils.hpp"
 

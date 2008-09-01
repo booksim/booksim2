@@ -149,7 +149,7 @@ int VC::GetPriority( ) const
 
 int VC::GetSize() const
 {
-  return _buffer.size();
+  return (int)_buffer.size();
 }
 
 void VC::Route( tRoutingFunction rf, const Router* router, const Flit* f, int in_channel )

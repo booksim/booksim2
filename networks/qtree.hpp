@@ -14,7 +14,7 @@
 
 #ifndef _QTREE_HPP_
 #define _QTREE_HPP_
-
+#include <assert.h>
 #include "network.hpp"
 
 class QTree : public Network {

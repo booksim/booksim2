@@ -22,7 +22,7 @@ void CreditChannel::SetLatency( int cycles ) {
 
 void CreditChannel::SendCredit( Credit* credit ) {
 
-  while ( (_queue.size() > _delay) && (_queue.front() == 0) )
+  while ( (_queue.size() > (unsigned int)_delay) && (_queue.front() == 0) )
     _queue.pop( );
 
   _queue.push(credit);

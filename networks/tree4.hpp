@@ -14,7 +14,7 @@
 
 #ifndef _TREE4_HPP_
 #define _TREE4_HPP_
-
+#include <assert.h>
 #include "network.hpp"
 
 class Tree4 : public Network {

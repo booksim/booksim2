@@ -520,8 +520,8 @@ void IQRouter::_SWAlloc( )
 	      } else {
 		//make sure priority is other wise correct
 	      _sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
-					 cur_vc->GetPriority( ), 
-					 cur_vc->GetPriority( ));
+					 0/*cur_vc->GetPriority( )*/, 
+					 0/*cur_vc->GetPriority( ))*/);
 	      }
 	    }
 	  }
@@ -752,12 +752,9 @@ int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
 {
  
 
-  VC     *cur_vc;
   BufferState *dest_vc;
-  BufferState *dest_vc_tmp;
   int    tmpsum = 0;
   int    vc_cnt = vc_end - vc_begin + 1;
-  int vc_avg;
   int cnt = 0;
   
   if (out >= _outputs ) {
@@ -780,6 +777,8 @@ int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
     }
     return tmpsum;
   }
+  assert(0); // Should never reach here.
+  return -5;
 }
 
 int IQRouter::GetBuffer(int i) const{

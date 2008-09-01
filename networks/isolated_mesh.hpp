@@ -16,6 +16,7 @@
 
 #include "network.hpp"
 #include "kncube.hpp"
+#include <assert.h>
 
 class IsolatedMesh : public Network {
 

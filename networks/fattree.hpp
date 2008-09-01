@@ -24,8 +24,6 @@ class FatTree : public Network {
   int _layout;
   int _channelWidth;
 
-  double latency_correction;
-  
   void _ComputeSize( const Configuration& config );
   void _BuildNet(    const Configuration& config );
 
@@ -35,34 +33,22 @@ class FatTree : public Network {
   int* _inputChannelMap;
   int* _outputChannelMap; 
   int* _latencyMap;
+  short** coords_to_router;
 
-  void _ConnectRouterInput( int depth, int pos, int port, int channel,
-			    int latency);
-
-  void _ConnectRouterOutput( int depth, int pos, int port, int channel,
-			     int latency );
-
-  void _FinalizeConnections( );
-  void _AllocateChannelMap( );
-  void _ReleaseChannelMap( );
-  int  _PortIndex( int depth, int pos, int port );
-
-  int _WireLatency( int depth1, int pos1, int depth1, int pos2 );
+  int _WireLatency( int depth1, int pos1, int depth2, int pos2 );
 
   // Parent Distance
   //   [Depth][Position][Port]
-
+  //int _parentDistance[3][16][4];
+  //int _portPreference[3][16][4];
+  int ***_parentDistance, ***_portPreference;
 
 public:
 
+  static void RegisterRoutingFunctions ();
   FatTree( const Configuration& config );
-  static void RegisterRoutingFunctions() ;
+  ~FatTree();
 
-  //
-  // Methods to Assit Routing Functions
-  //
-  static int PreferedPort( const Router* r, int index );
-			 
 };
 
 #endif

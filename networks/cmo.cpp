@@ -258,14 +258,6 @@ int CMO::GetC( ) const
 void CMO::InsertRandomFaults( const Configuration &config )
 {
     int num_fails;
-    unsigned long prev_seed;
-
-    int node, chan;
-    int i, j, t, n, c;
-    bool *fail_nodes;
-    bool available;
-
-    bool edge;
     num_fails = config.GetInt( "link_failures" );
 }
 

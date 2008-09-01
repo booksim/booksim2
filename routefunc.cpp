@@ -18,10 +18,10 @@
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
 
-#include "networks/fattree.hpp"
-#include "networks/tree4.hpp"
-#include "networks/qtree.hpp"
-#include "networks/cmesh.hpp"
+#include "fattree.hpp"
+#include "tree4.hpp"
+#include "qtree.hpp"
+#include "cmesh.hpp"
 
 
 
@@ -205,44 +205,48 @@ void tree4_nca( const Router *r, const Flit *f,
 // ============================================================
 //  FATTREE: Nearest Common Ancestor w/ Random  Routing Up
 // ===
-
-
-int fattree_transformation(int dest){
-  //destination transformation, translate how the nodes are actually arranged
-  //to the easier way of routing
-  //this transformation only support 64 nodes
-  int _cY = yrouter;
-  int _cX = xrouter;
-  int _k = gK;
-
-  //router in the x direction = find which column, and then mod by cY to find 
-  //which horizontal router
-  int horizontal = (dest%(_k*_cX))/(_cX);
-  int horizontal_rem = (dest%(_k*_cX))%(_cX);
-  //router in the y direction = find which row, and then divided by cX to find 
-  //vertical router
-  int vertical = (dest/(_k*_cX))/(_cY);
-  int vertical_rem = (dest/(_k*_cX))%(_cY);
-  //transform the destination to as if node0 was 0,1,2,3 and so forth
-  dest = (vertical*_k + horizontal)*_cY*_cX+_cX*vertical_rem+horizontal_rem;
-  return dest;
-}
-
 void fattree_nca( const Router *r, const Flit *f,
-	       int in_channel, OutputSet* outputs, bool inject)
+               int in_channel, OutputSet* outputs, bool inject)
 {
-  const int NPOS = gK*gK;
-
   int out_port = 0;
   int dest     = f->dest;
+  int router_id = r->GetID();
+  short router_depth, router_port;
 
-  int rH = r->GetID( ) / NPOS;
-  int rP = r->GetID( ) % NPOS;
 
-  dest = fattree_transformation(dest);
+
+  short routers_so_far = 0, routers;
+  for (short depth = gN - 1; depth >= 0; --depth) // We want to find out where the router is. At which level.
+  {
+    routers = powi(gK, depth);
+    if (router_id - routers_so_far < routers) {
+      router_depth = depth;
+      router_port = router_id - routers_so_far;
+      break;
+    }
+    routers_so_far += routers;
+  }
+
   outputs->Clear( );
 
-  if (rH == 0) {
+  int fatness_factor = powi(gK, gN - router_depth ); // This is the fatness factor for when going upwards.
+  int destinations = powi(gK, gN); // According to the depth and port of the current router, we know which destinations are reachable by it by going down.
+  int temp = powi(gK, router_depth); // (destinations / (powi(gK, router_depth) ) are the number of destinations below the current router.
+  if ((destinations / (temp) ) * router_port <= dest && (destinations / (temp) ) * (router_port + 1) > dest)
+  {
+    out_port = (dest - (destinations / (temp) ) * router_port) / (fatness_factor / gK); // This is the direction to go. We multiply this by the fatness factor of that link.
+    out_port *= fatness_factor / gK; // Because we are going downwards. Now we point to the first link that is going downwards, among all the same.
+        if (router_depth != gN - 1 )
+      out_port += RandomInt(fatness_factor / gK - 1); // Choose at random from the possible choices.
+        else
+          out_port = dest % gK; // If we are going to a final destination, only one link to choose.
+  }
+  else // We need to go up. Choose one of the links at random.
+  {
+    out_port = fatness_factor /*upwards ports are the last indexed */ + RandomInt(fatness_factor - 1); // Chose one of the going upwards at random.
+  }
+
+  /*if (rH == 0) {
     out_port = dest / (gK*gK);
   }
   if (rH == 1) {
@@ -256,45 +260,74 @@ void fattree_nca( const Router *r, const Flit *f,
       out_port = dest % gK;
     else
       out_port =  gK + RandomInt(gK-1);
-  }
+  }*/
+//  cout << "Router("<<rH<<","<<rP<<"): id= " << f->id << " dest= " << f->dest << " out_port = "
+//       << out_port << endl;
 
- outputs->AddRange( out_port, 0, gNumVCS - 1 );
-//   if (f->type == Flit::READ_REQUEST)
-//     outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
-//   if (f->type == Flit::WRITE_REQUEST)
-//     outputs->AddRange( out_port, gWriteReqBeginVC, gWriteReqEndVC );
-//   if (f->type ==  Flit::READ_REPLY)
-//     outputs->AddRange( out_port, gReadReplyBeginVC, gReadReplyEndVC );
-//   if (f->type ==  Flit::WRITE_REPLY)
-//     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
+  if (f->type == Flit::READ_REQUEST)
+    outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
+  if (f->type == Flit::WRITE_REQUEST)
+    outputs->AddRange( out_port, gWriteReqBeginVC, gWriteReqEndVC );
+  if (f->type ==  Flit::READ_REPLY)
+    outputs->AddRange( out_port, gReadReplyBeginVC, gReadReplyEndVC );
+  if (f->type ==  Flit::WRITE_REPLY)
+    outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
 
 }
-
-
 
 // ============================================================
 //  FATTREE: Nearest Common Ancestor w/ Adaptive Routing Up
 // ===
 void fattree_anca( const Router *r, const Flit *f,
-		int in_channel, OutputSet* outputs, bool inject)
+                int in_channel, OutputSet* outputs, bool inject)
 {
-  const int NPOS = gK*gK;
 
   int out_port = 0;
   int dest     = f->dest;
+  int router_id = r->GetID();
+  short router_depth, router_port;
 
-
-
-  int rH = r->GetID( ) / NPOS;
-  int rP = r->GetID( ) % NPOS;
-
-  dest = fattree_transformation(dest);
-
-  int range = 1;
+  short routers_so_far = 0, routers;
+  for (short depth = gN - 1; depth >= 0; --depth) // We want to find out where the router is. At which level.
+  {
+    routers = powi(gK, depth);
+    if (router_id - routers_so_far < routers) {
+      router_depth = depth;
+      router_port = router_id - routers_so_far;
+      break;
+    }
+    routers_so_far += routers;
+  }
 
   outputs->Clear( );
 
-  if (rH == 0) {
+  int fatness_factor = powi(gK, gN - router_depth ); // This is the fatness factor for when going upwards.
+  int destinations = powi(gK, gN); // According to the depth and port of the current router, we know which destinations are reachable by it by going down.
+  int temp = powi(gK, router_depth);
+  int range; // (destinations / (powi(gK, router_depth) ) are the number of destinations below the current router.
+  if ((destinations / (temp) ) * router_port <= dest && (destinations / (temp) ) * (router_port + 1) > dest)
+  {
+    out_port = (dest - (destinations / (temp)) * router_port) / (fatness_factor / gK); // This is the direction to go. We multiply this by the fatness factor of that link.
+    out_port *= fatness_factor / gK; // Because we are going downwards. Now we point to the first link that is going downwards, among all the same.
+        if (router_depth != gN - 1 )
+        {
+          range = fatness_factor / gK;
+        }
+        else
+        {
+          out_port = dest % gK; // If we are going to a final destination, only one link to choose.
+      range = 1;
+        }
+  }
+  else // We need to go up. Choose one of the links at random.
+  {
+    range = fatness_factor;
+    out_port = fatness_factor /*upwards ports are the last indexed */ ;
+  }
+
+  // r->GetCredit(tmp_out_port, vcBegin, vcEnd);
+
+  /*if (rH == 0) {
     out_port = dest / (gK*gK);
   }
   if (rH == 1) {
@@ -313,30 +346,43 @@ void fattree_anca( const Router *r, const Flit *f,
       out_port = gK;
       range    = gK;
     }
+  }*/
+
+//  cout << "Router("<<rH<<","<<rP<<"): id= "
+//       << f->id << " dest= " << f->dest << " out_port = "
+//       << out_port << endl;
+
+  int vcBegin = 0, vcEnd = 0;
+  if ( f->type == Flit::READ_REQUEST ) {
+    vcBegin = gReadReqBeginVC;
+    vcEnd   = gReadReqEndVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    vcBegin = gWriteReqBeginVC;
+    vcEnd   = gWriteReqEndVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    vcBegin = gReadReplyBeginVC;
+    vcEnd   = gReadReplyEndVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    vcBegin = gWriteReplyBeginVC;
+    vcEnd   = gWriteReplyEndVC;
   }
 
-  
-  int vcBegin = 0, vcEnd = gNumVCS-1;
-//   if ( f->type == Flit::READ_REQUEST ) {
-//     vcBegin = gReadReqBeginVC;
-//     vcEnd   = gReadReqEndVC;
-//   } else if ( f->type == Flit::WRITE_REQUEST ) {
-//     vcBegin = gWriteReqBeginVC;
-//     vcEnd   = gWriteReqEndVC;
-//   } else if ( f->type ==  Flit::READ_REPLY ) {
-//     vcBegin = gReadReplyBeginVC;
-//     vcEnd   = gReadReplyEndVC;
-//   } else if ( f->type ==  Flit::WRITE_REPLY ) {
-//     vcBegin = gWriteReplyBeginVC;
-//     vcEnd   = gWriteReplyEndVC;
-//   }
-  
-  if (range > 1) 
-    for (int i = 0; i < range; ++i)
-      outputs->AddRange( out_port + i, vcBegin, vcEnd );
+  if (range > 1) {
+    /*for (int i = 0; i < range; ++i)
+      outputs->AddRange( out_port + i, vcBegin, vcEnd );*/
+    short random1 = RandomInt(range-1); // Chose two ports out of the possible at random, compare loads, choose one.
+    short random2 = RandomInt(range-1);
+    if (r->GetCredit(out_port + random1, vcBegin, vcEnd) > r->GetCredit(out_port + random2, vcBegin, vcEnd))
+      outputs->AddRange( out_port + random2, vcBegin, vcEnd );
+    else
+      outputs->AddRange( out_port + random1, vcBegin, vcEnd );
+  }
   else
     outputs->AddRange( out_port , vcBegin, vcEnd );
 }
+
+
+
 
 // ============================================================
 //  Mesh: Dimension-order w/ VC restrictions
