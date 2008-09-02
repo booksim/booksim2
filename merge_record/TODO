@@ -1,0 +1,16 @@
+
+automatically load in channel length information, currently they are calculated according to nocsim
+
+Modify the nocviewer to be compatible with the new way that view traces are generated
+
+Clean up the power calc scripts
+
+
+Add concept of channel width
+
+
+Merge the different trafficmanagers
+
+Add a "flits_to_watch" option in booksim_config and trafficmanager
+
+Georges traffci manager needs to be changd, because the caluclation for ht ehighest class in _step is not correct

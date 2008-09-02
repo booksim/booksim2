@@ -12,7 +12,7 @@ for($i= 1; $i<80;$i+=2){
     $injectionrate = $i/100;
 ######################DECLARE################################
 
-    $outputname = "oldtraffic_flatfly"."_"."$traffic"."_"."$injectionrate";
+    $outputname = "flatfly"."_"."$traffic"."_"."$injectionrate";
 
     system ("cp -f immutable temp/flatflyconfig_$outputname");
 

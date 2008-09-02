@@ -1,0 +1,15 @@
+1). Added configuration parameter "physical_subnetworks" (and a paragraph in the doc). This is the number of physical subnetworks present. The trafficmanager generation engine is the same, except it now keeps a counter to make sure it creates and equal number of each packet type, to distribute load evenly among networks (can be changed to anything, but just to be even). There is an injection queue for each subnetwork which generated packets are put into according to a new traffic manager function, DivisionAlgorithm(Flit*f). A flit can be injected from each queue into each subnetwork each cycle. Bufferstates are also separate (individual) for each sub-network.
+
+2). Previously you only flipped a coin if the injection queue was empty. While it's the same because of qtime, now it flips a coin always because the check of the size of the queue is not for a single queue any more since there are multiple. I can do it another way if you want, but it's the same (a quick run confirmed that).
+
+3). Added a warning for possible network deadlock if no flit has been consumed in the last 256 cycles.
+
+4). Added progressive intermediate node choice in UGAL. This is activated by a define (configuration parameter possible, but didn't think it was worth it). If it is on, until you reach the intermediate node you re-evaluate your chocie by choosing another node that would result in an another output port in the same axis than the one you would take for the old intermediate node. You apply UGAL and keep the best option. So you don't take more than one hops in every axis nor do you loop around.
+
+5). In valiant and UGAL for FBFly, I created two seperate traffic classes. Basically I divide the total VCs into two halves and have the non-minimal class in the first and the minimal in the second. You can't have thse two in the same class because there is no dimension order thus there can be cyclic dependencies forming. If you reduce the number of VCs to a small enough number they will be created. So for example now if you assign VCs 0-1 to replies and 2-3 to requests, VC 0 will be for non-minimal replies, 1 for non-minimal requests, 2 for minimal replies and 3 for minimal requests. That is already done by e.g. valiant in the mesh.
+
+As far as I can remember that's what I had done for the VC networks. If I have forgotten something I'll add it later. We do seem to be based on different code versions though, especially for the traffic manager.
+
+The next thing is the elastic buffering stuff. But I'm going on vacation on Saturday so do any more changes you wanted first. I'll probably do it after I come back assuming there is no rush.
+
+The simulator appears to have a problem if I disable tail for credits (set to 0). Specifically, it sometimes deadlocks (with less VCs) or it can be very slow in consuming flits with many VCs. Do you have any idea on this? I can look for what is going on.

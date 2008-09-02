@@ -83,4 +83,4 @@ const_flits_per_packet = 8;
 
 traffic       = bitcomp;
 
-injection_rate = 0.15;
+injection_rate = 0.45;
