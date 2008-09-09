@@ -1,38 +1,38 @@
 // ----------------------------------------------------------------------
 //
-//  RoundRobin: RoundRobin Arbiter based Allocator
+//  SeparableAllocator: Separable Allocator
 //
 // ----------------------------------------------------------------------
+
+#ifndef _SEPARABLE_HPP_
+#define _SEPARABLE_HPP_
+
 #include "allocator.hpp"
-#include "roundrobin_arb.hpp"
+#include "arbiter.hpp"
+
 #include <list>
 
-// ----------------------------------------------------------------------
-// RCS Information:
-//  $Author: jbalfour $
-//  $Date: 2007/05/17 17:10:51 $
-//  $Id: roundrobin.hpp,v 1.1 2007/05/17 17:10:51 jbalfour Exp $
-// ----------------------------------------------------------------------
-class RoundRobin : public Allocator {
+class SeparableAllocator : public Allocator {
 
   int  _num_vcs ;
   int* _matched ;
 
-  RoundRobinArbiter* _input_arb ;
-  RoundRobinArbiter* _output_arb ;
+  Arbiter* _input_arb ;
+  Arbiter* _output_arb ;
 
-  RoundRobinArbiter* _spec_input_arb ;
-  RoundRobinArbiter* _spec_output_arb ;
+  Arbiter* _spec_input_arb ;
+  Arbiter* _spec_output_arb ;
 
   list<sRequest>* _in_req ;
   list<sRequest>* _out_req ;
 
 public:
   
-  RoundRobin( const Configuration& config, Module* parent,
-	      const string& name, int inputs, int outputs ) ;
+  SeparableAllocator( const Configuration& config, Module* parent,
+		      const string& name, const string &alloc_type,
+		      int inputs, int outputs ) ;
   
-  ~RoundRobin() ;
+  ~SeparableAllocator() ;
 
   //
   // Allocator Interface
@@ -47,3 +47,5 @@ public:
   virtual void PrintRequests() const ;
 
 } ;
+
+#endif

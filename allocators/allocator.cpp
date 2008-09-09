@@ -11,8 +11,7 @@
 #include "loa.hpp"
 #include "wavefront.hpp"
 #include "selalloc.hpp"
-#include "matrix.hpp"
-#include "roundrobin.hpp"
+#include "separable.hpp"
 //
 /////////////////////////////////////////////////////////////////////////
 
@@ -429,10 +428,9 @@ Allocator *Allocator::NewAllocator( const Configuration &config,
     a = new Wavefront( config, parent, name, inputs, outputs );
   } else if ( alloc_type == "select" ) {
     a = new SelAlloc( config, parent, name, inputs, outputs );
-  } else if ( alloc_type == "matrix" ) {
-    a = new Matrix( config, parent, name, inputs, outputs );
-  } else if ( alloc_type == "round_robin" ) {
-    a = new RoundRobin( config, parent, name, inputs, outputs );
+  } else if ( (alloc_type == "matrix") || (alloc_type == "round_robin") ) {
+    a = new SeparableAllocator( config, parent, name, alloc_type, inputs,
+				outputs );
   }
 
 //==================================================

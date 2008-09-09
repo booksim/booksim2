@@ -1,23 +1,23 @@
 // ----------------------------------------------------------------------
 //
-//  Matrix: Matrix Arbiter based Allocator
+//  SeparableAllocator: Separable Allocator
 //
 // ----------------------------------------------------------------------
+
+#include "separable.hpp"
+
 #include "booksim.hpp"
-#include "matrix.hpp"
+#include "roundrobin_arb.hpp"
+#include "matrix_arb.hpp"
+
 #include <vector>
 #include <iostream>
 #include <string.h>
 
-// ----------------------------------------------------------------------
-// RCS Information:
-//  $Author: jbalfour $
-//  $Date: 2007/05/17 17:10:51 $
-//  $Id: matrix.cpp,v 1.1 2007/05/17 17:10:51 jbalfour Exp $
-// ----------------------------------------------------------------------
-
-Matrix::Matrix( const Configuration& config, Module* parent,
-		const string& name, int inputs, int outputs )
+SeparableAllocator::SeparableAllocator( const Configuration& config,
+					Module* parent, const string& name,
+					const string &alloc_type, int inputs,
+					int outputs )
   : Allocator( config, parent, name, inputs, outputs )
 {
 
@@ -26,26 +26,34 @@ Matrix::Matrix( const Configuration& config, Module* parent,
 
   int num_vcs = config.GetInt("num_vcs") ;
 
-  _input_arb = new MatrixArbiter [ inputs ] ;
+  if ( alloc_type == "matrix" ) {
+    _input_arb = new MatrixArbiter [ inputs ] ;
+    _output_arb = new MatrixArbiter [ outputs ] ;
+    _spec_input_arb = new MatrixArbiter [ inputs ] ;
+    _spec_output_arb = new MatrixArbiter [ outputs ] ;
+  } else if ( alloc_type == "roundrobin" ) {
+    _input_arb = new RoundRobinArbiter [ inputs ] ;
+    _output_arb = new RoundRobinArbiter [ outputs ] ;
+    _spec_input_arb = new RoundRobinArbiter [ inputs ] ;
+    _spec_output_arb = new RoundRobinArbiter [ outputs ] ;
+  }
+
   for ( int i = 0 ; i < inputs ; i++ ) 
     _input_arb[i].Init( num_vcs ) ;
 
-  _output_arb = new MatrixArbiter [ outputs ] ;
   for ( int o = 0 ; o < outputs ; o++ ) 
     _output_arb[o].Init( inputs ) ;
  
-  _spec_input_arb = new MatrixArbiter [ inputs ] ;
   for ( int i = 0 ; i < inputs ; i++ ) 
     _spec_input_arb[i].Init( num_vcs ) ;
   
-  _spec_output_arb = new MatrixArbiter [ outputs ] ;
   for ( int o = 0 ; o < outputs ; o++ ) 
     _spec_output_arb[o].Init( inputs ) ;
 
   Clear() ;
 }
 
-Matrix::~Matrix() {
+SeparableAllocator::~SeparableAllocator() {
 
   delete[] _in_req ;
   delete[] _out_req ;
@@ -56,7 +64,7 @@ Matrix::~Matrix() {
   delete[] _spec_output_arb ; 
 }
 
-void Matrix::Clear() {
+void SeparableAllocator::Clear() {
 
   for ( int i = 0 ; i < _inputs ; i++ ) 
     _in_req[i].clear() ;
@@ -65,7 +73,7 @@ void Matrix::Clear() {
     _out_req[i].clear() ;
 }
 
-int Matrix::ReadRequest( int in, int out ) const {
+int SeparableAllocator::ReadRequest( int in, int out ) const {
   sRequest r ;
   if ( !ReadRequest( r, in, out) ) {
     return -1 ;
@@ -73,7 +81,7 @@ int Matrix::ReadRequest( int in, int out ) const {
   return r.label ;
 }
 
-bool Matrix::ReadRequest( sRequest &req, int in, int out ) const {
+bool SeparableAllocator::ReadRequest( sRequest &req, int in, int out ) const {
 
   assert( ( in >= 0 ) && ( in < _inputs ) &&
 	  ( out >= 0 ) && ( out < _outputs ) );
@@ -98,7 +106,8 @@ bool Matrix::ReadRequest( sRequest &req, int in, int out ) const {
 
 }
 
-void Matrix::AddRequest( int in, int out, int label, int in_pri, int out_pri ) {
+void SeparableAllocator::AddRequest( int in, int out, int label, int in_pri,
+				     int out_pri ) {
 
   assert( ( in >= 0 ) && ( in < _inputs ) &&
 	  ( out >= 0 ) && ( out < _outputs ) );
@@ -114,13 +123,13 @@ void Matrix::AddRequest( int in, int out, int label, int in_pri, int out_pri ) {
 
 }
 
-void Matrix::RemoveRequest( int in, int out, int label ) {
+void SeparableAllocator::RemoveRequest( int in, int out, int label ) {
   // Method not implemented yet
   assert( false ) ;
 
 }
 
-void Matrix::PrintRequests( ) const {
+void SeparableAllocator::PrintRequests( ) const {
 
   bool header_done = false ;
 
@@ -147,11 +156,11 @@ void Matrix::PrintRequests( ) const {
 
 }
 
-void Matrix::Allocate() {
+void SeparableAllocator::Allocate() {
 
   _ClearMatching() ;
 
-//  cout << "Matrix::Allocate()" << endl ;
+//  cout << "SeparableAllocator::Allocate()" << endl ;
 //  PrintRequests() ;
 
   for ( int input = 0 ; input < _inputs ; input++ ) {
