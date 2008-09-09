@@ -86,15 +86,19 @@ void qtree_nca( const Router *r, const Flit *f,
     // Route up to parent
     out_port = gK;        
 
-  if (f->type == Flit::READ_REQUEST)
+  switch(f->type) {
+  case Flit::READ_REQUEST:
     outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
-  if (f->type == Flit::WRITE_REQUEST)
+    break;
+  case Flit::WRITE_REQUEST:
     outputs->AddRange( out_port, gWriteReqBeginVC, gWriteReqEndVC );
-  if (f->type ==  Flit::READ_REPLY)
+    break;
+  case Flit::READ_REPLY:
     outputs->AddRange( out_port, gReadReplyBeginVC, gReadReplyEndVC );
-  if (f->type ==  Flit::WRITE_REPLY)
+    break;
+  case Flit::WRITE_REPLY:
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
-
+  }
 }
 
 // ============================================================
@@ -134,21 +138,25 @@ void tree4_anca( const Router *r, const Flit *f,
       range = 2;
     }
   }
- 
+  
   //  cout << "Router("<<rH<<","<<rP<<"): id= " << f->id << " dest= " << f->dest << " out_port = "
   //       << out_port << endl;
-
-   int vcBegin = 0, vcEnd = 0;
-  if ( f->type == Flit::READ_REQUEST ) {
+  
+  int vcBegin = 0, vcEnd = 0;
+  switch(f->type) {
+  case Flit::READ_REQUEST:
     vcBegin = gReadReqBeginVC;
     vcEnd   = gReadReqEndVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    break;
+  case Flit::WRITE_REQUEST:
     vcBegin = gWriteReqBeginVC;
     vcEnd   = gWriteReqEndVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
+    break;
+  case Flit::READ_REPLY:
     vcBegin = gReadReplyBeginVC;
     vcEnd   = gReadReplyEndVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    break;
+  case Flit::WRITE_REPLY:
     vcBegin = gWriteReplyBeginVC;
     vcEnd   = gWriteReplyEndVC;
   }
@@ -192,14 +200,19 @@ void tree4_nca( const Router *r, const Flit *f,
   //  cout << "Router("<<rH<<","<<rP<<"): id= " << f->id << " dest= " << f->dest << " out_port = "
   //       << out_port << endl;
 
-  if (f->type == Flit::READ_REQUEST)
+  switch(f->type) {
+  case Flit::READ_REQUEST:
     outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
-  if (f->type == Flit::WRITE_REQUEST)
+    break;
+  case Flit::WRITE_REQUEST:
     outputs->AddRange( out_port, gWriteReqBeginVC, gWriteReqEndVC );
-  if (f->type ==  Flit::READ_REPLY)
+    break;
+  case Flit::READ_REPLY:
     outputs->AddRange( out_port, gReadReplyBeginVC, gReadReplyEndVC );
-  if (f->type ==  Flit::WRITE_REPLY)
+    break;
+  case Flit::WRITE_REPLY:
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
+  }
 }
 
 // ============================================================
@@ -264,15 +277,19 @@ void fattree_nca( const Router *r, const Flit *f,
 //  cout << "Router("<<rH<<","<<rP<<"): id= " << f->id << " dest= " << f->dest << " out_port = "
 //       << out_port << endl;
 
-  if (f->type == Flit::READ_REQUEST)
+  switch(f->type) {
+  case Flit::READ_REQUEST:
     outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
-  if (f->type == Flit::WRITE_REQUEST)
+    break;
+  case Flit::WRITE_REQUEST:
     outputs->AddRange( out_port, gWriteReqBeginVC, gWriteReqEndVC );
-  if (f->type ==  Flit::READ_REPLY)
+    break;
+  case Flit::READ_REPLY:
     outputs->AddRange( out_port, gReadReplyBeginVC, gReadReplyEndVC );
-  if (f->type ==  Flit::WRITE_REPLY)
+    break;
+  case Flit::WRITE_REPLY:
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
-
+  }
 }
 
 // ============================================================
@@ -353,16 +370,20 @@ void fattree_anca( const Router *r, const Flit *f,
 //       << out_port << endl;
 
   int vcBegin = 0, vcEnd = 0;
-  if ( f->type == Flit::READ_REQUEST ) {
+  switch(f->type) {
+  case Flit::READ_REQUEST:
     vcBegin = gReadReqBeginVC;
     vcEnd   = gReadReqEndVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    break;
+  case Flit::WRITE_REQUEST:
     vcBegin = gWriteReqBeginVC;
     vcEnd   = gWriteReqEndVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
+    break;
+  case Flit::READ_REPLY:
     vcBegin = gReadReplyBeginVC;
     vcEnd   = gReadReplyEndVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    break;
+  case Flit::WRITE_REPLY:
     vcBegin = gWriteReplyBeginVC;
     vcEnd   = gWriteReplyEndVC;
   }
@@ -438,35 +459,29 @@ void xy_yx_mesh( const Router *r, const Flit *f,
   }
 
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
-  if (f->type == Flit::READ_REQUEST) {
-
+  switch(f->type) {
+  case Flit::READ_REQUEST:
     outputs->AddRange( out_port, gReadReqBeginVC + 2, gReadReqEndVC );
     if ( f->x_then_y )
       outputs->AddRange( out_port, gReadReqBeginVC+0, gReadReqBeginVC+0);
     else
       outputs->AddRange( out_port, gReadReqBeginVC+1, gReadReqBeginVC+1);
-  }
-
-  else if (f->type == Flit::WRITE_REQUEST) {
-
+    break;
+  case Flit::WRITE_REQUEST:
     outputs->AddRange( out_port, gWriteReqBeginVC, gWriteReqEndVC - 2);
     if ( f->x_then_y )
       outputs->AddRange( out_port, gWriteReqEndVC -0, gWriteReqEndVC -0);
     else
       outputs->AddRange( out_port, gWriteReqEndVC -1, gWriteReqEndVC -1);
-  }
-
-  else if (f->type ==  Flit::READ_REPLY) {
-
+    break;
+  case Flit::READ_REPLY:
     outputs->AddRange( out_port, gReadReplyBeginVC +2, gReadReplyEndVC  );
     if ( f->x_then_y )
       outputs->AddRange( out_port, gReadReplyBeginVC +0, gReadReplyEndVC +0);
     else
       outputs->AddRange( out_port, gReadReplyBeginVC +1, gReadReplyEndVC +1);
-  }
-
-  else if (f->type ==  Flit::WRITE_REPLY) {
-
+    break;
+  case Flit::WRITE_REPLY:
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC -2);
     if ( f->x_then_y )
       outputs->AddRange( out_port, gWriteReplyEndVC -0, gWriteReplyEndVC -0);
@@ -1260,19 +1275,20 @@ void dim_order_torus( const Router *r, const Flit *f, int in_channel,
 		  &out_port, &f->ring_par, false );
 
   int vc_class_min, vc_class_max ;
-  if (f->type == Flit::READ_REQUEST) {
+  switch(f->type) {
+  case Flit::READ_REQUEST:
     vc_class_min = gReadReqBeginVC;
     vc_class_max = gReadReqEndVC;
-  }
-  else if (f->type == Flit::WRITE_REQUEST) {
+    break;
+  case Flit::WRITE_REQUEST:
     vc_class_min = gWriteReqBeginVC;
     vc_class_max = gWriteReqEndVC;
-  }
-  else if (f->type ==  Flit::READ_REPLY) {
+    break;
+  case Flit::READ_REPLY:
     vc_class_min = gReadReplyBeginVC;
     vc_class_max = gReadReplyEndVC;
-  }
-  else if (f->type ==  Flit::WRITE_REPLY) {
+    break;
+  case Flit::WRITE_REPLY:
     vc_class_min = gWriteReplyBeginVC;
     vc_class_max = gWriteReplyEndVC;
   }
@@ -1347,19 +1363,23 @@ void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel,
 		  &out_port, &f->ring_par, true );
   
   // ( Traffic Class ) -> Virtual Channel Range
-  if (f->type == Flit::READ_REQUEST) {
+  switch(f->type) {
+  case Flit::READ_REQUEST:
     vc_class_min = gReadReqBeginVC ;
     vc_class_max = gReadReqEndVC ;
-  } else if (f->type == Flit::WRITE_REQUEST) {
+    break;
+  case Flit::WRITE_REQUEST:
     vc_class_min = gWriteReqBeginVC ;
     vc_class_max = gWriteReqEndVC ;
-  } else if (f->type ==  Flit::READ_REPLY) {
+    break;
+  case Flit::READ_REPLY:
     vc_class_min = gReadReplyBeginVC ;
     vc_class_max = gReadReplyEndVC ;
-  } else if (f->type ==  Flit::WRITE_REPLY) {
+    break;
+  case Flit::WRITE_REPLY:
     vc_class_min = gWriteReplyBeginVC ;
     vc_class_max = gWriteReplyEndVC ;
-  } ;
+  }
 
   int vc_class_size = vc_class_max - vc_class_min ;
   if ( f->ring_par == 0 ) {
