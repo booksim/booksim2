@@ -26,7 +26,7 @@ public:
 
   // Constructors
   Arbiter() ;
-  ~Arbiter() ;
+  virtual ~Arbiter() ;
   
   virtual void Init( int size ) ;
 
