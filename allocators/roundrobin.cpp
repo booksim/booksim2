@@ -201,8 +201,8 @@ void RoundRobin::Allocate() {
       assert( pri > 0 && _inmatch[input] == -1 && _outmatch[output] == -1 ) ;
       _inmatch[input]   = output ;
       _outmatch[output] = input ;
-      _input_arb[input].UpdatePriority() ;
-      _output_arb[output].UpdatePriority() ;
+      _input_arb[input].UpdateState() ;
+      _output_arb[output].UpdateState() ;
 
     } else if ( spec_input > -1 ) {
 
@@ -212,8 +212,8 @@ void RoundRobin::Allocate() {
 
 	_inmatch[spec_input] = output ;
 	_outmatch[output]    = spec_input ;
-	_spec_input_arb[spec_input].UpdatePriority() ;
-	_spec_output_arb[output].UpdatePriority() ;
+	_spec_input_arb[spec_input].UpdateState() ;
+	_spec_output_arb[output].UpdateState() ;
 
       }
     }
