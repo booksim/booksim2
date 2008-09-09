@@ -19,6 +19,7 @@
 //////////////////Sub router types//////////////////////
 #include "iq_router.hpp"
 #include "event_router.hpp"
+#include "noc_router.hpp"
 ///////////////////////////////////////////////////////
 
 Router::Router( const Configuration& config,
@@ -126,6 +127,8 @@ Router *Router::NewRouter( const Configuration& config,
     r = new IQRouter( config, parent, name, id, inputs, outputs );
   } else if ( type == "event" ) {
     r = new EventRouter( config, parent, name, id, inputs, outputs );
+  } else if ( type == "noc" ) {
+    r = new NoCRouter( config, parent, name, id, inputs, outputs );
   } else {
     cout << "Unknown router type " << type << endl;
   }
