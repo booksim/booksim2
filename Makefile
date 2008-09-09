@@ -22,7 +22,6 @@ CPP_SRCS = main.cpp \
    traffic.cpp \
    flitchannel.cpp \
    creditchannel.cpp \
-   network.cpp \
    trafficmanager.cpp \
    buffer_state.cpp \
    stats.cpp \
