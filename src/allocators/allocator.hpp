@@ -81,8 +81,6 @@ public:
 		   int in_pri = 0, int out_pri = 0 );
   void RemoveRequest( int in, int out, int label = 1 );
 
-  virtual void Allocate( ) = 0;
-
   void PrintRequests( ) const;
 };
 
@@ -114,8 +112,6 @@ public:
 		   int in_pri = 0, int out_pri = 0 );
   void RemoveRequest( int in, int out, int label = 1 );
   
-  virtual void Allocate( ) = 0;
-
   void PrintRequests( ) const;
 };
 
