@@ -32,7 +32,7 @@ public:
 		      const string& name, const string &alloc_type,
 		      int inputs, int outputs ) ;
   
-  ~SeparableAllocator() ;
+  virtual ~SeparableAllocator() ;
 
   //
   // Allocator Interface
