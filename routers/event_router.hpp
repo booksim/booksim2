@@ -7,7 +7,7 @@
 #include "module.hpp"
 #include "router.hpp"
 #include "vc.hpp"
-#include "arbiter.hpp"
+#include "prio_arb.hpp"
 #include "routefunc.hpp"
 #include "outputset.hpp"
 #include "pipefifo.hpp"

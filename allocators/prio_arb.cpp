@@ -1,26 +1,27 @@
 #include "booksim.hpp"
 #include <assert.h>
 
-#include "arbiter.hpp"
+#include "prio_arb.hpp"
 
 
-Arbiter::Arbiter( const Configuration &,
-		  Module *parent, const string& name,
-		  int inputs )
+PriorityArbiter::PriorityArbiter( const Configuration &config,
+				  Module *parent, const string& name,
+				  int inputs ) 
   : Module( parent, name ), _inputs( inputs )
 {
+  _rr_ptr = 0;
 }
 
-Arbiter::~Arbiter( )
+PriorityArbiter::~PriorityArbiter( )
 {
 }
 
-void Arbiter::Clear( )
+void PriorityArbiter::Clear( )
 {
   _requests.clear( );
 }
 
-void Arbiter::AddRequest( int in, int label, int pri )
+void PriorityArbiter::AddRequest( int in, int label, int pri )
 {
   sRequest r;
   list<sRequest>::iterator insert_point;
@@ -58,7 +59,7 @@ void Arbiter::AddRequest( int in, int label, int pri )
   }
 }
 
-void Arbiter::RemoveRequest( int in, int label )
+void PriorityArbiter::RemoveRequest( int in, int label )
 {
   list<sRequest>::iterator erase_point;
 
@@ -72,25 +73,9 @@ void Arbiter::RemoveRequest( int in, int label )
   _requests.erase( erase_point );
 }
 
-int Arbiter::Match( ) const
+int PriorityArbiter::Match( ) const
 {
   return _match;
-}
-
-//==================================================
-// PriorityArbiter
-//==================================================
-
-PriorityArbiter::PriorityArbiter( const Configuration &config,
-				  Module *parent, const string& name,
-				  int inputs ) 
-  : Arbiter( config, parent, name, inputs )
-{
-  _rr_ptr = 0;
-}
-
-PriorityArbiter::~PriorityArbiter( )
-{
 }
 
 void PriorityArbiter::Arbitrate( )
