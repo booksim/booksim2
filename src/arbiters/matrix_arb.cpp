@@ -48,9 +48,6 @@ void MatrixArbiter::UpdateState() {
   if ( _selected > -1 ) {
     for ( int i = 0; i < _input_size ; i++ ) {
       _SetPriority( _selected, i, 0 ) ;
-    }
-    
-    for ( int i = 0 ; i < _input_size ; i++ ) {
       _SetPriority( i, _selected, 1 ) ;
     }
   }
@@ -66,30 +63,35 @@ int MatrixArbiter::Arbitrate( int* id, int* pri ) {
   
 
   for ( int input = 0 ; input < _input_size ; input++ ) {
-    
-    bool grant = _request[input].valid ;
-    for ( int i = 0 ; i < _input_size ; i++ ) {
-      if ( _request[i].valid && _Priority(i,input) ) {
-	grant = false ;
-	break ;
+    if(_request[input].valid) {
+      
+      bool grant = true;
+      for ( int i = 0 ; i < _input_size ; i++ ) {
+	if ( _request[i].valid && _Priority(i,input) ) {
+	  grant = false ;
+	  break ;
+	}
       }
-    }
-    
-    if ( grant ) {
-      _selected = input ;
-      if ( id )
-	*id  = _request[_selected].id ;
-      if ( pri )
-	*pri = _request[_selected].pri ;
-      break ;
+      
+      if ( grant ) {
+	_selected = input ;
+	if ( id )
+	  *id  = _request[_selected].id ;
+	if ( pri )
+	  *pri = _request[_selected].pri ;
+	break ;
+
+      }
     }
     
   }
   
   // clear the request vector
-  for ( int i = 0; i < _input_size ; i++ )
-    _request[i].valid = false ;
-  _skip_arb = 1 ;
-  
+  if ( _selected != -1 ) {
+    for ( int i = 0; i < _input_size ; i++ )
+      _request[i].valid = false ;
+    _skip_arb = 1 ;
+  }
+
   return _selected ;
 }
