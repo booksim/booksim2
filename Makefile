@@ -6,7 +6,7 @@ YACC   = /usr/bin/bison -d
 LEX    = /usr/bin/flex
 PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
-CPPFLAGS = -O3 -I. -Iallocators -Irouters -Inetworks -ggdb
+CPPFLAGS = -O3 -I. -Iarbiters -Iallocators -Irouters -Inetworks -ggdb
 LFLAGS = 
 
 OBJDIR := obj
@@ -41,6 +41,7 @@ YACC_OBJS = ${OBJDIR}/config_tab.o
 # networks 
 NETWORKS := $(wildcard networks/*.cpp) 
 ALLOCATORS:= $(wildcard allocators/*.cpp)
+ARBITERS:= $(wildcard arbiters/*.cpp)
 ROUTERS:=$(wildcard routers/*.cpp)
 
 #--- Make rules ---
@@ -48,6 +49,7 @@ OBJS :=  $(LEX_OBJS) $(YACC_OBJS)\
  $(CPP_SRCS:%.cpp=${OBJDIR}/%.o)\
  $(NETWORKS:networks/%.cpp=${OBJDIR}/%.o)\
  $(ALLOCATORS:allocators/%.cpp=${OBJDIR}/%.o)\
+ $(ARBITERS:arbiters/%.cpp=${OBJDIR}/%.o)\
  $(ROUTERS:routers/%.cpp=${OBJDIR}/%.o)\
 
 .PHONY: clean
@@ -69,6 +71,10 @@ $(PROG): $(OBJS)
 ${OBJDIR}/%.o: networks/%.cpp 
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
+# rules to compile arbiters
+${OBJDIR}/%.o: arbiters/%.cpp 
+	$(CPP) $(CPPFLAGS) -c $< -o $@
+
 # rules to compile allocators
 ${OBJDIR}/%.o: allocators/%.cpp 
 	$(CPP) $(CPPFLAGS) -c $< -o $@
@@ -81,6 +87,8 @@ clean:
 	rm -f $(OBJS) 
 	rm -f $(PROG)
 	rm -f *~
+	rm -f allocators/*~
+	rm -f arbiters/*~
 	rm -f networks/*~
 	rm -f runfiles/*~
 	rm -f routers/*~
