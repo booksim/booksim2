@@ -36,6 +36,9 @@ struct Flit {
   int  hops;
   bool watch;
 
+  //for credit tracking, last router visited
+  mutable int from_router;
+
   // Fields for multi-phase algorithms
   mutable int intm;
   mutable int ph;

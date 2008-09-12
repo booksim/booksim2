@@ -661,7 +661,7 @@ void IQRouter::_SWAlloc( )
 	  
 	  c->vc[c->vc_cnt] = f->vc;
 	  c->vc_cnt++;
-	  
+	  c->dest_router = f->from_router;
 	  f->vc = cur_vc->GetOutputVC( );
 	  dest_vc->SendingFlit( f );
 	  
@@ -715,6 +715,7 @@ void IQRouter::_SendFlits( )
   for ( int output = 0; output < _outputs; ++output ) {
     if ( !_output_buffer[output].empty( ) ) {
       f = _output_buffer[output].front( );
+      f->from_router = this->GetID();
       _output_buffer[output].pop( );
     } else {
       f = 0;

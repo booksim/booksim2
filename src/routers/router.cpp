@@ -20,6 +20,7 @@
 #include "iq_router.hpp"
 #include "event_router.hpp"
 #include "noc_router.hpp"
+#include "MECSRouter.hpp"
 ///////////////////////////////////////////////////////
 
 Router::Router( const Configuration& config,
@@ -120,11 +121,17 @@ Router *Router::NewRouter( const Configuration& config,
 {
   Router *r;
   string type;
+  string topo;
 
   config.GetStr( "router", type );
+  config.GetStr( "topology", topo);
 
   if ( type == "iq" ) {
-    r = new IQRouter( config, parent, name, id, inputs, outputs );
+    if(topo == "MECS"){
+      r = new MECSRouter( config, parent, name, id, inputs, outputs);
+    } else {
+      r = new IQRouter( config, parent, name, id, inputs, outputs );
+    }
   } else if ( type == "event" ) {
     r = new EventRouter( config, parent, name, id, inputs, outputs );
   } else if ( type == "noc" ) {

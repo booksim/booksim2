@@ -556,7 +556,7 @@ void TrafficManager::_Step( )
         cred = new Credit( 1 );
         cred->vc[0] = f->vc;
         cred->vc_cnt = 1;
-
+	cred->dest_router = f->from_router;
         _net[i]->WriteCredit( cred, output );
         _RetireFlit( f, output );
       

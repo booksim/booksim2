@@ -1,0 +1,79 @@
+///////////////////BEGIN IMMUTABLE////////////////////////////////
+//
+// Flow control
+//
+read_request_begin_vc  = 0;
+read_request_end_vc    = 5;
+write_reply_begin_vc   = 2;
+write_reply_end_vc     = 7;
+read_reply_begin_vc    = 8;
+read_reply_end_vc      = 12;
+write_request_begin_vc = 10;
+write_request_end_vc   = 15;
+
+// Total number of VCs must match the above assignments
+num_vcs     = 16;
+vc_buf_size = 8;
+
+wait_for_tail_credit = 1;
+
+//
+// Router architectureq
+//
+vc_allocator = islip; 
+sw_allocator = islip;
+alloc_iters  = 1;
+
+credit_delay   = 2;
+routing_delay  = 0;
+vc_alloc_delay = 1;
+sw_alloc_delay = 1;
+st_final_delay = 1;
+
+input_speedup     = 1;
+output_speedup    = 1;
+internal_speedup  = 1.0;
+
+//
+// Traffic
+//
+
+sim_type = latency;
+
+warmup_periods = 3;
+
+sample_period  = 2000;  
+
+sim_count          = 1;
+
+///////////////////END IMMUTABLE////////////////////////////////
+
+
+
+
+topology = MECS;
+
+
+c  = 4;
+k  = 4;
+n  = 2;
+x  = 4;
+y  = 4;
+xr = 2;
+yr = 2;
+limit = 64;
+
+
+//
+// Routing
+//
+
+routing_function = dor;
+
+const_flits_per_packet = 1;
+
+traffic       = uniform;
+
+injection_rate = 0.1;
+
+speculative = 0;

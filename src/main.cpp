@@ -34,6 +34,7 @@
 #include "qtree.hpp"
 #include "tree4.hpp"
 #include "fattree.hpp"
+#include "mecs.hpp"
 ///////////////////////////////////////////////////////////////////////////////
 //Global declarations
 //////////////////////
@@ -115,6 +116,9 @@ void AllocatorSim( const Configuration& config )
     } else if ( topo == "cmo"){
       CMO::RegisterRoutingFunctions() ;
       net[i] = new CMO(config);
+    } else if ( topo == "MECS"){
+      MECS::RegisterRoutingFunctions() ;
+      net[i] = new MECS(config);
     } else {
       cerr << "Unknown topology " << topo << endl;
       exit(-1);
