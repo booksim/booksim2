@@ -133,8 +133,12 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
 
   _internal_speedup = config.GetFloat( "internal_speedup" );
   _partial_internal_cycles = new float[duplicate_networks];
-  for (int i=0; i < duplicate_networks; ++i)
+  class_array = new short* [duplicate_networks];
+  for (int i=0; i < duplicate_networks; ++i) {
     _partial_internal_cycles[i] = 0.0;
+    class_array[i] = new short [_classes];
+    memset(class_array[i], 0, sizeof(short)*_classes);
+  }
 
   _traffic_function  = GetTrafficFunction( config );
   _routing_function  = GetRoutingFunction( config );
@@ -180,6 +184,10 @@ TrafficManager::~TrafficManager( )
     delete _latency_stats[c];
     delete _overall_latency[c];
   }
+  for (int i = 0; i < duplicate_networks; ++i) {
+    delete [] class_array[i];
+  }
+  delete[] class_array;
 
   delete [] _latency_stats;
   delete [] _overall_latency;
@@ -403,8 +411,9 @@ void TrafficManager::_GeneratePacket( int source, int size,
       cout << "Generating flit at time " << time << endl;
       cout << *f;
     }
+    sub_network = this->DivisionAlgorithm(f);
 
-    _partial_packets[source][cl][this->DivisionAlgorithm(f)].push_back( f );
+    _partial_packets[source][cl][sub_network].push_back( f );
   }
 }
 
@@ -473,19 +482,27 @@ void TrafficManager::_Step( )
 	    _qdrained[input][c] = true;
 	  }
 	}
-	//need to change this:
 	if ( generated ) {
-	  highest_class = c;
+	  //highest_class = c;
+	  class_array[sub_network][c]++; // One more packet for this class.
 	}
-      } else {
-	highest_class = c;
-      }
+      } //else {
+	//highest_class = c;
+      //} This is not necessary with class_array because it stays.
     }
 
     // Now, check partially issued packets to
     // see if they can be issued
     for (int i = 0; i < duplicate_networks; ++i) {
       write_flit = false;
+      highest_class = 0;
+      // Now just find which is the highest_class.
+      for (short a = _classes - 1; a >= 0; --a) {
+	if (class_array[i][a]) {
+	  highest_class = a;
+	  break;
+	}
+      }
       if ( !_partial_packets[input][highest_class][i].empty( ) ) {
         f = _partial_packets[input][highest_class][i].front( );
         if ( f->head ) { // Find first available VC
@@ -518,6 +535,8 @@ void TrafficManager::_Step( )
         }
       }
       _net[i]->WriteFlit( write_flit ? f : 0, input );
+      if (write_flit && f->tail) // If a tail flit, reduce the number of packets of this class.
+	class_array[i][highest_class]--;
     }
   }
 

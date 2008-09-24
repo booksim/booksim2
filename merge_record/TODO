@@ -12,5 +12,3 @@ Add concept of channel width
 Merge the different trafficmanagers
 
 Add a "flits_to_watch" option in booksim_config and trafficmanager
-
-Georges traffci manager needs to be changd, because the caluclation for ht ehighest class in _step is not correct
