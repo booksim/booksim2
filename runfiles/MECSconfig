@@ -70,7 +70,7 @@ limit = 64;
 
 routing_function = dor;
 
-const_flits_per_packet = 1;
+const_flits_per_packet = 2;
 
 traffic       = uniform;
 

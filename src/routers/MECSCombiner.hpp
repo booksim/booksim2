@@ -14,7 +14,10 @@ protected:
   vector<MECSForwarder*> inputs;
   //to router
   FlitChannel* chan_out;
-  
+  //multi-flit packet
+  bool seen_head;
+  //for multi-flit packet, which forwarder to read from to preserve packet
+  int location;
   
 public:
   MECSCombiner(Module* parent, string name, int dir, int r);
