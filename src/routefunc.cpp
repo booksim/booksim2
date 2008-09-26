@@ -417,15 +417,14 @@ void dor_mesh( const Router *r, const Flit *f,
   outputs->Clear( );
 
   out_port = dor_next_mesh( r->GetID( ), f->dest );
-  outputs->AddRange( out_port, 0, gNumVCS - 1 );
-//   if (f->type == Flit::READ_REQUEST)
-//     outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
-//   else if (f->type == Flit::WRITE_REQUEST)
-//     outputs->AddRange( out_port, gWriteReqBeginVC, gWriteReqEndVC );
-//   else if (f->type ==  Flit::READ_REPLY)
-//     outputs->AddRange( out_port, gReadReplyBeginVC, gReadReplyEndVC );
-//   else if (f->type ==  Flit::WRITE_REPLY)
-//     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
+  if (f->type == Flit::READ_REQUEST)
+    outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
+  else if (f->type == Flit::WRITE_REQUEST)
+    outputs->AddRange( out_port, gWriteReqBeginVC, gWriteReqEndVC );
+  else if (f->type ==  Flit::READ_REPLY)
+    outputs->AddRange( out_port, gReadReplyBeginVC, gReadReplyEndVC );
+  else if (f->type ==  Flit::WRITE_REPLY)
+    outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
 }
 
 // ============================================================

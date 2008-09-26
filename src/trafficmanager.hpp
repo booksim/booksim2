@@ -86,7 +86,12 @@ protected:
   int   _drain_time;
 
   float _load;
+
   int   _packet_size;
+  int _read_request_size;
+  int _read_reply_size;
+  int _write_request_size;
+  int _write_reply_size;
 
   int   _total_sims;
   int   _sample_period;

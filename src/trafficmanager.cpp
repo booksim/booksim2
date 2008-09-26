@@ -22,6 +22,7 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   
   //nodes higher than limit do not produce or receive packets
   //for default limit = sources
+
   _limit = config.GetInt( "limit" );
   if(_limit == 0){
     _limit = _sources;
@@ -55,7 +56,7 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     tmp_name << "terminal_buf_state_" << s;
     _buf_states[s] = new BufferState * [duplicate_networks];
     for (int a = 0; a < duplicate_networks; ++a) {
-        _buf_states[s][a] = new BufferState( config, this, tmp_name.str( ) );
+      _buf_states[s][a] = new BufferState( config, this, tmp_name.str( ) );
     }
     tmp_name.seekp( 0, ios::beg );
   }
@@ -127,7 +128,12 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   // ============ Simulation parameters ============ 
 
   _load = config.GetFloat( "injection_rate" ); 
+
   _packet_size = config.GetInt( "const_flits_per_packet" );
+  _read_request_size = config.GetInt("read_request_size");
+  _read_reply_size = config.GetInt("read_reply_size");
+  _write_request_size = config.GetInt("write_request_size");
+  _write_reply_size = config.GetInt("write_reply_size");
 
   _total_sims = config.GetInt( "sim_count" );
 
@@ -207,15 +213,16 @@ TrafficManager::~TrafficManager( )
 }
 
 
-// Decides which subnetwork the flit should go to. This should change according to number of duplicate networks
+// Decides which subnetwork the flit should go to. 
+// This should change according to number of duplicate networks
 int TrafficManager::DivisionAlgorithm (Flit* f) {
 
   if (duplicate_networks == 2) {
     if (f->type == Flit::WRITE_REQUEST || f->type == Flit::READ_REQUEST) { // Request flit
-          return 1;
+      return 1;
     }
     else if (f->type == Flit::WRITE_REPLY || f->type == Flit::READ_REPLY) { // Reply flit
-          return 0;
+      return 0;
     }
   }
   else if (duplicate_networks == 4) {
@@ -341,6 +348,24 @@ void TrafficManager::_GeneratePacket( int source, int size,
   Flit *f;
   bool record;
   static int type_counter = 0;
+  Flit::FlitType packet_type;
+
+  if (type_counter % 4 == 0) {
+    packet_type = Flit::READ_REQUEST;
+    size = _read_request_size;
+  }
+  else if (type_counter % 4 == 1) {
+    packet_type = Flit::WRITE_REQUEST;
+    size = _write_request_size;
+  }
+  else if (type_counter % 4 == 2) {
+    packet_type = Flit::READ_REPLY;
+    size = _read_reply_size;
+  }
+  else {
+    packet_type = Flit::WRITE_REPLY;
+    size = _write_reply_size;
+  }
 
   //refusing to generate packets for nodes greater than limit
   if(source >=_limit){
@@ -365,21 +390,7 @@ void TrafficManager::_GeneratePacket( int source, int size,
     if(_trace || f->watch){
       cout<<"New Flit "<<f->src<<endl;
     }
-
-    if (type_counter % 4 == 0) {
-      f->type = Flit::READ_REQUEST;
-    }
-    else if (type_counter % 4 == 1) {
-      f->type = Flit::WRITE_REQUEST;
-    }
-    else if (type_counter % 4 == 2) {
-      f->type = Flit::READ_REPLY;
-    }
-    else {
-      f->type = Flit::WRITE_REPLY;
-    }
-    type_counter++;
-
+    f->type = packet_type;
 
     if ( i == 0 ) { // Head flit
       f->head = true;
@@ -415,6 +426,7 @@ void TrafficManager::_GeneratePacket( int source, int size,
 
     _partial_packets[source][cl][sub_network].push_back( f );
   }
+  type_counter++;
 }
 
 
@@ -424,7 +436,7 @@ void TrafficManager::_GeneratePacket( int source, int size,
 void TrafficManager::_FirstStep( )
 {  
   // Ensure that all outputs are defined before starting simulation
-   for (int i = 0; i < duplicate_networks; ++i) { 
+  for (int i = 0; i < duplicate_networks; ++i) { 
     _net[i]->WriteOutputs( );
   
     for ( int output = 0; output < _net[i]->NumDests( ); ++output ) {
@@ -435,8 +447,9 @@ void TrafficManager::_FirstStep( )
 
 void TrafficManager::_Step( )
 {
-  if(deadlock_counter++ == 0)
-        cout << "WARNING: Possible network deadlock.\n";
+  if(deadlock_counter++ == 0){
+    cout << "WARNING: Possible network deadlock.\n";
+  }
 
   Flit   *f, *nf;
   Credit *cred;
@@ -735,8 +748,9 @@ bool TrafficManager::_SingleSim( )
     cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 
     cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
-    //_net->Display();
+
     _latency_stats[0]->Display();
+
     cout << "thru(" << total_phases + 1 << ",:) = [ ";
     for ( int d = 0; d < _dests; ++d ) {
       cout << _accepted_packets[d]->Average( ) << " ";
@@ -794,8 +808,6 @@ bool TrafficManager::_SingleSim( )
 	}
       } 
     }
-
-
     prev_latency  = cur_latency;
     prev_accepted = cur_accepted;
 
@@ -851,8 +863,9 @@ void TrafficManager::Run( )
       cout << "Simulation unstable, ending ..." << endl;
       return;
     }
-    
-    cout << "Time taken is " << _time << " cycles" <<endl; //for the love of god don't ever say "Time taken" anywhere else
+    //for the love of god don't ever say "Time taken" anywhere else
+    //the power script depend on it
+    cout << "Time taken is " << _time << " cycles" <<endl; 
     for ( int c = 0; c < _classes; ++c ) {
       _overall_latency[c]->AddSample( _latency_stats[c]->Average( ) );
     }

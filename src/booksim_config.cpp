@@ -128,7 +128,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["perm_seed"] = 0;         // seed value for random perms traffic
 
   _float_map["injection_rate"]       = 0.1; //if 0.0 assumes it is batch mode
-  _int_map["const_flits_per_packet"] = 1; //flits per packet
+  _int_map["const_flits_per_packet"] = 1; //use  read_request_size etc insted
 
   AddStrField( "injection_process", "bernoulli" );
 
@@ -140,10 +140,10 @@ BookSimConfig::BookSimConfig( )
   _int_map["batch_size"] = 1000;
   _int_map["max_outstanding_requests"] = 4;
 
-  _int_map["read_request_size"]  = 1;
-  _int_map["write_request_size"] = 1;
-  _int_map["read_reply_size"]    = 1;
-  _int_map["write_reply_size"]   = 1;
+  _int_map["read_request_size"]  = 1; //flit per packet
+  _int_map["write_request_size"] = 1; //flit per packet
+  _int_map["read_reply_size"]    = 1; //flit per packet
+  _int_map["write_reply_size"]   = 1; //flit per packet
 
   //==== Simulation parameters ==========================
 
@@ -158,7 +158,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["sample_period"] = 1000; // how long between measurements
   _int_map["max_samples"]   = 20;   // maximum number of sample periods in a simulation
 
-  _float_map["latency_thres"] = 1000.0; // if avg. latency exceeds the threshold, assume unstable
+  _float_map["latency_thres"] = 500.0; // if avg. latency exceeds the threshold, assume unstable
 
   _int_map["sim_count"]     = 1;   // number of simulations to perform
 
