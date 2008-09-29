@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 $inputFileName = $ARGV[0] ;
 $outputFileName = $ARGV[1];
+$WMAX = $ARGV[2];
+$WMIN = $ARGV[3];
 
 # ----------------------------------------------------------------------
 # RCS Information:
@@ -15,7 +17,9 @@ $outputFileName = $ARGV[1];
 #   Network Parameters
 #
 # ----------------------------------------------------------------------
-$WMAX = 256;
+if($WMAX == 0){
+    $WMAX = 256;
+}
 
 $WireLength{"mesh"}          = 1.5 ;
 $WireLength{"cmesh"}          = 1.5 ;
@@ -427,12 +431,12 @@ sub areaOutputModule {
 #  Main script for processing the input file
 #
 # ----------------------------------------------------------------------
-@flitWidth = ( 64.0 , 512.0+64.0 , 512.0+64.0, 64.0 ) ;
+@flitWidth = ( 0,0,0,0,0 ) ;
 
 #wireOptimize(1.5) ;
 #print "L=1.5 K=$K, N=$N, M=$M\n" ;
 #wireOptimize(3) ;
-bc#print "L=3 K=$K, N=$N, M=$M\n" ;
+#print "L=3 K=$K, N=$N, M=$M\n" ;
 
 open(outFile, ">", $outputFileName) or die "Can't open write file";
 
@@ -445,11 +449,35 @@ print outFile "switchPower\tswitchPowerCtrl\tswitchPowerLeak\t";
 print outFile "outputPower\toutputPowerClk\toutputCtrlPower\t";
 print outFile "channelArea\tswitchArea\tinputArea\toutputArea\n";
 
-for ($w = $WMAX; $w>0; $w-=2) {
+for ($w = $WMAX; $w>$WMIN; $w-=2) {
 $flitWidth[0] = $w ;
 $flitWidth[1] = $w ;
 $flitWidth[2] = $w ;  
 $flitWidth[3] = $w ;
+$flitWidth[4] = $w ;
+
+
+$totalTime = 0;
+$channelWirePower=0;
+$channelClkPower=0;
+$channelDFFPower=0;
+$channelLeakPower=0;
+$inputReadPower=0;
+$inputWritePower=0;
+$inputLeakagePower=0;
+$switchPower=0;
+$switchPowerCtrl=0;
+$switchPowerLeak=0;
+$outputPower=0;
+$outputPowerClk=0;
+$outputCtrlPower=0;
+$channelArea=0;
+$switchArea=0;
+$inputArea=0;
+$outputArea=0;
+$maxInputPort = 0;
+$maxOutputPort = 0;
+
 
 open( inFile, "<", $inputFileName ) or die "Failed to open $inputFileName" ;
 while ( $line = <inFile> ) {
@@ -517,9 +545,9 @@ while ( $line = <inFile> ) {
 	$channelArea += areaChannel( $K, $N, $M) ;
        
 	# activity factor
-	$line =~ m/([0-9]+),([0-9]+),([0-9]+),([0-9]+)/ ;
-	@flits = ( $1 ,$2, $3, $4 ) ;
-	for ( my $i = 0 ; $i < 4 ; $i += 1 ) {
+	$line =~ m/([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)/ ;
+	@flits = ( $1 ,$2, $3, $4 ,$5) ;
+	for ( my $i = 0 ; $i < 5 ; $i += 1 ) {
 	    $a[$i] = $flits[$i] / ( 1.0 * $totalTime ) ;
 	}
 	
@@ -537,13 +565,15 @@ while ( $line = <inFile> ) {
 	$channelWirePower += $bitPower * $a[1] * $flitWidth[1] ;
 	$channelWirePower += $bitPower * $a[2] * $flitWidth[2] ; 
 	$channelWirePower += $bitPower * $a[3] * $flitWidth[3] ;
-	
+	$channelWirePower += $bitPower * $a[4] * $flitWidth[4] ;
+
 	$channelClkPower += powerWireClk( $M, $flitWidth[1] ) ;
 
 	$channelDFFPower += powerWireDFF( $M, $flitWidth[0], $a[0] ) ;
 	$channelDFFPower += powerWireDFF( $M, $flitWidth[1], $a[1] ) ;
 	$channelDFFPower += powerWireDFF( $M, $flitWidth[2], $a[2] ) ;
 	$channelDFFPower += powerWireDFF( $M, $flitWidth[3], $a[3] ) ;
+	$channelDFFPower += powerWireDFF( $M, $flitWidth[4], $a[4] ) ;
 
 	$channelLeakPower += powerRepeatedWireLeak( $K, $M, $N) * $flitWidth[1] ;
 
@@ -572,7 +602,7 @@ while ( $line = <inFile> ) {
 	#read and write activity factor
 	while ( $line =~ m/\[ [0-9]+ \]/ ) {
 	$inputLeakagePower += $Pleak ;
-	    for ( $type = 0 ; $type < 4 ; $type += 1 ) {
+	    for ( $type = 0 ; $type < 5 ; $type += 1 ) {
 		$line =~ m/Type=$type:\(R\#([0-9]+),W\#([0-9]+)\)/ ;
 		my $ar = ( 1.0 * $1 ) / $totalTime ;
 		my $aw = ( 1.0 * $2 ) / $totalTime ;
@@ -610,7 +640,7 @@ while ( $line = <inFile> ) {
 	    if ( $inputPort+1  > $maxInputPort )  { $maxInputPort  = $inputPort+1; } 
 	    if ( $outputPort+1 > $maxOutputPort ) { $maxOutputPort = $outputPort+1; } 
 	    #extracts out the activty factor for each of the type of packets 
-	    for ( $type = 0 ; $type < 4 ; $type += 1 ) {
+	    for ( $type = 0 ; $type < 5 ; $type += 1 ) {
 		$line =~ m/$type:([0-9]+)/ ;
 		$crossbar[$inputPort]->[$outputPort]->[$type] = $1 ;
 	    }
@@ -626,7 +656,7 @@ while ( $line = <inFile> ) {
 
 	    for ( $in = 0 ; $in < $maxInputPort ; $in +=1 ) {
 
-		for ( $type = 0 ; $type < 4 ; $type += 1 ) {
+		for ( $type = 0 ; $type < 5 ; $type += 1 ) {
 
 		    $a  = $crossbar[$in]->[$out]->[$type] ;
 		    $a  = $a / $totalTime ;
@@ -651,7 +681,7 @@ while ( $line = <inFile> ) {
 	    }
 
 	    $outputPowerClk += powerWireClk( 1, $w ) ;
-	    for ( $type = 0 ; $type < 4 ; $type+=1 ) {
+	    for ( $type = 0 ; $type < 5 ; $type+=1 ) {
 		$outputPower     += $activity[$type] * powerWireDFF( 1, $flitWidth[$type], 1.0 ) ;
 		$outputCtrlPower += $activity[$type] * powerOutputCtrl( $flitWidth[$type] ) ;
 	    }
@@ -666,26 +696,7 @@ print outFile "$switchPower\t$switchPowerCtrl\t$switchPowerLeak\t";
 print outFile "$outputPower\t$outputPowerClk\t$outputCtrlPower\t";
 print outFile "$channelArea\t$switchArea\t$inputArea\t$outputArea\n";
 
-$totalTime = 0;
-$channelWirePower=0;
-$channelClkPower=0;
-$channelDFFPower=0;
-$channelLeakPower=0;
-$inputReadPower=0;
-$inputWritePower=0;
-$inputLeakagePower=0;
-$switchPower=0;
-$switchPowerCtrl=0;
-$switchPowerLeak=0;
-$outputPower=0;
-$outputPowerClk=0;
-$outputCtrlPower=0;
-$channelArea=0;
-$switchArea=0;
-$inputArea=0;
-$outputArea=0;
-    $maxInputPort = 0;
-    $maxOutputPort = 0;
+
 }
 
 close(outFile);
