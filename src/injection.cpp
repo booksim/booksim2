@@ -15,15 +15,7 @@
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
 
-map<string, tInjectionProcess> gInjectionProcessMap;
-
-double gBurstAlpha;
-double gBurstBeta;
-
-/*number of flits per packet, set by the configuration file*/
-int    gConstPacketSize;
-
-int *gNodeStates = 0;
+extern map<string, tInjectionProcess> gInjectionProcessMap;
 
 //=============================================================
 

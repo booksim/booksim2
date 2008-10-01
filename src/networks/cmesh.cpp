@@ -517,7 +517,14 @@ void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel,
     else
       outputs->AddRange( out_port, gWriteReplyBeginVC+n+1, gWriteReplyEndVC );
   }
-
+  else if (f->type ==  Flit::ANY_TYPE) {
+ 
+    n = (gNumVCS-1) / 2 ;
+    if ( f->x_then_y )
+      outputs->AddRange( out_port, 0,0 + n);
+    else
+      outputs->AddRange( out_port, 0+n+1,gNumVCS-1 );
+  }
   if (f->watch) {
     cout << "n = " << n << endl ;
     cout << "WriteRange: " << gWriteReqBeginVC << "," << gWriteReqEndVC << endl;
@@ -679,6 +686,15 @@ void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
     else
       outputs->AddRange( out_port, gWriteReplyEndVC -1, gWriteReplyEndVC -1);
   }
+  else if (f->type ==  Flit::ANY_TYPE) {
+    if ( 0 + 1 > gNumVCS-1)
+      outputs->AddRange( out_port, 0, gNumVCS-1 -2);
+    if ( f->x_then_y )
+      outputs->AddRange( out_port, gNumVCS-1 -0, gNumVCS-1 -0);
+    else
+      outputs->AddRange( out_port, gNumVCS-1 -1, gNumVCS-1 -1);
+    
+  }
 }
 //============================================================
 //
@@ -768,10 +784,12 @@ void dor_cmesh( const Router *r, const Flit *f, int in_channel,
     outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
   if (f->type == Flit::WRITE_REQUEST)
     outputs->AddRange( out_port, gWriteReqBeginVC, gWriteReqEndVC );
-    if (f->type ==  Flit::READ_REPLY)
+  if (f->type ==  Flit::READ_REPLY)
       outputs->AddRange( out_port, gReadReplyBeginVC, gReadReplyEndVC );
-    if (f->type ==  Flit::WRITE_REPLY)
-      outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
+  if (f->type ==  Flit::WRITE_REPLY)
+    outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
+ if (f->type ==  Flit::ANY_TYPE)
+      outputs->AddRange( out_port, 0, gNumVCS-1);
 }
 
 //============================================================
@@ -838,5 +856,7 @@ void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
     outputs->AddRange( out_port, gReadReplyBeginVC, gReadReplyEndVC );
   if (f->type ==  Flit::WRITE_REPLY)
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
+  if (f->type ==  Flit::ANY_TYPE)
+    outputs->AddRange( out_port, 0, gNumVCS-1 );
   
 }

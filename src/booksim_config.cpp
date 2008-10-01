@@ -23,6 +23,10 @@ BookSimConfig::BookSimConfig( )
   // Control alloction of VC to packet types
   _int_map["partition_vcs"] = 1 ;
 
+  // Use read/write request reply scheme
+  
+  _int_map["use_read_write"] = 0;
+
   _int_map["read_request_begin_vc"] = 0;
   _int_map["read_request_end_vc"] = 3;
 

@@ -51,25 +51,25 @@ void BufferState::_Init( const Configuration& config )
     = config.GetInt( "read_request_begin_vc" );
   _vc_range_end[Flit::READ_REQUEST] 
     = config.GetInt( "read_request_end_vc" );
-
+  
   _vc_range_begin[Flit::WRITE_REQUEST] 
     = config.GetInt( "write_request_begin_vc" );
   _vc_range_end[Flit::WRITE_REQUEST] 
     = config.GetInt( "write_request_end_vc" );
-
+  
   _vc_range_begin[Flit::READ_REPLY] 
     = config.GetInt( "read_reply_begin_vc" );
   _vc_range_end[Flit::READ_REPLY] 
     = config.GetInt( "read_reply_end_vc" );
-
+  
   _vc_range_begin[Flit::WRITE_REPLY] 
     = config.GetInt( "write_reply_begin_vc" );
   _vc_range_end[Flit::WRITE_REPLY] 
     = config.GetInt( "write_reply_end_vc" );
-
+  
   _vc_range_begin[Flit::ANY_TYPE] = 0 ;
   _vc_range_end[Flit::ANY_TYPE]   = _vcs - 1 ;
-
+  
 }
 
 BufferState::~BufferState( )

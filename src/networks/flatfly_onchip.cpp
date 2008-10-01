@@ -462,6 +462,9 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
   } else if ( f->type ==  Flit::WRITE_REPLY ) {
     vcBegin = gWriteReplyBeginVC;
     vcEnd   = gWriteReplyEndVC;
+  } else if ( f->type ==  Flit::ANY_TYPE ) {
+    vcBegin = 0;
+    vcEnd   = gNumVCS-1;
   }
     outputs->AddRange( out_port , vcBegin, vcEnd );
 }
@@ -530,6 +533,9 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   } else if ( f->type ==  Flit::WRITE_REPLY ) {
     vcBegin = gWriteReplyBeginVC >> 1;
     vcEnd   = gWriteReplyEndVC >> 1;
+  }else if ( f->type ==  Flit::ANY_TYPE ) {
+    vcBegin = 0 >> 1;
+    vcEnd   = gNumVCS-1 >> 1;
   }
 
 
@@ -634,6 +640,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   
   if (debug) cout << "        through output port : " << out_port << endl;
   if(_trace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
+
   outputs->AddRange( out_port , vcBegin, vcEnd );
 }
 

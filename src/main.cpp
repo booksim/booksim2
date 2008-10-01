@@ -66,6 +66,31 @@ int ycount  = 0;
 
 //generate nocviewer trace
 bool _trace = false;
+
+/*false means all packet types are the same length "gConstantsize"
+ *All packets uses all VCS
+ *packet types are generated randomly, essentially making it only 1 type
+ *of packet in the network
+ *
+ *True means only request packets are generated and replies are generated
+ *as a response to the requests, packets are now difference length, correspond
+ *to "read_request_size" etc. 
+ */
+bool _use_read_write = false;
+
+//injection functions
+map<string, tInjectionProcess> gInjectionProcessMap;
+
+//burst rates
+double gBurstAlpha;
+double gBurstBeta;
+
+/*number of flits per packet, set by the configuration file*/
+int    gConstPacketSize;
+
+//for on_off injections
+int *gNodeStates = 0;
+
 /////////////////////////////////////////////////////////////////////////////
 
 void AllocatorSim( const Configuration& config )
@@ -184,7 +209,9 @@ int main( int argc, char **argv )
 
   _print_activity = (config.GetInt("print_activity")==1);
   _trace = (config.GetInt("viewer trace")==1);
-
+  
+  _use_read_write = (config.GetInt("use_read_write")==1);
+  
   /*configure and run the simulator
    */
   AllocatorSim( config );

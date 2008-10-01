@@ -52,6 +52,18 @@ protected:
   short duplicate_networks;
   unsigned char deadlock_counter;
 
+  // ============ batch mode ==========================
+  int *_packets_sent;
+  int _batch_size;
+  list<int>* _repliesPending;
+  int * _requestsOutstanding;
+  int _maxOutstanding;
+
+  // ============voq mode =============================
+  list<Flit*> ** _voq;
+  list<int>* _active_list;
+  bool** _active_vc;
+  
   // ============ Statistics ============
 
   Stats **_latency_stats;     
@@ -123,6 +135,8 @@ protected:
   virtual void _RetireFlit( Flit *f, int dest );
 
   void _FirstStep( );
+  void _NormalInject();
+  void _ReadWriteInject();
   void _Step( );
 
   bool _PacketsOutstanding( ) const;

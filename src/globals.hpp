@@ -24,4 +24,13 @@ extern int ycount;
 
 extern bool _trace;
 
+extern bool _use_read_write;
+
+extern double gBurstAlpha;
+extern double gBurstBeta;
+
+/*number of flits per packet, set by the configuration file*/
+extern int    gConstPacketSize;
+
+extern int *gNodeStates;
 #endif

@@ -25,7 +25,7 @@ FlitChannel::FlitChannel() {
 FlitChannel::~FlitChannel() {
 
   // Total Number of Cycles
-  const double NC = _active[0] + _active[1] + _active[2] + _active[3] + _idle;
+  const double NC = _active[0] + _active[1] + _active[2] + _active[3] + _active[4]+ _idle;
   
   // Activity Factor 
   const double AFs = double(_active[0] + _active[3]) / NC;
@@ -40,7 +40,7 @@ FlitChannel::~FlitChannel() {
 	 << "] " 
 	 << "[Latency: " << _delay << "] "
 	 << "(" << _active[0] << "," << _active[1] << "," << _active[2] 
-	 << "," << _active[3] << ") (I#" << _idle << ")" << endl ;
+	 << "," << _active[3] << "," << _active[4] << ") (I#" << _idle << ")" << endl ;
   }
 }
 

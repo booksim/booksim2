@@ -59,7 +59,23 @@ void dest_tag_crossbar( const Router *r,
   // Output port determined by those bits of destination above 
   //  concentration bits
   int out_port = f->dest >> memo_log2gC ;
-  outputs->AddRange( out_port, 0, gNumVCS-1 ) ;
+  switch(f->type) {
+  case Flit::READ_REQUEST:
+    outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
+    break;
+  case Flit::WRITE_REQUEST:
+    outputs->AddRange( out_port, gWriteReqBeginVC, gWriteReqEndVC );
+    break;
+  case Flit::READ_REPLY:
+    outputs->AddRange( out_port, gReadReplyBeginVC, gReadReplyEndVC );
+    break;
+  case Flit::WRITE_REPLY:
+    outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
+    break;
+  case Flit::ANY_TYPE:
+    outputs->AddRange( out_port, 0, gNumVCS-1 );
+    break;
+  }
   
 }
 
@@ -98,6 +114,10 @@ void qtree_nca( const Router *r, const Flit *f,
     break;
   case Flit::WRITE_REPLY:
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
+    break;
+  case Flit::ANY_TYPE:
+    outputs->AddRange( out_port, 0, gNumVCS-1 );
+    break;
   }
 }
 
@@ -159,6 +179,10 @@ void tree4_anca( const Router *r, const Flit *f,
   case Flit::WRITE_REPLY:
     vcBegin = gWriteReplyBeginVC;
     vcEnd   = gWriteReplyEndVC;
+    break;
+  case Flit::ANY_TYPE:
+    vcBegin = 0;
+    vcEnd   = gNumVCS-1;
   }
   
   for (int i = 0; i < range; ++i) 
@@ -212,6 +236,10 @@ void tree4_nca( const Router *r, const Flit *f,
     break;
   case Flit::WRITE_REPLY:
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
+    break;
+  case Flit::ANY_TYPE:
+    outputs->AddRange( out_port, 0, gNumVCS-1 );
+    break;
   }
 }
 
@@ -289,6 +317,10 @@ void fattree_nca( const Router *r, const Flit *f,
     break;
   case Flit::WRITE_REPLY:
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
+    break;
+  case Flit::ANY_TYPE:
+    outputs->AddRange( out_port, 0, gNumVCS-1 );
+    break;
   }
 }
 
@@ -386,6 +418,10 @@ void fattree_anca( const Router *r, const Flit *f,
   case Flit::WRITE_REPLY:
     vcBegin = gWriteReplyBeginVC;
     vcEnd   = gWriteReplyEndVC;
+    break;
+  case Flit::ANY_TYPE:
+    vcBegin = 0;
+    vcEnd   = gNumVCS-1;
   }
 
   if (range > 1) {
@@ -425,6 +461,8 @@ void dor_mesh( const Router *r, const Flit *f,
     outputs->AddRange( out_port, gReadReplyBeginVC, gReadReplyEndVC );
   else if (f->type ==  Flit::WRITE_REPLY)
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
+  else if (f->type ==  Flit::ANY_TYPE)
+    outputs->AddRange( out_port, 0, gNumVCS-1 );
 }
 
 // ============================================================
@@ -486,6 +524,13 @@ void xy_yx_mesh( const Router *r, const Flit *f,
       outputs->AddRange( out_port, gWriteReplyEndVC -0, gWriteReplyEndVC -0);
     else
       outputs->AddRange( out_port, gWriteReplyEndVC -1, gWriteReplyEndVC -1);
+    break;
+  case Flit::ANY_TYPE:
+    outputs->AddRange( out_port, 0, gNumVCS-1);
+    if ( f->x_then_y )
+      outputs->AddRange( out_port, 0, gNumVCS-1);
+    else
+      outputs->AddRange( out_port,  0, gNumVCS-1);
   }
 
 }
@@ -1290,6 +1335,10 @@ void dim_order_torus( const Router *r, const Flit *f, int in_channel,
   case Flit::WRITE_REPLY:
     vc_class_min = gWriteReplyBeginVC;
     vc_class_max = gWriteReplyEndVC;
+    break;
+  case Flit::ANY_TYPE:
+    vc_class_min = 0;
+    vc_class_max = gNumVCS-1;
   }
   
   int vc_class_size = vc_class_max - vc_class_min ;
@@ -1378,6 +1427,10 @@ void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel,
   case Flit::WRITE_REPLY:
     vc_class_min = gWriteReplyBeginVC ;
     vc_class_max = gWriteReplyEndVC ;
+    break;
+  case Flit::ANY_TYPE:
+    vc_class_min = 0;
+    vc_class_max = gNumVCS-1;
   }
 
   int vc_class_size = vc_class_max - vc_class_min ;

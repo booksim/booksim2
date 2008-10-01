@@ -335,7 +335,8 @@ void dor_MECS( const Router *r, const Flit *f, int in_channel,
     outputs->AddRange( out_port, gReadReplyBeginVC, gReadReplyEndVC );
   if (f->type ==  Flit::WRITE_REPLY)
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
-
+  if (f->type ==  Flit::ANY_TYPE)
+    outputs->AddRange( out_port, 0, gNumVCS-1 );
 }
 
 int mecs_transformation(int dest){
