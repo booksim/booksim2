@@ -243,38 +243,41 @@ TrafficManager::~TrafficManager( )
 }
 
 
-// Decides which subnetwork the flit should go to. 
+// Decides which subnetwork the flit should go to.
+// Is now called once per packet.
 // This should change according to number of duplicate networks
-int TrafficManager::DivisionAlgorithm (Flit* f) {
+int TrafficManager::DivisionAlgorithm (int packet_type) {
 
-  if (duplicate_networks == 2) {
-    if (f->type == Flit::WRITE_REQUEST || f->type == Flit::READ_REQUEST) { // Request flit
-      return 1;
+  if(packet_type == Flit::ANY_TYPE) {
+    static unsigned short counter = 0;
+    return (counter++)%duplicate_networks; // Even distribution.
+  }
+  else {
+    if (duplicate_networks == 2) {
+      if (packet_type == Flit::WRITE_REQUEST || packet_type == Flit::READ_REQUEST) { // Request flit
+        return 1;
+      }
+      else if (packet_type == Flit::WRITE_REPLY || packet_type == Flit::READ_REPLY) { // Reply flit
+        return 0;
+      }
     }
-    else if (f->type == Flit::WRITE_REPLY || f->type == Flit::READ_REPLY) { // Reply flit
-      return 0;
-    } else if(f->type == Flit::ANY_TYPE){
-      return RandomInt(1);
+    else if (duplicate_networks == 4) {
+      if (packet_type == Flit::WRITE_REQUEST)
+        return 0;
+      else if (packet_type == Flit::READ_REQUEST)
+        return 1;
+      else if (packet_type == Flit::WRITE_REPLY)
+        return 2;
+      else if (packet_type == Flit::READ_REPLY)
+        return 3;
     }
-  }
-  else if (duplicate_networks == 4) {
-    if (f->type == Flit::WRITE_REQUEST)
+    else if (duplicate_networks == 1) {
       return 0;
-    else if (f->type == Flit::READ_REQUEST)
-      return 1;
-    else if (f->type == Flit::WRITE_REPLY)
-      return 2;
-    else if (f->type == Flit::READ_REPLY)
-      return 3;
-    else if (f->type == Flit::ANY_TYPE)
-      return RandomInt(3);
-  }
-  else if (duplicate_networks == 1) {
-    return 0;
-  }
-  else {// Never should be here.
-    assert(0);
-    return -1;
+    }
+    else {// Never should be here.
+      assert(0);
+      return -1;
+    }
   }
 }
 
@@ -463,9 +466,11 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   }
   ++_total_in_flight;
 
+  sub_network = DivisionAlgorithm(packet_type);
+
   for ( int i = 0; i < size; ++i ) {
     f = _NewFlit( );
-      
+    f->subnetwork = sub_network;
     f->src    = source;
     f->time   = time;
     f->record = record;
@@ -483,7 +488,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       f->head = false;
       f->dest = -1;
     }
-
     switch( _pri_type ) {
     case class_based:
       f->pri = cl; break;
@@ -505,7 +509,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       cout << "Generating flit at time " << time << endl;
       cout << *f;
     }
-    sub_network = this->DivisionAlgorithm(f);
 
     _partial_packets[source][cl][sub_network].push_back( f );
   }

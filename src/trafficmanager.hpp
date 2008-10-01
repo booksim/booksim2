@@ -150,7 +150,7 @@ protected:
 
   virtual bool _SingleSim( );
 
-  int DivisionAlgorithm(Flit* f);
+  int DivisionAlgorithm(int packet_type);
 
   void _DisplayRemaining( ) const;
 

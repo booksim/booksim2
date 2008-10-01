@@ -35,6 +35,7 @@ struct Flit {
 
   int  hops;
   bool watch;
+  short subnetwork;
 
   //for credit tracking, last router visited
   mutable int from_router;
