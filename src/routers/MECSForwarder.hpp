@@ -8,6 +8,7 @@
 #include "flit.hpp"
 #include "config_utils.hpp"
 #include <queue>
+#include <assert.h>
 
 
 class MECSForwarder : public Module {

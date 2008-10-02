@@ -2,6 +2,7 @@
 #define _MECSCREDITCHANNELS_HPP_
 
 #include "MECSCreditForwarder.hpp"
+#include <assert.h>
 
 class MECSCreditChannels: public Module{
 

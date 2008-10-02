@@ -7,6 +7,7 @@
 #include "creditchannel.hpp"
 #include "config_utils.hpp"
 #include <queue>
+#include <assert.h>
 
 
 class MECSCreditForwarder : public Module {

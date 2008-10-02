@@ -9,6 +9,7 @@
 #include "MECSCreditCombiner.hpp"
 #include "MECSChannels.hpp"
 #include "MECSCreditChannel.hpp"
+#include <assert.h>
 
 class MECSRouter: public Router{
 
@@ -57,8 +58,8 @@ public:
   virtual void WriteOutputs( );
   virtual void Finalize ();
 
-  virtual int GetCredit(int out, int vc_begin, int vc_end ) const {}
-  virtual int GetBuffer(int i) const {}
+  virtual int GetCredit(int out, int vc_begin, int vc_end ) const {return -1;}
+  virtual int GetBuffer(int i) const {return -1;}
 };
 
 #endif

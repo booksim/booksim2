@@ -9,6 +9,7 @@
 
 #include "allocator.hpp"
 #include "arbiter.hpp"
+#include <assert.h>
 
 #include <list>
 
