@@ -551,7 +551,7 @@ void TrafficManager::_ReadWriteInject(){
     for ( int c = 0; c < _classes; ++c ) {
       // Potentially generate packets for any (input,class)
       // that is currently empty
-      if ( _partial_packets[input][c][0].empty( ) ) {
+      if ( 1 ) { // Always try. Hard to check for empty queue - many subnetworks potentially.
 	generated = false;
 	  
 	if ( !_empty_network ) {
@@ -573,21 +573,29 @@ void TrafficManager::_ReadWriteInject(){
 	  }
 	}
 	if ( generated ) {
-	  highest_class = c;
+	  //highest_class = c;
+	  class_array[sub_network][c]++; // One more packet for this class.
 	}
-      } else {
-	highest_class = c;
-      } //This is not necessary with class_array because it stays.
+      } //else {
+	//highest_class = c;
+      //} //This is not necessary with class_array because it stays.
     }
 
     // Now, check partially issued packets to
     // see if they can be issued
     for (int i = 0; i < duplicate_networks; ++i) {
       write_flit = false;
-  
+      highest_class = 0;
+     // Now just find which is the highest_class.
+      for (short c = _classes - 1; c >= 0; --c) {
+        if (class_array[i][c]) {
+          highest_class = c;
+          break;
+        }
+      } 
       if ( !_partial_packets[input][highest_class][i].empty( ) ) {
         f = _partial_packets[input][highest_class][i].front( );
-        if ( f->head ) { // Find first available VC
+        if ( f->head && f->vc == -1) { // Find first available VC
 
 	  f->vc = _buf_states[input][i]->FindAvailable( );
 	  if ( f->vc != -1 ) {
@@ -610,6 +618,10 @@ void TrafficManager::_ReadWriteInject(){
         }
       }
       _net[i]->WriteFlit( write_flit ? f : 0, input );
+      if (write_flit) {
+        if (f->tail) // If a tail flit, reduce the number of packets of this class.
+          class_array[i][highest_class]--;
+      }
     }
   }
 }
@@ -682,7 +694,7 @@ void TrafficManager::_NormalInject(){
       }
       if ( !_partial_packets[input][highest_class][i].empty( ) ) {
         f = _partial_packets[input][highest_class][i].front( );
-        if ( f->head ) { // Find first available VC
+        if ( f->head && f->vc == -1) { // Find first available VC
 
 	  if ( _voqing ) {
 	    if ( _buf_states[input][i]->IsAvailableFor( f->dest ) ) {

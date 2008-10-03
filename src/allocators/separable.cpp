@@ -31,7 +31,7 @@ SeparableAllocator::SeparableAllocator( const Configuration& config,
     _output_arb = new MatrixArbiter [ outputs ] ;
     _spec_input_arb = new MatrixArbiter [ inputs ] ;
     _spec_output_arb = new MatrixArbiter [ outputs ] ;
-  } else if ( alloc_type == "roundrobin" ) {
+  } else if ( alloc_type == "round_robin" ) {
     _input_arb = new RoundRobinArbiter [ inputs ] ;
     _output_arb = new RoundRobinArbiter [ outputs ] ;
     _spec_input_arb = new RoundRobinArbiter [ inputs ] ;
