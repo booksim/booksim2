@@ -28,7 +28,7 @@ int MatrixArbiter::_Priority( int row, int column ) const  {
 }
 
 void MatrixArbiter::_SetPriority( int row, int column, int val )  {
-  if ( row * _input_size + column < _input_size * _input_size ) 
+  if ( row <= column ) 
     _matrix[ row * _input_size + column ] = val ;
 }
 

@@ -68,12 +68,12 @@ SeparableAllocator::~SeparableAllocator() {
   delete[] _out_req ;
 
   for (int i = 0; i < _inputs; ++i) {
-    delete [] _input_arb[i];
-    delete [] _spec_input_arb[i];
+    delete _input_arb[i];
+    delete _spec_input_arb[i];
   }
   for (int i = 0; i < _outputs; ++i) {
-    delete [] _output_arb[i];
-    delete [] _spec_output_arb[i];
+    delete _output_arb[i];
+    delete _spec_output_arb[i];
   }
 
   delete[] _input_arb ;

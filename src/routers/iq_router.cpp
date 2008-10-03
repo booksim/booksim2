@@ -516,13 +516,13 @@ void IQRouter::_SWAlloc( )
 	      
 	      if( _speculative){
 		_sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
-					 1 /*cur_vc->GetPriority( ) */, 
-					 1 /*cur_vc->GetPriority( ) */);
+					 0 /*cur_vc->GetPriority( ) */, 
+					 0 /*cur_vc->GetPriority( ) */);
 	      } else {
 		//make sure priority is other wise correct
 	      _sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
-					 0/*cur_vc->GetPriority( )*/, 
-					 0/*cur_vc->GetPriority( ))*/);
+					 1/*cur_vc->GetPriority( )*/, 
+					 1/*cur_vc->GetPriority( ))*/);
 	      }
 	    }
 	  }

@@ -32,7 +32,7 @@ int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
     return _selected ;
   
   // run the round-robin tournament
-  for (int offset = 1 ; offset < _input_size ; offset++ ) {
+  for (int offset = 1 ; offset <= _input_size ; offset++ ) {
     int input = (_pointer + offset) % _input_size;
     if ( _request[input].valid ) {
       _selected = input ;
