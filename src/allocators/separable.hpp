@@ -18,11 +18,11 @@ class SeparableAllocator : public Allocator {
   int  _num_vcs ;
   int* _matched ;
 
-  Arbiter* _input_arb ;
-  Arbiter* _output_arb ;
+  Arbiter** _input_arb ;
+  Arbiter** _output_arb ;
 
-  Arbiter* _spec_input_arb ;
-  Arbiter* _spec_output_arb ;
+  Arbiter** _spec_input_arb ;
+  Arbiter** _spec_output_arb ;
 
   list<sRequest>* _in_req ;
   list<sRequest>* _out_req ;

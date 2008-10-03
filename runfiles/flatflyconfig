@@ -15,13 +15,13 @@ write_request_end_vc   = 15;
 num_vcs     = 16;
 vc_buf_size = 8;
 
-wait_for_tail_credit = 1;
+wait_for_tail_credit = 0;
 
 //
 // Router architectureq
 //
-vc_allocator = islip; 
-sw_allocator = islip;
+vc_allocator = round_robin; 
+sw_allocator = round_robin;
 alloc_iters  = 1;
 
 credit_delay   = 2;
@@ -84,3 +84,6 @@ const_flits_per_packet = 8;
 traffic       = bitcomp;
 
 injection_rate = 0.45;
+
+
+use_read_write = 1;

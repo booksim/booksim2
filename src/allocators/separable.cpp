@@ -26,29 +26,38 @@ SeparableAllocator::SeparableAllocator( const Configuration& config,
 
   int num_vcs = config.GetInt("num_vcs") ;
 
+  _input_arb = new Arbiter*[inputs];
+  _output_arb = new Arbiter*[outputs];
+  _spec_input_arb = new Arbiter*[inputs];
+  _spec_output_arb = new Arbiter*[outputs];
+
   if ( alloc_type == "matrix" ) {
-    _input_arb = new MatrixArbiter [ inputs ] ;
-    _output_arb = new MatrixArbiter [ outputs ] ;
-    _spec_input_arb = new MatrixArbiter [ inputs ] ;
-    _spec_output_arb = new MatrixArbiter [ outputs ] ;
+    for (int i = 0; i < inputs; ++i) {
+      _input_arb[i] = new MatrixArbiter;
+      _input_arb[i]->Init(num_vcs);
+      _spec_input_arb[i] = new MatrixArbiter;
+      _spec_input_arb[i]->Init(num_vcs);
+    }
+    for (int i = 0; i < outputs; ++i) {
+      _output_arb[i] = new MatrixArbiter;
+      _output_arb[i]->Init(inputs);
+      _spec_output_arb[i] = new MatrixArbiter;
+      _spec_output_arb[i]->Init(inputs);
+    }
   } else if ( alloc_type == "round_robin" ) {
-    _input_arb = new RoundRobinArbiter [ inputs ] ;
-    _output_arb = new RoundRobinArbiter [ outputs ] ;
-    _spec_input_arb = new RoundRobinArbiter [ inputs ] ;
-    _spec_output_arb = new RoundRobinArbiter [ outputs ] ;
+    for (int i = 0; i < inputs; ++i) {
+      _input_arb[i] = new RoundRobinArbiter;
+      _input_arb[i]->Init(num_vcs);
+      _spec_input_arb[i] = new RoundRobinArbiter;
+      _spec_input_arb[i]->Init(num_vcs);
+    }
+    for (int i = 0; i < outputs; ++i) {
+      _output_arb[i] = new RoundRobinArbiter;
+      _output_arb[i]->Init(inputs);
+      _spec_output_arb[i] = new RoundRobinArbiter;
+      _spec_output_arb[i]->Init(inputs);
+    }
   }
-
-  for ( int i = 0 ; i < inputs ; i++ ) 
-    _input_arb[i].Init( num_vcs ) ;
-
-  for ( int o = 0 ; o < outputs ; o++ ) 
-    _output_arb[o].Init( inputs ) ;
- 
-  for ( int i = 0 ; i < inputs ; i++ ) 
-    _spec_input_arb[i].Init( num_vcs ) ;
-  
-  for ( int o = 0 ; o < outputs ; o++ ) 
-    _spec_output_arb[o].Init( inputs ) ;
 
   Clear() ;
 }
@@ -57,6 +66,15 @@ SeparableAllocator::~SeparableAllocator() {
 
   delete[] _in_req ;
   delete[] _out_req ;
+
+  for (int i = 0; i < _inputs; ++i) {
+    delete [] _input_arb[i];
+    delete [] _spec_input_arb[i];
+  }
+  for (int i = 0; i < _outputs; ++i) {
+    delete [] _output_arb[i];
+    delete [] _spec_output_arb[i];
+  }
 
   delete[] _input_arb ;
   delete[] _spec_input_arb ;
@@ -174,9 +192,9 @@ void SeparableAllocator::Allocate() {
       const sRequest& req = *it ;
       if ( req.label > -1 ) {
 	if ( req.in_pri > 0 ) {
-	  _input_arb[input].AddRequest( req.label, req.port, req.in_pri ) ;
+	  _input_arb[input]->AddRequest( req.label, req.port, req.in_pri ) ;
 	} else {
-	  _spec_input_arb[input].AddRequest( req.label, req.port, req.in_pri ) ;
+	  _spec_input_arb[input]->AddRequest( req.label, req.port, req.in_pri ) ;
 	}
       }
       it++ ;
@@ -188,13 +206,13 @@ void SeparableAllocator::Allocate() {
     // prevent a speculative request that might be displaced by a non-
     // speculative request at the input port from competing for an output
     int out, spec_out, pri, spec_pri ;
-    int vc = _input_arb[input].Arbitrate( &out, &pri ) ;
-    int spec_vc = _spec_input_arb[input].Arbitrate( &spec_out, &spec_pri ) ;
+    int vc = _input_arb[input]->Arbitrate( &out, &pri ) ;
+    int spec_vc = _spec_input_arb[input]->Arbitrate( &spec_out, &spec_pri ) ;
 
     if ( vc > -1 ) {
-      _output_arb[out].AddRequest( input, vc, pri ) ;
+      _output_arb[out]->AddRequest( input, vc, pri ) ;
     } else if ( spec_vc > -1 ) {
-      _spec_output_arb[spec_out].AddRequest( input, spec_vc, spec_pri ) ;
+      _spec_output_arb[spec_out]->AddRequest( input, spec_vc, spec_pri ) ;
     }
   }
 
@@ -203,15 +221,15 @@ void SeparableAllocator::Allocate() {
   for ( int output = 0 ; output < _outputs ; output++ ) {
 
     int vc, spec_vc, pri, spec_pri ;
-    int input      = _output_arb[output].Arbitrate( &vc, &pri ) ;
-    int spec_input = _spec_output_arb[output].Arbitrate( &spec_vc, &spec_pri ) ;
+    int input      = _output_arb[output]->Arbitrate( &vc, &pri ) ;
+    int spec_input = _spec_output_arb[output]->Arbitrate( &spec_vc, &spec_pri ) ;
   
     if ( input > -1 ) {
       assert( pri > 0 && _inmatch[input] == -1 && _outmatch[output] == -1 ) ;
       _inmatch[input]   = output ;
       _outmatch[output] = input ;
-      _input_arb[input].UpdateState() ;
-      _output_arb[output].UpdateState() ;
+      _input_arb[input]->UpdateState() ;
+      _output_arb[output]->UpdateState() ;
 
     } else if ( spec_input > -1 ) {
 
@@ -221,8 +239,8 @@ void SeparableAllocator::Allocate() {
 
 	_inmatch[spec_input] = output ;
 	_outmatch[output]    = spec_input ;
-	_spec_input_arb[spec_input].UpdateState() ;
-	_spec_output_arb[output].UpdateState() ;
+	_spec_input_arb[spec_input]->UpdateState() ;
+	_spec_output_arb[output]->UpdateState() ;
 
       }
     }
