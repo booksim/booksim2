@@ -20,7 +20,7 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\author{Ted Jiang, George Michelogiannakis, Brian Towles and William J. Dally}
+\author{Ted Jiang, George Michelogiannakis, Daniel Becker, Brian Towles and William J. Dally}
 \title{\simname 2.0 User's Guide}
 
 \begin{document}
@@ -562,6 +562,13 @@ allocation.
 
 \end{opt_list}
 
+
+\subsubsection{The NoC router}
+\label{sec:noc_router}
+
+The NoC router (\texttt{router = noc}) is a simplified variant of the input-queued router. It does not support input or output speedup. Also, it does not support multi-cycle allocation, but does support output-first allocation.
+
+
 \subsubsection{The event-driven router}
 \label{sec:event_router}
 
@@ -585,7 +592,9 @@ allocation algorithms are available.
 \item[islip] iSLIP separable allocator.
 \item[pim] Parallel iterative matching separable allocator.
 \item[loa] Lonely output allocator.
-\item[wavefront] Wavefront matching.
+\item[wavefront] Wavefront allocator.
+\item[matrix] Separable input-first allocator built from matrix arbiters.
+\item[round\_robin] Separable input-first allocator built from round-robin arbiters.
 \item[select] Priority-based allocator.  Allocation is performed as in
 iSLIP, but with preference towards higher priority packets (see
 \texttt{priority} option in Section~\ref{sec:traffic}).
