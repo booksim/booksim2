@@ -129,6 +129,7 @@ protected:
   tRoutingFunction  _routing_function;
   tInjectionProcess _injection_process;
 
+  map<int,bool> flits_to_watch;
   // ============ Internal methods ============ 
 protected:
   virtual Flit *_NewFlit( );
@@ -153,7 +154,8 @@ protected:
   int DivisionAlgorithm(int packet_type);
 
   void _DisplayRemaining( ) const;
-
+  
+  void _LoadWatchList();
 public:
   TrafficManager( const Configuration &config, Network **net );
   ~TrafficManager( );

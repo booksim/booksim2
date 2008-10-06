@@ -1,7 +1,7 @@
 #include "booksim.hpp"
 #include <sstream>
 #include <math.h>
-
+#include <fstream>
 #include "trafficmanager.hpp"
 #include "random_utils.hpp" 
 
@@ -186,7 +186,8 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _max_samples    = config.GetInt( "max_samples" );
   _warmup_periods = config.GetInt( "warmup_periods" );
   _latency_thres = config.GetFloat( "latency_thres" );
-  _include_queuing = config.GetInt( "ienclude_queuing" );
+  _include_queuing = config.GetInt( "include_queuing" );
+  _LoadWatchList();
 }
 
 TrafficManager::~TrafficManager( )
@@ -288,6 +289,10 @@ Flit *TrafficManager::_NewFlit( )
   f = new Flit();
   f->id    = _cur_id;
   _in_flight[_cur_id] = true;
+  if(flits_to_watch.size()!=0   && 
+     flits_to_watch.find(_cur_id)!=flits_to_watch.end()){
+    f->watch =true; 
+  }
   ++_cur_id;
   return f;
 }
@@ -491,8 +496,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     switch( _pri_type ) {
     case class_based:
       f->pri = cl; break;
-    case age_based:
-      f->pri = -time; break;
+    case age_based://fall through
     case none:
       f->pri = 0; break;
     }
@@ -560,7 +564,7 @@ void TrafficManager::_ReadWriteInject(){
 
 	    if ( psize ) {
 	      _GeneratePacket( input, psize, c, 
-			       _include_queuing ? 
+			       _include_queuing==1 ? 
 			       _qtime[input][c] : _time );
 	      generated = true;
 	    }
@@ -659,7 +663,7 @@ void TrafficManager::_NormalInject(){
 
 	    if ( psize ) {
 	      _GeneratePacket( input, psize, c, 
-			       _include_queuing ? 
+			       _include_queuing==1 ? 
 			       _qtime[input][c] : _time );
 	      generated = true;
 	    }
@@ -1132,4 +1136,25 @@ void TrafficManager::Run( )
   cout << "Average hops = " << _hop_stats->Average( )
        << " (" << _hop_stats->NumSamples( ) << " samples)" << endl;
 
+}
+
+void TrafficManager::_LoadWatchList(){
+  
+  ifstream watch_list;
+  string line;
+  string delimiter = ",";
+  watch_list.open(watch_file.c_str());
+
+  if(watch_list.is_open()){
+    while(!watch_list.eof()){
+      getline(watch_list,line);
+      if(line!=""){
+	
+	flits_to_watch[atoi(line.c_str())]= true;
+      }
+    }
+
+  } else {
+    cout<<"Unable to open flit watch file, continuing with simulation\n";
+  }
 }

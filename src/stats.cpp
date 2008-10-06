@@ -92,11 +92,7 @@ void Stats::Display( ) const
 {
   int b;
 
-  cout << "bins = [ ";
-  for ( b = 0; b < _num_bins; ++b ) {
-    cout << b*_bin_size << " ";
-  }
-  cout << "];" << endl;
+  cout << "bins = [ "<<0<<" ..." << _num_bins-1<<"];" << endl;
 
   cout << "freq = [ ";
   for ( b = 0; b < _num_bins; ++b ) {

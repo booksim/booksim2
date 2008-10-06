@@ -1,3 +1,4 @@
+
 \documentclass[11pt]{article}
 \usepackage{fancyhdr}
 \usepackage[dvips]{graphicx} 
@@ -82,9 +83,11 @@ The latest version of the simulator is available from
 \texttt{http://cva.stanford.edu} as a compressed tar archive.  UNIX/Linux
 users can extract this archive using the tar utility
 \begin{verbatim}
-  tar xvfz booksim-1.0.tar.gz  
+
+  tar xvfz booksim-2.0.tar.gz  
 \end{verbatim}
-Windows users can use a compression program such as WinZip to extract
+
+Windows users can use a compression program such as Winrar to extract
 the archive.
 
 The simulator itself is written in C++ and has been specifically
@@ -100,7 +103,7 @@ LEX are stored in the \texttt{/usr/pubsw/bin} directory.  The
 \texttt{Makefile} reflects this:
 \begin{verbatim}
 CPP    = /usr/pubsw/bin/g++
-YACC   = /usr/pubsw/bin/byacc -d
+YACC   = /usr/pubsw/bin/bison -d
 LEX    = /usr/pubsw/bin/flex
 \end{verbatim}
 Then, the simulator can be compiled by running \texttt{make} in the
@@ -111,14 +114,13 @@ directory that contains the \texttt{Makefile}.
 
 The syntax of the simulator is simply
 \begin{verbatim}
-  booksim [configfile]
+  ./booksim [configfile]
 \end{verbatim}
 The optional parameter \texttt{configfile} is a file that contains
 configuration information for the simulator.  So, for example, to
 simulate the performance of a simple $8 \times 8$ torus (8-ary 2-cube)
 network on uniform traffic, a configuration such as the one shown in
-Figure~\ref{fig:config_example} could be used.  This particular
-configuration is stored in \texttt{examples/torus88}.
+Figure~\ref{fig:config_example} could be used. This particular configuration is stored in examples/torus88.
 
 \begin{figure}
 \begin{verbatim}
@@ -131,7 +133,7 @@ configuration is stored in \texttt{examples/torus88}.
   routing_function = dim_order;
 
   // Flow control
-  num_vcs = 2;
+  num_vcs = 4;
 
   // Traffic
   traffic        = uniform;
@@ -144,13 +146,10 @@ network.}
 
 In addition to specifying the topology, the configuration file also
 contains basic information about the routing algorithm, flow control,
-and traffic.  This simple example uses dimension-order routing and, to
-ensure deadlock-freedom of this routing function in the torus, two
-virtual channels are required.  The \texttt{injection\_rate} parameter
-is added to tell the simulator to inject 0.15 flits per simulation
-cycle per node.  Because the simulator operates at the flit level,
-most parameters are specified in units of flits as is the case with
-the \texttt{injection\_rate}.  Also, any line of the configuration
+and traffic.  This simple example uses dimension-order routing and and four
+virtual channels.  The \texttt{injection\_rate} parameter
+is added to tell the simulator to inject 0.15 packets per simulation
+cycle per node.  The packets are default to size of 1 flit.  Also, any line of the configuration
 that begins with \texttt{//} is treated as a comment and ignored by
 the simulator.  A detailed list of configuration parameters is given in
 Section~\ref{sec:config_params}.
@@ -170,36 +169,56 @@ also displayed.
 
 \begin{figure}
 \begin{verbatim}
-%=================================
 % Average latency = 6.02008
 % Accepted packets = 0.11 at node 52 (avg = 0.147094)
 % latency change    = 1
 % throughput change = 1
+>>>>>>> variant B
+BEGIN Configuration File
+Name: examples/torus88
+// Topology
+topology = torus;
+k = 8;
+n = 2;
+// Routing
+routing_function = dim_order;
+// Flow control
+num_vcs = 4;
+// Traffic
+traffic = uniform;
+injection_rate = 0.15;
+
+END Configuration File
+Unable to open flit watch file, continuing with simulation
+0%=================================
+% Average latency = 10.6252
+% Accepted packets = 0.119 at node 5 (avg = 0.148875)
+lat(1) = 10.6252;
+bins = [ 0 ...999];
+freq = [ 0 0 124 16 497 71 920 166 1336 303 1553 436 1351 
+406 926 328 537 213 173 77 43 24 13 6 5 2 1 1 0 ...]
 
 ...
 
-% Warmed up ...
-%=================================
-% Average latency = 6.0796
-% Accepted packets = 0.119 at node 5 (avg = 0.148266)
-% latency change    = 0.00562457
-% throughput change = 0.00379387
+% Warmed up ...Time used is 3000 cycles
 
 ...
 
 % Draining all recorded packets ...
 % Draining remaining packets ...
+Time taken is 6031 cycles
 ====== Traffic class 0 ======
-Overall average latency = 6.09083 (1 samples)
-Overall average accepted rate = 0.149475 (1 samples)
-Overall min accepted rate = 0.138551 (1 samples)
+Overall average latency = 10.658 (1 samples)
+Overall average accepted rate = 0.148383 (1 samples)
+Overall min accepted rate = 0.134279 (1 samples)
+Average hops = 5.01172 (57148 samples)
 \end{verbatim}
 \caption{Simulator output from running the \texttt{examples/torus88}
 configuration file.}
 \label{fig:sim_output}
 \end{figure}
 
-After the warm up periods have passed, the simulator prints the
+After the warm up periods have passed (default to 3$\times$sample\_period), the simulator prints the
 ``\texttt{Warmed up}'' message and resets all the simulation statistics.
 Then, the measurement phase begins and statistics continue to be
 reported after each sample period.  Once the measurement periods have
@@ -266,113 +285,12 @@ const_flits_per_packet = 20;
 // Simulation
 
 sim_type       = latency;
-injection_rate = 0.1;
+injection_rate = 0.005;
 \end{verbatim}
 \caption{A typical configuration file (\texttt{examples/mesh88\_lat})
 for creating a latency versus offered load curve for a 8-ary 2-mesh
 network.}
 \label{fig:lat_vs_load}
-\end{figure}
-
-Figure~\ref{fig:fly_dist} shows a configuration file that can be used
-to determine the distribution of packet latencies in a 2-ary 6-fly
-network that uses age-based arbitration.  Note the use of the
-\texttt{priority} configuration parameter along with the
-\texttt{select} allocators that account for packet priorities.  The
-simulator does not output latency distributions by default, but by
-editing \texttt{trafficmanager.cpp}, setting the configuration
-variable \texttt{DISPLAY\_LAT\_DIST} to true, and recompiling, the
-distribution will be displayed at the end of the simulation.  This
-technique was used to produced the distribution shown in Figure 25.12
-of PPIN.
-
-\begin{figure}
-\begin{verbatim}
-// Topology
-
-topology = fly;
-k = 2;
-n = 6;
-
-// Routing
-
-routing_function = dest_tag;
-
-// Flow control
-
-num_vcs     = 8;
-vc_buf_size = 8;
-
-wait_for_tail_credit = 1;
-
-// Router architecture
-
-vc_allocator = select;
-sw_allocator = select;
-alloc_iters  = 1;
-
-credit_delay   = 2;
-routing_delay  = 1;
-vc_alloc_delay = 1;
-
-input_speedup     = 2;
-output_speedup    = 1;
-internal_speedup  = 1.0;
-
-// Traffic
-
-traffic                = uniform;
-const_flits_per_packet = 20;
-priority               = age;
-
-// Simulation
-
-sim_type       = latency;
-injection_rate = 0.1;
-\end{verbatim}
-\caption{A configuration file (\texttt{examples/fly26\_age}) for
-finding the distribution of packet latencies using age-based
-arbitration.}
-\label{fig:fly_dist}
-\end{figure}
-
-As a final example, Figure~\ref{fig:single} shows the use of the
-special single-node topology to test the performance of a switch
-allocator --- in this case, the iSLIP allocator.  The
-\texttt{in\_ports} and \texttt{out\_ports} options set up a simulation
-of an $8\times 8$ crossbar.
-
-\begin{figure}
-\begin{verbatim}
-// Topology
-
-topology  = single;
-in_ports  = 8;
-out_ports = 8;
-
-// Routing
-
-routing_function = single;
-
-// Flow control
-
-vc_allocator = islip;
-sw_allocator = islip;
-alloc_iters  = 2;
-
-num_vcs     = 8;
-vc_buf_size = 1000;
-
-wait_for_tail_credit = 0;
-
-// Simulation
-
-sim_type       = latency;
-injection_rate = 0.1;
-\end{verbatim}
-\caption{A single-node configuration file (\texttt{examples/single})
-for testing the performance of a switch allocator.}
-\label{fig:single}
 \end{figure}
 
 \section{Configuration parameters}
@@ -382,13 +300,27 @@ All information used to configure a simulation is passed through a
 configuration file as illustrated by the example in
 Section~\ref{sec:run_example}.  This section lists the existing
 configuration parameters --- a user can incorporate additional options
-by changing the \texttt{booksim\_config.cpp} file.
+by changing the \texttt{booksim\_config.cpp} file. Most configuration parameters have default values that should work without user specification
 
 \subsection{Topologies}
 \label{sec:topos}
 
 The \texttt{topology} parameter determines the underlying topology of the
-network and the simulator supports four basic topologies:
+network. There is also a set of numerical parameters that describes the size of the networks. 
+
+\begin{opt_list}{single}
+\item[k] Network radix, the number of routers per dimension
+\item[n] Network dimension
+\item[c] Network concentration, the number of nodes sharing a single router. Typically set to 1, >1 only in networks that has concentration (i.e. cmesh)
+\item[x] (NoC simulations only) The number of routers in the X dimension. Used to calculate channel latency between routers. 
+\item[y] (NoC simulations only) The number of routers in the y dimension. Used to calculate channel latency between routers. 
+\item[xr] (NoC simulations only) For networks that has c>1, the number of nodes in the x direction per router. Used to calculate channel latency between routers. 
+\item[yr] (NoC simulations only) For networks that has c>1, the number of nodes in the y direction per router. Used to calculate channel latency between routers. 
+\item[limit] Emulate partially filled networks. Nodes greater or equal to limit does not generate or receive packets during simulation. Though depending on the routing algorithm the routers associated with those nodes may be use to route passing by traffic. 
+
+\end{opt_list}
+
+Topologies available in \simname are:
 \begin{opt_list}{single}
 \item[fly] A $k$-ary $n$-fly (butterfly) topology. The \texttt{k}
 parameter determines the network's radix and the \texttt{n} parameter
@@ -406,6 +338,20 @@ respectively.
 \item[torus] A $k$-ary $n$-cube (torus) topology.  The \texttt{k}
 parameter determines the network's radix and the \texttt{n} parameter determines
 the network's dimension.
+\item[cmesh] Concentrated mesh topology is a A $k$-ary $n$-mesh topology with multiple nodes sharing a single router. The \texttt{c} determines the concentration. The cmesh topology has the option that turns on "express channels" as described in  by default these channels are turned off. 
+
+\item[fat tree] Fat Tree topology with 3 levels. Nodes are routers are arranged in a tree structure but the number of links between levels stays constant. At the bottom \texttt{k} nodes shares a level 0 router.
+
+\item[flattened butterfly] A topology based on *** 
+
+\item[quad tree] A quad tree topology.
+
+\item[tree 4]
+
+\item[cmo] Concentrated Multi-dimensional Octagon created by Sang Kyun Kim and Wook-Jin Chung.
+
+\item[MECS] A topology based on (***). Currently it only support 1 flit per packet. 
+
 \end{opt_list}
 
 Both the \texttt{mesh} and \texttt{torus} topologies support the
@@ -434,51 +380,7 @@ Traffic destinations can eject one flit from each sub-network each cycle.
 
 The \texttt{routing\_function} parameter selects a routing algorithm
 for the topology.  Many routing algorithms need multiple virtual
-channels for deadlock freedom (VCDF).
-
-\begin{opt_list}{dim\_order\_bal}
-
-\item[dim\_order] Dimension-order routing.  Works for the
-\texttt{mesh} topology (1 VCDF) and for the \texttt{torus} topology (2
-VCDF).
-
-\item[dim\_order\_bal] Dimension-order routing for the
-\texttt{torus} topology with a more balanced use of VCs to
-avoid deadlock (2 VCDF).
-
-\item[dim\_order\_ni] A non-interfering version of
-dimension-order routing.  Works on the \texttt{torus} or \texttt{mesh}
-topology and requires one VC per network terminal.
-
-\item[min\_adapt] A minimal adaptive routing algorithm for
-the \texttt{mesh} topology (2 VCDF) and for the \texttt{torus}
-topology (3 VCDF).
-
-\item[planar\_adapt] Planar-adaptive routing for the
-\texttt{mesh} topology (2 VCDF).  Supports routing around failed channels.
-
-\item[romm] ROMM routing for the \texttt{mesh} (2 VCDF).
-Load is balanced by routing in two phases: one from the source to a
-random intermediate node in the minimal quadrant and a second from the
-intermediate to the destination.
-
-\item[romm\_ni] A non-interfering version of ROMM routing for
-the \texttt{mesh} that requires one VC per network terminal.
-
-\item[single] A dummy routing function used for the
-\texttt{single} topology.
-
-\item[valiant] Valiant's randomized routing algorithm for the
-\texttt{mesh} (2 VCDF) and \texttt{torus} (4 VCDF) topology.
-
-\item[valiant\_ni] A non-interfering version of Valiant's algorithm
-for the \texttt{torus} that requires 4 VCs per network terminal.
-
-\end{opt_list}
-
-Also, the simulator code is structured so that additional routing
-algorithms can be added with minimal changes to the overall simulator
-(see the \texttt{routefunc.cpp} file in the simulator's source code).
+channels for deadlock freedom (VCDF). In addition to \texttt{routefunc.cpp}, some topologies source files include additional routing functions. Also, the simulator code is structured so that additional routing algorithms can be added with minimal changes to the overall simulator (see the \texttt{routefunc.cpp} file in the simulator's source code).
 
 \subsection{Flow control}
 
@@ -489,12 +391,14 @@ credit-based backpressure.
 
 \item[num\_vcs] The number of virtual channels per physical channel.
 
-\item[vc\_buf\_size] The depth of each virtual in flits.
+\item[vc\_buf\_size] The depth of each virtual channel in flits.
 
-\item[voq] If non-zero, use virtual-output queuing.  With virtual
-output queuing, a separate virtual channel is assigned to each
-destination in the network.  This option is most useful when used with
-a non-interfering routing algorithm (Section~\ref{sec:routing_algs}).
+
+%voq is not currently enabled in the simulator !
+%\item[voq] If non-zero, use virtual-output queuing.  With virtual
+%output queuing, a separate virtual channel is assigned to each
+%destination in the network.  This option is most useful when used with
+%a non-interfering routing algorithm (Section~\ref{sec:routing_algs}).
   
 \item[wait\_for\_tail\_credit] If non-zero, do not reallocate a virtual
 channel until the tail flit has left that virtual channel.  This
@@ -560,6 +464,7 @@ allocators.
 \item[vc\_alloc\_delay] The delay (in cycles) of virtual-channel
 allocation.
 
+
 \end{opt_list}
 
 
@@ -567,6 +472,8 @@ allocation.
 \label{sec:noc_router}
 
 The NoC router (\texttt{router = noc}) is a simplified variant of the input-queued router. It does not support input or output speedup. Also, it does not support multi-cycle allocation, but does support output-first allocation.
+
+
 
 
 \subsubsection{The event-driven router}
@@ -608,12 +515,16 @@ the algorithm and the number of iterations is controlled by the
 \subsection{Traffic}
 \label{sec:traffic}
 
-The rate at which flits are injected into the simulator is set using
+
+The two traffic modes, injection rate or batch, can be set by the integer paramter \texttt[use\_read\_write], where 0 means injection mode. Injection mode is on by default.
+
+\subsubsection{Injection mode}
+The rate at which packkets are injected into the simulator is set using
 the \texttt{injection\_rate} option.  The simulator's cycle time is a
 flit cycle, the time it takes a single flit to be injected at a
-source, and the injection rate is specified in flits per flit cycle.
+source, and the injection rate is specified in packets per flit cycle.
 For example, setting \texttt{injection\_rate = 0.25} means that each
-source injects a new flit one of every four simulator cycles.  The
+source injects a new packet one of every four simulator cycles.  The
 injection process can also be specified as either Bernoulli
 (\texttt{injection\_process = bernoulli}) or an on-off process
 (\texttt{injection\_process = on\_off}).  The burstiness of the latter
@@ -622,11 +533,14 @@ injection process is controlled via the \texttt{burst\_alpha} and
 description of the on-off process and its parameters.
 
 The unit of injection is packets, which may be comprised of many
-flits.  The number of flits per packet is set using the
-\texttt{const\_flits\_per\_packet} option.  Each packet may also have an
-associated priority, either age-based (\texttt{age}) or none
-(\texttt{none}), as specified by the \texttt{priority} option.
 
+flits. All packets in injection mode are identical. The number of flits per packet is set using the
+\texttt{const\_flits\_per\_packet} option. 
+
+\subsubsection[Batch mode]
+Batch mode is enabled by setting \texttt{use\_read\_write= 1}. In batch mode, \texttt[injection\_rate] paramter is ignored. Instead, traffic are injected into the network as fast as possible until \texttt{batch\_size} of request packets are generated by each node. When a destination node receives a request packet, it returns a reply packet. The total number of packets injected in batch mode is 2$\times$ \texttt{batch\_size} per node. The parameter \texttt[max\_outstanding] specifies the maximum number of (request or reply) packets waiting at a node to be injected into the network. 
+
+\subsubsection[Traffic Patterns]
 The simulator also supports several different traffic patterns that
 are specified using the \texttt{traffic} option.  To describe these
 patterns, we use the same notation of PPIN Section 3.2: $s_i$ ($d_i$)
@@ -672,14 +586,14 @@ of networks operating beyond their saturation point.
 \item[sample\_period] The sample period is expressed in simulator
 cycles and is used as a multiplier when specifying the warm-up length
 of a simulation and the maximum number of samples.  Also, intermediate
-statistics are displayed once every \texttt{sample\_period} cycles.
+statistics are displayed once every \texttt{sample\_period} cycles. This is only applicable in injection mode.
 
 \item[warmup\_periods] The length of the simulator warm up expressed
 as a multiple of the \texttt{sample\_period}.  After warming up, all
-statistics counters are reset.
+statistics counters are reset. This is only applicable in injection mode.
 
 \item[max\_samples] The total length of simulation expressed as a
-multiple of the \texttt{sample\_period}.
+multiple of the \texttt{sample\_period}. This is only applicable in injection mode.
 
 \item[latency\_thres] If the sampled latency of the current simulation
 exceeds \texttt{latency\_thres}, the simulation is immediately ended.
@@ -690,8 +604,15 @@ particular statistics.
 
 \item[seed] A random seed for the simulation.
 
-\item[reorder] A non-zero value indicates that packet order should be
-maintained and reordering time is accounted for in the overall latency.
+%This is currently not setup in the traffic manager.
+%\item[reorder] A non-zero value indicates that packet order should be
+%maintained and reordering time is accounted for in the overall latency.
+
+\item[print\_activity] At the end of a simulation using iq\_router, print out the activity for buffer, switch, and channel of the network. 
+
+\item[viewer\_trace] The simulator will generate very verbose print out of all activity inside the network. This print out should be fed into noc\_viewer for a graphic display of the activity inside the network. Currently not working. 
+
+\item[watch\_file] Specific flits can have their "watch" status turn on. Require input a file which has flit id listed. 1 id per line. 
 
 \end{opt_list}
 

@@ -20,23 +20,20 @@ BookSimConfig::BookSimConfig( )
   // Channel length listing file
   AddStrField( "channel_file", "" ) ;
 
-  // Control alloction of VC to packet types
-  _int_map["partition_vcs"] = 1 ;
-
   // Use read/write request reply scheme
   
   _int_map["use_read_write"] = 0;
 
   _int_map["read_request_begin_vc"] = 0;
-  _int_map["read_request_end_vc"] = 3;
+  _int_map["read_request_end_vc"] = 5;
 
-  _int_map["write_request_begin_vc"] = 4;
+  _int_map["write_request_begin_vc"] = 2;
   _int_map["write_request_end_vc"] = 7;
 
   _int_map["read_reply_begin_vc"] = 8;
-  _int_map["read_reply_end_vc"] = 11;
+  _int_map["read_reply_end_vc"] = 13;
 
-  _int_map["write_reply_begin_vc"] = 12;
+  _int_map["write_reply_begin_vc"] = 10;
   _int_map["write_reply_end_vc"] = 15;
 
   // Physical sub-networks
@@ -99,7 +96,7 @@ BookSimConfig::BookSimConfig( )
   //==== Input-queued ======================================
 
   _int_map["num_vcs"]         = 16;  
-  _int_map["vc_buf_size"]     = 4;  
+  _int_map["vc_buf_size"]     = 8;  
 
   _int_map["wait_for_tail_credit"] = 1; // reallocate a VC before a tail credit?
 
@@ -129,7 +126,7 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField( "traffic", "uniform" );
 
-  _int_map["perm_seed"] = 0;         // seed value for random perms traffic
+  _int_map["perm_seed"] = 0;         // seed value for random permuation trafficpattern generator
 
   _float_map["injection_rate"]       = 0.1; //if 0.0 assumes it is batch mode
   _int_map["const_flits_per_packet"] = 1; //use  read_request_size etc insted
@@ -157,7 +154,7 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField( "sim_type", "latency" );
 
-  _int_map["warmup_periods"] = 0; // number of samples periods to "warm-up" the simulation
+  _int_map["warmup_periods"] = 3; // number of samples periods to "warm-up" the simulation
 
   _int_map["sample_period"] = 1000; // how long between measurements
   _int_map["max_samples"]   = 20;   // maximum number of sample periods in a simulation
@@ -166,20 +163,19 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["sim_count"]     = 1;   // number of simulations to perform
 
-  _int_map["auto_periods"]  = 1;   // non-zero for the simulator to automatically
-                                   //   control the length of warm-up and the
-                                   //   total length of the simulation
 
-  _int_map["include_queuing"] = 1; // non-zero includes source queuing latency
+  _int_map["include_queuing"] =1; // non-zero includes source queuing latency
 
-  _int_map["reorder"]         = 0;  // know what you're doing
+  //  _int_map["reorder"]         = 0;  // know what you're doing
 
-  _int_map["flit_timing"]     = 0;  // know what you're doing
-  _int_map["split_packets"]   = 0;  // know what you're doing
+  //_int_map["flit_timing"]     = 0;  // know what you're doing
+  //_int_map["split_packets"]   = 0;  // know what you're doing
 
-  _int_map["seed"]            = 0;
+  _int_map["seed"]            = 0; //random seed for simulation, e.g. traffic 
 
   _int_map["print_activity"] = 0;
 
-  _int_map["viewer trace"] = 0;
+  _int_map["viewer_trace"] = 0;
+
+  AddStrField("watch_file", "");
 }

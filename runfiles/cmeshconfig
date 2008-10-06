@@ -6,8 +6,9 @@ read_request_begin_vc  = 0;
 read_request_end_vc    = 5;
 write_reply_begin_vc   = 2;
 write_reply_end_vc     = 7;
+
 read_reply_begin_vc    = 8;
-read_reply_end_vc      = 12;
+read_reply_end_vc      = 13;
 write_request_begin_vc = 10;
 write_request_end_vc   = 15;
 
@@ -22,7 +23,7 @@ wait_for_tail_credit = 1;
 //
 vc_allocator = islip; 
 sw_allocator = islip;
-alloc_iters  = 2;
+alloc_iters  = 1;
 
 credit_delay   = 2;
 routing_delay  = 0;
@@ -39,8 +40,6 @@ internal_speedup  = 1.0;
 //
 
 sim_type = latency;
-
-max_outstanding_requests = 8;
 
 warmup_periods = 3;
 
@@ -66,8 +65,35 @@ c  = 4;
 //
 routing_function = dor_no_express;
 
+physical_subnetworks = 1;
+
+x  = 4;
+y  = 4;
+xr = 2;
+yr = 2;
+
+//the nodes above "limit" does not emit or receiv traffic
+limit = 64;
+
+
+
+use_read_write = 1;
+
 const_flits_per_packet = 1;
+
+read_reply_size = 1;
+read_request_size = 1;
+write_reply_size = 1;
+write_request_size = 1;
 
 traffic       = uniform;
 
-injection_rate = 0.15;
+injection_rate = 0.1; //ignored on batch mode
+
+speculative = 0;
+
+batch_size = 1000;
+
+print_activity =0;
+
+max_outstanding_requests = 4;

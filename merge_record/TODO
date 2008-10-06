@@ -5,10 +5,10 @@ Modify the nocviewer to be compatible with the new way that view traces are gene
 
 Clean up the power calc scripts
 
-
 Add concept of channel width
 
+Add a "flits_to_watch" option in booksim_config and trafficmanager (a list of flit ids to turn on "watch")
 
-Merge the different trafficmanagers
+does sim_type, latency or throughput matter at all?
 
-Add a "flits_to_watch" option in booksim_config and trafficmanager
+why doesn't include_queuing not affect anything?

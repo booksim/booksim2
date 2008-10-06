@@ -91,6 +91,8 @@ int    gConstPacketSize;
 //for on_off injections
 int *gNodeStates = 0;
 
+//flits to watch
+string watch_file;
 /////////////////////////////////////////////////////////////////////////////
 
 void AllocatorSim( const Configuration& config )
@@ -205,13 +207,14 @@ int main( int argc, char **argv )
   InitializeRoutingMap( );
   InitializeTrafficMap( );
   InitializeInjectionMap( );
-  RandomSeed( config.GetInt("seed") );
 
   _print_activity = (config.GetInt("print_activity")==1);
   _trace = (config.GetInt("viewer trace")==1);
   
   _use_read_write = (config.GetInt("use_read_write")==1);
   
+  config.GetStr( "watch_file", watch_file );
+
   /*configure and run the simulator
    */
   AllocatorSim( config );
