@@ -116,8 +116,8 @@ BookSimConfig::BookSimConfig( )
 
   //==== Allocators ========================================
 
-  AddStrField( "vc_allocator", "max_size" ); 
-  AddStrField( "sw_allocator", "max_size" ); 
+  AddStrField( "vc_allocator", "islip" ); 
+  AddStrField( "sw_allocator", "islip" ); 
 
   _int_map["alloc_iters"] = 1;
 

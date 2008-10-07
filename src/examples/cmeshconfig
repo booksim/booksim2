@@ -1,0 +1,21 @@
+//concentrated mesh configuration file running batch mode
+//xr, yr, x, y, are use to indicate how the concnetration is formed. 
+
+topology = cmesh;
+
+k = 4;
+n = 2;
+c = 4;
+xr = 2;
+yr = 2;
+
+x = 4; 
+y = 4;
+
+routing_function = dor_no_express;
+
+traffic = bitcomp;
+
+use_read_write = 1;
+
+batch_size = 2000;

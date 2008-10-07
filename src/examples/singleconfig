@@ -1,0 +1,17 @@
+//A single cross 10X10 cross bar under injection mode
+
+topology = single;
+
+in_ports = 10;
+out_ports = 10;
+
+routing_function = single;
+
+traffic = uniform;
+
+use_read_write = 0;
+
+injection_rate = 0.4;
+
+
+
