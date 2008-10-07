@@ -136,15 +136,22 @@ void Tree4::_BuildNet( const Configuration& config )
       _Router( 1, pp)->AddOutputChannel( &_chan[c], &_chan_cred[c] );
       _Router( 2, pc)->AddInputChannel(  &_chan[c], &_chan_cred[c] );
 
-      _chan[c].SetLatency( L );
-      _chan_cred[c].SetLatency( L );
+      //_chan[c].SetLatency( L );
+      //_chan_cred[c].SetLatency( L );
+
+      _chan[c].SetLatency( 0 );
+      _chan_cred[c].SetLatency( 0 );
+
       c++;
 
       _Router(1, pp)->AddInputChannel( &_chan[c], &_chan_cred[c] );
       _Router(2, pc)->AddOutputChannel( &_chan[c], &_chan_cred[c] );
+      
+      //_chan[c].SetLatency( L );
+      //_chan_cred[c].SetLatency( L );
+      _chan[c].SetLatency( 0 );
+      _chan_cred[c].SetLatency( 0 );
 
-      _chan[c].SetLatency( L );
-      _chan_cred[c].SetLatency( L );
       c++;
     }
   }
@@ -163,16 +170,20 @@ void Tree4::_BuildNet( const Configuration& config )
       _Router(0, pp)->AddOutputChannel( &_chan[c], &_chan_cred[c] );
       _Router(1, pc)->AddInputChannel( &_chan[c], &_chan_cred[c] );
 
-      _chan[c].SetLatency( L );
-      _chan_cred[c].SetLatency( L );
+      //      _chan[c].SetLatency( L );
+      //_chan_cred[c].SetLatency( L );
+      _chan[c].SetLatency( 0 );
+      _chan_cred[c].SetLatency( 0 );
 
       c++;
 
       _Router(0, pp)->AddInputChannel( &_chan[c], &_chan_cred[c] );
       _Router(1, pc)->AddOutputChannel( &_chan[c], &_chan_cred[c] );
 
-      _chan[c].SetLatency( L );
-      _chan_cred[c].SetLatency( L );
+      //  _chan[c].SetLatency( L );
+      // _chan_cred[c].SetLatency( L );
+      _chan[c].SetLatency( 0 );
+      _chan_cred[c].SetLatency( 0 );
       c++;
     }
   }

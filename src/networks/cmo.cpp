@@ -117,38 +117,55 @@ void CMO::_BuildNet( const Configuration &config )
     cross_output = _CrossChannel( node );
     slice_output = _SliceChannel( node );
 
-    _chan[left_input].SetLatency(_wire_delay1*2);
-    _chan_cred[left_input].SetLatency(_wire_delay1*2);
-    _chan[right_input].SetLatency(_wire_delay1*2);
-    _chan_cred[right_input].SetLatency(_wire_delay1*2);
+//     _chan[left_input].SetLatency(_wire_delay1*2);
+//     _chan_cred[left_input].SetLatency(_wire_delay1*2);
+//     _chan[right_input].SetLatency(_wire_delay1*2);
+//     _chan_cred[right_input].SetLatency(_wire_delay1*2);
+
+    _chan[left_input].SetLatency(0);
+    _chan_cred[left_input].SetLatency(0);
+    _chan[right_input].SetLatency(0);
+    _chan_cred[right_input].SetLatency(0);
 
     _routers[node]->AddInputChannel( &_chan[left_input], &_chan_cred[left_input] );
     _routers[node]->AddInputChannel( &_chan[right_input], &_chan_cred[right_input]);
     //same as ((node >> 1) ^ node) & 1, but for clarity, we use the following expression
     if((node_mod == 1) || (node_mod == 2) || (node_mod == 5) || (node_mod == 6)) {
 
-      _chan[cross_input].SetLatency(_wire_delay3*2);
-      _chan_cred[cross_input].SetLatency(_wire_delay3*2);
+//       _chan[cross_input].SetLatency(_wire_delay3*2);
+//       _chan_cred[cross_input].SetLatency(_wire_delay3*2);
+      _chan[cross_input].SetLatency(0);
+      _chan_cred[cross_input].SetLatency(0);
 
       _routers[node]->AddInputChannel( &_chan[cross_input], &_chan_cred[cross_input] );
     }
     else {
      
-      _chan[cross_input].SetLatency(_wire_delay4*2);
-      _chan_cred[cross_input].SetLatency(_wire_delay4*2);
+//       _chan[cross_input].SetLatency(_wire_delay4*2);
+//       _chan_cred[cross_input].SetLatency(_wire_delay4*2);
+      _chan[cross_input].SetLatency(0);
+      _chan_cred[cross_input].SetLatency(0);
       
       _routers[node]->AddInputChannel( &_chan[cross_input], &_chan_cred[cross_input] );
     }
 
-    _chan[slice_input].SetLatency(_wire_delay2*2);
-    _chan_cred[slice_input].SetLatency(_wire_delay2*2);
+//     _chan[slice_input].SetLatency(_wire_delay2*2);
+//     _chan_cred[slice_input].SetLatency(_wire_delay2*2);
+
+    _chan[slice_input].SetLatency(0);
+    _chan_cred[slice_input].SetLatency(0);
 
     _routers[node]->AddInputChannel( &_chan[slice_input], &_chan_cred[slice_input] );
     
-    _chan[left_output].SetLatency(_wire_delay1*2);
-    _chan_cred[left_output].SetLatency(_wire_delay1*2);
-    _chan[right_output].SetLatency(_wire_delay1*2);
-    _chan_cred[right_output].SetLatency(_wire_delay1*2);
+//     _chan[left_output].SetLatency(_wire_delay1*2);
+//     _chan_cred[left_output].SetLatency(_wire_delay1*2);
+//     _chan[right_output].SetLatency(_wire_delay1*2);
+//     _chan_cred[right_output].SetLatency(_wire_delay1*2);
+
+    _chan[left_output].SetLatency(0);
+    _chan_cred[left_output].SetLatency(0);
+    _chan[right_output].SetLatency(0);
+    _chan_cred[right_output].SetLatency(0);
 
     
     _routers[node]->AddOutputChannel( &_chan[left_output], &_chan_cred[left_output] );
@@ -156,8 +173,10 @@ void CMO::_BuildNet( const Configuration &config )
 
     if((node_mod == 1) || (node_mod == 2) || (node_mod == 5) || (node_mod == 6)) {
 
-      _chan[cross_output].SetLatency(_wire_delay3*2);
-      _chan_cred[cross_output].SetLatency(_wire_delay3*2);
+//       _chan[cross_output].SetLatency(_wire_delay3*2);
+//       _chan_cred[cross_output].SetLatency(_wire_delay3*2);
+      _chan[cross_output].SetLatency(0);
+      _chan_cred[cross_output].SetLatency(0);
 
       _routers[node]->AddOutputChannel( &_chan[cross_output], &_chan_cred[cross_output] );
     }
@@ -165,22 +184,26 @@ void CMO::_BuildNet( const Configuration &config )
 
       _chan[cross_output].SetLatency(_wire_delay4*2);
       _chan_cred[cross_output].SetLatency(_wire_delay4*2);
+      _chan[cross_output].SetLatency(0);
+      _chan_cred[cross_output].SetLatency(0);
 
       _routers[node]->AddOutputChannel( &_chan[cross_output], &_chan_cred[cross_output] );
     }
 
-    _chan[slice_output].SetLatency(_wire_delay2*2);
-    _chan_cred[slice_output].SetLatency(_wire_delay2*2);
+//     _chan[slice_output].SetLatency(_wire_delay2*2);
+//     _chan_cred[slice_output].SetLatency(_wire_delay2*2);
+    _chan[slice_output].SetLatency(0);
+    _chan_cred[slice_output].SetLatency(0);
 
     _routers[node]->AddOutputChannel( &_chan[slice_output], &_chan_cred[slice_output] );
     
 
     for( int i=0; i<_c; i++) {    //concentration
       
-      _inject[node*_c+i].SetLatency(1);
-      _inject_cred[node*_c+i].SetLatency(1);
-      _eject[node*_c+i].SetLatency(1);
-      _eject_cred[node*_c+i].SetLatency(1);
+      _inject[node*_c+i].SetLatency(0);
+      _inject_cred[node*_c+i].SetLatency(0);
+      _eject[node*_c+i].SetLatency(0);
+      _eject_cred[node*_c+i].SetLatency(0);
 
       _routers[node]->AddInputChannel( &_inject[node*_c+i], &_inject_cred[node*_c+i] );
       _routers[node]->AddOutputChannel( &_eject[node*_c+i], &_eject_cred[node*_c+i] );

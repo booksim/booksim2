@@ -42,9 +42,9 @@ BookSimConfig::BookSimConfig( )
   // Control Injection of Packets into Replicated Networks
   _int_map["read_request_subnet"] = 0;
 
-  _int_map["read_reply_subnet"] = 1;
+  _int_map["read_reply_subnet"] = 0;
 
-  _int_map["write_request_subnet"] = 1;
+  _int_map["write_request_subnet"] = 0;
 
   _int_map["write_reply_subnet"] = 0;
 
@@ -58,15 +58,14 @@ BookSimConfig::BookSimConfig( )
   _int_map["k"] = 8; //network radix
   _int_map["n"] = 2; //network dimension
   _int_map["c"] = 1; //concentration
-  _int_map["x"] = 1; //number of routers in X
-  _int_map["y"] = 1; //number of routers in Y
+  _int_map["x"] = 8; //number of routers in X
+  _int_map["y"] = 8; //number of routers in Y
   _int_map["xr"] = 1; //number of nodes per router in X only if c>1
   _int_map["yr"] = 1; //number of nodes per router in Y only if c>1
 
   _int_map["limit"] = 0; //how many of the nodes are actually used
 
   AddStrField( "routing_function", "none" );
-  AddStrField( "selection_function", "random" );
 
   _int_map["link_failures"] = 0; //legacy
   _int_map["fail_seed"]     = 0; //legacy
@@ -136,7 +135,7 @@ BookSimConfig::BookSimConfig( )
   _float_map["burst_alpha"] = 0.5; // burst interval
   _float_map["burst_beta"]  = 0.5; // burst length
 
-  AddStrField( "priority", "age" );  // message priorities
+  AddStrField( "priority", "none" );  // message priorities
 
   _int_map["batch_size"] = 1000;
   _int_map["max_outstanding_requests"] = 4;
@@ -157,7 +156,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["warmup_periods"] = 3; // number of samples periods to "warm-up" the simulation
 
   _int_map["sample_period"] = 1000; // how long between measurements
-  _int_map["max_samples"]   = 20;   // maximum number of sample periods in a simulation
+  _int_map["max_samples"]   = 10;   // maximum number of sample periods in a simulation
 
   _float_map["latency_thres"] = 500.0; // if avg. latency exceeds the threshold, assume unstable
 

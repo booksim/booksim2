@@ -156,11 +156,15 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 	//adopted from the CMESH, the first node has 0,1,8,9 (as an example)
 	int link = (xcount * xrouter) * (yrouter * y_index + y) + (xrouter * x_index + x) ;
 
-	_inject[link].SetLatency(ileng);
-	_inject_cred[link].SetLatency(ileng);
-	_eject[link] .SetLatency(ileng);
-	_eject_cred[link].SetLatency(ileng);
+// 	_inject[link].SetLatency(ileng);
+// 	_inject_cred[link].SetLatency(ileng);
+// 	_eject[link] .SetLatency(ileng);
+// 	_eject_cred[link].SetLatency(ileng);
 	
+	_inject[link].SetLatency(0);
+	_inject_cred[link].SetLatency(0);
+	_eject[link] .SetLatency(0);
+	_eject_cred[link].SetLatency(0);
 	
 	_routers[node]->AddInputChannel( &_inject[link], &_inject_cred[link] );
 	
@@ -237,8 +241,11 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 #ifdef DEBUG_FATFLY
 	cout << "Adding channel : " << _output << " to node " << node <<" and "<<other<<" with length "<<length<<endl;
 #endif
-	_chan[_output].SetLatency(length);
-	_chan_cred[_output].SetLatency(length);
+// 	_chan[_output].SetLatency(length);
+// 	_chan_cred[_output].SetLatency(length);
+
+	_chan[_output].SetLatency(0);
+	_chan_cred[_output].SetLatency(0);
 	_routers[node]->AddOutputChannel( &_chan[_output], &_chan_cred[_output] );
 	
 	_routers[other]->AddInputChannel( &_chan[_output], &_chan_cred[_output]);

@@ -110,10 +110,14 @@ void MECS::_BuildNet( const Configuration &config ) {
 	int ileng = 1;
 	//adopted from the CMESH, the first node has 0,1,8,9 (as an example)
 	int link = (xcount * xrouter) * (yrouter * y_index + y) + (xrouter * x_index + x) ;
-	_inject[link].SetLatency(ileng);
-	_inject_cred[link].SetLatency(ileng);
-	_eject[link] .SetLatency(ileng);
-	_eject_cred[link].SetLatency(ileng);
+	//	_inject[link].SetLatency(ileng);
+	//_inject_cred[link].SetLatency(ileng);
+	//_eject[link] .SetLatency(ileng);
+	//_eject_cred[link].SetLatency(ileng);
+	_inject[link].SetLatency(0);
+	_inject_cred[link].SetLatency(0);
+	_eject[link] .SetLatency(0);
+	_eject_cred[link].SetLatency(0);
 	cur->AddInputChannel( &_inject[link], &_inject_cred[link] );
 	
 #ifdef DEBUG_MECS
@@ -204,7 +208,8 @@ void MECS::_BuildNet( const Configuration &config ) {
 	  //calculate which channel
 	  link = link = node * _channels_per_router + 4 + output_added;
 	  output_added++;
-	  _chan[link].SetLatency(latency);
+	  //_chan[link].SetLatency(latency);
+	  _chan[link].SetLatency(0);
 	  //the first output channel gets added to the routers
 	  if(j ==0){
 	    cur->AddOutputChannel(&_chan[link], &_chan_cred[link]);

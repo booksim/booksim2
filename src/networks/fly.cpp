@@ -65,7 +65,7 @@ void KNFly::_BuildNet( const Configuration &config )
 	} else {
 	  c = _InChannel( stage, addr, port );
 	  _routers[node]->AddInputChannel( &_chan[c], &_chan_cred[c] );
-	  _chan[c].SetLatency(1);
+	  _chan[c].SetLatency(0);
 
 #ifdef DEBUG_FLY
 	  cout << "  input channel " << c << endl;

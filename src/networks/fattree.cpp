@@ -26,8 +26,8 @@
 #include "misc_utils.hpp"
 
 #define EJECT_LATENCY INJECT_LATENCY
-#define INJECT_LATENCY 1
-#define CHANNEL_LATENCY 1
+#define INJECT_LATENCY 0
+#define CHANNEL_LATENCY 0
 
 FatTree::FatTree( const Configuration& config )
   : Network( config )

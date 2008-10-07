@@ -291,7 +291,10 @@ Flit *TrafficManager::_NewFlit( )
   _in_flight[_cur_id] = true;
   if(flits_to_watch.size()!=0   && 
      flits_to_watch.find(_cur_id)!=flits_to_watch.end()){
-    f->watch =true; 
+    f->watch =true;
+    map<int, bool>::iterator match;
+    match = flits_to_watch.find( f->id );
+    flits_to_watch.erase(match);
   }
   ++_cur_id;
   return f;
@@ -895,6 +898,7 @@ bool TrafficManager::_SingleSim( )
   bool   clear_last;
 
   _time = 0;
+  //remove any pending request from the previous simulations
   for (int i=0;i<_sources;i++) {
     _packets_sent[i] = 0;
     _requestsOutstanding[i] = 0;
@@ -904,6 +908,7 @@ bool TrafficManager::_SingleSim( )
     }
   }
 
+  //reset queuetime for all sources
   for ( int s = 0; s < _sources; ++s ) {
     for ( int c = 0; c < _classes; ++c  ) {
       _qtime[s][c]    = 0;
@@ -922,7 +927,6 @@ bool TrafficManager::_SingleSim( )
   // reset stats, all packets after warmup_time marked
   // converge
   // draing, wait until all packets finish
-
   _sim_state    = warming_up;
   total_phases  = 0;
   prev_latency  = 0;
@@ -937,18 +941,14 @@ bool TrafficManager::_SingleSim( )
       _Step();
       if ( _time % 1000 == 0 ) {
 	cout <<_sim_state<< "%=================================" << endl;
-	
 	int dmin;
-	
 	cur_latency = _latency_stats[0]->Average( );
 	dmin = _ComputeAccepted( &avg, &min );
 	cur_accepted = avg;
 	
 	cout << "% Average latency = " << cur_latency << endl;
 	cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
-	
 	cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
-	
 	_latency_stats[0]->Display();
       }
     }
@@ -967,7 +967,9 @@ bool TrafficManager::_SingleSim( )
     cout << endl;
     cout << "batch size of "<<_batch_size  <<  " received. Time used is " << _time << " cycles" <<endl;
     converged = 1;
-  } else { //injection mode
+  } else { 
+    //once warmed up, we require 3 converging runs
+    //to end the simulation 
     while( ( total_phases < _max_samples ) && 
 	   ( ( _sim_state != running ) || 
 	     ( converged < 3 ) ) ) {
@@ -976,32 +978,26 @@ bool TrafficManager::_SingleSim( )
 	clear_last = false;
 	_ClearStats( );
       }
-
-    
+      
+      
       for ( iter = 0; iter < _sample_period; ++iter ) { _Step( ); } 
-    
+      
       cout <<_sim_state<< "%=================================" << endl;
-
       int dmin;
-
       cur_latency = _latency_stats[0]->Average( );
       dmin = _ComputeAccepted( &avg, &min );
       cur_accepted = avg;
-
       cout << "% Average latency = " << cur_latency << endl;
       cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
-
       cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
-
       _latency_stats[0]->Display();
-
       cout << "thru(" << total_phases + 1 << ",:) = [ ";
       for ( int d = 0; d < _dests; ++d ) {
 	cout << _accepted_packets[d]->Average( ) << " ";
       }
       cout << "];" << endl;
 
-      // Fail safe
+      // Fail safe for latency mode, throughput will ust continue
       if ( ( _sim_mode == latency ) && ( cur_latency >_latency_thres ) ) {
 	cout << "Average latency is getting huge" << endl;
 	converged = 0; 
@@ -1013,7 +1009,6 @@ bool TrafficManager::_SingleSim( )
       cout << "% throughput change = " << fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) << endl;
 
       if ( _sim_state == warming_up ) {
-
 	if ( _warmup_periods == 0 ) {
 	  if ( _sim_mode == latency ) {
 	    if ( ( fabs( ( cur_latency - prev_latency ) / cur_latency ) < warmup_threshold ) &&
@@ -1046,7 +1041,7 @@ bool TrafficManager::_SingleSim( )
 	  }
 	} else {
 	  if ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < acc_stopping_threshold ) {
-	    //++converged;
+	    ++converged;
 	  } else {
 	    converged = 0;
 	  }
@@ -1054,7 +1049,6 @@ bool TrafficManager::_SingleSim( )
       }
       prev_latency  = cur_latency;
       prev_accepted = cur_accepted;
-
       ++total_phases;
     }
   
@@ -1093,6 +1087,7 @@ bool TrafficManager::_SingleSim( )
     }
     _empty_network = false;
   }
+
   return ( converged > 0 );
 }
 
@@ -1138,8 +1133,8 @@ void TrafficManager::Run( )
 
 }
 
+//read the watchlist
 void TrafficManager::_LoadWatchList(){
-  
   ifstream watch_list;
   string line;
   string delimiter = ",";
@@ -1149,7 +1144,6 @@ void TrafficManager::_LoadWatchList(){
     while(!watch_list.eof()){
       getline(watch_list,line);
       if(line!=""){
-	
 	flits_to_watch[atoi(line.c_str())]= true;
       }
     }
