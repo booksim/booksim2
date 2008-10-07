@@ -8,3 +8,6 @@ Clean up the power calc scripts
 why doesn't include_queuing not affect anything?
 
 test out the graphes an examples from the book. 
+
+
+max_size allocator doesn't work mesh88

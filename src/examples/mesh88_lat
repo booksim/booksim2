@@ -6,12 +6,12 @@ n = 2;
 
 // Routing
 
-routing_function = dim_order;
+routing_function = dor;
 
 // Flow control
 
-num_vcs     = 8;
-vc_buf_size = 8;
+num_vcs     = 2;
+vc_buf_size = 16;
 
 wait_for_tail_credit = 1;
 
@@ -31,10 +31,10 @@ internal_speedup  = 1.0;
 
 // Traffic
 
-traffic                = transpose;
+traffic                = uniform;
 const_flits_per_packet = 20;
 
 // Simulation
 
 sim_type       = latency;
-injection_rate = 0.005;
+injection_rate = 0.01;
