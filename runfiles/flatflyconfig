@@ -20,8 +20,8 @@ wait_for_tail_credit = 0;
 //
 // Router architectureq
 //
-vc_allocator = round_robin; 
-sw_allocator = round_robin;
+vc_allocator = islip; 
+sw_allocator = islip;
 alloc_iters  = 1;
 
 credit_delay   = 2;
@@ -79,11 +79,13 @@ limit = 64;
 
 routing_function = ugal;
 
-const_flits_per_packet = 8;
+const_flits_per_packet = 1;
 
-traffic       = bitcomp;
+traffic       = uniform;
 
-injection_rate = 0.45;
+injection_rate = 0.7;
 
 
 use_read_write = 1;
+
+sim_type = latency;

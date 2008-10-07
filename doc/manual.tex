@@ -320,7 +320,9 @@ network. There is also a set of numerical parameters that describes the size of 
 
 \end{opt_list}
 
-Topologies available in \simname are:
+
+The channel latency of the network must be configured within the source code of the topology files. All topologies by default have channel latency of 1 cycles. Topologies available in \simname are:
+
 \begin{opt_list}{single}
 \item[fly] A $k$-ary $n$-fly (butterfly) topology. The \texttt{k}
 parameter determines the network's radix and the \texttt{n} parameter
@@ -350,7 +352,7 @@ the network's dimension.
 
 \item[cmo] Concentrated Multi-dimensional Octagon created by Sang Kyun Kim and Wook-Jin Chung.
 
-\item[MECS] A topology based on (***). Currently it only support 1 flit per packet. 
+\item[MECS] A topology based on ***. Currently it only support 1 flit per packet. 
 
 \end{opt_list}
 
