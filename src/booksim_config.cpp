@@ -70,6 +70,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["link_failures"] = 0; //legacy
   _int_map["fail_seed"]     = 0; //legacy
 
+  _int_map["use_noc_latency"] = 1;
 
   //==== Cmesh topology options =======================
   _int_map["express_channels"] = 0; //for Cmesh only, 0=no express channels

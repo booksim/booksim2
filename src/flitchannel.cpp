@@ -20,6 +20,7 @@ FlitChannel::FlitChannel() {
     _active[i] = 0;
   _idle   = 0;
   _cookie = 0;
+  _delay = 1; 
 }
 
 FlitChannel::~FlitChannel() {

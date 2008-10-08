@@ -73,7 +73,7 @@ xr = 2;
 yr = 2;
 
 //the nodes above "limit" does not emit or receiv traffic
-limit = 64;
+limit = 0;
 
 
 
@@ -86,13 +86,13 @@ read_request_size = 1;
 write_reply_size = 1;
 write_request_size = 1;
 
-traffic       = uniform;
+traffic       = bitcomp;
 
 injection_rate = 0.1; //ignored on batch mode
 
 speculative = 0;
 
-batch_size = 1000;
+batch_size = 2000;
 
 print_activity =0;
 

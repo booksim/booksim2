@@ -93,6 +93,9 @@ int *gNodeStates = 0;
 
 //flits to watch
 string watch_file;
+
+//latency type, noc or conventional network
+bool _use_noc_latency;
 /////////////////////////////////////////////////////////////////////////////
 
 void AllocatorSim( const Configuration& config )
@@ -215,6 +218,7 @@ int main( int argc, char **argv )
   
   config.GetStr( "watch_file", watch_file );
 
+  _use_noc_latency = (config.GetInt("use_noc_latency")==1);
   /*configure and run the simulator
    */
   AllocatorSim( config );

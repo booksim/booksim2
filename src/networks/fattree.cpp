@@ -26,8 +26,8 @@
 #include "misc_utils.hpp"
 
 #define EJECT_LATENCY INJECT_LATENCY
-#define INJECT_LATENCY 0
-#define CHANNEL_LATENCY 0
+#define INJECT_LATENCY 1
+#define CHANNEL_LATENCY 1
 
 FatTree::FatTree( const Configuration& config )
   : Network( config )
@@ -161,6 +161,7 @@ void FatTree::_BuildNet( const Configuration& config )
 
         int latency = _WireLatency( depth, pos, depth+1, childPos );
 
+	assert(latency!=0);
         //cout << "Connecting (0," << parentPos << ") and (1," 
         //     << childPos << ")" << endl;
 
@@ -170,13 +171,23 @@ void FatTree::_BuildNet( const Configuration& config )
 	{
 	  _Router(depth, pos)->AddOutputChannel(&_chan[c], &_chan_cred[c]);
 	  _Router(depth+1, childPos)->AddInputChannel(&_chan[c], &_chan_cred[c]);
-	  _chan[c].SetLatency(CHANNEL_LATENCY);
-	  _chan_cred[c].SetLatency(CHANNEL_LATENCY);
+	  if(_use_noc_latency){
+	    _chan[c].SetLatency(latency);
+	    _chan_cred[c].SetLatency(latency);
+	  } else {
+	    _chan[c].SetLatency(CHANNEL_LATENCY);
+	    _chan_cred[c].SetLatency(CHANNEL_LATENCY);
+	  }
 	  c++;
 	  _Router(depth+1, childPos)->AddOutputChannel(&_chan[c], &_chan_cred[c]);
           _Router(depth, pos)->AddInputChannel(&_chan[c], &_chan_cred[c]);
-	  _chan[c].SetLatency(CHANNEL_LATENCY);
-	  _chan_cred[c].SetLatency(CHANNEL_LATENCY);
+	  if(_use_noc_latency){
+ 	    _chan[c].SetLatency(latency);
+	    _chan_cred[c].SetLatency(latency);
+	  } else {
+	    _chan[c].SetLatency(CHANNEL_LATENCY);
+	    _chan_cred[c].SetLatency(CHANNEL_LATENCY);
+	  }
 	  c++;
 	}
 
@@ -201,7 +212,7 @@ Router*& FatTree::_Router( int depth, int pos )
 
 int FatTree::_WireLatency( int depth1, int pos1, int depth2, int pos2 )
 {
-  return CHANNEL_LATENCY; // XXX Hack.
+
   int depthChild, depthParent, posChild, posParent;
 
   if (depth1 < depth2) {

@@ -36,4 +36,6 @@ extern int    gConstPacketSize;
 extern int *gNodeStates;
 
 extern string watch_file;
+
+extern bool _use_noc_latency;
 #endif
