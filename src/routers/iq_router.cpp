@@ -515,15 +515,22 @@ void IQRouter::_SWAlloc( )
 	      // determined by the packet priorities.
 	      
 	      if( _speculative){
+		
+		// dub: if speculative switch allocation is enabled for this 
+		// router, hardwire the priority of non-speculative packets to 1
 		_sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
-					 0 /*cur_vc->GetPriority( ) */, 
-					 0 /*cur_vc->GetPriority( ) */);
+					   1 /*cur_vc->GetPriority( ) */, 
+					   1 /*cur_vc->GetPriority( ) */);
+		
 	      } else {
-		//make sure priority is other wise correct
-	      _sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
-					 1/*cur_vc->GetPriority( )*/, 
-					 1/*cur_vc->GetPriority( ))*/);
-	      }
+		
+		// dub: if we don't use speculation, use packet's specified 
+		// priority
+		_sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
+					   cur_vc->GetPriority( ), 
+					   cur_vc->GetPriority( )));
+	      
+	    }
 	    }
 	  }
 	}
