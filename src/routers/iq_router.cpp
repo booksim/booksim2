@@ -528,7 +528,7 @@ void IQRouter::_SWAlloc( )
 		// priority
 		_sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
 					   cur_vc->GetPriority( ), 
-					   cur_vc->GetPriority( )));
+					   cur_vc->GetPriority( ));
 	      
 	    }
 	    }
