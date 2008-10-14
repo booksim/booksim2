@@ -25,30 +25,40 @@ void RoundRobinArbiter::UpdateState() {
 
 int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
   
-  _selected = -1 ;
-  
-  // avoid running arbiter if it has not recevied at least one request
-  if ( _skip_arb == 1 ) 
-    return _selected ;
-  
-  // run the round-robin tournament
-  for (int offset = 1 ; offset <= _input_size ; offset++ ) {
-    int input = (_pointer + offset) % _input_size;
-    if ( _request[input].valid ) {
-      _selected = input ;
-      if ( id ) 
-	*id = _request[input].id ;
-      if ( pri ) 
-	*pri = _request[input].pri ;
-      break ;
+  // avoid running arbiter if it has not recevied at least two requests
+  // (in this case, requests and grants are identical)
+  if ( _num_reqs < 2 ) {
+    
+    _selected = _last_req ;
+    
+  } else {
+    
+    _selected = -1 ;
+    
+    // run the round-robin tournament
+    for (int offset = 1 ; offset <= _input_size ; offset++ ) {
+      int input = (_pointer + offset) % _input_size;
+      if ( _request[input].valid ) {
+	_selected = input ;
+	break ;
+      }
     }
   }
   
-  // clear the request vector
-  if ( _selected != -1 ) {
+  if ( _selected > -1 ) {
+    if ( id ) 
+      *id = _request[_selected].id ;
+    if ( pri ) 
+      *pri = _request[_selected].pri ;
+    
+    // clear the request vector
     for ( int i = 0; i < _input_size ; i++ )
       _request[i].valid = false ;
-    _skip_arb = 1 ;
+    _num_reqs = 0 ;
+    _last_req = -1 ;
+  } else {
+    assert(_num_reqs == 0);
+    assert(_last_req == -1);
   }
   
   return _selected ;

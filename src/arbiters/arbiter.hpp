@@ -19,7 +19,8 @@ protected:
   
   entry_t* _request ;
   int  _input_size ;
-  int  _skip_arb ;
+  int  _num_reqs ;
+  int  _last_req ;
   int  _selected ;
 
 public:

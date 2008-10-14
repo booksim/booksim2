@@ -11,7 +11,7 @@
 using namespace std ;
 
 Arbiter::Arbiter()
-  : _input_size(0), _request(0), _skip_arb(1) {
+  : _input_size(0), _request(0), _num_reqs(0), _last_req(-1) {
 }
 
 Arbiter::~Arbiter() {
@@ -28,7 +28,8 @@ void Arbiter::Init( int size ) {
 
 void Arbiter::AddRequest( int input, int id, int pri ) {
   assert( 0 <= input && input < _input_size ) ;
-  _skip_arb = 0 ;
+  _num_reqs++ ;
+  _last_req = input ;
   _request[input].valid = true ;
   _request[input].id = id ;
   _request[input].pri = pri ;

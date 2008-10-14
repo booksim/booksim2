@@ -55,42 +55,50 @@ void MatrixArbiter::UpdateState() {
 
 int MatrixArbiter::Arbitrate( int* id, int* pri ) {
   
-  _selected = -1 ;
-  
-  // avoid running arbiter if it has not recevied at least one request
-  if ( _skip_arb == 1 ) 
-    return _selected ;
-  
+  // avoid running arbiter if it has not recevied at least two requests
+  // (in this case, requests and grants are identical)
+  if ( _num_reqs < 2 ) {
+    
+    _selected = _last_req ;
+    
+  } else {
+    
+    _selected = -1 ;
 
-  for ( int input = 0 ; input < _input_size ; input++ ) {
-    if(_request[input].valid) {
-      
-      bool grant = true;
-      for ( int i = 0 ; i < _input_size ; i++ ) {
-	if ( _request[i].valid && _Priority(i,input) ) {
-	  grant = false ;
-	  break ;
+    for ( int input = 0 ; input < _input_size ; input++ ) {
+      if(_request[input].valid) {
+	
+	bool grant = true;
+	for ( int i = 0 ; i < _input_size ; i++ ) {
+	  if ( _request[i].valid && _Priority(i,input) ) {
+	    grant = false ;
+	    break ;
+	  }
+	}
+	
+	if ( grant ) {
+	  _selected = input ;
+	  break ; 
 	}
       }
       
-      if ( grant ) {
-	_selected = input ;
-	if ( id )
-	  *id  = _request[_selected].id ;
-	if ( pri )
-	  *pri = _request[_selected].pri ;
-	break ;
-
-      }
     }
-    
   }
-  
-  // clear the request vector
+    
   if ( _selected != -1 ) {
+    if ( id )
+      *id  = _request[_selected].id ;
+    if ( pri )
+      *pri = _request[_selected].pri ;
+
+    // clear the request vector
     for ( int i = 0; i < _input_size ; i++ )
       _request[i].valid = false ;
-    _skip_arb = 1 ;
+    _num_reqs = 0 ;
+    _last_req = -1 ;
+  } else {
+    assert(_num_reqs == 0);
+    assert(_last_req == -1);
   }
 
   return _selected ;
