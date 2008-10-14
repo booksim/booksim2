@@ -130,10 +130,12 @@ void DenseAllocator::AddRequest( int in, int out, int label,
 {
   assert( ( in >= 0 ) && ( in < _inputs ) &&
 	  ( out >= 0 ) && ( out < _outputs ) );
-
-  _request[in][out].label   = label;
-  _request[in][out].in_pri  = in_pri;
-  _request[in][out].out_pri = out_pri;
+  
+  if((_request[in][out].label == -1) || (_request[in][out].in_pri < in_pri)) {
+    _request[in][out].label   = label;
+    _request[in][out].in_pri  = in_pri;
+    _request[in][out].out_pri = out_pri;
+  }
 }
 
 void DenseAllocator::RemoveRequest( int in, int out, int label )

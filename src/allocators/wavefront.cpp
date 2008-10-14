@@ -12,17 +12,24 @@
 Wavefront::Wavefront( const Configuration &config,
 		      Module *parent, const string& name,
 		      int inputs, int outputs ) :
-  DenseAllocator( config, parent, name, inputs, outputs )
+  DenseAllocator( config, parent, name, inputs, outputs ),
+  _pri(0), _num_requests(0), _last_in(-1), _last_out(-1),
+  _square((inputs > outputs) ? inputs : outputs)
 {
-  // We need a square wavefront allocator, so take the max dimension
-  _square = ( _inputs > _outputs ) ? _inputs : _outputs;
-
-  // The diagonal with priority
-  _pri = 0;
 }
 
-Wavefront::~Wavefront( )
+void Wavefront::AddRequest( int in, int out, int label, 
+			    int in_pri, int out_pri )
 {
+  // count unique requests
+  sRequest req;
+  bool overwrite = ReadRequest(req, in, out);
+  if(!overwrite || (req.in_pri < in_pri)) {
+    _num_requests++;
+    _last_in = in;
+    _last_out = out;
+  }
+  DenseAllocator::AddRequest(in, out, label, in_pri, out_pri);
 }
 
 void Wavefront::Allocate( )
@@ -39,44 +46,63 @@ void Wavefront::Allocate( )
     _outmatch[j] = -1;
   }
 
-  // Loop through diagonals of request matrix
-  /*
- for ( int p = 0; p < _square; ++p ) {
-    output = ( _pri + p ) % _square;
+  if(_num_requests == 0)
 
-    // Step through the current diagonal
-    for ( input = 0; input < _inputs; ++input ) {
-      if ( ( output < _outputs ) && 
-	   ( _inmatch[input] == -1 ) && 
-	   ( _outmatch[output] == -1 ) &&
-	   ( _request[input][output].label != -1 ) ) {
-	// Grant!
-	_inmatch[input] = output;
-	_outmatch[output] = input;
-      }
-
-      output = ( output + 1 ) % _square;
-    }
-  }
-  */
+    // bypass allocator completely if there were no requests
+    return;
   
-  // dub: in PPIN, the wavefront allocator actually uses the upward diagonals,
-  // not the downward ones
-  for ( int p = 0; p < _square; ++p ) {
-    for ( int q = 0; q < _square; ++q ) {
-      input = (_pri + p - q + _square) % _square;
-      output = q;
+  if(_num_requests == 1) {
+
+    // if we only had a single request, we can immediately grant it
+    _inmatch[_last_in] = _last_out;
+    _outmatch[_last_out] = _last_in;
+    
+  } else {
+
+    // otherwise we have to loop through the diagonals of request matrix
+    
+    /*
+    for ( int p = 0; p < _square; ++p ) {
+      output = ( _pri + p ) % _square;
       
-      if ( ( input < _inputs ) && ( output < _outputs ) && 
-	   ( _inmatch[input] == -1 ) && ( _outmatch[output] == -1 ) &&
-	   ( _request[input][output].label != -1 ) ) {
-	// Grant!
-	_inmatch[input] = output;
-	_outmatch[output] = input;
+      // Step through the current diagonal
+      for ( input = 0; input < _inputs; ++input ) {
+	if ( ( output < _outputs ) && 
+	     ( _inmatch[input] == -1 ) && 
+	     ( _outmatch[output] == -1 ) &&
+	     ( _request[input][output].label != -1 ) ) {
+	  // Grant!
+	  _inmatch[input] = output;
+	  _outmatch[output] = input;
+	}
+	
+	output = ( output + 1 ) % _square;
+      }
+    }
+    */
+    
+    // dub: in PPIN, the wavefront allocator actually uses the upward diagonals,
+    // not the downward ones
+    for ( int p = 0; p < _square; ++p ) {
+      for ( int q = 0; q < _square; ++q ) {
+	input = (_pri + p - q + _square) % _square;
+	output = q;
+	
+	if ( ( input < _inputs ) && ( output < _outputs ) && 
+	     ( _inmatch[input] == -1 ) && ( _outmatch[output] == -1 ) &&
+	     ( _request[input][output].label != -1 ) ) {
+	  // Grant!
+	  _inmatch[input] = output;
+	  _outmatch[output] = input;
+	}
       }
     }
   }
-    
+  
+  _num_requests = 0;
+  _last_in = -1;
+  _last_out = -1;
+  
   // Round-robin the priority diagonal
   _pri = ( _pri + 1 ) % _square;
 }
