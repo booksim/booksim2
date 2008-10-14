@@ -457,8 +457,7 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
     }
   }
   
-  //cout<<*f<<"output: "<<out_port<<" "<<dest<<" "<<r->GetID()<<endl;
-  //outputs->AddRange( out_port, 0, gNumVCS - 1 );
+
   int vcBegin = 0, vcEnd = gNumVCS-1;
   if ( f->type == Flit::READ_REQUEST ) {
     vcBegin = gReadReqBeginVC;

@@ -6,6 +6,8 @@
 #include "random_utils.hpp" 
 
 int bleh = 0;
+//batched time-mode, know what you are doing
+bool timed_mode = false;
 
 TrafficManager::TrafficManager( const Configuration &config, Network **net )
   : Module( 0, "traffic_manager" )
@@ -391,7 +393,7 @@ int TrafficManager::_IssuePacket( int source, int cl ) const
       result = _repliesPending[source].front();
       _repliesPending[source].pop_front();
       
-    } else if ((_packets_sent[source] >= _batch_size) || 
+    } else if ((_packets_sent[source] >= _batch_size && !timed_mode) || 
 	       (_requestsOutstanding[source] >= _maxOutstanding)) {
       result = 0;
     } else {
@@ -935,8 +937,26 @@ bool TrafficManager::_SingleSim( )
   _ClearStats( );
   clear_last    = false;
 
- 
-  if(_use_read_write){//batch mode   
+  if (_use_read_write && timed_mode){
+    while(_time<_sample_period){
+      _Step();
+      if ( _time % 10000 == 0 ) {
+	cout <<_sim_state<< "%=================================" << endl;
+	int dmin;
+	cur_latency = _latency_stats[0]->Average( );
+	dmin = _ComputeAccepted( &avg, &min );
+	cur_accepted = avg;
+	
+	cout << "% Average latency = " << cur_latency << endl;
+	cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
+	cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
+	_latency_stats[0]->Display();
+      } 
+    }
+    cout<<"Total inflight "<<_total_in_flight<<endl;
+    converged = 1;
+
+  } else if(_use_read_write && !timed_mode){//batch mode   
     while(_packets_sent[0] < _batch_size){
       _Step();
       if ( _time % 1000 == 0 ) {
