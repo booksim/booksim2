@@ -28,12 +28,13 @@ void Arbiter::Init( int size ) {
 
 void Arbiter::AddRequest( int input, int id, int pri ) {
   assert( 0 <= input && input < _input_size ) ;
-  _last_req = input ;
-  if(!_request[input].valid) {
-    _num_reqs++ ;
-    _request[input].valid = true ;
+  if(!request[input].valid || (_request[input].pri < pri)) {
+    _last_req = input ;
+    if(!_request[input].valid) {
+      _num_reqs++ ;
+      _request[input].valid = true ;
+    }
+    _request[input].id = id ;
+    _request[input].pri = pri ;
   }
-  _request[input].id = id ;
-  _request[input].pri = pri ;
-  
 }
