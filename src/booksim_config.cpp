@@ -14,9 +14,6 @@ BookSimConfig::BookSimConfig( )
   // Network options
   //========================================================
 
-  // Control of virtual channel speculation
-  _int_map["speculative"] = 0 ;
-
   // Channel length listing file
   AddStrField( "channel_file", "" ) ;
 
@@ -95,6 +92,12 @@ BookSimConfig::BookSimConfig( )
 
   //==== Input-queued ======================================
 
+  // Control of virtual channel speculation
+  _int_map["speculative"] = 0 ;
+  
+  // what to use to inhibit speculative allocator grants?
+  AddStrField("filter_spec_grants", "confl_nonspec_gnts");
+
   _int_map["num_vcs"]         = 16;  
   _int_map["vc_buf_size"]     = 8;  
 
@@ -119,7 +122,11 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField( "vc_allocator", "islip" ); 
   AddStrField( "sw_allocator", "islip" ); 
-
+  
+  // used by noc_router:
+  AddStrField( "vc_alloc_arb_type", "round_robin" );
+  AddStrField( "sw_alloc_arb_type", "round_robin" );
+  
   _int_map["alloc_iters"] = 1;
 
   //==== Traffic ========================================

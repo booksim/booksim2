@@ -18,12 +18,14 @@ class NoCRouter : public Router {
   int  _num_vcs;
   int  _vc_buf_size;
   int  _speculative;
+  int  _filter_spec_grants;
 
   vector<VC *> _input_vcs;
   vector<BufferState *> _output_states;
 
   Allocator * _vc_allocator;
   Allocator * _sw_allocator;
+  Allocator * _spec_sw_allocator;
 
   int * _sw_rr_offset;
 

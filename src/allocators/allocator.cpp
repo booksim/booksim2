@@ -11,7 +11,8 @@
 #include "loa.hpp"
 #include "wavefront.hpp"
 #include "selalloc.hpp"
-#include "separable.hpp"
+#include "separable_input_first.hpp"
+#include "separable_output_first.hpp"
 //
 /////////////////////////////////////////////////////////////////////////
 
@@ -413,6 +414,7 @@ void SparseAllocator::PrintRequests( ) const
 Allocator *Allocator::NewAllocator( const Configuration &config,
 				    Module *parent, const string& name,
 				    const string &alloc_type, 
+				    const string &arb_type, 
 				    int inputs, int input_speedup,
 				    int outputs, int output_speedup )
 {
@@ -430,9 +432,10 @@ Allocator *Allocator::NewAllocator( const Configuration &config,
     a = new Wavefront( config, parent, name, inputs, outputs );
   } else if ( alloc_type == "select" ) {
     a = new SelAlloc( config, parent, name, inputs, outputs );
-  } else if ( (alloc_type == "matrix") || (alloc_type == "round_robin") ) {
-    a = new SeparableAllocator( config, parent, name, alloc_type, inputs,
-				outputs );
+  } else if (alloc_type == "separable_input_first") {
+    a = new SeparableInputFirstAllocator( config, parent, name, arb_type, inputs, outputs );
+  } else if (alloc_type == "separable_output_first") {
+    a = new SeparableOutputFirstAllocator( config, parent, name, arb_type, inputs, outputs );
   }
 
 //==================================================

@@ -53,6 +53,7 @@ public:
   static Allocator *NewAllocator( const Configuration &config,
 				  Module *parent, const string& name,
 				  const string &alloc_type, 
+				  const string &arb_type, 
 				  int inputs, int input_speedup,
 				  int outputs, int output_speedup );
 };

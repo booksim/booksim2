@@ -18,6 +18,18 @@ NoCRouter::NoCRouter(const Configuration & config, Module * parent, string name,
   _vc_buf_size = config.GetInt("vc_buf_size");
   _speculative = config.GetInt("speculative");
   
+  string filter_spec_grants;
+  config.GetStr("filter_spec_grants", filter_spec_grants);
+  if(filter_spec_grants == "any_nonspec_gnts") {
+    _filter_spec_grants = 0;
+  } else if(filter_spec_grants == "confl_nonspec_reqs") {
+    _filter_spec_grants = 1;
+  } else if(filter_spec_grants == "confl_nonspec_gnts") {
+    _filter_spec_grants = 2;
+  } else {
+    assert(false);
+  }
+
   int rqb_vc = config.GetInt("read_request_begin_vc");
   int rqe_vc = config.GetInt("read_request_end_vc");    
   int rrb_vc = config.GetInt("read_reply_begin_vc");    
@@ -53,11 +65,14 @@ NoCRouter::NoCRouter(const Configuration & config, Module * parent, string name,
   }
   
   string alloc_type;
+  string arb_type;
   
   // Alloc allocators
   config.GetStr("vc_allocator", alloc_type);
+  config.GetStr("vc_alloc_arb_type", arb_type);
   _vc_allocator = Allocator::NewAllocator(config, this, "vc_allocator",
-					  alloc_type, _num_vcs * _inputs, 1,
+					  alloc_type, arb_type,
+					  _num_vcs * _inputs, 1,
 					  _num_vcs * _outputs, 1);
   
   if(!_vc_allocator) {
@@ -66,20 +81,25 @@ NoCRouter::NoCRouter(const Configuration & config, Module * parent, string name,
   }
   
   config.GetStr("sw_allocator", alloc_type);
+  config.GetStr("sw_alloc_arb_type", arb_type);
   _sw_allocator = Allocator::NewAllocator(config, this, "sw_allocator",
-					  alloc_type, _inputs, 1, _outputs, 1);
+					  alloc_type, arb_type, _inputs, 1,
+					  _outputs, 1);
+  _spec_sw_allocator = Allocator::NewAllocator(config, this,
+					       "spec_sw_allocator",
+					       alloc_type, arb_type, _inputs, 1,
+					       _outputs, 1);
   
-  if(!_sw_allocator) {
+  if(!_sw_allocator || !_spec_sw_allocator) {
     cout << "ERROR: Unknown sw_allocator type " << alloc_type << endl;
     exit(-1);
   }
   
-  // dub: do we need this?
   _sw_rr_offset = new int [_inputs];
-  for(int i = 0; i < _inputs; ++i) {
+  for ( int i = 0; i < _inputs; ++i ) {
     _sw_rr_offset[i] = 0;
   }
-  
+
   // Alloc pipelines (to simulate processing/transmission delays)
   _crossbar_pipe = 
     new PipelineFIFO<Flit>(this, "crossbar_pipeline", _outputs,
@@ -125,9 +145,10 @@ NoCRouter::~NoCRouter()
   
   delete _vc_allocator;
   delete _sw_allocator;
+  delete _spec_sw_allocator;
   
   delete [] _sw_rr_offset;
-  
+
   delete _crossbar_pipe;
   delete _credit_pipe;
   
@@ -389,7 +410,12 @@ void NoCRouter::_VCAlloc()
 
 void NoCRouter::_SWAlloc()
 {
+  bool any_nonspec_reqs = false;
+  bool any_nonspec_output_reqs[_outputs];
+  memset(any_nonspec_output_reqs, 0, _outputs*sizeof(bool));
+  
   _sw_allocator->Clear();
+  _spec_sw_allocator->Clear();
 
   for(int ip = 0; ip < _inputs; ip++) {
     
@@ -398,20 +424,12 @@ void NoCRouter::_SWAlloc()
     // the case when multiple VC's are requesting
     // the same output port)
 
+    int ivc = _sw_rr_offset[ip];
     
-    
-    for(int ivc_base = 0; ivc_base < _num_vcs; ivc_base++) {
+    for(int v = 0; v < _num_vcs; v++) {
       
-      int ivc = (ivc_base + _sw_rr_offset[ip]) % _num_vcs;
-
       VC * cur_vc = _input_vcs[ip * _num_vcs + ivc];
       
-      //
-      // Non-speculative requests are sent to the allocator with a priority 
-      // assignment of 1, distinguishing these requests from speculative
-      // switch requests. The allocator is responsible for correctly
-      // handling the two classes of requests
-      //
       if((cur_vc->GetState() == VC::active) && !cur_vc->Empty()) {
 	
 	BufferState * output_state = _output_states[cur_vc->GetOutputPort()];
@@ -420,33 +438,21 @@ void NoCRouter::_SWAlloc()
 	  
 	  int op = cur_vc->GetOutputPort();
 	  
-	  // We could have requested this same input-output pair in a previous
-	  // iteration, only replace the previous request if the current
-	  // request has a higher priority (this is default behavior of the
-	  // allocators).  Switch allocation priorities are strictly 
-	  // determined by the packet priorities.
+	  _sw_allocator->AddRequest(ip, op, ivc, cur_vc->GetPriority(),
+				    cur_vc->GetPriority());
 	  
-	  if(_speculative){
-	    _sw_allocator->AddRequest(ip, op, ivc, 
-				      1 /*cur_vc->GetPriority() */, 
-				      1 /*cur_vc->GetPriority() */);
-	  } else {
-	    //make sure priority is other wise correct
-	    _sw_allocator->AddRequest(ip, op, ivc, 
-				      cur_vc->GetPriority(), 
-				      cur_vc->GetPriority());
-	  }
+	  any_nonspec_reqs = true;
+	  any_nonspec_output_reqs[op] = true;
+	  
 	}
       }
       
-      //
       // The following models the speculative VC allocation aspects 
       // of the pipeline. An input VC with a request in for an egress
       // virtual channel will also speculatively bid for the switch
       // regardless of whether the VC allocation succeeds. These
-      // speculative requests are marked as such so as to prevent them
-      // from interfering with non-speculative bids
-      //
+      // speculative requests are handled in a separate allocator so 
+      // as to prevent them from interfering with non-speculative bids
       bool enter_spec_sw_req = !cur_vc->Empty() &&
 	((cur_vc->GetState() == VC::vc_spec) ||
 	 (cur_vc->GetState() == VC::vc_spec_grant));
@@ -458,15 +464,16 @@ void NoCRouter::_SWAlloc()
 	// Speculative requests are sent to the allocator with a priority
 	// of 0 regardless of whether there is buffer space available
 	// at the downstream router because request is speculative. 
-	_sw_allocator->AddRequest(ip, op, ivc, 
-				  0, 
-				  0);
+	_sw_allocator->AddRequest(ip, op, ivc, cur_vc->GetPriority(),
+				  cur_vc->GetPriority());
 	
       }
+      ivc = (ivc + 1) % _num_vcs;
     }
   }
   
   _sw_allocator->Allocate();
+  _spec_sw_allocator->Allocate();
 
   // Promote virtual channel grants marked as speculative to active
   // now that the speculative switch request has been processed. Those
@@ -494,12 +501,37 @@ void NoCRouter::_SWAlloc()
   
   for(int ip = 0; ip < _inputs; ip++) {
     Credit * c = NULL;
+    bool use_spec_grant = false;
     
     int op = _sw_allocator->OutputAssigned(ip);
-    
+    if(op < 0) {
+      op = _spec_sw_allocator->OutputAssigned(ip);
+      if(op >= 0) {
+	switch(_filter_spec_grants) {
+	case 0:
+	  if(any_nonspec_reqs)
+	    op = -1;
+	  break;
+	case 1:
+	  if(any_nonspec_output_reqs[op])
+	    op = -1;
+	  break;
+	case 2:
+	  if(_sw_allocator->InputAssigned(op))
+	    op = -1;
+	  break;
+	default:
+	  assert(false);
+	}
+      }
+      use_spec_grant = (op >= 0);
+    }
+
     if(op >= 0) {
       
-      int ivc = _sw_allocator->ReadRequest(ip, op);
+      int ivc = (use_spec_grant ?
+		 _spec_sw_allocator :
+		 _sw_allocator)->ReadRequest(ip, op);
       VC * cur_vc = _input_vcs[ip * _num_vcs + ivc];
       
       // Detect speculative switch requests which succeeded when VC 
@@ -514,9 +546,6 @@ void NoCRouter::_SWAlloc()
 	
 	if(output_state->IsFullFor(cur_vc->GetOutputVC()))
 	  continue;
-	
-	// dub: redundant?
-	assert(!output_state->IsFullFor(cur_vc->GetOutputVC()));
 	
 	// Forward flit to crossbar and send credit back
 	Flit * f = cur_vc->RemoveFlit();
@@ -552,8 +581,6 @@ void NoCRouter::_SWAlloc()
 	if(f->tail) {
 	  cur_vc->SetState(VC::idle);
 	}
-	
-	_sw_rr_offset[ip] = (f->vc + 1) % _num_vcs;
       }
     }
     _credit_pipe->Write(c, ip);

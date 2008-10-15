@@ -308,14 +308,15 @@ by changing the \texttt{booksim\_config.cpp} file. Most configuration parameters
 The \texttt{topology} parameter determines the underlying topology of the
 network. There is also a set of numerical parameters that describes the size of the networks. 
 
-\begin{opt_list}{single}
+\begin{opt_list}{topoparams}
+
 \item[k] Network radix, the number of routers per dimension
 \item[n] Network dimension
 \item[c] Network concentration, the number of nodes sharing a single router. Typically set to 1, >1 only in networks that has concentration (i.e. cmesh)
 \item[x] (NoC simulations only) The number of routers in the X dimension. Used to calculate channel latency between routers. 
 \item[y] (NoC simulations only) The number of routers in the y dimension. Used to calculate channel latency between routers. 
-\item[xr] (NoC simulations only) For networks that has c>1, the number of nodes in the x direction per router. Used to calculate channel latency between routers. 
-\item[yr] (NoC simulations only) For networks that has c>1, the number of nodes in the y direction per router. Used to calculate channel latency between routers. 
+\item[xr] (NoC simulations only) For networks that have c>1, the number of nodes in the x direction per router. Used to calculate channel latency between routers. 
+\item[yr] (NoC simulations only) For networks that have c>1, the number of nodes in the y direction per router. Used to calculate channel latency between routers. 
 \item[limit] Emulate partially filled networks. Nodes greater or equal to limit does not generate or receive packets during simulation. Though depending on the routing algorithm the routers associated with those nodes may be use to route passing by traffic. 
 
 \end{opt_list}
@@ -323,7 +324,7 @@ network. There is also a set of numerical parameters that describes the size of 
 
 The channel latency of the network must be configured within the source code of the topology files. All topologies by default have channel latency of 1 cycles. Topologies available in \simname are:
 
-\begin{opt_list}{single}
+\begin{opt_list}{topologies}
 \item[fly] A $k$-ary $n$-fly (butterfly) topology. The \texttt{k}
 parameter determines the network's radix and the \texttt{n} parameter
 determines the network's dimension.
@@ -389,7 +390,7 @@ channels for deadlock freedom (VCDF). In addition to \texttt{routefunc.cpp}, som
 The simulator supports basic virtual-channel flow control with
 credit-based backpressure.  
 
-\begin{opt_list}{wait\_for\_tail\_credit}
+\begin{opt_list}{flowcontrolparams}
 
 \item[num\_vcs] The number of virtual channels per physical channel.
 
@@ -417,7 +418,7 @@ the Avici TSR and described in U.S. Patent 6,370,145.  The
 microarchitecture is selected using the \texttt{router} option.  Also,
 both routers share a small set of options.
 
-\begin{opt_list}{internal\_speedup}
+\begin{opt_list}{routerparams}
 \item[credit\_delay] The processing delay (in cycles) for a credit.
 Does not include the wire delay for transmitting the credit.
 
@@ -441,7 +442,7 @@ described in PPIN of route computation, virtual-channel allocation,
 switch allocation, and switch traversal.  There are several options
 specific to the input-queued router.
 
-\begin{opt_list}{st\_prepare\_delay}
+\begin{opt_list}{iqrouterparams}
 
 \item[input\_speedup] An integer speedup of the input ports in space.
 A speedup of 2, for example, gives each input two input ports into the
@@ -454,8 +455,16 @@ space.  Similar to \texttt{input\_speedup}
 
 \item[routing\_delay] The delay (in cycles) of route computation.
 
+\item[hold\_switch\_for\_packet]
+
+\item[speculative] Enable speculative switch allocation (i.e., allow switch allocation to occur in parallel with VC allocation for header flits).
+
+\item[filter\_spec\_grants] Determines how speculative grants are masked (\texttt{any\_nonspec\_gnts}: any non-speculative grant inhibits all speculative grants; \texttt{confl\_nonspec\_reqs}: speculative grants are inhibited by conflicting non-speculative requests; \texttt{confl\_nonspec\_gnts}: speculative grants are inhibited by conflicting non-speculative grants).
+
 \item[sw\_allocator] The type of allocator used for switch allocation.
 See Section~\ref{sec:alloc} for a list of the possible allocators.
+
+\item[sw\_alloc\_arb\_type] The type of arbiter to use if a separable input- or output-first allocator is used for switch allocation.
 
 \item[sw\_alloc\_delay] The delay (in cycles) of switch allocation.
 
@@ -463,9 +472,10 @@ See Section~\ref{sec:alloc} for a list of the possible allocators.
 allocation.  See Section~\ref{sec:alloc} for a list of the possible
 allocators.
 
+\item[vc\_alloc\_arb\_type] The type of arbiter to use if a separable input- or output-first allocator is used for virtual channel allocation.
+
 \item[vc\_alloc\_delay] The delay (in cycles) of virtual-channel
 allocation.
-
 
 \end{opt_list}
 
@@ -473,7 +483,7 @@ allocation.
 \subsubsection{The NoC router}
 \label{sec:noc_router}
 
-The NoC router (\texttt{router = noc}) is a simplified variant of the input-queued router. It does not support input or output speedup. Also, it does not support multi-cycle allocation, but does support output-first allocation.
+The NoC router (\texttt{router = noc}) is a simplified variant of the input-queued router. It does not support input or output speedup. Also, it does not support multi-cycle allocation.
 
 
 
@@ -495,24 +505,23 @@ independent of the number of VCs.
 Many of the allocators used in the simulator are configurable (see
 the input-queued router in Section~\ref{sec:iq_router}) and several
 allocation algorithms are available.
-\begin{opt_list}{wavefront}
+
+\begin{opt_list}{allocators}
 
 \item[max\_size] Maximum-size matching. 
 \item[islip] iSLIP separable allocator.
 \item[pim] Parallel iterative matching separable allocator.
 \item[loa] Lonely output allocator.
 \item[wavefront] Wavefront allocator.
-\item[matrix] Separable input-first allocator built from matrix arbiters.
-\item[round\_robin] Separable input-first allocator built from round-robin arbiters.
+\item[separable\_input\_first] Separable input-first allocator.
+\item[separable\_output\_first] Separable output-first allocator.
 \item[select] Priority-based allocator.  Allocation is performed as in
 iSLIP, but with preference towards higher priority packets (see
 \texttt{priority} option in Section~\ref{sec:traffic}).
 
 \end{opt_list}
 
-Allocation can also be improved by performing multiple iterations of
-the algorithm and the number of iterations is controlled by the
-\texttt{alloc\_iters} parameter.
+For the \texttt{islip}, \texttt{pim} and \texttt{select} allocators, allocation can be improved by performing multiple iterations of the algorithm; the number of iterations is controlled by the \texttt{alloc\_iters} parameter.
 
 \subsection{Traffic}
 \label{sec:traffic}
@@ -551,7 +560,7 @@ whereas $s_x$ ($d_x$) denotes the $x^\textrm{th}$ radix-$k$ digit of
 the source (destination) address.  The bit length of an address is $b
 = \log_2 N$, where $N$ is the number of nodes in the network.
 
-\begin{opt_list}{transpose}
+\begin{opt_list}{trafficpatterns}
 \item[uniform] Each source sends an equal amount of traffic to each
 destination (\texttt{traffic = uniform}).
 \item[bitcomp] Bit complement. $d_i = \neg s_i$.
@@ -575,7 +584,7 @@ used for several experiments.
 The duration and other aspects of a simulation are controlled using
 the set of simulation parameters.
 
-\begin{opt_list}{warmup\_periods}
+\begin{opt_list}{simparams}
 
 \item[sim\_type] A simulation can either focus on
 \texttt{throughput} or \texttt{latency}.  The key difference between
