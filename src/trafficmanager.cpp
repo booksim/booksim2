@@ -5,7 +5,6 @@
 #include "trafficmanager.hpp"
 #include "random_utils.hpp" 
 
-int bleh = 0;
 //batched time-mode, know what you are doing
 bool timed_mode = false;
 
@@ -180,7 +179,13 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     _sim_mode = latency;
   } else if ( sim_type == "throughput" ) {
     _sim_mode = throughput;
-  } else {
+  }  else if ( sim_type == "batch" ) {
+    _sim_mode = batch;
+  }  else if (sim_type == "timed_batch"){
+    _sim_mode = batch;
+    timed_mode = true;
+  }
+  else {
     Error( "Unknown sim_type " + sim_type );
   }
 
@@ -342,12 +347,25 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     
     //code the source of request, look carefully, its tricky ;)
     if (f->type == Flit::READ_REQUEST) {
-      _repliesPending[dest].push_back(2*(f->src) + 1);
+      Packet_Reply* temp = new Packet_Reply;
+      temp->source = f->src;
+      temp->time = _time;
+      temp->type = f->type;
+      _repliesDetails[f->id] = temp;
+      _repliesPending[dest].push_back(f->id);
     } else if (f->type == Flit::WRITE_REQUEST) {
-      _repliesPending[dest].push_back(2*(f->src) + 2);
+      Packet_Reply* temp = new Packet_Reply;
+      temp->source = f->src;
+      temp->time = _time;
+      temp->type = f->type;
+      _repliesDetails[f->id] = temp;
+      _repliesPending[dest].push_back(f->id);
     } else if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY  ){
       //received a reply
       _requestsOutstanding[dest]--;
+    } else if(f->type == Flit::ANY_TYPE && _sim_mode == batch  ){
+      //received a reply
+      _requestsOutstanding[f->src]--;
     }
 
 
@@ -386,33 +404,72 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 int TrafficManager::_IssuePacket( int source, int cl ) const
 {
   int result;
-  
-  if(_use_read_write){ //batch mode
-    //check queue for waiting replies.
-    if (!_repliesPending[source].empty()) {
-      result = _repliesPending[source].front();
-      _repliesPending[source].pop_front();
-      
-    } else if ((_packets_sent[source] >= _batch_size && !timed_mode) || 
-	       (_requestsOutstanding[source] >= _maxOutstanding)) {
-      result = 0;
-    } else {
-      
-      //coin toss to determine request type.
-      result = -1;
-      
-      if (drand48() < 0.5) {
-	result = -2;
+  int pending_time = INT_MAX; //reset to maxtime+1
+  if(_sim_mode == batch){ //batch mode
+    if(_use_read_write){ //read write packets
+      //check queue for waiting replies.
+      //check to make sure it is on time yet
+      if (!_repliesPending[source].empty()) {
+	result = _repliesPending[source].front();
+	pending_time = (_repliesDetails.find(result)->second)->time;
       }
-      
-      _packets_sent[source]++;
-      _requestsOutstanding[source]++;
+      if (pending_time<=_qtime[source][0]) {
+	result = _repliesPending[source].front();
+	_repliesPending[source].pop_front();
+	
+      } else if ((_packets_sent[source] >= _batch_size && !timed_mode) || 
+		 (_requestsOutstanding[source] >= _maxOutstanding)) {
+	result = 0;
+      } else {
+	
+	//coin toss to determine request type.
+	result = -1;
+	
+	if (drand48() < 0.5) {
+	  result = -2;
+	}
+	
+	_packets_sent[source]++;
+	_requestsOutstanding[source]++;
+      } 
+    } else { //normal
+      if ((_packets_sent[source] >= _batch_size && !timed_mode) || 
+		 (_requestsOutstanding[source] >= _maxOutstanding)) {
+	result = 0;
+      } else {
+	result = gConstPacketSize;
+	_packets_sent[source]++;
+	//here is means, how many flits can be waiting in the queue
+	_requestsOutstanding[source]++;
+      } 
     } 
-  } else { //injection mode
-    return _injection_process( source, _load );
+  } else { //injection rate mode
+    if(_use_read_write){ //use read and write
+      //check queue for waiting replies.
+      //check to make sure it is on time yet
+      if (!_repliesPending[source].empty()) {
+	result = _repliesPending[source].front();
+	pending_time = (_repliesDetails.find(result)->second)->time;
+      }
+      if (pending_time<=_qtime[source][0]) {
+	result = _repliesPending[source].front();
+	_repliesPending[source].pop_front();
+      } else {
+	result = _injection_process( source, _load );
+	//produce a packet
+	if(result){
+	  //coin toss to determine request type.
+	  result = -1;
+	
+	  if (drand48() < 0.5) {
+	    result = -2;
+	  }
+	}
+      } 
+    } else { //normal mode
+      return _injection_process( source, _load );
+    } 
   }
- 
-
   return result;
 }
 
@@ -443,15 +500,22 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       packet_destination = _traffic_function( source, _limit );
     }
     else  {
-      if ((stype %2) != 0) {//read reply
+      Packet_Reply* temp = _repliesDetails.find(stype)->second;
+      
+      if (temp->type == Flit::READ_REQUEST) {//read reply
 	size = _read_reply_size;
-	packet_destination = (stype - 1)/2;
+	packet_destination = temp->source;
 	packet_type = Flit::READ_REPLY;
+	time = temp->time;
       } else {  //write reply
 	size = _write_reply_size;
-	packet_destination = (stype - 2)/2;
+	packet_destination = temp->source;
 	packet_type = Flit::WRITE_REPLY;
+	time = temp->time;
       }
+
+      _repliesDetails.erase(_repliesDetails.find(stype));
+      delete temp;
     }
   } else {
     //use uniform packet size
@@ -539,7 +603,7 @@ void TrafficManager::_FirstStep( )
   }
 }
 
-void TrafficManager::_ReadWriteInject(){
+void TrafficManager::_BatchInject(){
   Flit   *f, *nf;
   Credit *cred;
   int    psize;
@@ -585,9 +649,7 @@ void TrafficManager::_ReadWriteInject(){
 	  //highest_class = c;
 	  class_array[sub_network][c]++; // One more packet for this class.
 	}
-      } //else {
-	//highest_class = c;
-      //} //This is not necessary with class_array because it stays.
+      }
     }
 
     // Now, check partially issued packets to
@@ -666,13 +728,19 @@ void TrafficManager::_NormalInject(){
 	  while( !generated && ( _qtime[input][c] <= _time ) ) {
 	    psize = _IssuePacket( input, c );
 
-	    if ( psize ) {
+	    if ( psize ) { //generate a packet
 	      _GeneratePacket( input, psize, c, 
 			       _include_queuing==1 ? 
 			       _qtime[input][c] : _time );
 	      generated = true;
 	    }
-	    ++_qtime[input][c];
+	    //this is not a request packet
+	    //don't advance time
+	    if(_use_read_write && psize>0){
+	      
+	    } else {
+	      ++_qtime[input][c];
+	    }
 	  }
 	  
 	  if ( ( _sim_state == draining ) && 
@@ -748,9 +816,9 @@ void TrafficManager::_Step( )
   Flit   *f;
   Credit *cred;
 
-  if(_use_read_write){ //batch mode
-    _ReadWriteInject();
-  } else { //injection rate
+  if(_sim_mode == batch){
+    _BatchInject();
+  } else {
     _NormalInject();
   }
 
@@ -937,7 +1005,7 @@ bool TrafficManager::_SingleSim( )
   _ClearStats( );
   clear_last    = false;
 
-  if (_use_read_write && timed_mode){
+  if (_sim_mode == batch && timed_mode){
     while(_time<_sample_period){
       _Step();
       if ( _time % 10000 == 0 ) {
@@ -956,7 +1024,7 @@ bool TrafficManager::_SingleSim( )
     cout<<"Total inflight "<<_total_in_flight<<endl;
     converged = 1;
 
-  } else if(_use_read_write && !timed_mode){//batch mode   
+  } else if(_sim_mode == batch && !timed_mode){//batch mode   
     while(_packets_sent[0] < _batch_size){
       _Step();
       if ( _time % 1000 == 0 ) {

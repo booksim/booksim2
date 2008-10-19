@@ -16,6 +16,13 @@
 #include "injection.hpp"
 #include <assert.h>
 
+//register the requests to a node
+struct Packet_Reply {
+  int source;
+  int time;
+  Flit::FlitType type;
+};
+
 class TrafficManager : public Module {
 protected:
   int _sources;
@@ -56,6 +63,7 @@ protected:
   int *_packets_sent;
   int _batch_size;
   list<int>* _repliesPending;
+  map<int,Packet_Reply*> _repliesDetails;
   int * _requestsOutstanding;
   int _maxOutstanding;
 
@@ -76,20 +84,13 @@ protected:
   Stats *_overall_accepted;
   Stats *_overall_accepted_min;
 
-//   ////annoying crap required for tcc
-//   bool  _flit_timing;
-//   bool         **_active_vc;
-//   int *_packets_sent;
-//   int *_requestsOutstanding;
-//   list<int>    *_repliesPending;
-//   bool         _use_lagging;
 
   // ============ Simulation parameters ============ 
 
   enum eSimState { warming_up, running, draining, done };
   eSimState _sim_state;
 
-  enum eSimMode { latency, throughput };
+  enum eSimMode { latency, throughput, batch };
   eSimMode _sim_mode;
 
   int   _limit; //any higher clients do not generate packets
@@ -137,7 +138,7 @@ protected:
 
   void _FirstStep( );
   void _NormalInject();
-  void _ReadWriteInject();
+  void _BatchInject();
   void _Step( );
 
   bool _PacketsOutstanding( ) const;

@@ -42,7 +42,6 @@ sim_type = latency;
 
 warmup_periods = 3;
 
-sample_period  = 1000;  
 
 sim_count          = 1;
 
@@ -79,13 +78,28 @@ limit = 64;
 
 routing_function = ugal;
 
-const_flits_per_packet = 1;
+const_flits_per_packet = 2;
 
 traffic       = uniform;
 
-injection_rate = 0.7;
-
+sample_period  = 1000;  
 
 use_read_write = 1;
 
+batch_size = 1000;
+
+injection_rate = 0.1;
+
 sim_type = latency;
+
+speculative = 0;
+
+print_activity = 0;
+
+
+
+read_request_size=1;
+read_reply_size=4;
+write_request_size=4;
+write_reply_size=1;
+
