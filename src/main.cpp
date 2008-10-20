@@ -179,8 +179,8 @@ void AllocatorSim( const Configuration& config )
 
   ///Power analysis
 
-//   Power_Module * pnet = new Power_Module(net[0], trafficManager, config);
-//   pnet->run();
+  Power_Module * pnet = new Power_Module(net[0], trafficManager, config);
+  pnet->run();
 
 
   delete trafficManager ;

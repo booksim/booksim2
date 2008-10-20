@@ -1,0 +1,160 @@
+#ifndef _POWER_MODULE_HPP_
+#define _POWER_MODULE_HPP_
+
+#include <map>
+#include "module.hpp"
+#include "network.hpp"
+#include "config_utils.hpp"
+#include "trafficmanager.hpp"
+#include "flitchannel.hpp"
+#include "iq_router.hpp"
+#include "flit.hpp"
+
+
+struct wire{
+  double L;
+  double K;
+  double M;
+  double N;
+};
+
+class Power_Module : public Module {
+
+protected:
+  //network undersimulation
+  Network * net;
+  TrafficManager* sim;
+  //all channels are this width
+  double channel_width;
+  //resimulate all with channel_width decremented by channel_sweep until 0
+  double  channel_sweep; 
+  //write result to a tabbed format to file
+  string output_file_name;
+
+  //buffer depth
+  double depthVC;
+  //vcs
+  double numVC;
+
+  //store the property of wires based on length
+  map<double, wire*> wire_map;
+
+  //////////////////////////////////Constants/////////////////////////////
+  //wire length in (mm)
+  double wire_length;
+  //////////Metal Parameters////////////
+  // Wire left/right coupling capacitance [ F/mm ]
+  double Cw_cpl ; 
+  // Wire up/down groudn capacitance      [ F/mm ]
+  double Cw_gnd  ;
+  double Cw ;
+  double Rw ;
+  // metal pitch [mm]
+  double MetalPitch ; 
+
+
+  //////////Device Parameters////////////
+  
+  double LAMBDA  ;       // [um/LAMBDA]
+  double Cd   ;           // [F/um] (for Delay)
+  double Cg  ;           // [F/um] (for Delay)
+  double Cgdl  ;           // [F/um] (for Delay)
+  
+  double Cd_pwr;           // [F/um] (for Power)
+  double Cg_pwr  ;           // [F/um] (for Power)
+			       
+  double IoffN  ;            // [A/um]
+  double IoffP  ;            // [A/um]
+  // Leakage from bitlines, two-port cell  [A]
+  double IoffSRAM;  
+  // [Ohm] ( D1=1um Inverter)
+  double R     ;                         
+  // [F]   ( D1=1um Inverter - for Power )
+  double Ci_delay;   
+  // [F]   ( D1=1um Inverter - for Power )
+  double Co_delay ;              
+
+  double Ci ;
+  double Co ;
+  double Vdd  ;
+  double FO4   ;		     
+  double tCLK ;
+  double fCLK ;              
+
+  double H_INVD2;
+  double W_INVD2;
+  double H_DFQD1;
+  double W_DFQD1;
+  double H_ND2D1;
+  double W_ND2D1;
+  double H_SRAM;
+  double W_SRAM;
+  double  ChannelPitch ;
+  double   CrossbarPitch;
+  ////////////////////////////////End of Constants/////////////////////////////
+
+  /////////////results///////////////////
+  double totalTime;
+  double channelWirePower;
+  double channelClkPower;
+  double channelDFFPower;
+  double channelLeakPower;
+  double inputReadPower;
+  double inputWritePower;
+  double inputLeakagePower;
+  double switchPower;
+  double switchPowerCtrl;
+  double switchPowerLeak;
+  double outputPower;
+  double outputPowerClk;
+  double outputCtrlPower;
+  double channelArea;
+  double switchArea;
+  double inputArea;
+  double outputArea;
+  double maxInputPort;
+  double maxOutputPort;
+
+
+  ////////////////////////
+
+  //channels
+  void calcChannel(FlitChannel * f);
+  wire* wireOptimize(double l);
+  double powerRepeatedWire(double L, double K, double M, double N);
+  double powerRepeatedWireLeak (double K, double M, double N);
+  double powerWireClk (double M, double W);
+  double powerWireDFF(double M, double W, double alpha);
+  
+  //memory
+  void calcBuffer(BufferMonitor *bm);
+  double powerWordLine(double memoryWidth, double memoryDepth);
+  double powerMemoryBitRead(double memoryDepth);
+  double powerMemoryBitWrite(double memoryDepth);
+  double powerMemoryBitLeak(double memoryDepth );
+
+  //switch
+  void calcSwitch(SwitchMonitor *sm);
+  double powerCrossbar(double width, double inputs, double outputs, double from, double to);
+  double powerCrossbarCtrl(double width, double inputs, double outputs);
+  double powerCrossbarLeak (double width, double inputs, double outputs);
+  
+  //output
+  double powerOutputCtrl(double width);
+
+  //area
+
+  double areaChannel (double K, double N, double M);
+  double areaCrossbar(double Inputs, double Outputs) ;
+  double areaInputModule(double Words) ;
+  double areaOutputModule(double Outputs);
+
+public:
+  Power_Module(Network * net, TrafficManager* parent, const Configuration &config);
+  ~Power_Module();
+
+  void run();
+
+
+};
+#endif

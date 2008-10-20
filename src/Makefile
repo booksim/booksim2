@@ -6,7 +6,7 @@ YACC   = /usr/bin/bison -d
 LEX    = /usr/bin/flex
 PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
-CPPFLAGS = -O3 -I. -Iarbiters -Iallocators -Irouters -Inetworks -ggdb
+CPPFLAGS = -O3 -I. -Iarbiters -Iallocators -Irouters -Inetworks -I../utils/ -ggdb
 LFLAGS = 
 
 OBJDIR := obj
@@ -32,7 +32,6 @@ CPP_SRCS = main.cpp \
    random_utils.cpp\
    misc_utils.cpp\
    rng_wrapper.cpp\
-   power_module.cpp\
    rng_double_wrapper.cpp
 
 LEX_OBJS  = ${OBJDIR}/configlex.o
@@ -43,6 +42,7 @@ NETWORKS := $(wildcard networks/*.cpp)
 ALLOCATORS:= $(wildcard allocators/*.cpp)
 ARBITERS:= $(wildcard arbiters/*.cpp)
 ROUTERS:=$(wildcard routers/*.cpp)
+POWER:=$(wildcard ../utils/*.cpp)
 
 #--- Make rules ---
 OBJS :=  $(LEX_OBJS) $(YACC_OBJS)\
@@ -51,6 +51,7 @@ OBJS :=  $(LEX_OBJS) $(YACC_OBJS)\
  $(ALLOCATORS:allocators/%.cpp=${OBJDIR}/%.o)\
  $(ARBITERS:arbiters/%.cpp=${OBJDIR}/%.o)\
  $(ROUTERS:routers/%.cpp=${OBJDIR}/%.o)\
+ $(POWER:../utils/%.cpp=${OBJDIR}/%.o)
 
 .PHONY: clean
 .PRECIOUS: %_tab.cpp %_tab.hpp %lex.cpp
@@ -81,6 +82,10 @@ ${OBJDIR}/%.o: allocators/%.cpp
 
 # rules to compile routers
 ${OBJDIR}/%.o: routers/%.cpp 
+	$(CPP) $(CPPFLAGS) -c $< -o $@
+
+# rules to compile routers
+${OBJDIR}/%.o: ../utils/%.cpp 
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
 clean:
