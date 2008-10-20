@@ -32,6 +32,7 @@ CPP_SRCS = main.cpp \
    random_utils.cpp\
    misc_utils.cpp\
    rng_wrapper.cpp\
+   power_module.cpp\
    rng_double_wrapper.cpp
 
 LEX_OBJS  = ${OBJDIR}/configlex.o

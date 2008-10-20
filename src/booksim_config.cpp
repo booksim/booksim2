@@ -185,4 +185,11 @@ BookSimConfig::BookSimConfig( )
   _int_map["viewer_trace"] = 0;
 
   AddStrField("watch_file", "");
+
+
+  //==================Power model params=====================
+  _int_map["sim_power"] = 0;
+  AddStrField("power_output_file","pwr_tmp");
+  _int_map["channel_width"] = 128;
+  _int_map["channel_sweep"] = 0;
 }

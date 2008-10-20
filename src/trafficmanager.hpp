@@ -157,11 +157,14 @@ protected:
   void _DisplayRemaining( ) const;
   
   void _LoadWatchList();
+
 public:
   TrafficManager( const Configuration &config, Network **net );
   ~TrafficManager( );
 
   void Run( );
+
+  int getTime(){ return _time;}
 };
 
 #endif

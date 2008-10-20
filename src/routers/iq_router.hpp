@@ -13,6 +13,40 @@
 #include "buffer_state.hpp"
 #include "pipefifo.hpp"
 
+class SwitchMonitor {
+  int  _cycles ;
+  int  _inputs ;
+  int  _outputs ;
+  int* _event ;
+  int index( int input, int output, int flitType ) const ;
+public:
+  SwitchMonitor( int inputs, int outputs ) ;
+  void cycle() ;
+  int* GetActivity(){return _event;}
+  int NumInputs(){return _inputs;}
+  int NumOutputs(){return _outputs;}
+  void traversal( int input, int output, Flit* flit ) ;
+  friend ostream& operator<<( ostream& os, const SwitchMonitor& obj ) ;
+  
+} ;
+
+class BufferMonitor {
+  int  _cycles ;
+  int  _inputs ;
+  int* _reads ;
+  int* _writes ;
+  int index( int input, int flitType ) const ;
+public:
+  BufferMonitor( int inputs ) ;
+  void cycle() ;
+  void write( int input, Flit* flit ) ;
+  void read( int input, Flit* flit ) ;
+  int* GetReads(){return _reads;}
+  int* GetWrites(){return _writes;}
+  int NumInputs(){return _inputs;}
+  friend ostream& operator<<( ostream& os, const BufferMonitor& obj ) ;
+} ;
+
 class IQRouter : public Router {
   int  _vcs ;
   int  _vc_size ;
@@ -63,35 +97,10 @@ class IQRouter : public Router {
   //
   // ----------------------------------------
 public:
-  class SwitchMonitor {
-    int  _cycles ;
-    int  _inputs ;
-    int  _outputs ;
-    int* _event ;
-    int index( int input, int output, int flitType ) const ;
-  public:
-    SwitchMonitor( int inputs, int outputs ) ;
-    void cycle() ;
-    void traversal( int input, int output, Flit* flit ) ;
-    friend ostream& operator<<( ostream& os, const SwitchMonitor& obj ) ;
-    
-  } ;
   SwitchMonitor switchMonitor ;
   
 public:
-  class BufferMonitor {
-    int  _cycles ;
-    int  _inputs ;
-    int* _reads ;
-    int* _writes ;
-    int index( int input, int flitType ) const ;
-  public:
-    BufferMonitor( int inputs ) ;
-    void cycle() ;
-    void write( int input, Flit* flit ) ;
-    void read( int input, Flit* flit ) ;
-    friend ostream& operator<<( ostream& os, const BufferMonitor& obj ) ;
-  } ;
+
   BufferMonitor bufferMonitor ;
   
 public:
@@ -109,6 +118,8 @@ public:
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const;
   virtual int GetBuffer(int i) const;
   
+  SwitchMonitor* GetSwitchMonitor(){return &switchMonitor;}
+  BufferMonitor* GetBufferMonitor(){return &bufferMonitor;}
 };
 
 #endif

@@ -34,6 +34,7 @@ public:
   // Phsyical Parameters
   void SetLatency( int cycles ) ;
   int GetLatency() { return _delay ; }
+  int* GetActivity(){return _active;}
 
   // Check for flit on input. Used for tracking channel use
   bool InUse();

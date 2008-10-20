@@ -19,6 +19,7 @@
 #include "random_utils.hpp"
 #include "network.hpp"
 #include "injection.hpp"
+#include "power_module.hpp"
 
 ///////////////////////////////////////////////////////////////////////////////
 //include new network here//
@@ -175,6 +176,12 @@ void AllocatorSim( const Configuration& config )
   /*Start the simulation run
    */
   trafficManager->Run() ;
+
+  ///Power analysis
+
+//   Power_Module * pnet = new Power_Module(net[0], trafficManager, config);
+//   pnet->run();
+
 
   delete trafficManager ;
   for (int i=0; i<networks; ++i)

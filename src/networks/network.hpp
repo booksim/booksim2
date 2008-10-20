@@ -67,6 +67,13 @@ public:
   virtual void WriteOutputs( );
 
   void Display( ) const;
+
+  int NumChannels(){return _channels;}
+  FlitChannel* GetInject(){return _inject;}
+  FlitChannel* GetEject(){return _eject;}
+  FlitChannel* GetChannels(){return _chan;}
+  Router ** GetRouters(){return _routers;}
+  int NumRouters(){return _size;}
 };
 
 #endif 

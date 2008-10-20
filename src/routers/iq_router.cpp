@@ -841,7 +841,7 @@ int IQRouter::GetBuffer(int i) const{
 //   Switch Monitor
 //
 // ----------------------------------------------------------------------
-IQRouter::SwitchMonitor::SwitchMonitor( int inputs, int outputs ) {
+SwitchMonitor::SwitchMonitor( int inputs, int outputs ) {
   // something is stomping on the arrays, so padding is applied
   const int Offset = 16 ;
   _cycles  = 0 ;
@@ -855,19 +855,19 @@ IQRouter::SwitchMonitor::SwitchMonitor( int inputs, int outputs ) {
   _event += Offset ;
 }
 
-int IQRouter::SwitchMonitor::index( int input, int output, int flitType ) const {
+int SwitchMonitor::index( int input, int output, int flitType ) const {
   return flitType + Flit::NUM_FLIT_TYPES * ( output + _outputs * input ) ;
 }
 
-void IQRouter::SwitchMonitor::cycle() {
+void SwitchMonitor::cycle() {
   _cycles++ ;
 }
 
-void IQRouter::SwitchMonitor::traversal( int input, int output, Flit* flit ) {
+void SwitchMonitor::traversal( int input, int output, Flit* flit ) {
   _event[ index( input, output, flit->type) ]++ ;
 }
 
-ostream& operator<<( ostream& os, const IQRouter::SwitchMonitor& obj ) {
+ostream& operator<<( ostream& os, const SwitchMonitor& obj ) {
   for ( int i = 0 ; i < obj._inputs ; i++ ) {
     for ( int o = 0 ; o < obj._outputs ; o++) {
       os << "[" << i << " -> " << o << "] " ;
@@ -885,7 +885,7 @@ ostream& operator<<( ostream& os, const IQRouter::SwitchMonitor& obj ) {
 //   Flit Buffer Monitor
 //
 // ----------------------------------------------------------------------
-IQRouter::BufferMonitor::BufferMonitor( int inputs ) {
+BufferMonitor::BufferMonitor( int inputs ) {
   // something is stomping on the arrays, so padding is applied
   const int Offset = 16 ;
   _cycles = 0 ;
@@ -902,7 +902,7 @@ IQRouter::BufferMonitor::BufferMonitor( int inputs ) {
   _writes += Offset ;
 }
 
-int IQRouter::BufferMonitor::index( int input, int flitType ) const {
+int BufferMonitor::index( int input, int flitType ) const {
   if ( input < 0 || input > _inputs ) 
     cerr << "ERROR: input out of range in BufferMonitor" << endl ;
   if ( flitType < 0 || flitType> Flit::NUM_FLIT_TYPES ) 
@@ -910,19 +910,19 @@ int IQRouter::BufferMonitor::index( int input, int flitType ) const {
   return flitType + Flit::NUM_FLIT_TYPES * input ;
 }
 
-void IQRouter::BufferMonitor::cycle() {
+void BufferMonitor::cycle() {
   _cycles++ ;
 }
 
-void IQRouter::BufferMonitor::write( int input, Flit* flit ) {
+void BufferMonitor::write( int input, Flit* flit ) {
   _writes[ index(input, flit->type) ]++ ;
 }
 
-void IQRouter::BufferMonitor::read( int input, Flit* flit ) {
+void BufferMonitor::read( int input, Flit* flit ) {
   _reads[ index(input, flit->type) ]++ ;
 }
 
-ostream& operator<<( ostream& os, const IQRouter::BufferMonitor& obj ) {
+ostream& operator<<( ostream& os, const BufferMonitor& obj ) {
   for ( int i = 0 ; i < obj._inputs ; i++ ) {
     os << "[ " << i << " ] " ;
     for ( int f = 0 ; f < Flit::NUM_FLIT_TYPES ; f++ ) {
