@@ -70,6 +70,8 @@ public:
 
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const = 0;
   virtual int GetBuffer(int i) const = 0;
+
+  int NumOutputs(){return _outputs;}
 };
 
 #endif

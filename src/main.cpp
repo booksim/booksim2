@@ -36,6 +36,7 @@
 #include "tree4.hpp"
 #include "fattree.hpp"
 #include "mecs.hpp"
+#include "anynet.hpp"
 ///////////////////////////////////////////////////////////////////////////////
 //Global declarations
 //////////////////////
@@ -150,6 +151,9 @@ void AllocatorSim( const Configuration& config )
     } else if ( topo == "MECS"){
       MECS::RegisterRoutingFunctions() ;
       net[i] = new MECS(config);
+    } else if ( topo == "anynet"){
+      AnyNet::RegisterRoutingFunctions() ;
+      net[i] = new AnyNet(config);
     } else {
       cerr << "Unknown topology " << topo << endl;
       exit(-1);
@@ -179,9 +183,10 @@ void AllocatorSim( const Configuration& config )
 
   ///Power analysis
 
-  Power_Module * pnet = new Power_Module(net[0], trafficManager, config);
-  pnet->run();
-
+  if(config.GetInt("sim_power")==1){
+    Power_Module * pnet = new Power_Module(net[0], trafficManager, config);
+    pnet->run();
+  }
 
   delete trafficManager ;
   for (int i=0; i<networks; ++i)
