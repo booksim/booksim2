@@ -1,14 +1,5 @@
-import a network descsription file config file
-
 automatically load in channel length information, currently they are calculated according to nocsim
 
 Modify the nocviewer to be compatible with the new way that view traces are generated
-
-include the power script inside C++
-
-//Clean up the power calc scripts
-
-why doesn't include_queuing not affect anything?
-
 
 max_size allocator doesn't work mesh88

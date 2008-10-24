@@ -107,15 +107,15 @@ clean:
 
 #	$(CPP) $(CPPFLAGS) $(VCSFLAGS) -c $< -o $@
 
-##%_tab.cpp: %.y
-##	$(YACC) -b$* -p$* $<
-##	cp -f $*.tab.c $*_tab.cpp
-##
-##%_tab.hpp: %_tab.cpp
-##	cp -f $*.tab.h $*_tab.hpp
-##
-##%lex.cpp: %.l
-##	$(LEX) -P$* -o$@ $<
+%_tab.cpp: %.y
+	$(YACC) -b$* -p$* $<
+	cp -f $*.tab.c $*_tab.cpp
+
+%_tab.hpp: %_tab.cpp
+	cp -f $*.tab.h $*_tab.hpp
+
+%lex.cpp: %.l
+	$(LEX) -P$* -o$@ $<
 
 # *_tab.cpp *_tab.hpp #*.tab.c *.tab.h *lex.cpp
 

@@ -1,3 +1,9 @@
+/*anynet
+ *
+ *The 
+ *
+ */
+
 #include "anynet.hpp"
 #include <fstream>
 #include <sstream>
@@ -21,7 +27,7 @@ void AnyNet::_ComputeSize( const Configuration &config ){
     cout<<"No network file name provided"<<endl;
     exit(-1);
   }
-  
+  //parse the network description file
   readFile();
 
   _channels =0;

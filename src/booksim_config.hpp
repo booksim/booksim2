@@ -9,3 +9,15 @@ public:
 };
 
 #endif
+
+#ifndef _POWER_CONFIG_HPP_
+#define _POWER_CONFIG_HPP_
+
+#include "config_utils.hpp"
+
+class PowerConfig : public Configuration {
+public:
+  PowerConfig( );
+};
+
+#endif

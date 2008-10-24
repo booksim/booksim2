@@ -14,6 +14,7 @@ class AnyNet : public Network {
   //associtation between  nodes and routers
   map<int, int > node_list;
   map<int,  map<int, int>* >* router_list;
+  //stores minimal routing information from every router to every node
   map<int, int>* routing_table;
 
   void _ComputeSize( const Configuration &config );

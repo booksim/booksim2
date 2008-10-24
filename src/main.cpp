@@ -186,6 +186,7 @@ void AllocatorSim( const Configuration& config )
   if(config.GetInt("sim_power")==1){
     Power_Module * pnet = new Power_Module(net[0], trafficManager, config);
     pnet->run();
+    delete pnet;
   }
 
   delete trafficManager ;

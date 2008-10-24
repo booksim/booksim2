@@ -103,3 +103,4 @@ read_reply_size=4;
 write_request_size=4;
 write_reply_size=1;
 
+sim_power = 1;

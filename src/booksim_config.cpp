@@ -190,9 +190,40 @@ BookSimConfig::BookSimConfig( )
   //==================Power model params=====================
   _int_map["sim_power"] = 0;
   AddStrField("power_output_file","pwr_tmp");
+  AddStrField("tech_file", "../utils/temp");
   _int_map["channel_width"] = 128;
   _int_map["channel_sweep"] = 0;
 
   //==================Network file===========================
   AddStrField("network_file","");
+}
+
+PowerConfig::PowerConfig( )
+{ 
+
+  _int_map["H_INVD2"] = 0;
+  _int_map["W_INVD2"] = 0;
+  _int_map["H_DFQD1"] = 0;
+  _int_map["W_DFQD1"] = 0;
+  _int_map["H_ND2D1"] = 0;
+  _int_map["W_ND2D1"] = 0;
+  _int_map["H_SRAM"] = 0;
+  _int_map["W_SRAM"] = 0;
+  _float_map["Vdd"] = 0;
+  _float_map["R"] = 0;
+  _float_map["IoffSRAM"] = 0;
+  _float_map["IoffP"] = 0;
+  _float_map["IoffN"] = 0;
+  _float_map["Cg_pwr"] = 0;
+  _float_map["Cd_pwr"] = 0;
+  _float_map["Cgdl"] = 0;
+  _float_map["Cg"] = 0;
+  _float_map["Cd"] = 0;
+  _float_map["LAMBDA"] = 0;
+  _float_map["MetalPitch"] = 0;
+  _float_map["Rw"] = 0;
+  _float_map["Cw_gnd"] = 0;
+  _float_map["Cw_cpl"] = 0;
+  _float_map["wire_length"] = 0;
+
 }

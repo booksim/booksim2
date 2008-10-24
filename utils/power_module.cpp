@@ -1,7 +1,21 @@
 #include "power_module.hpp"
+#include "booksim_config.hpp"
 
 Power_Module::Power_Module(Network * n , TrafficManager* parent, const Configuration &config)
   : Module( 0, "power_module" ){
+
+  
+  PowerConfig pconfig;
+  string pfile;
+  config.GetStr("tech_file", pfile);
+  char ** argv = (char**)malloc(sizeof(char*)*2);
+  argv[1] = (char*)malloc(sizeof(char)*(pfile.length()+1));
+  strcpy(argv[1],pfile.c_str());
+
+  if ( !ParseArgs( &pconfig,2,argv) )  {
+    cout<<"cant locate technology file  "<<argv[1]<<endl;
+  }
+  
 
   net = n;
   sim = parent;
@@ -14,33 +28,33 @@ Power_Module::Power_Module(Network * n , TrafficManager* parent, const Configura
 
   //////////////////////////////////Constants/////////////////////////////
   //wire length in (mm)
-  wire_length = 1.5;
+  wire_length = pconfig.GetFloat("wire_length");
   //////////Metal Parameters////////////
   // Wire left/right coupling capacitance [ F/mm ]
-  Cw_cpl = 0.0651E-15 * 1E3 ; 
+  Cw_cpl = pconfig.GetFloat("Cw_cpl"); 
   // Wire up/down groudn capacitance      [ F/mm ]
-  Cw_gnd = 0.0354E-15 * 1E3 ;
+  Cw_gnd = pconfig.GetFloat("Cw_gnd");
   Cw = 2.0 * Cw_cpl + 2.0 * Cw_gnd ;
-  Rw = 2.0 * 1E3 ;
+  Rw = pconfig.GetFloat("Rw");
   // metal pitch [mm]
-  MetalPitch = 200E-9 * 1E3 ; 
+  MetalPitch = pconfig.GetFloat("MetalPitch"); 
   
   //////////Device Parameters////////////
   
-  LAMBDA = 0.065 / 2.0  ;       // [um/LAMBDA]
-  Cd     = 0.70E-15 ;           // [F/um] (for Delay)
-  Cg     = 1.20E-15 ;           // [F/um] (for Delay)
-  Cgdl   = 0.29E-15 ;           // [F/um] (for Delay)
+  LAMBDA =  pconfig.GetFloat("LAMBDA")  ;       // [um/LAMBDA]
+  Cd     =  pconfig.GetFloat("Cd");           // [F/um] (for Delay)
+  Cg     =  pconfig.GetFloat("Cg");           // [F/um] (for Delay)
+  Cgdl   =  pconfig.GetFloat("Cgdl");           // [F/um] (for Delay)
   
-  Cd_pwr = 0.70E-15 ;           // [F/um] (for Power)
-  Cg_pwr = 1.26E-15 ;           // [F/um] (for Power)
+  Cd_pwr =  pconfig.GetFloat("Cd_pwr") ;           // [F/um] (for Power)
+  Cg_pwr =  pconfig.GetFloat("Cg_pwr") ;           // [F/um] (for Power)
 			       
-  IoffN  = 10.0E-9 ;            // [A/um]
-  IoffP  =  5.0E-9 ;            // [A/um]
+  IoffN  = pconfig.GetFloat("IoffN");            // [A/um]
+  IoffP  = pconfig.GetFloat("IoffP");            // [A/um]
   // Leakage from bitlines, two-port cell  [A]
-  IoffSRAM = 4 * 5.0E-9 ;  
+  IoffSRAM = pconfig.GetFloat("IoffSRAM");  
   // [Ohm] ( D1=1um Inverter)
-  R        = 1.2E3  ;                         
+  R        = pconfig.GetFloat("R");                  
   // [F]   ( D1=1um Inverter - for Power )
   Ci_delay = (1.0 + 2.0) * ( Cg + Cgdl );   
   // [F]   ( D1=1um Inverter - for Power )
@@ -50,19 +64,19 @@ Power_Module::Power_Module(Network * n , TrafficManager* parent, const Configura
   Ci = (1.0 + 2.0) * Cg_pwr ;
   Co = (1.0 + 2.0) * Cd_pwr ;
 
-  Vdd    = 1.0;
+  Vdd    = pconfig.GetFloat("Vdd");
   FO4    = R * ( 3.0 * Cd + 12 * Cg + 12 * Cgdl);		     
   tCLK   = 20 * FO4;
   fCLK   = 1.0 / tCLK;              
 
-  H_INVD2=8;
-  W_INVD2=3;
-  H_DFQD1=8;
-  W_DFQD1=16;
-  H_ND2D1=8;
-  W_ND2D1=3;
-  H_SRAM=8;
-  W_SRAM=6;
+  H_INVD2=(double)pconfig.GetInt("H_INVD2");
+  W_INVD2=(double)pconfig.GetInt("W_INVD2") ;
+  H_DFQD1=(double)pconfig.GetInt("H_DFQD1");
+  W_DFQD1= (double)pconfig.GetInt("W_DFQD1");
+  H_ND2D1= (double)pconfig.GetInt("H_ND2D1");
+  W_ND2D1=(double)pconfig.GetInt("W_ND2D1");
+  H_SRAM=(double)pconfig.GetInt("H_SRAM");
+  W_SRAM=(double)pconfig.GetInt("W_SRAM");
 
   ChannelPitch = 2.0 * MetalPitch ;
   CrossbarPitch = 2.0 * MetalPitch ;

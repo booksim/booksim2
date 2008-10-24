@@ -19,6 +19,10 @@ unsigned int configlineno = 1;
 
 %}
 
+Digit [0-9]
+Exponent [eE]([+-]?){Digit}+
+DblConst ({Digit}+(\.{Digit}*)?)({Exponent})?
+
 %%
 
    /* Ignore comments and all spaces */
@@ -35,6 +39,8 @@ unsigned int configlineno = 1;
 [0-9]+     { configlval.num = strtoul( yytext, 0, 10 ); return NUM; }
 
 [0-9]+\.[0-9]+ { configlval.fnum = strtod( yytext, 0 ); return FNUM; }
+
+{DblConst}  { configlval.fnum = strtod(yytext, 0); return FNUM;}
 
 .          { return yytext[0]; }
 
