@@ -503,6 +503,9 @@ void IQRouter::_SWAlloc( )
 
 	// This continue acounts for the interleaving of 
 	// VCs when input speedup is used
+	// dub: Essentially, this skips loop iterations corresponding to those 
+	// VCs not in the current speedup set. The skipped iterations will be 
+	// handled in a different iteration of the enclosing loop over 's'.
 	if ( ( vc % _input_speedup ) != s ) {
 	  vc = ( vc + 1 ) % _vcs;
 	  continue;
@@ -528,10 +531,10 @@ void IQRouter::_SWAlloc( )
 	    if ( ( _switch_hold_in[expanded_input] == -1 ) && 
 		 ( _switch_hold_out[expanded_output] == -1 ) ) {
 	      
-	      // We could have requested this same input-output pair in a previous
-	      // iteration, only replace the previous request if the current
-	      // request has a higher priority (this is default behavior of the
-	      // allocators).  Switch allocation priorities are strictly 
+	      // We could have requested this same input-output pair in a 
+	      // previous iteration; only replace the previous request if the 
+	      // current request has a higher priority (this is default behavior
+	      // of the allocators).  Switch allocation priorities are strictly 
 	      // determined by the packet priorities.
 	      
 	      _sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
