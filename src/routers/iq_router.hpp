@@ -51,7 +51,6 @@ class IQRouter : public Router {
   int  _vcs ;
   int  _vc_size ;
   int  _speculative ;
-  int  _filter_spec_grants ;
 
   VC          **_vc;
   BufferState *_next_vcs;
