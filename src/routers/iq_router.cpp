@@ -91,10 +91,34 @@ IQRouter::IQRouter( const Configuration& config,
 					   _inputs*_input_speedup, 
 					   _outputs*_output_speedup,
 					   iters, arb_type );
-  
+
   if ( !_sw_allocator ) {
     cout << "ERROR: Unknown sw_allocator type " << alloc_type << endl;
     exit(-1);
+  }
+
+  if ( _speculative ) {
+    
+    string filter_spec_grants;
+    config.GetStr("filter_spec_grants", filter_spec_grants);
+    if(filter_spec_grants == "any_nonspec_gnts") {
+      _filter_spec_grants = 0;
+    } else if(filter_spec_grants == "confl_nonspec_reqs") {
+      _filter_spec_grants = 1;
+    } else if(filter_spec_grants == "confl_nonspec_gnts") {
+      _filter_spec_grants = 2;
+    } else assert(false);
+    
+    _spec_sw_allocator = Allocator::NewAllocator( this, "spec_sw_allocator",
+						  alloc_type,
+						  _inputs*_input_speedup, 
+						  _outputs*_output_speedup,
+						  iters, arb_type );
+    if ( !_spec_sw_allocator ) {
+      cout << "ERROR: Unknown sw_allocator type " << alloc_type << endl;
+      exit(-1);
+    }
+
   }
 
   _sw_rr_offset = new int [_inputs*_input_speedup];
@@ -157,6 +181,9 @@ IQRouter::~IQRouter( )
 
   delete _vc_allocator;
   delete _sw_allocator;
+
+  if ( _speculative )
+    delete _spec_sw_allocator;
 
   delete [] _sw_rr_offset;
 
@@ -468,9 +495,14 @@ void IQRouter::_SWAlloc( )
 
   int expanded_input;
   int expanded_output;
-
+  
+  bool any_nonspec_reqs = false;
+  bool any_nonspec_output_reqs[_outputs*_output_speedup];
+  memset(any_nonspec_output_reqs, 0, _outputs*_output_speedup*sizeof(bool));
+  
   _sw_allocator->Clear( );
-
+  _spec_sw_allocator->Clear( );
+  
   for ( input = 0; input < _inputs; ++input ) {
     for ( int s = 0; s < _input_speedup; ++s ) {
       expanded_input  = s*_inputs + input;
@@ -495,12 +527,6 @@ void IQRouter::_SWAlloc( )
 	
 	cur_vc = &_vc[input][vc];
 
-	//
-	// Non-speculative requests are sent to the allocator with a priority 
-	// assignment of 1, distinguishing these requests from speculative
-	// switch requests. The allocator is responsible for correctly
-	// handling the two classes of requests
-	//
 	if ((cur_vc->GetState( ) == VC::active) && !cur_vc->Empty() ) {
 	  
 	  dest_vc = &_next_vcs[cur_vc->GetOutputPort( )];
@@ -525,23 +551,12 @@ void IQRouter::_SWAlloc( )
 	      // of the allocators).  Switch allocation priorities are strictly 
 	      // determined by the packet priorities.
 	      
-	      if( _speculative){
-		
-		// dub: if speculative switch allocation is enabled for this 
-		// router, hardwire the priority of non-speculative packets to 1
-		_sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
-					   1 /*cur_vc->GetPriority( ) */, 
-					   1 /*cur_vc->GetPriority( ) */);
-		
-	      } else {
-		
-		// dub: if we don't use speculation, use packet's specified 
-		// priority
-		_sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
-					   cur_vc->GetPriority( ), 
-					   cur_vc->GetPriority( ));
+	      _sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
+					 cur_vc->GetPriority( ), 
+					 cur_vc->GetPriority( ));
+	      any_nonspec_reqs = true;
+	      any_nonspec_output_reqs[expanded_output] = true;
 	      
-	    }
 	    }
 	  }
 	}
@@ -551,8 +566,8 @@ void IQRouter::_SWAlloc( )
 	// of the pipeline. An input VC with a request in for an egress
 	// virtual channel will also speculatively bid for the switch
 	// regardless of whether the VC allocation succeeds. These
-	// speculative requests are marked as such so as to prevent them
-	// from interfering with non-speculative bids
+	// speculative requests are handled in a separate allocator so 
+	// as to prevent them from interfering with non-speculative bids
 	//
 	bool enter_spec_sw_req = !cur_vc->Empty() &&
 	  ((cur_vc->GetState() == VC::vc_spec) ||
@@ -569,9 +584,9 @@ void IQRouter::_SWAlloc( )
 	    // Speculative requests are sent to the allocator with a priority
 	    // of 0 regardless of whether there is buffer space available
 	    // at the downstream router because request is speculative. 
-	    _sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
-				       0, 
-				       0 );
+	    _spec_sw_allocator->AddRequest( expanded_input, expanded_output, vc,
+					    cur_vc->GetPriority( ), 
+					    cur_vc->GetPriority( ));
 	  }
 	  
 	}
@@ -581,7 +596,8 @@ void IQRouter::_SWAlloc( )
   }
 
   _sw_allocator->Allocate( );
-
+  _spec_sw_allocator->Allocate( );
+  
   // Promote virtual channel grants marked as speculative to active
   // now that the speculative switch request has been processed. Those
   // not marked active will not release flits speculatiely sent to the
@@ -611,6 +627,8 @@ void IQRouter::_SWAlloc( )
 
     for ( int s = 0; s < _input_speedup; ++s ) {
 
+      bool use_spec_grant = false;
+      
       expanded_input  = s*_inputs + input;
 
       if ( _switch_hold_in[expanded_input] != -1 ) {
@@ -623,13 +641,37 @@ void IQRouter::_SWAlloc( )
 	}
       } else {
 	expanded_output = _sw_allocator->OutputAssigned( expanded_input );
+	if(expanded_output < 0) {
+	  expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
+	  if(expanded_output >= 0) {
+	    switch(_filter_spec_grants) {
+	    case 0:
+	      if(any_nonspec_reqs)
+		expanded_output = -1;
+	      break;
+	    case 1:
+	      if(any_nonspec_output_reqs[expanded_output])
+		expanded_output = -1;
+	      break;
+	    case 2:
+	      if(_sw_allocator->InputAssigned(expanded_output) >= 0)
+		expanded_output = -1;
+	      break;
+	    default:
+	      assert(false);
+	    }
+	  }
+	  use_spec_grant = (expanded_output >= 0);
+	}
       }
 
       if ( expanded_output >= 0 ) {
 	output = expanded_output % _outputs;
 
 	if ( _switch_hold_in[expanded_input] == -1 ) {
-	  vc = _sw_allocator->ReadRequest( expanded_input, expanded_output );
+	  vc = (use_spec_grant ?
+		_spec_sw_allocator :
+		_sw_allocator)->ReadRequest( expanded_input, expanded_output );
 	  cur_vc = &_vc[input][vc];
 	}
 
@@ -652,8 +694,6 @@ void IQRouter::_SWAlloc( )
 	  
 	  if ( dest_vc->IsFullFor( cur_vc->GetOutputVC( ) ) )
 	    continue ;
-	  
-	  assert( !dest_vc->IsFullFor( cur_vc->GetOutputVC( ) ) );
 	  
 	  // Forward flit to crossbar and send credit back
 	  f = cur_vc->RemoveFlit( );

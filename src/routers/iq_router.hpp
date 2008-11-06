@@ -51,12 +51,14 @@ class IQRouter : public Router {
   int  _vcs ;
   int  _vc_size ;
   int  _speculative ;
+  int  _filter_spec_grants ;
 
   VC          **_vc;
   BufferState *_next_vcs;
 
   Allocator *_vc_allocator;
   Allocator *_sw_allocator;
+  Allocator *_spec_sw_allocator;
 
   int *_sw_rr_offset;
 
