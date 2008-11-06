@@ -58,7 +58,6 @@ class IQRouter : public Router {
 
   Allocator *_vc_allocator;
   Allocator *_sw_allocator;
-  Allocator *_spec_sw_allocator;
 
   int *_sw_rr_offset;
 
