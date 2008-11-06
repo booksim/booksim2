@@ -11,8 +11,7 @@ class Wavefront : public DenseAllocator {
   int _last_out;
 
 public:
-  Wavefront( const Configuration &config,
-	     Module *parent, const string& name,
+  Wavefront( Module *parent, const string& name,
 	     int inputs, int outputs );
   
   void AddRequest( int in, int out, int label = 1, 

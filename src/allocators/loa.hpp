@@ -11,10 +11,8 @@ class LOA : public DenseAllocator {
   int *_gptr;
 
 public:
-  LOA( const Configuration &config,
-       Module *parent, const string& name,
-       int inputs, int input_speedup,
-       int outputs, int output_speedup );
+  LOA( Module *parent, const string& name,
+       int inputs, int outputs );
   ~LOA( );
 
   void Allocate( );

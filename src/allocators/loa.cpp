@@ -4,17 +4,15 @@
 #include "loa.hpp"
 #include "random_utils.hpp"
 
-LOA::LOA( const Configuration &config,
-	  Module *parent, const string& name,
-	  int inputs, int input_speedup,
-	  int outputs, int output_speedup ) :
-  DenseAllocator( config, parent, name, inputs, outputs )
+LOA::LOA( Module *parent, const string& name,
+	  int inputs, int outputs ) :
+  DenseAllocator( parent, name, inputs, outputs )
 {
-  _req    = new int [_inputs];
-  _counts = new int [_outputs];
+  _req    = new int [inputs];
+  _counts = new int [outputs];
 
-  _rptr   = new int [_inputs];
-  _gptr   = new int [_outputs];
+  _rptr   = new int [inputs];
+  _gptr   = new int [outputs];
 }
 
 LOA::~LOA( )

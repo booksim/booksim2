@@ -14,11 +14,9 @@
 #include <string.h>
 
 SeparableOutputFirstAllocator::
-SeparableOutputFirstAllocator( const Configuration& config,
-			       Module* parent, const string& name,
-			       const string& arb_type,
-			       int inputs, int outputs )
-  : SeparableAllocator( config, parent, name, arb_type, inputs, outputs )
+SeparableOutputFirstAllocator( Module* parent, const string& name, int inputs,
+			       int outputs, const string& arb_type )
+  : SeparableAllocator( parent, name, inputs, outputs, arb_type )
 {}
 
 void SeparableOutputFirstAllocator::Allocate() {
@@ -49,11 +47,18 @@ void SeparableOutputFirstAllocator::Allocate() {
     
     // Execute the output arbiters and propagate the grants to the
     // input arbiters.
-    int label, pri ;
-    int in = _output_arb[output]->Arbitrate( &label, &pri ) ;
+    int in = _output_arb[output]->Arbitrate( NULL, NULL ) ;
     
     if ( in > -1 ) {
-      _input_arb[in]->AddRequest( output, label, pri ) ;
+      list<sRequest>::const_iterator it  = _requests[in].begin() ;
+      list<sRequest>::const_iterator end = _requests[in].end() ;
+      while ( it != end ) {
+	const sRequest& req = *it ;
+	if ( ( req.label > -1 ) && ( req.port == output ) ) {
+	  _input_arb[in]->AddRequest( output, req.label, req.in_pri );
+	}
+	it++ ;
+      }
     }
   }
   

@@ -20,6 +20,7 @@ IQRouter::IQRouter( const Configuration& config,
 {
   string alloc_type;
   string arb_type;
+  int iters;
   ostringstream vc_name;
   
   _vcs         = config.GetInt( "num_vcs" );
@@ -68,11 +69,13 @@ IQRouter::IQRouter( const Configuration& config,
   // Alloc allocators
   config.GetStr( "vc_allocator", alloc_type );
   config.GetStr( "vc_alloc_arb_type", arb_type );
-  _vc_allocator = Allocator::NewAllocator( config, 
-					   this, "vc_allocator",
-					   alloc_type, arb_type,
-					   _vcs*_inputs, 1,
-					   _vcs*_outputs, 1 );
+  iters = config.GetInt( "vc_alloc_iters" );
+  if(iters == 0) iters = config.GetInt("alloc_iters");
+  _vc_allocator = Allocator::NewAllocator( this, "vc_allocator",
+					   alloc_type,
+					   _vcs*_inputs,
+					   _vcs*_outputs,
+					   iters, arb_type );
 
   if ( !_vc_allocator ) {
     cout << "ERROR: Unknown vc_allocator type " << alloc_type << endl;
@@ -81,12 +84,14 @@ IQRouter::IQRouter( const Configuration& config,
 
   config.GetStr( "sw_allocator", alloc_type );
   config.GetStr( "sw_alloc_arb_type", arb_type );
-  _sw_allocator = Allocator::NewAllocator( config,
-					   this, "sw_allocator",
-					   alloc_type, arb_type,
-					   _inputs*_input_speedup, _input_speedup, 
-					   _outputs*_output_speedup, _output_speedup );
-
+  iters = config.GetInt("sw_alloc_iters");
+  if(iters == 0) iters = config.GetInt("alloc_iters");
+  _sw_allocator = Allocator::NewAllocator( this, "sw_allocator",
+					   alloc_type,
+					   _inputs*_input_speedup, 
+					   _outputs*_output_speedup,
+					   iters, arb_type );
+  
   if ( !_sw_allocator ) {
     cout << "ERROR: Unknown sw_allocator type " << alloc_type << endl;
     exit(-1);

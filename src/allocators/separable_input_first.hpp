@@ -13,9 +13,8 @@ class SeparableInputFirstAllocator : public SeparableAllocator {
 
 public:
   
-  SeparableInputFirstAllocator( const Configuration& config, Module* parent,
-				const string& name, const string& arb_type,
-				int inputs, int outputs ) ;
+  SeparableInputFirstAllocator( Module* parent, const string& name, int inputs,
+				int outputs, const string& arb_type ) ;
   
   virtual void Allocate() ;
 

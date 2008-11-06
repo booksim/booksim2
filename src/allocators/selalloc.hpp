@@ -11,9 +11,8 @@ class SelAlloc : public SparseAllocator {
   int *_gptrs;
 
 public:
-  SelAlloc( const Configuration &config,
-	    Module *parent, const string& name,
-	    int inputs, int outputs );
+  SelAlloc( Module *parent, const string& name,
+	    int inputs, int outputs, int iters );
   ~SelAlloc( );
 
   void Allocate( );

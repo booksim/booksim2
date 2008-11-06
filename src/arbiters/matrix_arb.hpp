@@ -22,9 +22,7 @@ class MatrixArbiter : public Arbiter {
 public:
 
   // Constructors
-  MatrixArbiter() ;
-
-  virtual void Init( int size ) ;
+  MatrixArbiter( Module *parent, const string &name, int size ) ;
 
   // Print priority matrix to standard output
   virtual void PrintState() const ;

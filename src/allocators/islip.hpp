@@ -11,9 +11,8 @@ class iSLIP_Sparse : public SparseAllocator {
   int *_aptrs;
 
 public:
-  iSLIP_Sparse( const Configuration &config,
-		Module *parent, const string& name,
-		int inputs, int outputs );
+  iSLIP_Sparse( Module *parent, const string& name,
+		int inputs, int outputs, int iters );
   ~iSLIP_Sparse( );
 
   void Allocate( );

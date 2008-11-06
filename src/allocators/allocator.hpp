@@ -27,8 +27,7 @@ public:
     int out_pri;
   };
 
-  Allocator( const Configuration &config,
-	     Module *parent, const string& name,
+  Allocator( Module *parent, const string& name,
 	     int inputs, int outputs );
   virtual ~Allocator( );
 
@@ -50,12 +49,10 @@ public:
 
   virtual void PrintRequests( ) const = 0;
 
-  static Allocator *NewAllocator( const Configuration &config,
-				  Module *parent, const string& name,
+  static Allocator *NewAllocator( Module *parent, const string& name,
 				  const string &alloc_type, 
-				  const string &arb_type, 
-				  int inputs, int input_speedup,
-				  int outputs, int output_speedup );
+				  int inputs, int outputs,
+				  int iters, const string &arb_type );
 };
 
 //==================================================
@@ -68,8 +65,7 @@ protected:
   sRequest **_request;
 
 public:
-  DenseAllocator( const Configuration &config,
-		  Module *parent, const string& name,
+  DenseAllocator( Module *parent, const string& name,
 		  int inputs, int outputs );
   virtual ~DenseAllocator( );
 
@@ -99,8 +95,7 @@ protected:
   list<sRequest> *_out_req;
 
 public:
-  SparseAllocator( const Configuration &config,
-		   Module *parent, const string& name,
+  SparseAllocator( Module *parent, const string& name,
 		   int inputs, int outputs );
   virtual ~SparseAllocator( );
 

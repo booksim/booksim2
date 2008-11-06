@@ -13,12 +13,12 @@
 #include <vector>
 #include <iostream>
 #include <string.h>
+#include <sstream>
 
-SeparableAllocator::SeparableAllocator( const Configuration& config,
-					Module* parent, const string& name,
-					const string& arb_type,
-					int inputs, int outputs )
-  : Allocator( config, parent, name, inputs, outputs )
+SeparableAllocator::SeparableAllocator( Module* parent, const string& name,
+					int inputs, int outputs,
+					const string& arb_type )
+  : Allocator( parent, name, inputs, outputs )
 {
   
   _requests  = new list<sRequest> [inputs] ;
@@ -26,26 +26,17 @@ SeparableAllocator::SeparableAllocator( const Configuration& config,
   _input_arb = new Arbiter*[inputs];
   _output_arb = new Arbiter*[outputs];
   
-  if ( arb_type == "matrix" ) {
-    for (int i = 0; i < inputs; ++i) {
-      _input_arb[i] = new MatrixArbiter;
-      _input_arb[i]->Init(outputs);
-    }
-    for (int i = 0; i < outputs; ++i) {
-      _output_arb[i] = new MatrixArbiter;
-      _output_arb[i]->Init(inputs);
-    }
-  } else if ( arb_type == "round_robin" ) {
-    for (int i = 0; i < inputs; ++i) {
-      _input_arb[i] = new RoundRobinArbiter;
-      _input_arb[i]->Init(outputs);
-    }
-    for (int i = 0; i < outputs; ++i) {
-      _output_arb[i] = new RoundRobinArbiter;
-      _output_arb[i]->Init(inputs);
-    }
-  } else {
-    assert(false);
+  ostringstream arb_name;
+  
+  for (int i = 0; i < inputs; ++i) {
+    arb_name << "arb_i" << i;
+    _input_arb[i] = Arbiter::NewArbiter(this, arb_name.str(), arb_type, outputs);
+    arb_name.seekp( 0, ios::beg );
+  }
+  for (int i = 0; i < outputs; ++i) {
+    arb_name << "arb_o" << i;
+    _output_arb[i] = Arbiter::NewArbiter(this, arb_name.str( ), arb_type, inputs);
+    arb_name.seekp( 0, ios::beg );
   }
   
   Clear() ;

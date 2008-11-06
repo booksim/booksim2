@@ -26,9 +26,8 @@ protected:
 
 public:
   
-  SeparableAllocator( const Configuration& config, Module* parent,
-		      const string& name, const string& arb_type,
-		      int inputs, int outputs ) ;
+  SeparableAllocator( Module* parent, const string& name, int inputs,
+		      int outputs, const string& arb_type ) ;
   
   virtual ~SeparableAllocator() ;
 

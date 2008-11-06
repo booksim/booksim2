@@ -8,12 +8,8 @@
 #include <iostream>
 using namespace std ;
 
-MatrixArbiter::MatrixArbiter()
-  : Arbiter(), _matrix(0) {
-}
-
-void MatrixArbiter::Init( int size ) {
-  Arbiter::Init(size);
+MatrixArbiter::MatrixArbiter( Module *parent, const string &name, int size )
+  : Arbiter( parent, name, size ) {
   _matrix  = new int [ size * size ] ;
   for ( int i = 0 ; i < size*size ; i++ )
     _matrix[i] = 0 ;
@@ -70,7 +66,10 @@ int MatrixArbiter::Arbitrate( int* id, int* pri ) {
 	
 	bool grant = true;
 	for ( int i = 0 ; i < _input_size ; i++ ) {
-	  if ( _request[i].valid && _Priority(i,input) ) {
+	  if ( _request[i].valid &&
+	       ( _Priority(i,input) //||
+		 /*( _request[i].pri > _request[index].pri )*/
+		 ) ) {
 	    grant = false ;
 	    break ;
 	  }

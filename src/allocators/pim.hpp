@@ -8,9 +8,8 @@ class PIM : public DenseAllocator {
 
   int *_grants;
 public:
-  PIM( const Configuration &config,
-       Module *parent, const string& name,
-       int inputs, int outputs );
+  PIM( Module *parent, const string& name,
+       int inputs, int outputs, int iters );
 
   ~PIM( );
 

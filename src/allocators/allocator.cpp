@@ -20,8 +20,7 @@
 // Allocator base class
 //==================================================
 
-Allocator::Allocator( const Configuration &config,
-		      Module *parent, const string& name,
+Allocator::Allocator( Module *parent, const string& name,
 		      int inputs, int outputs ) :
   Module( parent, name ), _inputs( inputs ), _outputs( outputs )
 {
@@ -76,10 +75,9 @@ void Allocator::MaskOutput( int out, int mask )
 // DenseAllocator
 //==================================================
 
-DenseAllocator::DenseAllocator( const Configuration &config,
-				Module *parent, const string& name,
+DenseAllocator::DenseAllocator( Module *parent, const string& name,
 				int inputs, int outputs ) :
-  Allocator( config, parent, name, inputs, outputs )
+  Allocator( parent, name, inputs, outputs )
 {
   _request  = new sRequest * [_inputs];
 
@@ -163,10 +161,9 @@ void DenseAllocator::PrintRequests( ) const
 // SparseAllocator
 //==================================================
 
-SparseAllocator::SparseAllocator( const Configuration &config,
-				  Module *parent, const string& name,
+SparseAllocator::SparseAllocator( Module *parent, const string& name,
 				  int inputs, int outputs ) :
-  Allocator( config, parent, name, inputs, outputs )
+  Allocator( parent, name, inputs, outputs )
 {
   _in_req =  new list<sRequest> [_inputs];
   _out_req = new list<sRequest> [_outputs];
@@ -411,31 +408,31 @@ void SparseAllocator::PrintRequests( ) const
 // Global allocator allocation function
 //==================================================
 
-Allocator *Allocator::NewAllocator( const Configuration &config,
-				    Module *parent, const string& name,
+Allocator *Allocator::NewAllocator( Module *parent, const string& name,
 				    const string &alloc_type, 
-				    const string &arb_type, 
-				    int inputs, int input_speedup,
-				    int outputs, int output_speedup )
+				    int inputs, int outputs,
+				    int iters, const string &arb_type )
 {
   Allocator *a = 0;
-
+  
   if ( alloc_type == "max_size" ) {
-    a = new MaxSizeMatch( config, parent, name, inputs, outputs );
+    a = new MaxSizeMatch( parent, name, inputs, outputs );
   } else if ( alloc_type == "pim" ) {
-    a = new PIM( config, parent, name, inputs, outputs );
+    a = new PIM( parent, name, inputs, outputs, iters );
   } else if ( alloc_type == "islip" ) {
-    a = new iSLIP_Sparse( config, parent, name, inputs, outputs );
+    a = new iSLIP_Sparse( parent, name, inputs, outputs, iters );
   } else if ( alloc_type == "loa" ) {
-    a = new LOA( config, parent, name, inputs, input_speedup, outputs, output_speedup );
+    a = new LOA( parent, name, inputs, outputs );
   } else if ( alloc_type == "wavefront" ) {
-    a = new Wavefront( config, parent, name, inputs, outputs );
+    a = new Wavefront( parent, name, inputs, outputs );
   } else if ( alloc_type == "select" ) {
-    a = new SelAlloc( config, parent, name, inputs, outputs );
+    a = new SelAlloc( parent, name, inputs, outputs, iters );
   } else if (alloc_type == "separable_input_first") {
-    a = new SeparableInputFirstAllocator( config, parent, name, arb_type, inputs, outputs );
+    a = new SeparableInputFirstAllocator( parent, name, inputs, outputs,
+					  arb_type );
   } else if (alloc_type == "separable_output_first") {
-    a = new SeparableOutputFirstAllocator( config, parent, name, arb_type, inputs, outputs );
+    a = new SeparableOutputFirstAllocator( parent, name, inputs, outputs,
+					   arb_type );
   }
 
 //==================================================

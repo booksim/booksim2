@@ -17,7 +17,7 @@ class RoundRobinArbiter : public Arbiter {
 public:
 
   // Constructors
-  RoundRobinArbiter() ;
+  RoundRobinArbiter( Module *parent, const string &name, int size ) ;
 
   // Print priority matrix to standard output
   virtual void PrintState() const ;

@@ -37,14 +37,13 @@
 //#define DEBUG_MAXSIZE
 //#define PRINT_MATCHING
 
-MaxSizeMatch::MaxSizeMatch( const Configuration &config,
-			    Module *parent, const string& name,
+MaxSizeMatch::MaxSizeMatch( Module *parent, const string& name,
 			    int inputs, int outputs ) :
-  DenseAllocator( config, parent, name, inputs, outputs )
+  DenseAllocator( parent, name, inputs, outputs )
 {
-  _from = new int [_outputs];
-  _s    = new int [_inputs];
-  _ns   = new int [_inputs];
+  _from = new int [outputs];
+  _s    = new int [inputs];
+  _ns   = new int [inputs];
 }
 
 MaxSizeMatch::~MaxSizeMatch( )

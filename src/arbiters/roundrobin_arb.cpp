@@ -8,8 +8,9 @@
 #include <iostream>
 using namespace std ;
 
-RoundRobinArbiter::RoundRobinArbiter() 
-  : Arbiter(), _pointer( 0 ) {
+RoundRobinArbiter::RoundRobinArbiter( Module *parent, const string &name,
+				      int size ) 
+  : Arbiter( parent, name, size ), _pointer( 0 ) {
 }
 
 void RoundRobinArbiter::PrintState() const  {
@@ -39,8 +40,10 @@ int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
     for (int offset = 1 ; offset <= _input_size ; offset++ ) {
       int input = (_pointer + offset) % _input_size;
       if ( _request[input].valid ) {
-	_selected = input ;
-	break ;
+	if ( ( _selected < 0 ) //||
+	     /*( _request[_selected].pri < _request[index].pri )*/
+	     )
+	  _selected = input ;
       }
     }
   }

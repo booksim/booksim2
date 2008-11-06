@@ -14,11 +14,9 @@
 #include <string.h>
 
 SeparableInputFirstAllocator::
-SeparableInputFirstAllocator( const Configuration& config,
-			      Module* parent, const string& name,
-			      const string& arb_type,
-			      int inputs, int outputs )
-  : SeparableAllocator( config, parent, name, arb_type, inputs, outputs )
+SeparableInputFirstAllocator( Module* parent, const string& name, int inputs,
+			      int outputs, const string& arb_type )
+  : SeparableAllocator( parent, name, inputs, outputs, arb_type )
 {}
 
 void SeparableInputFirstAllocator::Allocate() {

@@ -7,7 +7,9 @@
 #ifndef _ARBITER_HPP_
 #define _ARBITER_HPP_
 
-class Arbiter {
+#include "module.hpp"
+
+class Arbiter : public Module {
 
 protected:
 
@@ -26,11 +28,9 @@ protected:
 public:
 
   // Constructors
-  Arbiter() ;
+  Arbiter( Module *parent, const string &name, int size ) ;
   virtual ~Arbiter() ;
   
-  virtual void Init( int size ) ;
-
   // Print priority matrix to standard output
   virtual void PrintState() const = 0 ;
   
@@ -43,7 +43,9 @@ public:
   // Arbitrate amongst requests. Returns winning input and 
   // updates pointers to metadata when valid pointers are passed
   virtual int Arbitrate( int* id = 0, int* pri = 0) = 0 ;
-
+  
+  static Arbiter *NewArbiter( Module *parent, const string &name,
+			      const string &arb_type, int size );
 } ;
 
 #endif

@@ -6,13 +6,11 @@
 
 //#define DEBUG_ISLIP
 
-iSLIP_Sparse::iSLIP_Sparse( const Configuration &config,
-			     Module *parent, const string& name,
-			     int inputs, int outputs ) :
-  SparseAllocator( config, parent, name, inputs, outputs )
+iSLIP_Sparse::iSLIP_Sparse( Module *parent, const string& name,
+			    int inputs, int outputs, int iters ) :
+  SparseAllocator( parent, name, inputs, outputs ),
+  _iSLIP_iter(iters)
 {
-  _iSLIP_iter = config.GetInt( "alloc_iters" );
-
   _grants = new int [_outputs];
   _gptrs  = new int [_outputs];
   _aptrs  = new int [_inputs];

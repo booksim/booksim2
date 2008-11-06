@@ -11,8 +11,7 @@ class MaxSizeMatch : public DenseAllocator {
   bool _ShortestAugmenting( );
 
 public:
-  MaxSizeMatch( const Configuration &config,
-		Module *parent, const string& name,
+  MaxSizeMatch( Module *parent, const string& name,
 		int inputs, int ouputs ); 
   ~MaxSizeMatch( );
   

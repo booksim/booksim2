@@ -6,14 +6,12 @@
 
 //#define DEBUG_PIM
 
-PIM::PIM( const Configuration &config,
-	  Module *parent, const string& name,
-	  int inputs, int outputs ) :
-  DenseAllocator( config, parent, name, inputs, outputs )
+PIM::PIM( Module *parent, const string& name,
+	  int inputs, int outputs, int iters ) :
+  DenseAllocator( parent, name, inputs, outputs ),
+  _PIM_iter(iters)
 {
-  _PIM_iter = config.GetInt( "alloc_iters" );
-
-  _grants = new int [_outputs];
+  _grants = new int [outputs];
 }
 
 PIM::~PIM( )

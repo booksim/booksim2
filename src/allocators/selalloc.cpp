@@ -6,21 +6,20 @@
 
 //#define DEBUG_SELALLOC
 
-SelAlloc::SelAlloc( const Configuration &config,
-			     Module *parent, const string& name,
-			     int inputs, int outputs ) :
-  SparseAllocator( config, parent, name, inputs, outputs )
+SelAlloc::SelAlloc( Module *parent, const string& name,
+		    int inputs, int outputs, int iters ) :
+  SparseAllocator( parent, name, inputs, outputs )
 {
-  _iter = config.GetInt( "alloc_iters" );
+  _iter = iters;
 
-  _grants = new int [_outputs];
-  _gptrs  = new int [_outputs];
-  _aptrs  = new int [_inputs];
+  _grants = new int [outputs];
+  _gptrs  = new int [outputs];
+  _aptrs  = new int [inputs];
 
-  for ( int i = 0; i < _inputs; ++i ) {
+  for ( int i = 0; i < inputs; ++i ) {
     _aptrs[i] = 0;
   }
-  for ( int j = 0; j < _outputs; ++j ) {
+  for ( int j = 0; j < outputs; ++j ) {
     _gptrs[j] = 0;
   }
 }
