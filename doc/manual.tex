@@ -353,7 +353,7 @@ the network's dimension.
 
 \item[cmo] Concentrated Multi-dimensional Octagon created by Sang Kyun Kim and Wook-Jin Chung.
 
-\item[MECS] A topology based on ***. Currently it only support 1 flit per packet. 
+\item[MECS] A topology based on ***. Currently it only supports single-flit packets. 
 
 \end{opt_list}
 
@@ -461,10 +461,14 @@ space.  Similar to \texttt{input\_speedup}
 
 \item[filter\_spec\_grants] Determines how speculative grants are masked (\texttt{any\_nonspec\_gnts}: any non-speculative grant inhibits all speculative grants; \texttt{confl\_nonspec\_reqs}: speculative grants are inhibited by conflicting non-speculative requests; \texttt{confl\_nonspec\_gnts}: speculative grants are inhibited by conflicting non-speculative grants).
 
+\item[alloc\_iters] For the \texttt{islip}, \texttt{pim} and \texttt{select} allocators, allocation can be improved by performing multiple iterations of the algorithm; this parameter controls the number of iterations to be performed for both switch and VC allocation.
+
 \item[sw\_allocator] The type of allocator used for switch allocation.
 See Section~\ref{sec:alloc} for a list of the possible allocators.
 
-\item[sw\_alloc\_arb\_type] The type of arbiter to use if a separable input- or output-first allocator is used for switch allocation.
+\item[sw\_alloc\_arb\_type] If the switch allocator is a separable input- or output-first allocator, this parameter selects the type of arbiter to use.
+
+\item[sw\_alloc\_iters] If the switch allocator is of type \texttt{islip}, \texttt{pim} or \texttt{select}, this parameter controls how many allocation iterations should be performed. This overrides the global \texttt{alloc\_iters} parameter.
 
 \item[sw\_alloc\_delay] The delay (in cycles) of switch allocation.
 
@@ -472,21 +476,14 @@ See Section~\ref{sec:alloc} for a list of the possible allocators.
 allocation.  See Section~\ref{sec:alloc} for a list of the possible
 allocators.
 
-\item[vc\_alloc\_arb\_type] The type of arbiter to use if a separable input- or output-first allocator is used for virtual channel allocation.
+\item[vc\_alloc\_arb\_type] If the VC allocator is a separable input- or output-first allocator, this parameter selects the type of arbiter to use.
+
+\item[vc\_alloc\_iters] If the VC allocator is of type \texttt{islip}, \texttt{pim} or \texttt{select}, this parameter controls how many allocation iterations should be performed. This overrides the global \texttt{alloc\_iters} parameter.
 
 \item[vc\_alloc\_delay] The delay (in cycles) of virtual-channel
 allocation.
 
 \end{opt_list}
-
-
-\subsubsection{The NoC router}
-\label{sec:noc_router}
-
-The NoC router (\texttt{router = noc}) is a simplified variant of the input-queued router. It does not support input or output speedup. Also, it does not support multi-cycle allocation.
-
-
-
 
 \subsubsection{The event-driven router}
 \label{sec:event_router}
@@ -520,8 +517,6 @@ iSLIP, but with preference towards higher priority packets (see
 \texttt{priority} option in Section~\ref{sec:traffic}).
 
 \end{opt_list}
-
-For the \texttt{islip}, \texttt{pim} and \texttt{select} allocators, allocation can be improved by performing multiple iterations of the algorithm; the number of iterations is controlled by the \texttt{alloc\_iters} parameter.
 
 \subsection{Traffic}
 \label{sec:traffic}
