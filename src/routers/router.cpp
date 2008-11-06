@@ -19,7 +19,6 @@
 //////////////////Sub router types//////////////////////
 #include "iq_router.hpp"
 #include "event_router.hpp"
-#include "noc_router.hpp"
 #include "MECSRouter.hpp"
 ///////////////////////////////////////////////////////
 
@@ -134,12 +133,10 @@ Router *Router::NewRouter( const Configuration& config,
     }
   } else if ( type == "event" ) {
     r = new EventRouter( config, parent, name, id, inputs, outputs );
-  } else if ( type == "noc" ) {
-    r = new NoCRouter( config, parent, name, id, inputs, outputs );
   } else {
     cout << "Unknown router type " << type << endl;
   }
-  /*For additional router, add another eles if statement*/
+  /*For additional router, add another else if statement*/
   /*Original booksim specifies the router using "flow_control"
    *we now simply call these types. 
    */
