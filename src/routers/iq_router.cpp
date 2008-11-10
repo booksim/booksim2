@@ -501,7 +501,8 @@ void IQRouter::_SWAlloc( )
   memset(any_nonspec_output_reqs, 0, _outputs*_output_speedup*sizeof(bool));
   
   _sw_allocator->Clear( );
-  _spec_sw_allocator->Clear( );
+  if ( _speculative )
+    _spec_sw_allocator->Clear( );
   
   for ( input = 0; input < _inputs; ++input ) {
     for ( int s = 0; s < _input_speedup; ++s ) {
@@ -575,6 +576,7 @@ void IQRouter::_SWAlloc( )
 
 	if ( enter_spec_sw_req ) {
 	 
+	  assert( _speculative );
 	  assert( expanded_input == (vc%_input_speedup)*_inputs + input );
 	  expanded_output = (input%_output_speedup)*_outputs + cur_vc->GetOutputPort( );
 	  
@@ -596,7 +598,8 @@ void IQRouter::_SWAlloc( )
   }
 
   _sw_allocator->Allocate( );
-  _spec_sw_allocator->Allocate( );
+  if ( _speculative )
+    _spec_sw_allocator->Allocate( );
   
   // Promote virtual channel grants marked as speculative to active
   // now that the speculative switch request has been processed. Those
@@ -641,20 +644,20 @@ void IQRouter::_SWAlloc( )
 	}
       } else {
 	expanded_output = _sw_allocator->OutputAssigned( expanded_input );
-	if(expanded_output < 0) {
+	if ( _speculative && ( expanded_output < 0 ) ) {
 	  expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
-	  if(expanded_output >= 0) {
-	    switch(_filter_spec_grants) {
+	  if ( expanded_output >= 0 ) {
+	    switch ( _filter_spec_grants ) {
 	    case 0:
-	      if(any_nonspec_reqs)
+	      if ( any_nonspec_reqs )
 		expanded_output = -1;
 	      break;
 	    case 1:
-	      if(any_nonspec_output_reqs[expanded_output])
+	      if ( any_nonspec_output_reqs[expanded_output] )
 		expanded_output = -1;
 	      break;
 	    case 2:
-	      if(_sw_allocator->InputAssigned(expanded_output) >= 0)
+	      if ( _sw_allocator->InputAssigned(expanded_output) >= 0 )
 		expanded_output = -1;
 	      break;
 	    default:
