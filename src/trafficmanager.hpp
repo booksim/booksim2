@@ -162,9 +162,16 @@ public:
   TrafficManager( const Configuration &config, Network **net );
   ~TrafficManager( );
 
-  void Run( );
+  bool Run( );
 
-  int getTime(){ return _time;}
+  void DisplayStats();
+
+  const Stats * GetOverallLatency(int c) { return _overall_latency[c]; }
+  const Stats * GetAccepted() { return _overall_accepted; }
+  const Stats * GetAcceptedMin() { return _overall_accepted_min; }
+  const Stats * GetHops() { return _hop_stats; }
+
+  int getTime() { return _time;}
 };
 
 #endif

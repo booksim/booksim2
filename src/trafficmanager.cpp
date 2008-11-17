@@ -259,31 +259,38 @@ int TrafficManager::DivisionAlgorithm (int packet_type) {
   if(packet_type == Flit::ANY_TYPE) {
     static unsigned short counter = 0;
     return (counter++)%duplicate_networks; // Even distribution.
-  }
-  else {
-    if (duplicate_networks == 2) {
-      if (packet_type == Flit::WRITE_REQUEST || packet_type == Flit::READ_REQUEST) { // Request flit
-        return 1;
-      }
-      else if (packet_type == Flit::WRITE_REPLY || packet_type == Flit::READ_REPLY) { // Reply flit
-        return 0;
-      }
-    }
-    else if (duplicate_networks == 4) {
-      if (packet_type == Flit::WRITE_REQUEST)
-        return 0;
-      else if (packet_type == Flit::READ_REQUEST)
-        return 1;
-      else if (packet_type == Flit::WRITE_REPLY)
-        return 2;
-      else if (packet_type == Flit::READ_REPLY)
-        return 3;
-    }
-    else if (duplicate_networks == 1) {
+  } else {
+    switch(duplicate_networks) {
+    case 1:
       return 0;
-    }
-    else {// Never should be here.
-      assert(0);
+    case 2:
+      switch(packet_type) {
+      case Flit::WRITE_REQUEST:
+      case Flit::READ_REQUEST:
+        return 1;
+      case Flit::WRITE_REPLY:
+      case Flit::READ_REPLY:
+        return 0;
+      default:
+	assert(false);
+	return -1;
+      }
+    case 4:
+      switch(packet_type) {
+      case Flit::WRITE_REQUEST:
+        return 0;
+      case Flit::READ_REQUEST:
+        return 1;
+      case Flit::WRITE_REPLY:
+        return 2;
+      case Flit::READ_REPLY:
+        return 3;
+      default:
+	assert(false);
+	return -1;
+      }
+    default:
+      assert(false);
       return -1;
     }
   }
@@ -1179,7 +1186,7 @@ bool TrafficManager::_SingleSim( )
   return ( converged > 0 );
 }
 
-void TrafficManager::Run( )
+bool TrafficManager::Run( )
 {
   double min, avg;
   int total_packets = 0;
@@ -1188,7 +1195,7 @@ void TrafficManager::Run( )
   for ( int sim = 0; sim < _total_sims; ++sim ) {
     if ( !_SingleSim( ) ) {
       cout << "Simulation unstable, ending ..." << endl;
-      return;
+      return false;
     }
     //for the love of god don't ever say "Time taken" anywhere else
     //the power script depend on it
@@ -1201,7 +1208,12 @@ void TrafficManager::Run( )
     _overall_accepted->AddSample( avg );
     _overall_accepted_min->AddSample( min );
   }
+  
+  DisplayStats();
+  return true;
+}
 
+void TrafficManager::DisplayStats() {
   for ( int c = 0; c < _classes; ++c ) {
     cout << "====== Traffic class " << c << " ======" << endl;
 
@@ -1218,7 +1230,6 @@ void TrafficManager::Run( )
 
   cout << "Average hops = " << _hop_stats->Average( )
        << " (" << _hop_stats->NumSamples( ) << " samples)" << endl;
-
 }
 
 //read the watchlist
