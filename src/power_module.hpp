@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _POWER_MODULE_HPP_
 #define _POWER_MODULE_HPP_
 

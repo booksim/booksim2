@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _ALLOCATOR_HPP_
 #define _ALLOCATOR_HPP_
 

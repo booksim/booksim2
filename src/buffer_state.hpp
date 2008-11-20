@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _BUFFER_STATE_HPP_
 #define _BUFFER_STATE_HPP_
 

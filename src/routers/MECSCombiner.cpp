@@ -1,3 +1,4 @@
+// $Id$
 /*MECSCominber
  *
  *Combines the flit drop-off points from channels of a given direction

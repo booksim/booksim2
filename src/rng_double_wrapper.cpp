@@ -1,3 +1,4 @@
+// $Id$
 #include "rng.hpp"
 
 #define main rng_double_main

@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _MECS_HPP_
 #define _MECS_HPP_
 

@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _MECSCREDITCOMBINER_HPP_
 #define _MECSCREDITCOMBINER_HPP_
 

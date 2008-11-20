@@ -1,3 +1,4 @@
+// $Id$
 // ----------------------------------------------------------------------
 //
 // CMesh: Network with <Int> Terminal Nodes arranged in a concentrated
@@ -8,7 +9,7 @@
 // ----------------------------------------------------------------------
 //  $Author: jbalfour $
 //  $Date: 2007/06/28 17:24:35 $
-//  $Id: cmesh.cpp,v 1.3 2007/06/28 17:24:35 jbalfour Exp jbalfour $
+//  $Id$
 //  Modified 11/6/2007 by Ted Jiang
 //  Now handeling n = most power of 2: 16, 64, 256, 1024
 // ----------------------------------------------------------------------

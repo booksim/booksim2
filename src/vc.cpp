@@ -1,3 +1,4 @@
+// $Id$
 /*vc.cpp
  *
  *this class describes a virtual channel in a router

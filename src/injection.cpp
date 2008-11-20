@@ -1,3 +1,4 @@
+// $Id$
 /*injection.cpp
  *
  *Class of injection methods, bernouli and on_off

@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _BOOKSIM_HPP_
 #define _BOOKSIM_HPP_
 

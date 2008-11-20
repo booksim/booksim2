@@ -1,3 +1,4 @@
+// $Id$
 /*flit.cpp
  *
  *flit struct is a flit, carries all the control signals that a flit needs

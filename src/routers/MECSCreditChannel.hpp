@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _MECSCREDITCHANNELS_HPP_
 #define _MECSCREDITCHANNELS_HPP_
 

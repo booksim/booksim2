@@ -1,3 +1,4 @@
+// $Id$
 /*router.cpp
  *
  *The base class of either iq router or event router

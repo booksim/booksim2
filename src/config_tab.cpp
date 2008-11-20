@@ -1,3 +1,4 @@
+// $Id$
 /* A Bison parser, made by GNU Bison 1.875c.  */
 
 /* Skeleton parser for Yacc-like parsing with Bison,

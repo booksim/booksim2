@@ -1,3 +1,4 @@
+// $Id$
 /*wavefront.cpp
  *
  *The wave front allocator

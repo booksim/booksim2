@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _RANDOM_UTILS_HPP_
 #define _RANDOM_UTILS_HPP_
 

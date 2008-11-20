@@ -1,3 +1,4 @@
+// $Id$
 ////////////////////////////////////////////////////////////////////////
 //
 // IsolatedMesh: Provides two independent physical networks for
@@ -9,7 +10,7 @@
 // RCS Information:
 //  $Author: jbalfour $
 //  $Date: 2007/05/17 17:14:07 $
-//  $Id: isolated_mesh.cpp,v 1.1 2007/05/17 17:14:07 jbalfour Exp $
+//  $Id$
 // 
 ////////////////////////////////////////////////////////////////////////
 

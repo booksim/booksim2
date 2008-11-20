@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _WAVEFRONT_HPP_
 #define _WAVEFRONT_HPP_
 

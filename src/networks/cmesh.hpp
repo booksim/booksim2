@@ -1,3 +1,4 @@
+// $Id$
 ////////////////////////////////////////////////////////////////////////
 //
 // CMesh: Mesh topology with concentration and express links along the
@@ -8,7 +9,7 @@
 // RCS Information:
 //  $Author: jbalfour $
 //  $Date: 2007/06/26 22:49:23 $
-//  $Id: cmesh.hpp,v 1.2 2007/06/26 22:49:23 jbalfour Exp $
+//  $Id$
 // 
 ////////////////////////////////////////////////////////////////////////
 #ifndef _CMESH_HPP_

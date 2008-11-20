@@ -1,3 +1,4 @@
+// $Id$
 /*MECSChannel
  *
  * A MECSChannel is composed of several normal flit channels 

@@ -1,3 +1,4 @@
+// $Id$
 /*cmo.cpp
  *
  *Concentrated Multi-dimensional Octagon

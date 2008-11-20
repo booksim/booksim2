@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _PIPEFIFO_HPP_
 #define _PIPEFIFO_HPP_
 

@@ -1,3 +1,4 @@
+// $Id$
 /*stats.cpp
  *
  *class stores statistics gnerated by the trafficmanager such as the latency

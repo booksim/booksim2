@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _CREDIT_HPP_
 #define _CREDIT_HPP_
 

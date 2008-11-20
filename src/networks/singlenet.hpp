@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _SINGLENET_HPP_
 #define _SINGLENET_HPP_
 

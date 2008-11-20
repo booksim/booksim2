@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _MAXSIZE_HPP_
 #define _MAXSIZE_HPP_
 

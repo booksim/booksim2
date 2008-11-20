@@ -1,3 +1,4 @@
+// $Id$
 /*outputset.cpp
  *
  *output set assigns a flit which output to go to in a router

@@ -1,3 +1,4 @@
+// $Id$
 /*module.cpp
  *
  *The basic class that is extended by all other components of the network

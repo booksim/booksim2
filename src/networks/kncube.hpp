@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _KNCUBE_HPP_
 #define _KNCUBE_HPP_
 

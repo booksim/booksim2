@@ -1,3 +1,4 @@
+// $Id$
 /*buffer_state.cpp
  *
  * This class is the buffere state of the next router down the channel

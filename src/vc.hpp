@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _VC_HPP_
 #define _VC_HPP_
 

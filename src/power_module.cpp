@@ -1,3 +1,4 @@
+// $Id$
 #include "power_module.hpp"
 #include "booksim_config.hpp"
 

@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _LOA_HPP_
 #define _LOA_HPP_
 

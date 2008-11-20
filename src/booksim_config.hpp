@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _BOOKSIM_CONFIG_HPP_
 #define _BOOKSIM_CONFIG_HPP_
 

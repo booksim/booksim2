@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _TRAFFICMANAGER_HPP_
 #define _TRAFFICMANAGER_HPP_
 

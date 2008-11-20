@@ -1,3 +1,4 @@
+// $Id$
 /*credit.cpp
  *
  *A class for credits

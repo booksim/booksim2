@@ -1,3 +1,4 @@
+// $Id$
 #define yy_create_buffer config_create_buffer
 #define yy_delete_buffer config_delete_buffer
 #define yy_scan_buffer config_scan_buffer

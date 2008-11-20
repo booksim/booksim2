@@ -1,3 +1,4 @@
+// $Id$
 /*MECSCreditChannel
  *
  *A MECSChannel is composed of 1 more more normal channels

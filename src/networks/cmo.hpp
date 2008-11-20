@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _CMO_HPP_
 #define _CMO_HPP_
 

@@ -1,3 +1,4 @@
+// $Id$
 #include "booksim.hpp"
 #include <assert.h>
 

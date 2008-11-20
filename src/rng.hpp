@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _RNG_HPP_
 #define _RNG_HPP_
 

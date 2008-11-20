@@ -1,3 +1,4 @@
+// $Id$
 //concentrated mesh configuration file running batch mode
 //xr, yr, x, y, are use to indicate how the concnetration is formed. 
 

@@ -1,3 +1,4 @@
+// $Id$
 /*    This program by D E Knuth is in the public domain and freely copyable
  *    AS LONG AS YOU MAKE ABSOLUTELY NO CHANGES!
  *    It is explained in Seminumerical Algorithms, 3rd edition, Section 3.6

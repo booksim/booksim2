@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _MECSCHANNELS_HPP_
 #define _MECSCHANNELS_HPP_
 

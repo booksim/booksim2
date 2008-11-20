@@ -1,3 +1,4 @@
+// $Id$
 ////////////////////////////////////////////////////////////////////////
 //
 // Tree4: Network with 64 Terminal Nodes arranged in a tree topology
@@ -13,7 +14,7 @@
 // RCS Information:
 //  $Author: jbalfour $
 //  $Date: 2007/06/26 22:49:23 $
-//  $Id: tree4.cpp,v 1.2 2007/06/26 22:49:23 jbalfour Exp jbalfour $
+//  $Id$
 // 
 ////////////////////////////////////////////////////////////////////////
 

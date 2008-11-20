@@ -1,3 +1,4 @@
+// $Id$
 #ifndef _INJECTION_HPP_
 #define _INJECTION_HPP_
 
