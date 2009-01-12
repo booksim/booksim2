@@ -224,6 +224,9 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _warmup_periods = config.GetInt( "warmup_periods" );
   _latency_thres = config.GetFloat( "latency_thres" );
   _include_queuing = config.GetInt( "include_queuing" );
+
+  _print_csv_results = config.GetInt( "print_csv_results" );
+
   _LoadWatchList();
 }
 
@@ -1245,21 +1248,30 @@ bool TrafficManager::Run( )
 
 void TrafficManager::DisplayStats() {
   for ( int c = 0; c < _classes; ++c ) {
-    cout << "====== Traffic class " << c << " ======" << endl;
-
-    cout << "Overall average latency = " << _overall_latency[c]->Average( )
-	 << " (" << _overall_latency[c]->NumSamples( ) << " samples)" << endl;
-
-    cout << "Overall average accepted rate = " << _overall_accepted->Average( )
-	 << " (" << _overall_accepted->NumSamples( ) << " samples)" << endl;
-
-    cout << "Overall min accepted rate = " << _overall_accepted_min->Average( )
-	 << " (" << _overall_accepted_min->NumSamples( ) << " samples)" << endl;
+    if(_print_csv_results) {
+      cout << "results:" << c
+	   << "," << _overall_latency[c]->Average( )
+	   << "," << _overall_accepted_min->Average( )
+	   << "," << _overall_accepted_min->Average( ) << endl;
+    } else {
+      cout << "====== Traffic class " << c << " ======" << endl;
+      
+      cout << "Overall average latency = " << _overall_latency[c]->Average( )
+	   << " (" << _overall_latency[c]->NumSamples( ) << " samples)" << endl;
+      
+      cout << "Overall average accepted rate = " << _overall_accepted->Average( )
+	   << " (" << _overall_accepted->NumSamples( ) << " samples)" << endl;
+      
+      cout << "Overall min accepted rate = " << _overall_accepted_min->Average( )
+	   << " (" << _overall_accepted_min->NumSamples( ) << " samples)" << endl;
+    }
     
   }
 
-  cout << "Average hops = " << _hop_stats->Average( )
-       << " (" << _hop_stats->NumSamples( ) << " samples)" << endl;
+  if(!_print_csv_results)
+    cout << "Average hops = " << _hop_stats->Average( )
+	 << " (" << _hop_stats->NumSamples( ) << " samples)" << endl;
+  
 }
 
 //read the watchlist

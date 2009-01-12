@@ -114,7 +114,6 @@ protected:
   Stats *_overall_accepted;
   Stats *_overall_accepted_min;
 
-
   // ============ Simulation parameters ============ 
 
   enum eSimState { warming_up, running, draining, done };
@@ -161,6 +160,9 @@ protected:
   tInjectionProcess _injection_process;
 
   map<int,bool> flits_to_watch;
+
+  bool _print_csv_results;
+
   // ============ Internal methods ============ 
 protected:
   virtual Flit *_NewFlit( );
