@@ -127,7 +127,7 @@ IQRouter::IQRouter( const Configuration& config,
     exit(-1);
   }
 
-  if ( _speculative ) {
+  if ( _speculative == 2 ) {
     
     string filter_spec_grants;
     config.GetStr("filter_spec_grants", filter_spec_grants);
@@ -212,7 +212,7 @@ IQRouter::~IQRouter( )
   delete _vc_allocator;
   delete _sw_allocator;
 
-  if ( _speculative )
+  if ( _speculative == 2 )
     delete _spec_sw_allocator;
 
   delete [] _sw_rr_offset;
@@ -368,7 +368,7 @@ void IQRouter::_Route( )
       if ( ( cur_vc->GetState( ) == VC::routing ) &&
 	   ( cur_vc->GetStateTime( ) >= _routing_delay ) ) {
 	
-	if ( _speculative )
+	if ( _speculative > 0 )
 	  cur_vc->SetState( VC::vc_spec ) ;
 	else
 	  cur_vc->SetState( VC::vc_alloc ) ;
@@ -439,22 +439,8 @@ void IQRouter::_VCAlloc( )
 
       cur_vc = &_vc[input][vc];
 
-      if ( ( cur_vc->GetState( ) == VC::vc_alloc ) &&
-	   ( cur_vc->GetStateTime( ) >= _vc_alloc_delay ) ) {
-
-	f = cur_vc->FrontFlit( );
-	if ( f->watch ) {
-	  cout << "VC requesting allocation at " << _fullname << endl;
-	  cout << "  input_index = " << input*_vcs + vc << endl;
-	  cout << *f;
-	  watched = true;
-	}
-
-	_AddVCRequests( cur_vc, input*_vcs + vc, f->watch );
-      }
-    
-      // Speculative VC allocation step
-      else if ( ( cur_vc->GetState( ) == VC::vc_spec ) &&
+      if ( ( ( cur_vc->GetState( ) == VC::vc_alloc ) ||
+	     ( cur_vc->GetState( ) == VC::vc_spec ) ) &&
 	   ( cur_vc->GetStateTime( ) >= _vc_alloc_delay ) ) {
 	
   	f = cur_vc->FrontFlit( );
@@ -491,7 +477,7 @@ void IQRouter::_VCAlloc( )
 	cur_vc  = &_vc[match_input][match_vc];
 	dest_vc = &_next_vcs[output];
 
-	if ( _speculative )
+	if ( _speculative > 0 )
 	  cur_vc->SetState( VC::vc_spec_grant );
 	else
 	  cur_vc->SetState( VC::active );
@@ -531,7 +517,7 @@ void IQRouter::_SWAlloc( )
   memset(any_nonspec_output_reqs, 0, _outputs*_output_speedup*sizeof(bool));
   
   _sw_allocator->Clear( );
-  if ( _speculative )
+  if ( _speculative == 2 )
     _spec_sw_allocator->Clear( );
   
   for ( input = 0; input < _inputs; ++input ) {
@@ -582,9 +568,14 @@ void IQRouter::_SWAlloc( )
 	      // of the allocators).  Switch allocation priorities are strictly 
 	      // determined by the packet priorities.
 	      
-	      _sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
-					 cur_vc->GetPriority( ), 
-					 cur_vc->GetPriority( ));
+	      if( _speculative == 1 )
+		_sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
+					   1, 
+					   1);
+	      else
+		_sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
+					   cur_vc->GetPriority( ), 
+					   cur_vc->GetPriority( ));
 	      any_nonspec_reqs = true;
 	      any_nonspec_output_reqs[expanded_output] = true;
 	      
@@ -606,7 +597,7 @@ void IQRouter::_SWAlloc( )
 
 	if ( enter_spec_sw_req ) {
 	 
-	  assert( _speculative );
+	  assert( _speculative > 0 );
 	  assert( expanded_input == (vc%_input_speedup)*_inputs + input );
 	  expanded_output = (input%_output_speedup)*_outputs + cur_vc->GetOutputPort( );
 	  
@@ -616,9 +607,15 @@ void IQRouter::_SWAlloc( )
 	    // Speculative requests are sent to the allocator with a priority
 	    // of 0 regardless of whether there is buffer space available
 	    // at the downstream router because request is speculative. 
-	    _spec_sw_allocator->AddRequest( expanded_input, expanded_output, vc,
-					    cur_vc->GetPriority( ), 
-					    cur_vc->GetPriority( ));
+	    if( _speculative == 1 )
+	      _sw_allocator->AddRequest( expanded_input, expanded_output, vc,
+					 0, 
+					 0);
+	    else
+	      _spec_sw_allocator->AddRequest( expanded_input, expanded_output, 
+					      vc,
+					      cur_vc->GetPriority( ), 
+					      cur_vc->GetPriority( ));
 	  }
 	  
 	}
@@ -628,7 +625,7 @@ void IQRouter::_SWAlloc( )
   }
 
   _sw_allocator->Allocate( );
-  if ( _speculative )
+  if ( _speculative == 2 )
     _spec_sw_allocator->Allocate( );
   
   // Promote virtual channel grants marked as speculative to active
@@ -674,7 +671,7 @@ void IQRouter::_SWAlloc( )
 	}
       } else {
 	expanded_output = _sw_allocator->OutputAssigned( expanded_input );
-	if ( _speculative && ( expanded_output < 0 ) ) {
+	if ( ( _speculative == 2 ) && ( expanded_output < 0 ) ) {
 	  expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
 	  if ( expanded_output >= 0 ) {
 	    switch ( _filter_spec_grants ) {
