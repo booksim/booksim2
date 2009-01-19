@@ -226,7 +226,10 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _include_queuing = config.GetInt( "include_queuing" );
 
   _print_csv_results = config.GetInt( "print_csv_results" );
-
+  _pkt_size = config.GetInt( "const_flits_per_packet" );
+  _pkt_rate = config.GetInt( "injection_rate" );
+  config.GetStr( "traffic", _traffic ) ;
+  
   _LoadWatchList();
 }
 
@@ -1249,7 +1252,11 @@ bool TrafficManager::Run( )
 void TrafficManager::DisplayStats() {
   for ( int c = 0; c < _classes; ++c ) {
     if(_print_csv_results) {
-      cout << "results:" << c
+      cout << "results:"
+	   << c
+	   << "," << _traffic
+	   << "," << _pkt_size
+	   << "," << _pkt_rate
 	   << "," << _overall_latency[c]->Average( )
 	   << "," << _overall_accepted_min->Average( )
 	   << "," << _overall_accepted_min->Average( ) << endl;

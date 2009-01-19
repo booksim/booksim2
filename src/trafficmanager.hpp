@@ -162,6 +162,9 @@ protected:
   map<int,bool> flits_to_watch;
 
   bool _print_csv_results;
+  int _pkt_size;
+  int _pkt_rate;
+  string _traffic;
 
   // ============ Internal methods ============ 
 protected:
