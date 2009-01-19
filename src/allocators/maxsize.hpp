@@ -37,6 +37,7 @@ class MaxSizeMatch : public DenseAllocator {
   int *_from;   // array to hold breadth-first tree
   int *_s;      // stack of leaf nodes in tree
   int *_ns;     // next stack
+  int _prio;    // priority pointer to ensure fairness
  
   bool _ShortestAugmenting( );
 
