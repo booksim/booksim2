@@ -130,7 +130,7 @@ string watch_file;
 bool _use_noc_latency;
 /////////////////////////////////////////////////////////////////////////////
 
-bool AllocatorSim( const Configuration& config )
+void AllocatorSim( const Configuration& config )
 {
   Network **net;
   string topo;
@@ -209,7 +209,7 @@ bool AllocatorSim( const Configuration& config )
 
   /*Start the simulation run
    */
-  bool result = trafficManager->Run() ;
+  trafficManager->Run() ;
 
   ///Power analysis
 
@@ -223,8 +223,6 @@ bool AllocatorSim( const Configuration& config )
   for (int i=0; i<networks; ++i)
     delete net[i];
   delete [] net;
-
-  return result;
 }
 
 
@@ -266,6 +264,7 @@ int main( int argc, char **argv )
   _use_noc_latency = (config.GetInt("use_noc_latency")==1);
   /*configure and run the simulator
    */
-  bool result = AllocatorSim( config );
-  return result ? -1 : 0;
+  AllocatorSim( config );
+
+  return 0;
 }

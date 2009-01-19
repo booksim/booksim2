@@ -471,7 +471,6 @@ void IQRouter::_VCAlloc( )
       input_and_vc = _vc_allocator->InputAssigned( output*_vcs + vc );
 
       if ( input_and_vc != -1 ) {
-	assert(input_and_vc > 0);
 	match_input = input_and_vc / _vcs;
 	match_vc    = input_and_vc - match_input*_vcs;
 
@@ -663,7 +662,6 @@ void IQRouter::_SWAlloc( )
       expanded_input  = s*_inputs + input;
 
       if ( _switch_hold_in[expanded_input] != -1 ) {
-	assert(_switch_hold_in[expanded_input] > 0);
 	expanded_output = _switch_hold_in[expanded_input];
 	vc = _switch_hold_vc[expanded_input];
 	cur_vc = &_vc[input][vc];
@@ -863,7 +861,6 @@ int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
     }
     return tmpsum;
   }  else if (vc_begin != -1) {
-    assert(vc_begin > 0);
     for (int v =vc_begin;v<= vc_end ;v++)  {
       tmpsum+= dest_vc->Size(v);
       cnt++;
