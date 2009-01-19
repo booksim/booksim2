@@ -51,7 +51,7 @@ wait_for_tail_credit = 0;
 //
 vc_allocator = islip; 
 sw_allocator = islip;
-alloc_iters  = 1;
+alloc_iters  = 2;
 
 credit_delay   = 2;
 routing_delay  = 0;
@@ -105,19 +105,19 @@ limit = 64;
 // Routing
 //
 
-routing_function = ugal;
+routing_function = ran_min;
 
 const_flits_per_packet = 1;
 
 traffic       = uniform;
 
-sample_period  = 1000;  
+sample_period  = 10000;  
 
 use_read_write = 0;
 
-batch_size = 1000;
+batch_size = 10000;
 
-injection_rate = 0.1;
+injection_rate = 0.84;
 
 sim_type = latency;
 
@@ -132,4 +132,4 @@ read_reply_size=4;
 write_request_size=4;
 write_reply_size=1;
 
-sim_power = 1;
+sim_power = 0;

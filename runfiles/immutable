@@ -44,7 +44,7 @@ write_request_end_vc   = 15;
 num_vcs     = 16;
 vc_buf_size = 8;
 
-wait_for_tail_credit = 1;
+wait_for_tail_credit = 0;
 
 //
 // Router architectureq
@@ -71,7 +71,7 @@ sim_type = latency;
 
 warmup_periods = 3;
 
-sample_period  = 1000;  
+sample_period  = 10000;  
 
 sim_count          = 1;
 
