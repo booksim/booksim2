@@ -227,7 +227,6 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
 
   _print_csv_results = config.GetInt( "print_csv_results" );
   _pkt_size = config.GetInt( "const_flits_per_packet" );
-  _pkt_rate = config.GetInt( "injection_rate" );
   config.GetStr( "traffic", _traffic ) ;
   
   _LoadWatchList();
@@ -1256,7 +1255,7 @@ void TrafficManager::DisplayStats() {
 	   << c
 	   << "," << _traffic
 	   << "," << _pkt_size
-	   << "," << _pkt_rate
+	   << "," << _load
 	   << "," << _overall_latency[c]->Average( )
 	   << "," << _overall_accepted_min->Average( )
 	   << "," << _overall_accepted_min->Average( ) << endl;
