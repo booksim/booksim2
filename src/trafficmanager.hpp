@@ -128,6 +128,7 @@ protected:
   int   _drain_time;
 
   float _load;
+  float _flit_rate;
 
   int   _packet_size;
   int _read_request_size;
@@ -162,8 +163,8 @@ protected:
   map<int,bool> flits_to_watch;
 
   bool _print_csv_results;
-  int _pkt_size;
   string _traffic;
+  bool _drain_measured_only;
 
   // ============ Internal methods ============ 
 protected:

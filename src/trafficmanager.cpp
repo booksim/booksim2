@@ -122,11 +122,16 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     _use_lagging = true;
   }
 
-  _packet_size = config.GetInt( "const_flits_per_packet" );
   _read_request_size = config.GetInt("read_request_size");
   _read_reply_size = config.GetInt("read_reply_size");
   _write_request_size = config.GetInt("write_request_size");
   _write_reply_size = config.GetInt("write_reply_size");
+  if(_use_read_write) {
+    _packet_size = (_read_request_size + _read_reply_size +
+		    _write_request_size + _write_reply_size) / 2;
+  }
+  else
+    _packet_size = config.GetInt( "const_flits_per_packet" );
 
   _packets_sent = new int [_sources];
   _batch_size = config.GetInt( "batch_size" );
@@ -185,8 +190,7 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   // ============ Simulation parameters ============ 
 
   _load = config.GetFloat( "injection_rate" ); 
-
-
+  _flit_rate = _load * _packet_size;
 
   _total_sims = config.GetInt( "sim_count" );
 
@@ -226,9 +230,8 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _include_queuing = config.GetInt( "include_queuing" );
 
   _print_csv_results = config.GetInt( "print_csv_results" );
-  _pkt_size = config.GetInt( "const_flits_per_packet" );
   config.GetStr( "traffic", _traffic ) ;
-  
+  _drain_measured_only = config.GetInt( "drain_measured_only" );
   _LoadWatchList();
 }
 
@@ -975,15 +978,21 @@ int TrafficManager::_ComputeAccepted( double *avg, double *min ) const
 
 void TrafficManager::_DisplayRemaining( ) const 
 {
+  cout << "Remaining flits (" << _measured_in_flight << " measurement packets, "
+       << _total_in_flight << " total) : ";
+
   map<int, bool>::const_iterator iter;
   int i;
-
-  cout << "Remaining flits (" << _measured_in_flight << " measurement packets) : ";
   for ( iter = _in_flight.begin( ), i = 0;
-	( iter != _in_flight.end( ) ) && ( i < 20 );
+	( iter != _in_flight.end( ) ) && ( i < 10 );
 	iter++, i++ ) {
     cout << iter->first << " ";
   }
+
+  i = _in_flight.size();
+  if(i > 10)
+    cout << "[...] (" << i << " flits total)";
+
   cout << endl;
 
 }
@@ -1085,7 +1094,7 @@ bool TrafficManager::_SingleSim( )
     cout << "batch size of "<<_batch_size  <<  " sent. Time used is " << _time << " cycles" <<endl;
     cout<< "Draining the Network...................\n";
     empty_steps = 0;
-    while( _total_in_flight > 0 ) { 
+    while( (_drain_measured_only ? _measured_in_flight : _total_in_flight) > 0 ) { 
       _Step( ); 
       ++empty_steps;
       
@@ -1207,7 +1216,7 @@ bool TrafficManager::_SingleSim( )
     cout << "% Draining remaining packets ..." << endl;
     _empty_network = true;
     empty_steps = 0;
-    while( _total_in_flight > 0 ) { 
+    while( (_drain_measured_only ? _measured_in_flight : _total_in_flight) > 0 ) { 
       _Step( ); 
       ++empty_steps;
 
@@ -1254,8 +1263,9 @@ void TrafficManager::DisplayStats() {
       cout << "results:"
 	   << c
 	   << "," << _traffic
-	   << "," << _pkt_size
+	   << "," << _packet_size
 	   << "," << _load
+	   << "," << _flit_rate
 	   << "," << _overall_latency[c]->Average( )
 	   << "," << _overall_accepted_min->Average( )
 	   << "," << _overall_accepted_min->Average( ) << endl;
