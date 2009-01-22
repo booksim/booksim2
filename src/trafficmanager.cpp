@@ -189,8 +189,13 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
 
   // ============ Simulation parameters ============ 
 
-  _load = config.GetFloat( "injection_rate" ); 
-  _flit_rate = _load * _packet_size;
+  if(config.GetInt( "injection_rate_uses_flits" )) {
+    _flit_rate = config.GetFloat( "injection_rate" ); 
+    _load = _flit_rate / _packet_size;
+  } else {
+    _load = config.GetFloat( "injection_rate" ); 
+    _flit_rate = _load * _packet_size;
+  }
 
   _total_sims = config.GetInt( "sim_count" );
 
