@@ -470,7 +470,7 @@ int TrafficManager::_IssuePacket( int source, int cl ) const
 	//coin toss to determine request type.
 	result = -1;
 	
-	if (drand48() < 0.5) {
+	if (RandomFloat() < 0.5) {
 	  result = -2;
 	}
 	
@@ -506,7 +506,7 @@ int TrafficManager::_IssuePacket( int source, int cl ) const
 	  //coin toss to determine request type.
 	  result = -1;
 	
-	  if (drand48() < 0.5) {
+	  if (RandomFloat() < 0.5) {
 	    result = -2;
 	  }
 	}
