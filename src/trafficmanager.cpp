@@ -669,7 +669,8 @@ void TrafficManager::_BatchInject(){
     for ( int c = 0; c < _classes; ++c ) {
       // Potentially generate packets for any (input,class)
       // that is currently empty
-      if ( 1 ) { // Always try. Hard to check for empty queue - many subnetworks potentially.
+      if ( (duplicate_networks > 1) || _partial_packets[input][c][0].empty() ) {
+	// For multiple networks, always try. Hard to check for empty queue - many subnetworks potentially.
 	generated = false;
 	  
 	if ( !_empty_network ) {
@@ -765,8 +766,8 @@ void TrafficManager::_NormalInject(){
     for ( int c = 0; c < _classes; ++c ) {
       // Potentially generate packets for any (input,class)
       // that is currently empty
-      //if ( _partial_packets[input][c][0].empty( ) ) {
-      if (1) { // Always flip coin because now you have multiple send buffers so you can't choose one only to check.
+      if ( (duplicate_networks > 1) || _partial_packets[input][c][0].empty() ) {
+      // For multiple networks, always flip coin because now you have multiple send buffers so you can't choose one only to check.
 	generated = false;
 	  
 	if ( !_empty_network ) {
