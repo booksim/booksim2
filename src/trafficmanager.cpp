@@ -1260,6 +1260,7 @@ bool TrafficManager::Run( )
 
 void TrafficManager::DisplayStats() {
   for ( int c = 0; c < _classes; ++c ) {
+
     if(_print_csv_results) {
       cout << "results:"
 	   << c
@@ -1269,25 +1270,26 @@ void TrafficManager::DisplayStats() {
 	   << "," << _flit_rate
 	   << "," << _overall_latency[c]->Average( )
 	   << "," << _overall_accepted_min->Average( )
-	   << "," << _overall_accepted_min->Average( ) << endl;
-    } else {
-      cout << "====== Traffic class " << c << " ======" << endl;
-      
-      cout << "Overall average latency = " << _overall_latency[c]->Average( )
-	   << " (" << _overall_latency[c]->NumSamples( ) << " samples)" << endl;
-      
-      cout << "Overall average accepted rate = " << _overall_accepted->Average( )
-	   << " (" << _overall_accepted->NumSamples( ) << " samples)" << endl;
-      
-      cout << "Overall min accepted rate = " << _overall_accepted_min->Average( )
-	   << " (" << _overall_accepted_min->NumSamples( ) << " samples)" << endl;
+	   << "," << _overall_accepted_min->Average( )
+	   << "," << _hop_stats->Average( )
+	   << endl;
     }
+
+    cout << "====== Traffic class " << c << " ======" << endl;
+    
+    cout << "Overall average latency = " << _overall_latency[c]->Average( )
+	 << " (" << _overall_latency[c]->NumSamples( ) << " samples)" << endl;
+    
+    cout << "Overall average accepted rate = " << _overall_accepted->Average( )
+	 << " (" << _overall_accepted->NumSamples( ) << " samples)" << endl;
+    
+    cout << "Overall min accepted rate = " << _overall_accepted_min->Average( )
+	 << " (" << _overall_accepted_min->NumSamples( ) << " samples)" << endl;
     
   }
 
-  if(!_print_csv_results)
-    cout << "Average hops = " << _hop_stats->Average( )
-	 << " (" << _hop_stats->NumSamples( ) << " samples)" << endl;
+  cout << "Average hops = " << _hop_stats->Average( )
+       << " (" << _hop_stats->NumSamples( ) << " samples)" << endl;
   
 }
 
