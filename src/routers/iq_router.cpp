@@ -457,7 +457,7 @@ void IQRouter::_VCAlloc( )
     }
     
   }
-
+  //  watched = true;
   if ( watched ) {
     _vc_allocator->PrintRequests( );
   }
@@ -583,6 +583,7 @@ void IQRouter::_SWAlloc( )
 	    }
 	  }
 	}
+	
 
 	//
 	// The following models the speculative VC allocation aspects 

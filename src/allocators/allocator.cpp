@@ -31,8 +31,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include <iostream>
 #include <assert.h>
-
 #include "allocator.hpp"
+
 /////////////////////////////////////////////////////////////////////////
 //Allocator types
 #include "maxsize.hpp"
@@ -472,3 +472,4 @@ Allocator *Allocator::NewAllocator( Module *parent, const string& name,
 
   return a;
 }
+

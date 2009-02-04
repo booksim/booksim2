@@ -129,4 +129,14 @@ void Stats::Display( ) const
     cout << _hist[b] << " ";
   }
   cout << "];" << endl;
+
+ FILE *ostream=fopen("stat","w");
+
+
+ for ( b = 0; b < _num_bins; ++b ) {
+ 	int temp =	(int)(b*_bin_size);
+	fprintf(ostream,"%d   %d \n",temp,_hist[b] );	
+  }
+
+  fclose(ostream);
 }
