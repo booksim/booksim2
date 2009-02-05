@@ -67,6 +67,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "fattree.hpp"
 #include "mecs.hpp"
 #include "anynet.hpp"
+#include "dragonfly.hpp"
 ///////////////////////////////////////////////////////////////////////////////
 //Global declarations
 //////////////////////
@@ -186,7 +187,10 @@ bool AllocatorSim( const Configuration& config )
     } else if ( topo == "anynet"){
       AnyNet::RegisterRoutingFunctions() ;
       net[i] = new AnyNet(config);
-    } else {
+    } else if ( topo == "dragonflynew"){
+      DragonFlyNew::RegisterRoutingFunctions() ;
+      net[i] = new DragonFlyNew(config);
+    }else {
       cerr << "Unknown topology " << topo << endl;
       exit(-1);
     }
