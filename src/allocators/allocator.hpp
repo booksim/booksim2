@@ -76,7 +76,6 @@ public:
 
   int OutputAssigned( int in ) const;
   int InputAssigned( int out ) const;
-
   virtual void PrintRequests( ) const = 0;
 
   static Allocator *NewAllocator( Module *parent, const string& name,

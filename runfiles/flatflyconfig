@@ -49,8 +49,8 @@ wait_for_tail_credit = 0;
 //
 // Router architectureq
 //
-vc_allocator = islip; 
-sw_allocator = islip;
+vc_allocator = max_size; 
+sw_allocator = max_size;
 alloc_iters  = 2;
 
 credit_delay   = 2;
@@ -117,7 +117,7 @@ use_read_write = 0;
 
 batch_size = 10000;
 
-injection_rate = 0.84;
+injection_rate = 0.78;
 
 sim_type = latency;
 

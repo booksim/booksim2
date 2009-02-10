@@ -131,7 +131,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["num_vcs"]         = 16;  
   _int_map["vc_buf_size"]     = 8;  
 
-  _int_map["wait_for_tail_credit"] = 1; // reallocate a VC before a tail credit?
+  _int_map["wait_for_tail_credit"] = 0; // reallocate a VC before a tail credit?
 
   _int_map["hold_switch_for_packet"] = 0; // hold a switch config for the entire packet
 

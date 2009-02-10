@@ -67,6 +67,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "fattree.hpp"
 #include "mecs.hpp"
 #include "anynet.hpp"
+#include "dragonfly.hpp"
 ///////////////////////////////////////////////////////////////////////////////
 //Global declarations
 //////////////////////
@@ -80,7 +81,7 @@ int gC = 0;//concentration
 /*These extra variables are necessary for correct traffic pattern generation
  *The difference is due to concentration, radix 4 with concentration of 4 is
  *equivalent to radix 8 with no concentration. Though this only really applies
- *Under NOC since NOCS are inheriently 2 dimension
+ *under NOCs since NOCS are inheriently 2 dimension
  */
 int realgk;
 int realgn;
@@ -117,7 +118,8 @@ map<string, tInjectionProcess> gInjectionProcessMap;
 double gBurstAlpha;
 double gBurstBeta;
 
-/*number of flits per packet, set by the configuration file*/
+/*number of flits per packet, when _use_read_write is false*/
+
 int    gConstPacketSize;
 
 //for on_off injections
@@ -128,6 +130,7 @@ string watch_file;
 
 //latency type, noc or conventional network
 bool _use_noc_latency;
+
 /////////////////////////////////////////////////////////////////////////////
 
 bool AllocatorSim( const Configuration& config )
@@ -184,7 +187,10 @@ bool AllocatorSim( const Configuration& config )
     } else if ( topo == "anynet"){
       AnyNet::RegisterRoutingFunctions() ;
       net[i] = new AnyNet(config);
-    } else {
+    } else if ( topo == "dragonflynew"){
+      DragonFlyNew::RegisterRoutingFunctions() ;
+      net[i] = new DragonFlyNew(config);
+    }else {
       cerr << "Unknown topology " << topo << endl;
       exit(-1);
     }
@@ -212,7 +218,6 @@ bool AllocatorSim( const Configuration& config )
   bool result = trafficManager->Run() ;
 
   ///Power analysis
-
   if(config.GetInt("sim_power")==1){
     Power_Module * pnet = new Power_Module(net[0], trafficManager, config);
     pnet->run();
@@ -228,9 +233,9 @@ bool AllocatorSim( const Configuration& config )
 }
 
 
-
 int main( int argc, char **argv )
 {
+
   BookSimConfig config;
 
   if ( !ParseArgs( &config, argc, argv ) ) {
@@ -264,6 +269,7 @@ int main( int argc, char **argv )
   config.GetStr( "watch_file", watch_file );
 
   _use_noc_latency = (config.GetInt("use_noc_latency")==1);
+
   /*configure and run the simulator
    */
   bool result = AllocatorSim( config );

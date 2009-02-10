@@ -62,6 +62,12 @@ void src_dest_bin( int source, int dest, int lg )
 
 /* Add Traffic functions here */
 
+
+
+
+
+
+
 //=============================================================
 
 int uniform( int source, int total_nodes )
