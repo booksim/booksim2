@@ -49,6 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "flit.hpp"
 #include "globals.hpp"
 #include <queue>
+#include <pthread.h>
 using namespace std;
 class Router ;
 
@@ -61,6 +62,12 @@ public:
   int GetSource();
   void SetSink( Router* router ) ;
   int GetSink();
+
+  //multithreading
+  void SetShared();
+  void Lock(){ if(shared){ pthread_mutex_lock(chan_lock);}} 
+  void Unlock(){if(shared){pthread_mutex_unlock(chan_lock);}}
+  
   // Phsyical Parameters
   void SetLatency( int cycles ) ;
   int GetLatency() { return _delay ; }
@@ -79,6 +86,11 @@ public:
   Flit* PeekFlit( );
 
 private:
+  //multithreading
+  bool shared;
+  pthread_mutex_t* chan_lock;
+
+ 
   int          _delay;
   queue<Flit*> _queue;
   

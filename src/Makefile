@@ -36,7 +36,7 @@ LEX    = /usr/bin/flex
 PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
 CPPFLAGS = -O3 -I. -Iarbiters -Iallocators -Irouters -Inetworks -ggdb -pthread
-LFLAGS =  
+LFLAGS =  -pthread
 
 OBJDIR := obj
 PROG   := booksim
@@ -52,6 +52,7 @@ CPP_SRCS = main.cpp \
    flitchannel.cpp \
    creditchannel.cpp \
    trafficmanager.cpp \
+   ptrafficmanager.cpp \
    buffer_state.cpp \
    stats.cpp \
    credit.cpp \

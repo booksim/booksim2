@@ -140,7 +140,7 @@ protected:
   int   _sample_period;
   int   _max_samples;
   int   _warmup_periods;
-  short ** class_array;
+
   short sub_network;
 
   int   _include_queuing;

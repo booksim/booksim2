@@ -96,6 +96,11 @@ public:
   virtual void InternalStep( );
   virtual void WriteOutputs( );
 
+  //multithreading
+  virtual void ReadInputs(int t);
+  virtual void InternalStep( int t);
+  virtual void WriteOutputs( int t);
+
   void Display( ) const;
 
   int NumChannels(){return _channels;}
@@ -104,6 +109,9 @@ public:
   FlitChannel* GetChannels(){return _chan;}
   Router ** GetRouters(){return _routers;}
   int NumRouters(){return _size;}
+
+  void Divide(int t);
+
 };
 
 #endif 

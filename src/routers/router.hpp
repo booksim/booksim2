@@ -45,6 +45,8 @@ class Router : public Module {
 protected:
   int _id;
 
+  //multithreading
+  int tid; 
   
   int _inputs;
   int _outputs;
@@ -96,7 +98,9 @@ public:
   const string& Name() ;
 
   int GetID( ) const;
-
+  int GetTID(){ return tid;}
+  //multithreading
+  void SetTID(int id){tid = id;}
 
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const = 0;
   virtual int GetBuffer(int i) const = 0;

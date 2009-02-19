@@ -38,6 +38,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 CreditChannel::CreditChannel() {
   _delay = 0;
+  shared = false;
+  chan_lock = 0;
+}
+CreditChannel::~CreditChannel(){
+  if(shared){
+    pthread_mutex_destroy(chan_lock);
+    free(chan_lock);
+  }
+}
+
+
+//multithreading
+void CreditChannel::SetShared(){
+  if(!shared){
+    shared = true;
+    chan_lock = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
+    pthread_mutex_init(chan_lock,0);
+  }
 }
 
 void CreditChannel::SetLatency( int cycles ) {

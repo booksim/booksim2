@@ -278,9 +278,10 @@ void IQRouter::_ReceiveFlits( )
 
   bufferMonitor.cycle() ;
 
-  for ( int input = 0; input < _inputs; ++input ) { 
+  for ( int input = 0; input < _inputs; ++input ) {
+    (*_input_channels)[input]->Lock();
     f = (*_input_channels)[input]->ReceiveFlit();
-
+    (*_input_channels)[input]->Unlock();
     if ( f ) {
       _input_buffer[input].push( f );
       bufferMonitor.write( input, f ) ;
@@ -812,7 +813,9 @@ void IQRouter::_SendFlits( )
       f = 0;
     }
     if(_trace && f){cout<<"Outport "<<output<<endl;cout<<"Stop Mark"<<endl;}
+    (*_output_channels)[output]->Lock();
     (*_output_channels)[output]->SendFlit( f );
+    (*_output_channels)[output]->Unlock();
   }
 }
 

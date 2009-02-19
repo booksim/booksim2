@@ -43,12 +43,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "credit.hpp"
 #include <queue>
+#include <pthread.h>
 using namespace std;
 
 class CreditChannel {
 public:
   CreditChannel();
-
+  ~CreditChannel();
   // Physical Parameters
   void SetLatency( int cycles );
   // Send credit 
@@ -60,10 +61,19 @@ public:
   // Peek at Credit
   Credit* PeekCredit( );
 
+  //multithreading
+  void SetShared();
+  void Lock(){ if(shared) pthread_mutex_lock(chan_lock);} 
+  void Unlock(){ if(shared) pthread_mutex_unlock(chan_lock);}
+
 private:
   int            _delay;
   queue<Credit*> _queue;
 
+  //multithreading
+  bool shared;
+  pthread_mutex_t* chan_lock;
+  
   ////////////////////////////////////////
   //
   // Power Models

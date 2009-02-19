@@ -41,6 +41,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <stdlib.h>
 #include <fstream>
+#include <time.h>
+#include <sys/time.h>
 #include "booksim.hpp"
 #include "routefunc.hpp"
 #include "traffic.hpp"
@@ -133,8 +135,11 @@ bool _use_noc_latency;
 
 /////////////////////////////////////////////////////////////////////////////
 
+
 bool AllocatorSim( const Configuration& config )
 {
+
+
   Network **net;
   string topo;
 
@@ -195,17 +200,11 @@ bool AllocatorSim( const Configuration& config )
       exit(-1);
     }
 
-  /*legacy code that insert random faults in the networks
-   *not sure how to use this
-   */
-  if ( config.GetInt( "link_failures" ) ) {
-      net[i]->InsertRandomFaults( config );
-    }
+
+    net[i]->Divide(THREADS);
   }
 
-
-  string traffic ;
-  config.GetStr( "traffic", traffic ) ;
+  
 
   /*tcc and characterize are legacy
    *not sure how to use them 
@@ -215,7 +214,18 @@ bool AllocatorSim( const Configuration& config )
 
   /*Start the simulation run
    */
+
+  double total_time; /* Amount of time we've run */
+  struct timeval start_time, end_time; /* Time before/after user code */
+  total_time = 0.0;
+  gettimeofday(&start_time, NULL);
   bool result = trafficManager->Run() ;
+
+  gettimeofday(&end_time, NULL);
+  total_time = ((double)(end_time.tv_sec) + (double)(end_time.tv_usec)/1000000.0)
+            - ((double)(start_time.tv_sec) + (double)(start_time.tv_usec)/1000000.0);
+
+  cout<<"Total run time "<<total_time<<endl;
 
   ///Power analysis
   if(config.GetInt("sim_power")==1){

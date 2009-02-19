@@ -130,6 +130,14 @@ void Network::ReadInputs( )
   }
 }
 
+void Network::ReadInputs(int tid){
+  for ( int r = 0; r < _size; ++r ) {
+    if(_routers[r]->GetTID() == tid)
+      _routers[r]->ReadInputs( );
+  }
+}
+
+
 void Network::InternalStep( )
 {
   for ( int r = 0; r < _size; ++r ) {
@@ -137,10 +145,34 @@ void Network::InternalStep( )
   }
 }
 
+void Network::InternalStep( int tid)
+{
+  for ( int r = 0; r < _size; ++r ) {
+    if(_routers[r]->GetTID() == tid)
+      _routers[r]->InternalStep( );
+  }
+}
+
+
 void Network::WriteOutputs( )
 {
   for ( int r = 0; r < _size; ++r ) {
     _routers[r]->WriteOutputs( );
+  }
+
+  for ( int c = 0; c < _channels; ++c ) {
+    if ( _chan[c].InUse() ) {
+      _chan_use[c]++;
+    }
+  }
+  _chan_use_cycles++;
+}
+
+void Network::WriteOutputs(int tid )
+{
+  for ( int r = 0; r < _size; ++r ) {
+    if(_routers[r]->GetTID() == tid)
+      _routers[r]->WriteOutputs( );
   }
 
   for ( int c = 0; c < _channels; ++c ) {
@@ -205,6 +237,23 @@ void Network::OutChannelFault( int r, int c, bool fault )
 double Network::Capacity( ) const
 {
   return 1.0;
+}
+
+//multithreading
+void Network::Divide(int t){
+  
+  if(_routers == 0){
+    cout<<"you must configure the network before dividing"<<endl;
+    exit(-1);
+  }
+  for(int i = 0; i<_size; i++){
+    _routers[i]->SetTID(i%t);
+  }
+  
+  for(int i = 0; i<_channels; i++){
+    _chan[i].SetShared();
+    _chan_cred[i].SetShared();
+  }
 }
 
 /* this function can be heavily modified to display any information

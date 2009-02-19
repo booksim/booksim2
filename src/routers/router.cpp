@@ -77,7 +77,8 @@ Router::Router( const Configuration& config,
 
   _channel_faults  = new vector<bool>;
 
- 
+  //multithreading
+  tid = 0;
 
 }
 

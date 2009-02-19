@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include <sstream>
 #include <math.h>
+#include <pthread.h>
 #include <fstream>
 #include "trafficmanager.hpp"
 #include "random_utils.hpp" 
@@ -41,6 +42,10 @@ bool timed_mode = false;
 TrafficManager::TrafficManager( const Configuration &config, Network **net )
   : Module( 0, "traffic_manager" )
 {
+  
+pthread_barrier_t barr;
+
+
   int s;
   ostringstream tmp_name;
   string sim_type, priority;
@@ -201,12 +206,8 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
 
   _internal_speedup = config.GetFloat( "internal_speedup" );
   _partial_internal_cycles = new float[duplicate_networks];
-  class_array = new short* [duplicate_networks];
-  for (int i=0; i < duplicate_networks; ++i) {
-    _partial_internal_cycles[i] = 0.0;
-    class_array[i] = new short [_classes];
-    memset(class_array[i], 0, sizeof(short)*_classes);
-  }
+
+
 
   _traffic_function  = GetTrafficFunction( config );
   _routing_function  = GetRoutingFunction( config );
@@ -271,10 +272,7 @@ TrafficManager::~TrafficManager( )
     delete _latency_stats[c];
     delete _overall_latency[c];
   }
-  for (int i = 0; i < duplicate_networks; ++i) {
-    delete [] class_array[i];
-  }
-  delete[] class_array;
+
 
   delete [] _latency_stats;
   delete [] _overall_latency;
@@ -654,6 +652,14 @@ void TrafficManager::_FirstStep( )
 }
 
 void TrafficManager::_BatchInject(){
+
+  short ** class_array;
+  class_array = new short* [duplicate_networks];
+  for (int i=0; i < duplicate_networks; ++i) {
+    _partial_internal_cycles[i] = 0.0;
+    class_array[i] = new short [_classes];
+    memset(class_array[i], 0, sizeof(short)*_classes);
+  }
   Flit   *f, *nf;
   Credit *cred;
   int    psize;
@@ -746,11 +752,21 @@ void TrafficManager::_BatchInject(){
       }
     }
   }
+  for (int i=0; i < duplicate_networks; ++i) {
+    delete [] class_array[i];
+  }
+  delete [] class_array;
 }
 
 
 void TrafficManager::_NormalInject(){
-
+  short ** class_array;
+  class_array = new short* [duplicate_networks];
+  for (int i=0; i < duplicate_networks; ++i) {
+    _partial_internal_cycles[i] = 0.0;
+    class_array[i] = new short [_classes];
+    memset(class_array[i], 0, sizeof(short)*_classes);
+  }
   Flit   *f, *nf;
   Credit *cred;
   int    psize;
@@ -856,6 +872,10 @@ void TrafficManager::_NormalInject(){
 	class_array[i][highest_class]--;
     }
   }
+  for (int i=0; i < duplicate_networks; ++i) {
+    delete [] class_array[i];
+  }
+  delete [] class_array;
 }
 
 void TrafficManager::_Step( )

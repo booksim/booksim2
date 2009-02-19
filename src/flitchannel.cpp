@@ -51,6 +51,8 @@ FlitChannel::FlitChannel() {
   _idle   = 0;
   _cookie = 0;
   _delay = 1; 
+  shared = false;
+  chan_lock = 0;
 }
 
 FlitChannel::~FlitChannel() {
@@ -73,6 +75,11 @@ FlitChannel::~FlitChannel() {
 	 << "(" << _active[0] << "," << _active[1] << "," << _active[2] 
 	 << "," << _active[3] << "," << _active[4] << ") (I#" << _idle << ")" << endl ;
   }
+  //multithreading
+  if(shared){
+    pthread_mutex_destroy(chan_lock);
+    free(chan_lock);
+  }
 }
 
 void FlitChannel::SetSource( Router* router ) {
@@ -91,6 +98,14 @@ int FlitChannel::GetSink(){
   return _routerSink;
 }
 
+//multithreading
+void FlitChannel::SetShared(){
+  if(!shared){
+    shared = true;
+    chan_lock = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
+    pthread_mutex_init(chan_lock,0);
+  }
+}
 
 void FlitChannel::SetLatency( int cycles ) {
 
