@@ -256,6 +256,27 @@ void Network::Divide(int t){
   }
 }
 
+void Network::GetNodes(int *** nodelist, int** nodecount){
+
+  (*nodecount) = (int*)calloc(THREADS,sizeof(int));
+  (*nodelist) = (int**)malloc(THREADS*sizeof(int*));
+  for(int i = 0; i<_sources; i++){
+    (*nodecount)[_routers[_inject[i].GetSink()]->GetTID()]++;
+    
+  }
+  for(int i = 0; i<THREADS; i++){
+    (*nodelist)[i] = (int*)malloc((*nodecount)[i]*sizeof(int));
+    int j = 0;
+    for(int k = 0; k<_sources; k++){
+      if(_routers[_inject[k].GetSink()]->GetTID()==i){
+	(*nodelist)[i][j] = k;
+	j++;
+      }
+    }
+  }
+  
+}
+
 /* this function can be heavily modified to display any information
  * neceesary of the network, by default, call display on each router
  * and display the channel utilization rate

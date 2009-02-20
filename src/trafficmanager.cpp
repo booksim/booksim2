@@ -656,7 +656,6 @@ void TrafficManager::_BatchInject(){
   short ** class_array;
   class_array = new short* [duplicate_networks];
   for (int i=0; i < duplicate_networks; ++i) {
-    _partial_internal_cycles[i] = 0.0;
     class_array[i] = new short [_classes];
     memset(class_array[i], 0, sizeof(short)*_classes);
   }
@@ -763,7 +762,6 @@ void TrafficManager::_NormalInject(){
   short ** class_array;
   class_array = new short* [duplicate_networks];
   for (int i=0; i < duplicate_networks; ++i) {
-    _partial_internal_cycles[i] = 0.0;
     class_array[i] = new short [_classes];
     memset(class_array[i], 0, sizeof(short)*_classes);
   }

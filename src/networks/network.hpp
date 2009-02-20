@@ -111,7 +111,7 @@ public:
   int NumRouters(){return _size;}
 
   void Divide(int t);
-
+  void GetNodes(int *** list, int** count);
 };
 
 #endif 

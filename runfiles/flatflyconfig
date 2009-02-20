@@ -115,7 +115,7 @@ sample_period  = 10000;
 
 use_read_write = 0;
 
-batch_size = 10000;
+batch_size = 1000;
 
 injection_rate = 0.78;
 

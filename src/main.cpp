@@ -48,6 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "traffic.hpp"
 #include "booksim_config.hpp"
 #include "trafficmanager.hpp"
+#include "ptrafficmanager.hpp"
 #include "random_utils.hpp"
 #include "network.hpp"
 #include "injection.hpp"
@@ -209,8 +210,11 @@ bool AllocatorSim( const Configuration& config )
   /*tcc and characterize are legacy
    *not sure how to use them 
    */
-  TrafficManager *trafficManager ;
-  trafficManager = new TrafficManager( config, net ) ;
+//   TrafficManager *trafficManager ;
+//   trafficManager = new TrafficManager( config, net ) ;
+
+  PTrafficManager *trafficManager ;
+  trafficManager = new PTrafficManager( config, net ) ;
 
   /*Start the simulation run
    */

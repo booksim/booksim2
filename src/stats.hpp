@@ -61,6 +61,7 @@ public:
   void AddSample( double val );
   void AddSample( int val );
 
+  void MergeStats(Stats* other);
 
   void Display( ) const;
 };

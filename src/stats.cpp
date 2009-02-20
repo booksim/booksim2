@@ -140,3 +140,17 @@ void Stats::Display( ) const
 
   fclose(ostream);
 }
+
+void Stats::MergeStats(Stats * that){
+  
+  this->_num_samples += that->_num_samples;
+  this->_sample_sum += that->_sample_sum;
+
+  if ( that->_max > this->_max ) { this->_max = that->_max; }
+  if ( that->_min < this->_min ) { this->_min = that->_min; }
+
+  for(int b = 0; b<_num_bins; b++){
+    this->_hist[b] +=that->_hist[b];
+  }
+  that->Clear();
+}
