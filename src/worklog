@@ -1,0 +1,137 @@
+find the TODOs 
+
+
+2/12/2009
+
+Added tid to router. Associate each router with a accessing thread.
+
+Added a bool shared to channels indicating its shared status
+
+Added a pthread_lock_t to each channel, only allocated/inited after setshared() is called 
+
+a thread version of network methods has been added, the method invoke the objects where  tid == thread id.
+--Readinputs
+--internal step
+--writeoutputs
+
+Note, in router object, addinputchannel, addoutputchannel don't need locks even though they modify the channel objects. Because network is setup during the sequential phase of the program.
+
+added lock calls to iq_router when accessing the channels. 
+
+added timing recording to main
+
+created a silly Ptrafficmanager....yeah...
+
+added barrier and barrier init to ptraffic
+
+
+
+2/18/2009
+
+current plan: ptrafficmanger will inheriten most of the funcitons of trafficmanager. The two diverges at the _singlesim() below single sim all code will be replicated to be available to threads, e.g. newflit become newflitP that takes a thread id as the argument, retireflit becomes retireflitP that takes an extra thread id argument etc. 
+
+
+2/19/2009
+
+added a mergestats functions to the stat class. So we can merge the stats of the individual threads together. AND CLEARS THE DATA after the merge
+
+
+yay its working -ish. The injection rate is screwed up, when I set to 20% it is actually 26%. We suspect the random generator is a synchronization point and the rand seed maybe fucked up. 50% speed up with 2 threads
+
+rand_utils have been changed from crazy shit to using normal c rand functions. This fixed the injeciton problem. But there are comments somewhere why they wrote their own rand stuff, somethin about the c versions being crappy.... anyways
+
+=====================================================================
+
+
+
+Operations that can not be easily modified to run concurrently are removed for now they are listed below to be added in later. 
+
+
+
+TODO: neeed an intelligent way to divide the network, and espeicially how to tell if a channel need to be shared
+
+TODO: netweork::writeoutputs has a shared operation, should be isolated and separated into a separate step finalize function
+
+TODO: a lot of assert false has been added because the function has been removed below
+
+TODO: each instance of ptraffic need to get a list of nodes that it is managing
+
+TODO: WTF is class_array do, and can it be instantiated in the local scope of the normal/batch injection methods. I have changed it to be local, but might need to undo this bullshit
+
+functions removed:
+--automatically set flit_watch to on (silly and don't really need it)
+--does not record in_flight flits for checking in the retireflilt function and does not display remaining (cuz its in a map and I dono how to split that map between the threads)
+--does not check total_in_flight
+--does not monitor measured_in_flight
+--only support ANY_TYPE flit type, so... don't use use_read_write = 1; in the config file
+--no batched mode
+--not draining the network after the simulation
+--does not support class based arbitration
+--removed deadlock counter (what does it do anyways?)
+
+today stopped at normal injection method, still ocmpilesx
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
