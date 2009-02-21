@@ -52,7 +52,10 @@ PTrafficManager::PTrafficManager( const Configuration &config, Network **net )
 
   for(int i = 0; i<THREADS; i++){
     thread_partial_internal_cycles[i] = new float[duplicate_networks];
-
+    for(int j = 0; j<duplicate_networks; j++){
+      thread_partial_internal_cycles[i][j] = 0.0; 
+    }
+    
     thread_fid[i] = i;
     thread_hop_stats[i] = new Stats( this, "hop_stats", 1.0, 20 );
 
@@ -451,7 +454,6 @@ void PTrafficManager::_NormalInjectP(int tid){
 
 void PTrafficManager::_StepP( int tid)
 {
-
 
   Flit   *f;
   Credit *cred;
