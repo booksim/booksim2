@@ -35,7 +35,7 @@ YACC   = /usr/bin/bison -d
 LEX    = /usr/bin/flex
 PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
-CPPFLAGS = -O3 -I. -Iarbiters -Iallocators -Irouters -Inetworks -ggdb -pthread 
+CPPFLAGS = -O3 -I. -Iarbiters -Iallocators -Irouters -Inetworks -ggdb -pthread -Wall 
 LFLAGS =  -pthread 
 
 OBJDIR := obj

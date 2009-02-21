@@ -229,6 +229,7 @@ void VC::Display( ) const
     case active: cout << "active"; break ;
     case vc_spec: cout << "vc_spec"; break ;
     case vc_spec_grant: cout << "vc_sepc_grant"; break ;
+    default: idle: cout<<"idle";break;
     }
       
     cout << " out_port: " << _out_port
