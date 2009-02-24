@@ -50,11 +50,9 @@ Operations that can not be easily modified to run concurrently are removed for n
 
 TODO: neeed an intelligent way to divide the network, and espeicially how to tell if a channel need to be shared
 
-TODO: netweork::writeoutputs has a shared operation, should be isolated and separated into a separate step finalize function
 
 TODO: a lot of assert false has been added because the function has been removed below
 
-TODO: each instance of ptraffic need to get a list of nodes that it is managing
 
 TODO: WTF is class_array do, and can it be instantiated in the local scope of the normal/batch injection methods. I have changed it to be local, but might need to undo this bullshit
 

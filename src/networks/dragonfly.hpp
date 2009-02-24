@@ -60,7 +60,7 @@ public:
   int GetK( ) const;
 
   double Capacity( ) const;
-  static void DragonFlyNew::RegisterRoutingFunctions();
+  static void RegisterRoutingFunctions();
   void InsertRandomFaults( const Configuration &config );
 };
 int flatfly_selfrouting(int dest);

@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 /////
 #include "creditchannel.hpp"
-
+#include "booksim.hpp"
 CreditChannel::CreditChannel() {
   _delay = 0;
   shared = false;
