@@ -40,6 +40,11 @@ yay its working -ish. The injection rate is screwed up, when I set to 20% it is 
 
 rand_utils have been changed from crazy shit to using normal c rand functions. This fixed the injeciton problem. But there are comments somewhere why they wrote their own rand stuff, somethin about the c versions being crappy.... anyways
 
+
+2/24/2009
+
+I never actually call the locks on the credit channels, this caused dead locks!!!
+
 =====================================================================
 
 
