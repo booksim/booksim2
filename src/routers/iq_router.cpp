@@ -294,8 +294,9 @@ void IQRouter::_ReceiveCredits( )
   Credit *c;
 
   for ( int output = 0; output < _outputs; ++output ) {  
+    (*_output_credits)[output]->Lock();
     c = (*_output_credits)[output]->ReceiveCredit();
-
+    (*_output_credits)[output]->Unlock();
     if ( c ) {
       _out_cred_buffer[output].push( c );
     }
@@ -830,8 +831,9 @@ void IQRouter::_SendCredits( )
     } else {
       c = 0;
     }
-
+    (*_input_credits)[input]->Lock();
     (*_input_credits)[input]->SendCredit( c );
+    (*_input_credits)[input]->Unlock();
   }
 }
 
