@@ -42,7 +42,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define CREDITCHANNEL_HPP
 
 #include "credit.hpp"
-#include <queue>
+  //#include <queue>
+#include "lfqueue.hpp"
 #include <pthread.h>
 using namespace std;
 
@@ -68,7 +69,7 @@ public:
 
 private:
   int            _delay;
-  queue<Credit*> _queue;
+  lfqueue<Credit*> _queue;
 
   //multithreading
   bool shared;

@@ -48,7 +48,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "flit.hpp"
 #include "globals.hpp"
-#include <queue>
+  //#include <queue>
+#include "lfqueue.hpp"
 #include <pthread.h>
 using namespace std;
 class Router ;
@@ -92,7 +93,7 @@ private:
 
  
   int          _delay;
-  queue<Flit*> _queue;
+  lfqueue<Flit*> _queue;
   
   ////////////////////////////////////////
   //
