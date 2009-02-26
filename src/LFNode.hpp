@@ -5,32 +5,54 @@
 #define LFNode LFNode
 #endif
 
-#include "AtomicReference.hpp"
+#include <pthread.h>
+#include <cstdlib>
 
 using namespace std;
 
 template <class T>
-class LFNode : public AtomicReference<T> {
+class LFNode {
 public:
   typedef T value_type;
   value_type value;
   LFNode<T> *next;
-
+protected:
+  pthread_mutex_t *value_lock;
+public:
   LFNode(T val){
     value = val;
     next = new LFNode(NULL);
+    value_lock = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
+    pthread_mutex_init(value_lock,0);
   }
 
   ~LFNode(){
-    delete(next);
+    pthread_mutex_destroy(value_lock);
   }
 
-  AtomicReference<T>* get();
+  bool compareAndSet(LFNode<T> *expectedReference, LFNode<T> *newReference);
+
+  T get();
 };
 
 template <class T>
-AtomicReference<T>* LFNode<T>::get(){
-  return this;
+bool LFNode<T>::compareAndSet(LFNode<T> *expectedReference, LFNode<T> *newReference){
+  bool retValue;
+  pthread_mutex_lock(value_lock);
+  if(next==expectedReference){
+    next=newReference;
+    retValue=true;
+  }
+  else{
+    retValue=false;
+  }
+  pthread_mutex_unlock(value_lock);
+  return retValue;
+}
+
+template <class T>
+T LFNode<T>::get(){
+  return value;
 }
 
 #undef LFNode

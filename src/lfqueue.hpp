@@ -59,10 +59,10 @@ T lfqueue<T>::back(){
 
 template <class T>
 void lfqueue<T>::push(const T val){
-  AtomicReference<T> *node = new LFNode<T>(val);
+  LFNode<T> *node = new LFNode<T>(val);
   while(true){
-    AtomicReference<T> *last = tail;
-    AtomicReference<T> *next = last->next;
+    LFNode<T> *last = tail;
+    LFNode<T> *next = last->next;
     if(last==tail){
       if(next==NULL){
 	if(last->next->compareAndSet(next,node)){
@@ -80,9 +80,9 @@ void lfqueue<T>::push(const T val){
 template <class T>
 T lfqueue<T>::pop(){
   while(true){
-    AtomicReference<T> *first = head;
-    AtomicReference<T> *last = tail;
-    AtomicReference<T> *next = first->next;
+    LFNode<T> *first = head;
+    LFNode<T> *last = tail;
+    LFNode<T> *next = first->next;
     if(first==head){
       if(first==last){
 	if(next==NULL){
