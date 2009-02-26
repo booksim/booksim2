@@ -5,6 +5,8 @@
 #define lfqueue lfqueue
 #endif
 
+#include "LFNode.hpp"
+
 using namespace std;
 
 template <class T>
@@ -14,12 +16,14 @@ public:
   typedef int size_type;
 protected:
   size_type length;
-  value_type head;
-  value_type tail;
+  LFNode<T> *head;
+  LFNode<T> *tail;
   
 public:
   lfqueue(){
-
+    head = new LFNode<T>(NULL);
+    tail = head;
+    length = 0;
   }
   
   bool empty() const {
@@ -30,34 +34,71 @@ public:
     return length;
   }
 
-  void pop() {
-
-  }
-
   ~lfqueue(){
-
+    
   }
 
   T front();
 
   T back();
 
-  void push(const T x);
+  void push(const T val);
+
+  T pop();
 };
 
 template <class T>
 T lfqueue<T>::front(){
-  return head;
+  return head->value;
 }
 
 template <class T>
 T lfqueue<T>::back(){
-  return tail;
+  return tail->value;
 }
 
 template <class T>
-void lfqueue<T>::push(const T x){
+void lfqueue<T>::push(const T val){
+  AtomicReference<T> *node = new LFNode<T>(val);
+  while(true){
+    AtomicReference<T> *last = tail;
+    AtomicReference<T> *next = last->next;
+    if(last==tail){
+      if(next==NULL){
+	if(last->next->compareAndSet(next,node)){
+	  tail->compareAndSet(last,node);
+	  return;
+	}
+      }
+      else{
+	tail->compareAndSet(last,next);
+      }
+    }
+  }
+}
 
+template <class T>
+T lfqueue<T>::pop(){
+  while(true){
+    AtomicReference<T> *first = head;
+    AtomicReference<T> *last = tail;
+    AtomicReference<T> *next = first->next;
+    if(first==head){
+      if(first==last){
+	if(next==NULL){
+	  return NULL;
+	}
+	tail->compareAndSet(last,next);
+      }
+      else{
+	T val = next->value;
+	if(head->compareAndSet(first,next)){
+	  delete(first);
+	  return val;
+	}
+      }
+    }
+  }
 }
 
 #undef lfqueue
