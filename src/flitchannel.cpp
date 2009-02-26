@@ -79,6 +79,7 @@ FlitChannel::~FlitChannel() {
   if(shared){
     pthread_mutex_destroy(chan_lock);
     free(chan_lock);
+    _queue.initialize();
   }
 }
 

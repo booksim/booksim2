@@ -55,6 +55,7 @@ void CreditChannel::SetShared(){
     shared = true;
     chan_lock = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
     pthread_mutex_init(chan_lock,0);
+    _queue.initialize();
   }
 }
 

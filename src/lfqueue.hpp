@@ -16,12 +16,13 @@ public:
   typedef int size_type;
 protected:
   size_type length;
-  LFNode<T> *head;
-  LFNode<T> *tail;
+  AtomicReference<LFNode<T>* > *head;
+  AtomicReference<LFNode<T>* > *tail;
   
 public:
   lfqueue(){
-    head = new LFNode<T>(NULL);
+    LFNode<T> *tmp = new LFNode<T>(NULL);
+    head = new AtomicReference<LFNode<T>* >(tmp);
     tail = head;
     length = 0;
   }
@@ -32,6 +33,13 @@ public:
 
   size_type size() const {
     return length;
+  }
+
+  void initialize() {
+    LFNode<T> *tmp = new LFNode<T>(NULL);
+    head = new AtomicReference<LFNode<T>* >(tmp);
+    tail = head;
+    length = 0;
   }
 
   ~lfqueue(){
@@ -49,23 +57,23 @@ public:
 
 template <class T>
 T lfqueue<T>::front(){
-  return head->value;
+  return (head->get())->value;
 }
 
 template <class T>
 T lfqueue<T>::back(){
-  return tail->value;
+  return (tail->get())->value;
 }
 
 template <class T>
 void lfqueue<T>::push(const T val){
   LFNode<T> *node = new LFNode<T>(val);
   while(true){
-    LFNode<T> *last = tail;
-    LFNode<T> *next = last->next;
-    if(last==tail){
+    LFNode<T> *last = tail->get();
+    LFNode<T> *next = last->next->get();
+    if(last==tail->get()){
       if(next==NULL){
-	if(last->compareAndSet(next,node)){
+	if(last->next->compareAndSet(next,node)){
 	  tail->compareAndSet(last,node);
 	  length++;
 	  return;
@@ -81,10 +89,10 @@ void lfqueue<T>::push(const T val){
 template <class T>
 T lfqueue<T>::pop(){
   while(true){
-    LFNode<T> *first = head;
-    LFNode<T> *last = tail;
-    LFNode<T> *next = first->next;
-    if(first==head){
+    LFNode<T> *first = head->get();
+    LFNode<T> *last = tail->get();
+    LFNode<T> *next = first->next->get();
+    if(first==head->get()){
       if(first==last){
 	if(next==NULL){
 	  return NULL;
