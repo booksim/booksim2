@@ -65,8 +65,9 @@ void lfqueue<T>::push(const T val){
     LFNode<T> *next = last->next;
     if(last==tail){
       if(next==NULL){
-	if(last->next->compareAndSet(next,node)){
+	if(last->compareAndSet(next,node)){
 	  tail->compareAndSet(last,node);
+	  length++;
 	  return;
 	}
       }
@@ -94,6 +95,7 @@ T lfqueue<T>::pop(){
 	T val = next->value;
 	if(head->compareAndSet(first,next)){
 	  delete(first);
+	  length--;
 	  return val;
 	}
       }

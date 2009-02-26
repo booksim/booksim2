@@ -17,17 +17,18 @@ public:
   value_type value;
   LFNode<T> *next;
 protected:
-  pthread_mutex_t *value_lock;
+  pthread_mutex_t* value_lock;
 public:
   LFNode(T val){
     value = val;
-    next = new LFNode(NULL);
+    next = NULL;
     value_lock = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
     pthread_mutex_init(value_lock,0);
   }
 
   ~LFNode(){
     pthread_mutex_destroy(value_lock);
+    free(value_lock);
   }
 
   bool compareAndSet(LFNode<T> *expectedReference, LFNode<T> *newReference);
