@@ -45,6 +45,24 @@ rand_utils have been changed from crazy shit to using normal c rand functions. T
 
 I never actually call the locks on the credit channels, this caused dead locks!!!
 
+2/25/2009
+Working on the copy local to my home computer:
+
+Barrier is taking up alot of time. But changing the barrier from 1 cycle to 9 cycles actually take longer time. There is a load imbalance? maybe. 
+
+2/26/2009
+Working on the copy local to my home computer:
+
+Intelligently dividing the network into two halves, the number of shared channels reduced to very few (1/6th ish)
+
+Baseline	89s
+1t		115
+2t		70s
+4t		45s
+8t		36s
+16t		39s
+
+
 =====================================================================
 
 
