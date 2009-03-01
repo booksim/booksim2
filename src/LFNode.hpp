@@ -6,6 +6,7 @@
 #endif
 
 #include "AtomicReference.hpp"
+#include <iostream>
 
 using namespace std;
 
@@ -16,9 +17,9 @@ public:
   value_type value;
   AtomicReference<LFNode<T>* > *next;
 public:
-  LFNode(const T val){
+  LFNode(T val){
     value = val;
-    next = new AtomicReference<LFNode<T>* >(NULL);
+    next = new AtomicReference<LFNode<T>* >((LFNode<T>*)1);
   }
 
   ~LFNode(){

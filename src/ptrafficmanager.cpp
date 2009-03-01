@@ -457,7 +457,7 @@ void PTrafficManager::_StepP( int tid)
 
   Flit   *f;
   Credit *cred;
-
+  
   if(_sim_mode == batch){
     assert(false);
     _BatchInject();
@@ -474,7 +474,7 @@ void PTrafficManager::_StepP( int tid)
       thread_partial_internal_cycles[tid][i] -= 1.0;
     }
   }
-
+  
   for (int a = 0; a < duplicate_networks; ++a) {
     _net[a]->WriteOutputs(tid);
   }
