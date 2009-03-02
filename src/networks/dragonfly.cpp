@@ -83,7 +83,6 @@ DragonFlyNew::DragonFlyNew( const Configuration &config ) :
   _ComputeSize( config );
   _Alloc( );
   _BuildNet( config );
-  Divide(THREADS);
 }
 
 void DragonFlyNew::_ComputeSize( const Configuration &config )
@@ -256,6 +255,8 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
 
     for ( int cnt = 0; cnt < _p; ++cnt ) {
       c = _p * node +  cnt;
+      _inject[c].SetLatency(1);
+      _inject_cred[c].SetLatency(1);
       _routers[node]->AddInputChannel( &_inject[c], &_inject_cred[c] );
 #ifdef DEBUG_DRAGONFLYNEW
       cout << "  Adding injection channel " << c << endl;
@@ -264,6 +265,8 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
 
     for ( int cnt = 0; cnt < _p; ++cnt ) {
       c = _p * node +  cnt;
+      _eject[c].SetLatency(1);
+      _eject_cred[c].SetLatency(1);
       _routers[node]->AddOutputChannel( &_eject[c], &_eject_cred[c] );
 #ifdef DEBUG_DRAGONFLYNEW
       cout << "  Adding ejection channel " << c << endl;

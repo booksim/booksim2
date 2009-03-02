@@ -34,23 +34,42 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fstream>
 #include "ptrafficmanager.hpp"
 #include "random_utils.hpp" 
+#include <time.h>
+#include <sys/time.h>
 
 //batched time-mode, know what you are doing
 extern bool timed_mode;
 
-int _lol = 0;
+double total_time; /* Amount of time we've run */
+struct timeval start_time, end_time; /* Time before/after user code */
+
+pthread_cond_t  thread_restart;
+pthread_mutex_t *thread_restart_lock;
+pthread_cond_t master_restart;
+pthread_mutex_t master_lock;
+bool thread_stop = false;
 
 PTrafficManager::PTrafficManager( const Configuration &config, Network **net )
   : TrafficManager ( config, net) 
 {
-  pthread_barrier_init(&thread_bar, 0, (unsigned int)THREADS);
+  thread_restart_lock = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t)*_threads);
+  for(int i = 0; i<_threads; i++){
+    pthread_mutex_init(&thread_restart_lock[i], 0);
+  }
+  pthread_cond_init(&master_restart,0);
+  pthread_mutex_init(&master_lock,0);
+  pthread_cond_init(&thread_restart,0);
+  pthread_barrier_init(&thread_bar, 0, (unsigned int)_threads);
   
-  thread_fid = (int *)malloc(THREADS*sizeof(int));
-  thread_hop_stats = (Stats**)malloc(THREADS*sizeof(Stats*));
-  thread_latency_stats = (Stats***)malloc(THREADS*sizeof(Stats**));
-  thread_partial_internal_cycles = (float**)malloc(THREADS*sizeof(float*));
 
-  for(int i = 0; i<THREADS; i++){
+  thread_fid = (int *)malloc(_threads*sizeof(int));
+  thread_hop_stats = (Stats**)malloc(_threads*sizeof(Stats*));
+  thread_latency_stats = (Stats***)malloc(_threads*sizeof(Stats**));
+  thread_partial_internal_cycles = (float**)malloc(_threads*sizeof(float*));
+
+  thread_time = (int*)malloc(_threads*sizeof(int));
+  for(int i = 0; i<_threads; i++){
+    thread_time[i] = 0;
     thread_partial_internal_cycles[i] = new float[duplicate_networks];
     for(int j = 0; j<duplicate_networks; j++){
       thread_partial_internal_cycles[i][j] = 0.0; 
@@ -67,7 +86,7 @@ PTrafficManager::PTrafficManager( const Configuration &config, Network **net )
   net[0]->GetNodes(&node_list, &node_count);
   
   map<int,bool> lol;
-  for(int i = 0; i<THREADS; i++){
+  for(int i = 0; i<_threads; i++){
     for(int j = 0; j<node_count[i]; j++){
       if(lol[node_list[i][j]]){
 	cout<<"Node assignment to the ptraffic managers are wrong, dup found\n";
@@ -76,15 +95,17 @@ PTrafficManager::PTrafficManager( const Configuration &config, Network **net )
       lol[node_list[i][j]] = true;
     }
   }
+  cout<<"Assigned "<<lol.size()<<" routers to threads"<<endl;
+  total_time = 0.0;
 }
 
 PTrafficManager::~PTrafficManager( )
 {
   cout<<"LOL "<<thread_fid[0]<<" "<<thread_fid[1]<<endl;
-  cout<<"node0 "<<_lol<<endl;
+  cout<<"bar time "<<total_time<<endl;
   pthread_barrier_destroy(&thread_bar);
   delete thread_fid;
-  for(int i = 0; i<THREADS; i++){
+  for(int i = 0; i<_threads; i++){
     delete thread_hop_stats[i];
   }
   delete[] thread_hop_stats;
@@ -103,7 +124,7 @@ Flit *PTrafficManager::_NewFlitP( int t)
   //  f->watch = true;
   //  _in_flight[f->id] = true;
   //no automatic flit watching
-  thread_fid[t]+=THREADS;
+  thread_fid[t]+=_threads;
   return f;
 }
 
@@ -127,7 +148,7 @@ void PTrafficManager::_RetireFlitP( Flit *f, int dest, int tid)
   
   if ( f->watch ) { 
     cout << "Ejecting flit " << f->id 
-	 << ",  lat = " << _time - f->time
+	 << ",  lat = " << thread_time[tid] - f->time
 	 << ", src = " << f->src 
 	 << ", dest = " << f->dest << endl;
   }
@@ -149,7 +170,7 @@ void PTrafficManager::_RetireFlitP( Flit *f, int dest, int tid)
     if (f->type == Flit::READ_REQUEST) {
       Packet_Reply* temp = new Packet_Reply;
       temp->source = f->src;
-      temp->time = _time;
+      temp->time = thread_time[tid];
       temp->type = f->type;
       _repliesDetails[f->id] = temp;
       _repliesPending[dest].push_back(f->id);
@@ -158,7 +179,7 @@ void PTrafficManager::_RetireFlitP( Flit *f, int dest, int tid)
     } else if (f->type == Flit::WRITE_REQUEST) {
       Packet_Reply* temp = new Packet_Reply;
       temp->source = f->src;
-      temp->time = _time;
+      temp->time = thread_time[tid];
       temp->type = f->type;
       _repliesDetails[f->id] = temp;
       _repliesPending[dest].push_back(f->id);
@@ -186,11 +207,11 @@ void PTrafficManager::_RetireFlitP( Flit *f, int dest, int tid)
 
       switch( _pri_type ) {
       case class_based:
-	thread_latency_stats[tid][f->pri]->AddSample( _time - f->time );
+	thread_latency_stats[tid][f->pri]->AddSample( thread_time[tid] - f->time );
 	break;
       case age_based: // fall through
       case none:
-	thread_latency_stats[tid][0]->AddSample( _time - f->time);
+	thread_latency_stats[tid][0]->AddSample( thread_time[tid] - f->time);
 	break;
       }
    
@@ -361,17 +382,13 @@ void PTrafficManager::_NormalInjectP(int tid){
 	generated = false;
 	  
 	if ( !_empty_network ) {
-	  while( !generated && ( _qtime[input][c] <= _time ) ) {
+	  while( !generated && ( _qtime[input][c] <= thread_time[tid] ) ) {
 	    psize = _IssuePacket( input, c );
 
 	    if ( psize ) { //generate a packet
-	      if(tid == 0 && input == 0){
-		_lol ++;
-		
-	      }
 	      _GeneratePacketP( input, psize, c, 
 			       _include_queuing==1 ? 
-			       _qtime[input][c] : _time, tid );
+			       _qtime[input][c] : thread_time[tid], tid );
 	      generated = true;
 	    }
 	    //this is not a request packet
@@ -457,14 +474,13 @@ void PTrafficManager::_StepP( int tid)
 
   Flit   *f;
   Credit *cred;
-  
+
   if(_sim_mode == batch){
     assert(false);
     _BatchInject();
   } else {
     _NormalInjectP(tid);
   }
-
   //advance networks
   for (int i = 0; i < duplicate_networks; ++i) {
     _net[i]->ReadInputs(tid);
@@ -474,14 +490,28 @@ void PTrafficManager::_StepP( int tid)
       thread_partial_internal_cycles[tid][i] -= 1.0;
     }
   }
-  
   for (int a = 0; a < duplicate_networks; ++a) {
     _net[a]->WriteOutputs(tid);
   }
   
-  pthread_barrier_wait(&thread_bar);
+ 
+
+
+  if(thread_time[tid]%1 == 0){    
+    pthread_barrier_wait(&thread_bar);
+
+  }
+
+  thread_time[tid]++;
+
   if(tid == 0){
+    //    cout<<_time<<endl;
     ++_time;
+    if(_time%_sample_period == 0){
+      pthread_mutex_lock(&master_lock);
+      pthread_cond_signal(&master_restart);
+      pthread_mutex_unlock(&master_lock);
+    }
   }
 
 
@@ -520,15 +550,27 @@ struct Thread_job{
 };
 
 
-void *PTrafficManager::runthread(void *arg){
+void PTrafficManager::runthread(int tid){
   
+  cout<<"I am thread "<<tid<<endl;
+  for (int iter = 0; iter < _sample_period; ++iter ) { _StepP(tid); } 
+  
+}
+
+
+void* PTrafficManager::launchthread(void* arg){
   Thread_job *job = (Thread_job *)arg;
   PTrafficManager *curr = job->pt;
-  
   int tid = job->tid;
-  cout<<"I am thread "<<tid<<endl;
-  for (int iter = 0; iter < curr->_sample_period; ++iter ) { curr->_StepP(tid); } 
-      
+  pthread_mutex_lock(&thread_restart_lock[tid]);
+  
+  while(!thread_stop){
+ 
+    curr->runthread(tid);
+    cout<<"thread "<<tid<<" waiting"<<endl;
+    pthread_cond_wait(&thread_restart, &thread_restart_lock[tid]);
+  }
+  
 }
 
 bool PTrafficManager::_SingleSim( )
@@ -552,6 +594,9 @@ bool PTrafficManager::_SingleSim( )
 
   bool   clear_last;
 
+  for(int i = 0; i<_threads;i++){
+    thread_time[i] = 0;
+  }
   _time = 0;
   //remove any pending request from the previous simulations
   for (int i=0;i<_sources;i++) {
@@ -645,6 +690,18 @@ bool PTrafficManager::_SingleSim( )
   } else { 
     //once warmed up, we require 3 converging runs
     //to end the simulation 
+    pthread_t threads[_threads];
+    
+    Thread_job job[_threads];
+    
+    for(int i = 0; i<_threads; i++){
+      job[i].tid = i;
+      job[i].pt = this;
+      pthread_create(&threads[i], NULL,PTrafficManager::launchthread,(void *)(&job[i]));
+    }
+    
+
+
     while( ( total_phases < _max_samples ) && 
 	   ( ( _sim_state != running ) || 
 	     ( converged < 3 ) ) ) {
@@ -653,23 +710,34 @@ bool PTrafficManager::_SingleSim( )
 	clear_last = false;
 	_ClearStats( );
       }
-      
-      pthread_t threads[THREADS];
-      Thread_job job[THREADS];
-      for(int i = 0; i<THREADS; i++){
-	job[i].tid = i;
-	job[i].pt = this;
-	pthread_create(&threads[i], NULL,PTrafficManager::runthread,(void *)(&job[i]));
+      cout<<"master waiting "<<endl;
+      pthread_cond_wait(&master_restart, &master_lock);
+
+
+      for(int i = 0; i<_threads; i++){
+	pthread_mutex_lock(&thread_restart_lock[i]);
       }
 
+      
       void* status;
-      for(int i = 0; i<THREADS; i++){
-	pthread_join(threads[i], &status);
-	//cout<<"latency "<<thread_latency_stats[i][0]->Average(); 
+      for(int i = 0; i<_threads; i++){
 	for(int j = 0; j<_classes;j++){
 	  _latency_stats[j]->MergeStats(thread_latency_stats[i][j]);     
 	}
 	  _hop_stats->MergeStats(thread_hop_stats[i]);
+      }
+
+      if(!(( total_phases+1 < _max_samples ) && 
+	   ( ( _sim_state != running ) || 
+	     ( converged+1 < 3 ) ))){
+	thread_stop = true;
+	cout<<"oh fuck\n";
+      }
+
+
+      pthread_cond_broadcast(&thread_restart);
+      for(int i = 0; i<_threads; i++){
+	pthread_mutex_unlock(&thread_restart_lock[i]);
       }
 
       cout <<_sim_state<< "%=================================" << endl;
@@ -681,11 +749,11 @@ bool PTrafficManager::_SingleSim( )
       cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
       cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
       _latency_stats[0]->Display();
-      cout << "thru(" << total_phases + 1 << ",:) = [ ";
-      for ( int d = 0; d < _dests; ++d ) {
-	cout << _accepted_packets[d]->Average( ) << " ";
-      }
-      cout << "];" << endl;
+//       cout << "thru(" << total_phases + 1 << ",:) = [ ";
+//       for ( int d = 0; d < _dests; ++d ) {
+// 	cout << _accepted_packets[d]->Average( ) << " ";
+//       }
+//       cout << "];" << endl;
 
       // Fail safe for latency mode, throughput will ust continue
       if ( ( _sim_mode == latency ) && ( cur_latency >_latency_thres ) ) {
@@ -740,7 +808,12 @@ bool PTrafficManager::_SingleSim( )
       prev_latency  = cur_latency;
       prev_accepted = cur_accepted;
       ++total_phases;
+
+
     }
+
+
+
   
     if ( _sim_state == running ) {
       ++converged;

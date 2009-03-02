@@ -241,8 +241,9 @@ double Network::Capacity( ) const
 
 //multithreading
 void Network::Divide(int t){
-  
-  if(_routers == 0){
+  int shared_chan = 0;
+  //basic division based on thread id
+  /*if(_routers == 0){
     cout<<"you must configure the network before dividing"<<endl;
     exit(-1);
   }
@@ -253,18 +254,44 @@ void Network::Divide(int t){
   for(int i = 0; i<_channels; i++){
     _chan[i].SetShared();
     _chan_cred[i].SetShared();
+    shared_chan ++;
+    }*/
+    
+  if(_routers == 0){
+    cout<<"you must configure the network before dividing"<<endl;
+    exit(-1);
   }
+  for(int tt = 0; tt<_threads; tt++){
+    int startr = (int)(_size/_threads)*tt;
+    int endr = startr+(int)(_size/_threads);
+    if (tt+1 == _threads){
+      endr = _size;
+    }
+    for(int i = startr; i<endr; i++){
+      _routers[i]->SetTID(tt);
+    }
+  }
+ 
+  for(int i = 0; i<_channels; i++){
+    if(_routers[_chan[i].GetSink()]->GetTID()!= _routers[_chan[i].GetSource()]->GetTID()){
+      _chan[i].SetShared();
+      _chan_cred[i].SetShared();
+      shared_chan ++;
+    }
+    }
+
+  cout<<"Number of shared channels: "<<shared_chan<<endl;
 }
 
 void Network::GetNodes(int *** nodelist, int** nodecount){
 
-  (*nodecount) = (int*)calloc(THREADS,sizeof(int));
-  (*nodelist) = (int**)malloc(THREADS*sizeof(int*));
+  (*nodecount) = (int*)calloc(_threads,sizeof(int));
+  (*nodelist) = (int**)malloc(_threads*sizeof(int*));
   for(int i = 0; i<_sources; i++){
     (*nodecount)[_routers[_inject[i].GetSink()]->GetTID()]++;
     
   }
-  for(int i = 0; i<THREADS; i++){
+  for(int i = 0; i<_threads; i++){
     (*nodelist)[i] = (int*)malloc((*nodecount)[i]*sizeof(int));
     int j = 0;
     for(int k = 0; k<_sources; k++){

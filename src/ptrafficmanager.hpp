@@ -60,7 +60,7 @@ protected:
   int **router_list;
   int **node_list;
   
-
+  int *thread_time;
 
   // ============ Internal methods ============ 
 protected:
@@ -73,7 +73,8 @@ protected:
 
   void _GeneratePacketP( int source, int size, int cl, int time, int t);
 
-  static void  *runthread(void *threadid);
+  void  runthread(int tid);
+  static void *launchthread(void *tid);
   virtual bool _SingleSim( );
 
 

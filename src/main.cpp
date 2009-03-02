@@ -134,6 +134,7 @@ string watch_file;
 //latency type, noc or conventional network
 bool _use_noc_latency;
 
+int _threads =1;
 /////////////////////////////////////////////////////////////////////////////
 
 
@@ -202,7 +203,7 @@ bool AllocatorSim( const Configuration& config )
     }
 
 
-    net[i]->Divide(THREADS);
+    net[i]->Divide(_threads);
   }
 
   
@@ -268,6 +269,8 @@ int main( int argc, char **argv )
     cout << c ;
   }
   cout << "END Configuration File" << endl;
+
+  _threads = config.GetInt("threads");
 
   /*initialize routing, traffic, injection functions
    */

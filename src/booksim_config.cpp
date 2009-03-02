@@ -235,6 +235,9 @@ BookSimConfig::BookSimConfig( )
 
   //==================Network file===========================
   AddStrField("network_file","");
+
+
+  _int_map["threads"] = 1;
 }
 
 PowerConfig::PowerConfig( )

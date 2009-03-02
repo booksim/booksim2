@@ -77,7 +77,6 @@ FlatFlyOnChip::FlatFlyOnChip( const Configuration &config ) :
   _ComputeSize( config );
   _Alloc( );
   _BuildNet( config );
-  Divide(THREADS);
 }
 
 void FlatFlyOnChip::_ComputeSize( const Configuration &config )
