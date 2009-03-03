@@ -301,7 +301,8 @@ void dor_MECS( const Router *r, const Flit *f, int in_channel,
   int dest_y_location = (int)(dest_router/gK);
 
 
-
+ int intm = 0;
+  int intm_router = 0;
 
   //at destination
   if(rID == dest_router){
@@ -327,8 +328,8 @@ void dor_MECS( const Router *r, const Flit *f, int in_channel,
     }
   }
 
-  int intm = mecs_transformation(f->intm);
-  int intm_router = (int)(intm/gK);
+  intm = mecs_transformation(f->intm);
+  intm_router = (int)(intm/gK);
   if(f->ph == 0){
     //switch over to Y dmension
     if(rID == intm_router){

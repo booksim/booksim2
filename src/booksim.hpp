@@ -32,7 +32,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _BOOKSIM_HPP_
 
 #include <string>
-
+#include <cstdlib>
+#include <cstring>
+#include <limits.h>
+#include <assert.h>
 #ifdef _WIN32_
 #pragma warning (disable: 4786)
 #include <ostream>
