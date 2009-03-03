@@ -43,7 +43,7 @@ extern bool timed_mode;
 double total_time; /* Amount of time we've run */
 struct timeval start_time, end_time; /* Time before/after user code */
 
-pthread_cond_t  thread_restart;
+pthread_cond_t  *thread_restart;
 pthread_mutex_t *thread_restart_lock;
 pthread_cond_t master_restart;
 pthread_mutex_t master_lock;
@@ -53,12 +53,14 @@ PTrafficManager::PTrafficManager( const Configuration &config, Network **net )
   : TrafficManager ( config, net) 
 {
   thread_restart_lock = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t)*_threads);
+  thread_restart = (pthread_cond_t*)malloc(sizeof(pthread_cond_t)*_threads);
   for(int i = 0; i<_threads; i++){
     pthread_mutex_init(&thread_restart_lock[i], 0);
+    pthread_cond_init(&thread_restart[i], 0);
   }
   pthread_cond_init(&master_restart,0);
   pthread_mutex_init(&master_lock,0);
-  pthread_cond_init(&thread_restart,0);
+  //pthread_cond_init(&thread_restart,0);
   pthread_barrier_init(&thread_bar, 0, (unsigned int)_threads);
   
 
@@ -497,10 +499,9 @@ void PTrafficManager::_StepP( int tid)
  
 
 
-  if(thread_time[tid]%1 == 0){    
+  //if(thread_time[tid]%1 == 0){    
     pthread_barrier_wait(&thread_bar);
-
-  }
+    //}
 
   thread_time[tid]++;
 
@@ -568,9 +569,10 @@ void* PTrafficManager::launchthread(void* arg){
  
     curr->runthread(tid);
     cout<<"thread "<<tid<<" waiting"<<endl;
-    pthread_cond_wait(&thread_restart, &thread_restart_lock[tid]);
+    pthread_cond_wait(&thread_restart[tid], &thread_restart_lock[tid]);
   }
   
+  pthread_mutex_unlock(&thread_restart_lock[tid]);
 }
 
 bool PTrafficManager::_SingleSim( )
@@ -694,6 +696,7 @@ bool PTrafficManager::_SingleSim( )
     
     Thread_job job[_threads];
     
+    pthread_mutex_lock(&master_lock);
     for(int i = 0; i<_threads; i++){
       job[i].tid = i;
       job[i].pt = this;
@@ -712,7 +715,7 @@ bool PTrafficManager::_SingleSim( )
       }
       cout<<"master waiting "<<endl;
       pthread_cond_wait(&master_restart, &master_lock);
-
+      cout<<"master woken up "<<endl;
 
       for(int i = 0; i<_threads; i++){
 	pthread_mutex_lock(&thread_restart_lock[i]);
@@ -735,8 +738,8 @@ bool PTrafficManager::_SingleSim( )
       }
 
 
-      pthread_cond_broadcast(&thread_restart);
       for(int i = 0; i<_threads; i++){
+	pthread_cond_signal(&thread_restart[i]);
 	pthread_mutex_unlock(&thread_restart_lock[i]);
       }
 
@@ -811,6 +814,7 @@ bool PTrafficManager::_SingleSim( )
 
 
     }
+    pthread_mutex_unlock(&master_lock);
 
 
 

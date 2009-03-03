@@ -37,7 +37,7 @@ public:
 
 template <class T>
 bool AtomicReference<T>::compareAndSet(T expectedReference, T newReference){
-  bool retValue;
+  /*bool retValue;
   pthread_mutex_lock(value_lock);
   if(value==expectedReference){
     value = newReference;
@@ -47,7 +47,8 @@ bool AtomicReference<T>::compareAndSet(T expectedReference, T newReference){
     retValue=false;
   }
   pthread_mutex_unlock(value_lock);
-  return retValue;
+  return retValue; */
+  return __sync_bool_compare_and_swap(&value, expectedReference, newReference);
 }
 
 template <class T>
