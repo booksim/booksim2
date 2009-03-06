@@ -40,12 +40,14 @@ CreditChannel::CreditChannel() {
   _delay = 0;
   shared = false;
   chan_lock = 0;
+  _queue = new normqueue<Credit*>();
 }
 CreditChannel::~CreditChannel(){
   if(shared){
     pthread_mutex_destroy(chan_lock);
     free(chan_lock);
   }
+  delete(_queue);
 }
 
 
@@ -57,7 +59,9 @@ void CreditChannel::SetShared(){
     pthread_mutex_init(chan_lock,0);
     wait_valid = (pthread_cond_t*)malloc(sizeof(pthread_cond_t));
     pthread_cond_init(wait_valid,0);
-    _queue.initialize();
+    delete(_queue);
+    _queue = new lfqueue<Credit*>();
+    //_queue.initialize();
     valid = 0;
   }
 }
@@ -65,19 +69,19 @@ void CreditChannel::SetShared(){
 void CreditChannel::SetLatency( int cycles ) {
 
   _delay = cycles ;
-  while ( !_queue.empty() )
-    _queue.pop( );
+  while ( !_queue->empty() )
+    _queue->pop( );
   for (int i = 1; i < _delay; i++)
-    _queue.push(0);
+    _queue->push(0);
 }
 
 
 void CreditChannel::SendCredit( Credit* credit ) {
 
-  while ( (_queue.size() > (unsigned int)_delay) && (_queue.front() == 0) )
-    _queue.pop( );
+  while ( (_queue->size() > (unsigned int)_delay) && (_queue->front() == 0) )
+    _queue->pop( );
 
-  _queue.push(credit);
+  _queue->push(credit);
   if(shared){
     pthread_mutex_lock(chan_lock);
     valid++;
@@ -94,18 +98,18 @@ Credit* CreditChannel::ReceiveCredit() {
     valid--;
     pthread_mutex_unlock(chan_lock);
   }
-  if ( _queue.empty( ) )
+  if ( _queue->empty( ) )
     return 0;
 
-  Credit* c = _queue.front();
-  _queue.pop();
+  Credit* c = _queue->front();
+  _queue->pop();
   return c;
 }
 
 Credit* CreditChannel::PeekCredit( ) 
 {
-  if ( _queue.empty() )
+  if ( _queue->empty() )
     return 0;
 
-  return _queue.front( );
+  return _queue->front( );
 }

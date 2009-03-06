@@ -53,6 +53,7 @@ FlitChannel::FlitChannel() {
   _delay = 1; 
   shared = false;
   chan_lock = 0;
+  _queue = new normqueue<Flit*>();
 }
 
 FlitChannel::~FlitChannel() {
@@ -80,6 +81,7 @@ FlitChannel::~FlitChannel() {
     pthread_mutex_destroy(chan_lock);
     free(chan_lock);
   }
+  delete(_queue);
 }
 
 void FlitChannel::SetSource( Router* router ) {
@@ -106,7 +108,9 @@ void FlitChannel::SetShared(){
     pthread_mutex_init(chan_lock,0);
     wait_valid = (pthread_cond_t*)malloc(sizeof(pthread_cond_t));
     pthread_cond_init(wait_valid,0);
-    _queue.initialize();
+    delete(_queue);
+    _queue = new lfqueue<Flit*>();
+    //_queue.initialize();
     valid = 0;
   }
 }
@@ -114,16 +118,16 @@ void FlitChannel::SetShared(){
 void FlitChannel::SetLatency( int cycles ) {
 
   _delay = cycles; 
-  while ( !_queue.empty() )
-    _queue.pop();  
+  while ( !_queue->empty() )
+    _queue->pop();  
   for (int i = 1; i < _delay ; i++)
-    _queue.push(0);
+    _queue->push(0);
 }
 
 bool FlitChannel::InUse() {
-  if ( _queue.empty() )
+  if ( _queue->empty() )
     return false;
-  return ( _queue.back() != 0 );
+  return ( _queue->back() != 0 );
 }
 
 void FlitChannel::SendFlit( Flit* flit ) {
@@ -133,10 +137,10 @@ void FlitChannel::SendFlit( Flit* flit ) {
   else 
     ++_idle;
 
-  while ( (_queue.size() > (unsigned int)_delay) && (_queue.front() == 0) )
-    _queue.pop( );
+  while ( (_queue->size() > (unsigned int)_delay) && (_queue->front() == 0) )
+    _queue->pop( );
 
-  _queue.push(flit);
+  _queue->push(flit);
   if(shared){
     pthread_mutex_lock(chan_lock);
     valid++;
@@ -153,18 +157,18 @@ Flit* FlitChannel::ReceiveFlit() {
     valid--;
     pthread_mutex_unlock(chan_lock);
   }
-  if ( _queue.empty() )
+  if ( _queue->empty() )
     return 0;
 
-  Flit* f = _queue.front();
-  _queue.pop();
+  Flit* f = _queue->front();
+  _queue->pop();
   return f;
 }
 
 Flit* FlitChannel::PeekFlit( )
 {
-  if ( _queue.empty() )
+  if ( _queue->empty() )
     return 0;
 
-  return _queue.front();
+  return _queue->front();
 }

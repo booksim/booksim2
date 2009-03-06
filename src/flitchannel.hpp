@@ -50,6 +50,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "globals.hpp"
   //#include <queue>
 #include "lfqueue.hpp"
+#include "normqueue.hpp"
 #include <pthread.h>
 using namespace std;
 class Router ;
@@ -95,7 +96,7 @@ private:
 
  
   int          _delay;
-  lfqueue<Flit*> _queue;
+  simqueue<Flit*> *_queue;
   
   ////////////////////////////////////////
   //

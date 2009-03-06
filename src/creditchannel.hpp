@@ -44,6 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "credit.hpp"
   //#include <queue>
 #include "lfqueue.hpp"
+#include "normqueue.hpp"
 #include <pthread.h>
 using namespace std;
 
@@ -69,7 +70,7 @@ public:
 
 private:
   int            _delay;
-  lfqueue<Credit*> _queue;
+  simqueue<Credit*> *_queue;
 
   //multithreading
   bool shared;

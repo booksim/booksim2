@@ -5,13 +5,14 @@
 #define lfqueue lfqueue
 #endif
 
+#include "simqueue.hpp"
 #include "LFNode.hpp"
 #include <iostream>
 
 using namespace std;
 
 template <class T>
-class lfqueue {
+class lfqueue : public simqueue<T> {
 public:
   typedef T value_type;
   typedef int size_type;
