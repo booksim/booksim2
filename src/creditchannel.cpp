@@ -55,7 +55,10 @@ void CreditChannel::SetShared(){
     shared = true;
     chan_lock = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
     pthread_mutex_init(chan_lock,0);
+    wait_valid = (pthread_cond_t*)malloc(sizeof(pthread_cond_t));
+    pthread_cond_init(wait_valid,0);
     _queue.initialize();
+    valid = 0;
   }
 }
 
@@ -75,11 +78,22 @@ void CreditChannel::SendCredit( Credit* credit ) {
     _queue.pop( );
 
   _queue.push(credit);
-
+  if(shared){
+    pthread_mutex_lock(chan_lock);
+    valid++;
+    pthread_cond_signal(wait_valid);
+    pthread_mutex_unlock(chan_lock);
+  }
 }
 
 Credit* CreditChannel::ReceiveCredit() {
-
+  if(shared){
+    pthread_mutex_lock(chan_lock);
+    if(!valid)
+      pthread_cond_wait(wait_valid,chan_lock);
+    valid--;
+    pthread_mutex_unlock(chan_lock);
+  }
   if ( _queue.empty( ) )
     return 0;
 

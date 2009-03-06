@@ -73,8 +73,10 @@ private:
 
   //multithreading
   bool shared;
+  int valid;
   pthread_mutex_t* chan_lock;
-  
+  pthread_cond_t* wait_valid;
+
   ////////////////////////////////////////
   //
   // Power Models

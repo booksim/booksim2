@@ -79,7 +79,6 @@ FlitChannel::~FlitChannel() {
   if(shared){
     pthread_mutex_destroy(chan_lock);
     free(chan_lock);
-    _queue.initialize();
   }
 }
 
@@ -105,6 +104,10 @@ void FlitChannel::SetShared(){
     shared = true;
     chan_lock = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
     pthread_mutex_init(chan_lock,0);
+    wait_valid = (pthread_cond_t*)malloc(sizeof(pthread_cond_t));
+    pthread_cond_init(wait_valid,0);
+    _queue.initialize();
+    valid = 0;
   }
 }
 
@@ -134,9 +137,22 @@ void FlitChannel::SendFlit( Flit* flit ) {
     _queue.pop( );
 
   _queue.push(flit);
+  if(shared){
+    pthread_mutex_lock(chan_lock);
+    valid++;
+    pthread_cond_signal(wait_valid);
+    pthread_mutex_unlock(chan_lock);
+  }
 }
 
 Flit* FlitChannel::ReceiveFlit() {
+  if(shared){
+    pthread_mutex_lock(chan_lock);
+    if(!valid)
+      pthread_cond_wait(wait_valid,chan_lock);
+    valid--;
+    pthread_mutex_unlock(chan_lock);
+  }
   if ( _queue.empty() )
     return 0;
 
