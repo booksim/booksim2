@@ -500,7 +500,7 @@ void PTrafficManager::_StepP( int tid)
 
 
   //if(thread_time[tid]%1 == 0){    
-    pthread_barrier_wait(&thread_bar);
+  // pthread_barrier_wait(&thread_bar);
     //}
 
   thread_time[tid]++;
