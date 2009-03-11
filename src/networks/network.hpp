@@ -100,7 +100,7 @@ public:
   virtual void ReadInputs(int t);
   virtual void InternalStep( int t);
   virtual void WriteOutputs( int t);
-
+  virtual void DOALL(int t);
   void Display( ) const;
 
   int NumChannels(){return _channels;}

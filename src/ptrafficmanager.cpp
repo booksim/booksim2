@@ -485,16 +485,18 @@ void PTrafficManager::_StepP( int tid)
   }
   //advance networks
   for (int i = 0; i < duplicate_networks; ++i) {
-    _net[i]->ReadInputs(tid);
-    thread_partial_internal_cycles[tid][i] += _internal_speedup;
-    while( thread_partial_internal_cycles[tid][i] >= 1.0 ) {
-      _net[i]->InternalStep(tid);
-      thread_partial_internal_cycles[tid][i] -= 1.0;
-    }
+    _net[i]->DOALL(tid);
   }
-  for (int a = 0; a < duplicate_networks; ++a) {
-    _net[a]->WriteOutputs(tid);
-  }
+//     _net[i]->ReadInputs(tid);
+//     thread_partial_internal_cycles[tid][i] += _internal_speedup;
+//     while( thread_partial_internal_cycles[tid][i] >= 1.0 ) {
+//       _net[i]->InternalStep(tid);
+//       thread_partial_internal_cycles[tid][i] -= 1.0;
+//     }
+//   }
+//   for (int a = 0; a < duplicate_networks; ++a) {
+//     _net[a]->WriteOutputs(tid);
+//   }
   
  
 

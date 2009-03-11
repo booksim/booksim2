@@ -137,6 +137,16 @@ void Network::ReadInputs(int tid){
   }
 }
 
+void Network::DOALL(int tid){
+  for ( int r = 0; r < _size; ++r ) {
+    if(_routers[r]->GetTID() == tid){
+      _routers[r]->ReadInputs( );
+      _routers[r]->InternalStep( );
+      _routers[r]->WriteOutputs( );
+    }
+  }
+}
+
 
 void Network::InternalStep( )
 {
@@ -175,12 +185,12 @@ void Network::WriteOutputs(int tid )
       _routers[r]->WriteOutputs( );
   }
 
-  for ( int c = 0; c < _channels; ++c ) {
-    if ( _chan[c].InUse() ) {
-      _chan_use[c]++;
-    }
-  }
-  _chan_use_cycles++;
+//   for ( int c = 0; c < _channels; ++c ) {
+//     if ( _chan[c].InUse() ) {
+//       _chan_use[c]++;
+//     }
+//   }
+//   _chan_use_cycles++;
 }
 
 void Network::WriteFlit( Flit *f, int source )

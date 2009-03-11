@@ -289,6 +289,9 @@ int main( int argc, char **argv )
 
   /*configure and run the simulator
    */
-  bool result = AllocatorSim( config );
+  bool result;
+  //  for(int i = 0; i<2; i++){
+    result = AllocatorSim( config );
+    //}
   return result ? -1 : 0;
 }
