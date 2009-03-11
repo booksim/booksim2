@@ -239,10 +239,11 @@ void Power_Module::calcBuffer(BufferMonitor *bm){
   double depth = numVC * depthVC  ;
   double Pleak = powerMemoryBitLeak( depth ) * channel_width ;
   //area
-  inputArea += areaInputModule( depth );
+
   int * reads = bm->GetReads();
   int * writes = bm->GetWrites();
   for(int i = 0; i<bm->NumInputs(); i++){
+    inputArea += areaInputModule( depth );
     inputLeakagePower += Pleak ;
     for(int j = 0; j< Flit::NUM_FLIT_TYPES; j++){
       double ar = ((double)reads[i* Flit::NUM_FLIT_TYPES+j])/totalTime;

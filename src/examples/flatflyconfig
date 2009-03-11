@@ -95,10 +95,10 @@ limit = 0;
 // Routing
 //
 
-routing_function = ugal;
+routing_function = ran_min;
 
 //1: batch mode, 0: injection mode
-use_read_write = 1;
+use_read_write = 0;
 
 //for injection mode
 const_flits_per_packet = 1;

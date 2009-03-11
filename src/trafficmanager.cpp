@@ -1314,6 +1314,6 @@ void TrafficManager::_LoadWatchList(){
     }
 
   } else {
-    cout<<"Unable to open flit watch file, continuing with simulation\n";
+    //cout<<"Unable to open flit watch file, continuing with simulation\n";
   }
 }
