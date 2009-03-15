@@ -258,14 +258,133 @@ code.  Not surprisingly this operation allowed the system to take
 advantage of the cache hierarchy and provide additional perfromance gain.
 
 \section{Results \label{results}}
+Having completed a parallel implementation of our network simulator, our
+next step was to analyze the performance of the simulator to determine how
+much speedup it achieved.  We began first by analzying the performance of
+the different synchronization mechanisms to ensure that they held with our
+hypotheses about which permitted the most concurrency.  We then analyzed
+our results on a series of architectures to determine the scalability of
+the simulator as well as any potential bottlenecks.
+
+\subsection{Analyzing Synchronization Mechanisms}
+The first step in analyzing our parallelized network simulator was to
+determine the performance of the different synchronization mechanisms that
+we had employed at different points in development.  Figure \ref{synch}
+shows the performance of the various synchronization mechansims on a
+single node of the Hotbox cluster that consists of two Intel Xeon Quad
+cores.  We only ran experiments up to 8 threads as this is the maximum
+number of hardware thread contexts available without encountering the
+overhead of using ethernet to communicate between nodes.\\
+\begin{center}
+\includegraphics[width=2in,height=2in]{synch.eps} \\
+\small{Figure 1: This figure shows the performance of the different
+synchronization mechanisms on up to eight threads.}
+\end{center}
+From these results we can see that our hypotheses were confirmed regarding
+the performance of the various synchronization mechanisms.  Barriering
+every cycle added significant overhead to performance and ultimately
+prevented even 8 threads from extracting much parallelism at all.
+Surprisingly the same result was discovered when the barrier was removed and
+all the queues were replaced with lock-free queues.  However, once we were
+able to only implement the shared channels with lock-free queues lock-free
+queues, we could see a noticeable performance gain and even some
+additional scalability.  Finally, once we fused several of the loops being
+executed within the program, we were able to improve some of the temporal
+locality of data use and thereby achieve a little additional
+performance.\\
+~\\
+Despite our efforts however, we were only able to extract a two fold
+speedup using eight threads, far below a linear speedup.  This was very
+perplexing to us as we had consciously attempted to break up the work into
+parallel computations that required very little inter-thread
+communication.  In order to determine exactly what was causing us to lose
+performance we then proceeded to run several experiments to find the
+bottlenecks in the program.
+
+\subsection{Determining Scalability Bottlenecks}
+Having observed the somewhat poor performance of our application we then
+set about attempting to determine the reason for such poor performance.
+Our initial hypothesis was that application was memory bound based on the
+fact that there is a significant amount of data being processed in our
+simulator.  In addition to this, the fact that Pthreads is a shared memory
+programming model implies that if the working set cannot fit inside the L2
+cache, then there will be a significant amount of data being moved both to
+and from main memory.\\
+~\\
+To test our hypothesis that the simulator was memory bound, we ran the
+simulator again on the Hotbox cluster, but this time ran each thread on a
+different node.  This allowed each thread to have access to the entire
+memory bandwithd of its node, and in effect, thereby increase the total
+amount of memory bandwidth available to the entire application.  The
+results of this experiment can be seen in Figure \ref{smp}.\\
+\begin{center}
+\includegraphics[height=2in,width=2in]{smp.eps} \\
+\small{Figure 2: This figure shows the performance of the simulator on
+up to 16 threads on a simulated SMP machine.  The speedup is relative to
+the sequential simulator.}
+\end{center}
+From the result of this experiment we were able to see that bandwidth was
+not the primary issue.  This is due to the fact that the performance of
+the simulator remained poor and was even worse than the CMP version up to
+16 threads.  In addition to revealing that the poor performance was not
+due to memory bandwidth, it also revealed that communication was playing a
+large role in the performance as the increased cost of communicating via
+ethernet between nodes caused performance to be even worse than the CMP
+configuration.\\
+~\\
+After realizing that our program was not memory bound, we wanted to see if
+the size of the problem had any effect on the speedup.  We tested this by
+plotting the speedup of a four threaded run on a given network size over the
+sequential time for simulating the same size network on the Hotbox
+cluster.  The results can be seen in Figure \ref{probsize}.
+\begin{center}
+\includegraphics[height=2in,width=2in]{probsize.eps}
+\small{Figure 3: This figure shows the speedup versus network size of a
+four threaded run of the parallel simulator on the Hotbox cluster.}
+\end{center}
+From this figure we could see that essentially the speedup was independent
+of problem size.  This meant that regardless of the size of the network
+simulated, the four-threaded version ultimately was constrained by the
+same relative to the sequential version.  The fact that the speedup
+attained was significantly less than a linear speedup of 4 indicated that
+the threads were not compute bound.  Instead we hypothesized that false
+sharing was causing the four threads to thrash each others' caches.\\
+~\\
+To confirm our diagnosis of false sharing, we decided to run the simulator
+on the both the Niagara T2 and T2+ machines.  Since these machines were
+better designed to deal with long latency loads and stores, our hope was
+that they would be able to mitigate the effects of false sharing to some
+extend.  The results from this experiment can be seen in figure
+\ref{niagara}.
+\begin{center}
+\includegraphics[height=2in,width=2in]{niagara.eps}
+\small{Figure 4: This figure shows the speedup of the parallel simulator
+up to 64 threads on the Niagara T2 and T2+ machines.}
+\end{center}
+We noticed that in this experiment, both the T2 and T2+ were able to
+achieve some speedup to a certain number of threads, but then performance
+began to fall off.  We determined that once the threads' working set sizes
+began to interfere with each other in the shared L2 cache is when the
+performance begins to degrade and couldn't offer us much insight into the
+false any potential false sharing that was occurring when run on other
+hardware platforms.
 
 \section{Discussion \label{disc}}
 
 \section{Conclusion \label{conc}}
-
+We have developed a parallelized version of a interconnect network
+simulator that is capable of achieving some speedup on both CMP and SMP
+machines.  We outlined the basics of the simulator and the various
+techniques that we used in order to extract concurrency from the
+simulator.  We then demonstrated the performance of our parallel simulator
+on several different hardware platforms.  Investigtions showed that the
+simulator is prone to sufferring from false sharing and extremem
+communication overheads.  Despite these bottlenecks we were able to
+achieve up to a 3X performance which can significantly lower the
+simulation time required for running future experiments.
 
 \begin{thebibliography}{99}
-\bibitem{LF} Herlihy and Shavit {\em The Art of Multiprocessor Programming.} 2008.
+\bibitem{LF} Herlihy, Maurice and Shavit, Nir {\em The Art of Multiprocessor Programming.} 2008.
 
 
 \end{thebibliography}
