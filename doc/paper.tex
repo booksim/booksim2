@@ -1,8 +1,8 @@
-\documentclass{article}
+\documentclass[twocolumn]{article}
 \usepackage{amsmath}
 \usepackage{epsfig}
 \usepackage[all]{xy}
-\usepackage{multicol}
+%\usepackage{multicol}
 \usepackage{indentfirst}
 \usepackage{algorithm}
 \usepackage{algorithmic}
@@ -21,8 +21,8 @@
 % Date and year
 % Name
 % spellcheck using ``aspell -c filename'' in Unix
-\begin{center}
-\LARGE{\bf Parallelizing a Network Simulator}
+%\begin{center}
+%\LARGE{\bf Parallelizing a Network Simulator}
 %% PUT IN YOUR SECTION, DAY, AND TIME
 %%example:
 %% Section 7 - Thursday 8:30 AM\\
@@ -31,15 +31,23 @@
 %%example:
 %% September 10, 2004
 %% PUT IN YOUR NAME
-\begin{center}
-\Large{
+%\begin{center}
+%\Large{
+%Michael Bauer \hspace{1in} Nan Jiang
+%}
+%\end{center}
+%\Large{Department of Computer Science \\ Stanford University \\ \{mebauer, njiang37 %\}@stanford.edu}
+%\end{center}
+
+\title{\LARGE{\bf Parallelizing a Network Simulator}}
+\author{
 Michael Bauer \hspace{1in} Nan Jiang
 }
-\end{center}
-\Large{Department of Computer Science \\ Stanford University \\ \{mebauer, njiang37 \}@stanford.edu}
-\end{center}
+\date{\Large{Department of Computer Science \\ Stanford University \\ \{mebauer, njiang37 \}@stanford.edu}}
+\maketitle
 
-\begin{multicols}{2}
+
+%\begin{multicols}{2}
 \begin{center}
 \Large{\bf Abstract}
 \end{center}
@@ -386,6 +394,6 @@ simulation time required for running future experiments.
 
 \bibliographystyle{IEEEtran}
 \bibliography{paper}
-\end{multicols}
+%\end{multicols}
 
 \end{document}
