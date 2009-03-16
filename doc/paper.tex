@@ -62,12 +62,12 @@ determine the best network designs and configurations.  The process by which thi
 is done however is often computationally intensive and requires
 significant run time.  The fact that most simulators are single threaded
 only adds to the computational bottleneck and renders them unable to take
-advantage of new multicore processors.  This paper demonstrates how
+advantage of the new multicore processors.  This paper demonstrates how
 an interconnect network simulator can be parallelized into a multithreaded
 implementation.  The additional
 performance gain from this parallel simulator ultimately can lead to decreased
 development time and better designs as architects can sweep additional
-parameter spaces and consider more exotic configurations.}
+parameter spaces and consider a wider range of network configurations.}
 %}
 \section{Introduction}
 After hitting the frequency and power walls, chip manufacturers have begun
@@ -82,11 +82,11 @@ several parallelization techniques in the process of parallelizing a
 network simulator.\\
 ~\\
 In addition to the need for parallel programs, another major ramification of the multicore revolution has been the
-increased importance of interconnect network design.  As the number of
+increased importance of interconnection network design.  As the number of
 cores being placed on a chip increases, the processor interconnect plays a bigger and
 bigger role in minimizing the latency of communication between processors
 and providing enough bandwidth to allow for the movement of large chunks
-of data. The traditional bus architecture is no longer the appropriate medium of communication for large number of cores. Even more recently, single crossbar communication hubs will also not be sufficient in the future since the complexity of a single crossbar grows quadratically with the number of cores. Interconnection network can provide the scalable and efficient communication
+of data. The traditional bus architecture is no longer the appropriate medium of communication for large number of cores. Even more recently, single crossbar communication hubs will also not be sufficient in the future since the cost of a single crossbar grows quadratically with the number of cores. Interconnection network can provide the scalable and efficient communication
 infrastructures for future multicore processors. \\
 ~\\
 In order to make informed decisions in the process of designing
@@ -215,13 +215,15 @@ the new sentinel, the next item in the list.  In this case the old
 sentinel can then be reclaimed.  Each element in the lock-free queue is
 wrapped in an AtomicReference object.  This object ensures that the any
 items in the queue can only be written to atomically.  A diagram of how
-this works can be seen in Figure \ref{lfqueue}.
+this works can be seen in Figure \ref{lfqueue}.\\
+~\\
 \begin{figure}[h]
 \centering
 \includegraphics[width=3in, height=2.25in]{lfqueue.eps}
 \caption{This figure demonstrates the layout of the objects associated with a lock-free queue of length 2 (the sentinel value does not count to towards the length of the list).  Note that the pointer to the next element in the list, does not point directly to next list node, but instead to the wrapper AtomicReference class.  Also note that the sentinel is not an actual maintained pointer, but will always point to the same AtomicReference as the Head Node.  It is included in this diagram for clarity.}
 \label{lfqueue}
 \end{figure}
+
 We initially implemented this AtomicReference object with a PThread
 lock.  While this provided a finer granularity of access to shared
 objects than previously, we realized that the overhead in the number of
@@ -251,7 +253,7 @@ an additional piece of data to each shared queue: a semaphore.  This
 semaphore would be used in the following way: anytime a write operation
 occurred to the queue, an up operation was performed.  Similarly, anytime
 a pop operation occurred to the queue, a down operation would have to be
-performed first.  We also modified the routers such that for every cycle
+performed first. The value of the semaphore is initialized to latency of the channel. We also modified the routers such that for every cycle
 of simulation, they would perform at least one up operation on every
 channel that they shared with another thread even if they didn't actually
 write any flits to that channel.  Note that a down operation is not able
@@ -264,14 +266,14 @@ simulating different cycles simultaneously.
 
 \subsection{Fusing Loops}
 The last operation that we performed on our code was to fuse the inner loops in figure~\ref{fig:runtime} together.  The initial simulator implementation was written to make it
-easy to understand the code and not for performance.  We moved all these operations into a single
-'for' loop in order to help improve some of the temporal locality of the
+easy to understand the code and not for performance.  We moved all these operations into a single loop in order to help improve some of the temporal locality of the
 code.  Not surprisingly this operation allowed the system to take
 advantage of the cache hierarchy and provided additional performance gain.
 
 \section{Results \label{results}}
-Having completed a parallel implementation of our network simulator, our
-next step was to analyze the performance of the simulator to determine how
+Having completed a parallel implementation of our network simulator, we first tested its functionality. We generated a series of latency-throughput plot for a dragonfly network running with different traffic patterns. The resulting plot was nearly identical to those of the sequential simulator. On average there was about less than 0.1\% difference between the two versions. The slight different was caused by the randomness of packet injection. \\
+~\\
+ Our next step was to analyze the performance of the simulator to determine how
 much speedup it achieved.  We began first by analyzing the performance of
 the different synchronization mechanisms to ensure that they held with our
 hypotheses about which method permitted the most concurrency.  We then analyzed
@@ -324,6 +326,8 @@ programming model implies that if the working set cannot fit inside the L2
 cache, then there will be a significant amount of data being moved both to
 and from main memory.\\
 ~\\
+The first method of our program analysis was by using Intel's Vtune performance analyzer \cite{vtune}. Vtune provides a thread profiler for characterizing multi-threaded programs as well as access to all performance counters in Intel processors. The comparison between the profile of the parallel code and that of the sequential code did not reveal much insights. Majority of the execution time is still within the routing step during each simulation cycle. The lock free queues account for about 10\% of the runtime, proving that synchronization is a performance problem. One performance counter that did stand out is the data bus utilization. The utilization rate for the sequential code is 35\% while the parallel code with 2 threads was at 50\%. After tallying the number of cache lines transferred on the data bus (the BUS\_TRANS\_BURST.ALL\_AGENT counter) and use the formula provided by \cite{account}, we calculated that the parallel program uses approximated 3GB/s memory bandwidth from the front side bus. The maximum possible bandwidth on the system is 6.4GB/s, this was a further indication to us that simulator is perhaps memory bound. 
+~\\
 To test our hypothesis that the simulator was memory bound, we ran the
 simulator again on the Hotbox cluster, but this time ran each thread on a
 different node.  This allowed each thread to have access to the entire
@@ -340,13 +344,13 @@ the sequential simulator.}
 From the result of this experiment we were able to see that bandwidth was
 not the primary issue.  This is due to the fact that the performance of
 the simulator remained poor and was even worse than the CMP version up to
-16 threads.  In addition to revealing that the poor performance was not
+16 threads.  In addition to revealing that the poor performance was perhaps not
 due to memory bandwidth, it also revealed that communication was playing a
 large role in the performance as the increased cost of communicating via
 ethernet between nodes caused performance to be even worse than the CMP
 configuration.\\
 ~\\
-After realizing that our program was not memory bound, we wanted to see if
+After putting the memory bandwidth hypothesis to doubt, we wanted to see if
 the size of the problem had any effect on the speedup.  We tested this by
 plotting the speedup of a four threaded run on a given network size over the
 sequential time for simulating the same size network on the Hotbox
