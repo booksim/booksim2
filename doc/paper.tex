@@ -15,7 +15,6 @@
 \setlength{\headheight}{0in}
 \setlength{\headsep}{0in}
 \setlength{\topskip}{0.5in}
-\begin{document}
 %% be sure to change the:
 % Section number, Day, and time
 % Date and year
@@ -43,16 +42,20 @@
 \author{
 Michael Bauer \hspace{1in} Nan Jiang
 }
-\date{\Large{Department of Computer Science \\ Stanford University \\ \{mebauer, njiang37 \}@stanford.edu}}
-\maketitle
 
+\date{\Large{Department of Computer Science \\ Stanford University \\ \{mebauer, njiang37 \}@stanford.edu}}
+%\maketitle
 
 %\begin{multicols}{2}
-\begin{center}
-\Large{\bf Abstract}
-\end{center}
+%\begin{center}
+%\Large{\bf Abstract}
+%\end{center}
 %\small{
-\emph{In the context of the current multicore revolution, the need to
+%\emph{
+\begin{document}
+\maketitle
+\abstract{ 
+In the context of the current multicore revolution, the need to
 design an effective interconnect network has become increasingly
 vital.  Computer architects make use of network simulators in order to
 determine the best network designs and configurations.  The process by which this
@@ -279,11 +282,12 @@ single node of the Hotbox cluster that consists of two Intel Xeon Quad
 cores.  We only ran experiments up to 8 threads as this is the maximum
 number of hardware thread contexts available without encountering the
 overhead of using ethernet to communicate between nodes.\\
-\begin{center}
-\includegraphics[width=3in,height=3in]{synch.eps} \\
-\small{Figure 1: This figure shows the performance of the different
+\begin{figure}[h]
+\centering
+\includegraphics[width=3in,height=3in]{synch.eps}
+\caption{\label{org} This figure shows the performance of the different
 synchronization mechanisms on up to eight threads.}
-\end{center}
+\end{figure}
 From these results we can see that our hypotheses were confirmed regarding
 the performance of the various synchronization mechanisms.  Barriering
 every cycle added significant overhead to performance and ultimately
@@ -320,12 +324,13 @@ different node.  This allowed each thread to have access to the entire
 memory bandwidth of its node, and in effect, thereby increase the total
 amount of memory bandwidth available to the entire application.  The
 results of this experiment can be seen in Figure \ref{smp}.\\
-\begin{center}
-\includegraphics[height=3in,width=3in]{smp.eps} \\
-\small{Figure 2: This figure shows the performance of the simulator on
+\begin{figure}[h]
+\centering
+\includegraphics[height=3in,width=3in]{smp.eps}
+\caption{\label{smp}This figure shows the performance of the simulator on
 up to 16 threads on a simulated SMP machine.  The speedup is relative to
 the sequential simulator.}
-\end{center}
+\end{figure}
 From the result of this experiment we were able to see that bandwidth was
 not the primary issue.  This is due to the fact that the performance of
 the simulator remained poor and was even worse than the CMP version up to
@@ -340,11 +345,12 @@ the size of the problem had any effect on the speedup.  We tested this by
 plotting the speedup of a four threaded run on a given network size over the
 sequential time for simulating the same size network on the Hotbox
 cluster.  The results can be seen in Figure \ref{probsize}.
-\begin{center}
+\begin{figure}[h]
+\centering
 \includegraphics[height=3in,width=3in]{probsize.eps}
-\small{Figure 3: This figure shows the speedup versus network size of a
+\caption{\label{probsize}This figure shows the speedup versus network size of a
 four threaded run of the parallel simulator on the Hotbox cluster.}
-\end{center}
+\end{figure}
 From this figure we could see that essentially the speedup was independent
 of problem size.  This meant that regardless of the size of the network
 simulated, the four-threaded version ultimately was constrained by the
@@ -359,11 +365,12 @@ better designed to deal with long latency loads and stores, our hope was
 that they would be able to mitigate the effects of false sharing to some
 extend.  The results from this experiment can be seen in figure
 \ref{niagara}.
-\begin{center}
+\begin{figure}[h]
+\centering
 \includegraphics[height=3in,width=3in]{niagara.eps}
-\small{Figure 4: This figure shows the speedup of the parallel simulator
+\caption{\label{niagara}This figure shows the speedup of the parallel simulator
 up to 64 threads on the Niagara T2 and T2+ machines.}
-\end{center}
+\end{figure}
 We noticed that in this experiment, both the T2 and T2+ were able to
 achieve some speedup to a certain number of threads, but then performance
 began to fall off.  We determined that once the threads' working set sizes
@@ -388,6 +395,7 @@ simulation time required for running future experiments.
 
 %\begin{thebibliography}{99}
 %\bibitem{LF} Herlihy, Maurice and Shavit, Nir {\em The Art of Multiprocessor Programming.} 2008.
+
 
 
 %\end{thebibliography}
