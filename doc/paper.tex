@@ -215,8 +215,13 @@ the new sentinel, the next item in the list.  In this case the old
 sentinel can then be reclaimed.  Each element in the lock-free queue is
 wrapped in an AtomicReference object.  This object ensures that the any
 items in the queue can only be written to atomically.  A diagram of how
-this works can be seen in Figure (need figure here).\\
-~\\
+this works can be seen in Figure \ref{lfqueue}.
+\begin{figure}[h]
+\centering
+\includegraphics[width=3in, height=2.25in]{lfqueue.eps}
+\caption{This figure demonstrates the layout of the objects associated with a lock-free queue of length 2 (the sentinel value does not count to towards the length of the list).  Note that the pointer to the next element in the list, does not point directly to next list node, but instead to the wrapper AtomicReference class.  Also note that the sentinel is not an actual maintained pointer, but will always point to the same AtomicReference as the Head Node.  It is included in this diagram for clarity.}
+\label{lfqueue}
+\end{figure}
 We initially implemented this AtomicReference object with a PThread
 lock.  While this provided a finer granularity of access to shared
 objects than previously, we realized that the overhead in the number of
