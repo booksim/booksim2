@@ -272,7 +272,7 @@ cores.  We only ran experiments up to 8 threads as this is the maximum
 number of hardware thread contexts available without encountering the
 overhead of using ethernet to communicate between nodes.\\
 \begin{center}
-\includegraphics[width=2in,height=2in]{synch.eps} \\
+\includegraphics[width=3in,height=3in]{synch.eps} \\
 \small{Figure 1: This figure shows the performance of the different
 synchronization mechanisms on up to eight threads.}
 \end{center}
@@ -313,7 +313,7 @@ memory bandwidth of its node, and in effect, thereby increase the total
 amount of memory bandwidth available to the entire application.  The
 results of this experiment can be seen in Figure \ref{smp}.\\
 \begin{center}
-\includegraphics[height=2in,width=2in]{smp.eps} \\
+\includegraphics[height=3in,width=3in]{smp.eps} \\
 \small{Figure 2: This figure shows the performance of the simulator on
 up to 16 threads on a simulated SMP machine.  The speedup is relative to
 the sequential simulator.}
@@ -333,7 +333,7 @@ plotting the speedup of a four threaded run on a given network size over the
 sequential time for simulating the same size network on the Hotbox
 cluster.  The results can be seen in Figure \ref{probsize}.
 \begin{center}
-\includegraphics[height=2in,width=2in]{probsize.eps}
+\includegraphics[height=3in,width=3in]{probsize.eps}
 \small{Figure 3: This figure shows the speedup versus network size of a
 four threaded run of the parallel simulator on the Hotbox cluster.}
 \end{center}
@@ -352,7 +352,7 @@ that they would be able to mitigate the effects of false sharing to some
 extend.  The results from this experiment can be seen in figure
 \ref{niagara}.
 \begin{center}
-\includegraphics[height=2in,width=2in]{niagara.eps}
+\includegraphics[height=3in,width=3in]{niagara.eps}
 \small{Figure 4: This figure shows the speedup of the parallel simulator
 up to 64 threads on the Niagara T2 and T2+ machines.}
 \end{center}
@@ -372,8 +372,8 @@ simulator that is capable of achieving some speedup on both CMP and SMP
 machines.  We outlined the basics of the simulator and the various
 techniques that we used in order to extract concurrency from the
 simulator.  We then demonstrated the performance of our parallel simulator
-on several different hardware platforms.  Investigtions showed that the
-simulator is prone to sufferring from false sharing and extreme
+on several different hardware platforms.  Investigations showed that the
+simulator is prone to suffering from false sharing and extreme
 communication overheads.  Despite these bottlenecks we were able to
 achieve up to a 3X performance which can significantly lower the
 simulation time required for running future experiments.
