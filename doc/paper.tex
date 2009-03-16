@@ -67,7 +67,7 @@ an interconnect network simulator can be parallelized into a multithreaded
 implementation.  The additional
 performance gain from this parallel simulator ultimately can lead to decreased
 development time and better designs as architects can sweep additional
-parameter spaces and consider more configurations.}
+parameter spaces and consider more exotic configurations.}
 %}
 \section{Introduction}
 After hitting the frequency and power walls, chip manufacturers have begun
@@ -81,12 +81,12 @@ how the data is organized and partitioned.  In this paper we demonstrate
 several parallelization techniques in the process of parallelizing a
 network simulator.\\
 ~\\
-Another major ramification of the multicore revolution has been the
+In addition to the need for parallel programs, another major ramification of the multicore revolution has been the
 increased importance of interconnect network design.  As the number of
 cores being placed on a chip increases, the processor interconnect plays a bigger and
 bigger role in minimizing the latency of communication between processors
 and providing enough bandwidth to allow for the movement of large chunks
-of data. Traditional bus architecture is no longer the appropriate medium of communication for high number of core. Even more recent single crossbar communication hubs will also not be sufficient in the future, since the complexity of a single crossbar grows quadratically with the number of cores. Interconnection network can provide the scalable and efficient communication
+of data. The traditional bus architecture is no longer the appropriate medium of communication for large number of cores. Even more recently, single crossbar communication hubs will also not be sufficient in the future since the complexity of a single crossbar grows quadratically with the number of cores. Interconnection network can provide the scalable and efficient communication
 infrastructures for future multicore processors. \\
 ~\\
 In order to make informed decisions in the process of designing
@@ -95,10 +95,10 @@ observe the effect of different network configurations and parameters.  While
 these simulations can provide valuable insight into the best designs, they
 often require sweeping a large, multi-dimensional parameter space.  In
 addition, each simulation requires that many thousands of cycles
-of network operation to be simulated.  This demands a large number of computational
+of network operation be simulated.  This demands a large number of computational
 resources in order to fully explore the design space.\\
 ~\\
-The network simulator that we employ in this papaer was originally written
+The network simulator that we employ in this paper was originally written
 in a single threaded programming model.  This made the simulator extremely
 slow and a single simulation of just a few thousand cycles would take many
 minutes of compute time.  In order to speed up the process of running
@@ -128,10 +128,10 @@ work that could be spread across parallel threads with minimal amounts of
 communication overhead.  Fortunately, the network simulator naturally
 lends itself to this sort of partition in the sense that each router
 within the network can be simulated almost entirely independent of every
-other router.  In addition to this communication only occurs at the
+other router.  In addition to this, communication only occurs at the
 beginning and end of every cycle of simulation when flits are either
 written or read from the shared channels.  The significant
-calculation of the arbitration logic is a much larger computational that
+calculation of the arbitration logic is a much larger computation that
 can be performed in an entirely local manner.  While this provided us with
 a simple partition of work, it left us with several important issues both
 for correctness and performance.
@@ -144,7 +144,7 @@ were forced to place locks on all channels to ensure correctness.  Since
 the channels were initially represented as STL queues, there was no way to
 allow concurrent accesses to the queues (i.e. we couldn't allow one router
 to be reading and another to be writing simultaneously).  In order to
-prevent this, we protected each queue with a Pthread lock.  For a thread
+prevent this, we protected each queue with a PThread lock.  For a thread
 to access the queue, it first had to acquire the lock and then release the
 lock when finished performing its operation on the queue.\\
 ~\\
@@ -153,10 +153,10 @@ performance overhead.  Even queues that were not shared between different
 threads were having to be locked and unlocked in order to perform
 operations on the queues.  In order to get around this additional
 overhead, we instead began to partition the router work based upon the
-topology of the network.  This therefore allowed us to know which channels
+topology of the network.  This allowed us to know which channels
 were shared and which were local to a single thread.  By doing this, we
 were able to remove some of the overhead of locking when performing
-operations on a channel's queue. However, this method adds an additional layer of complexity for the user. For each topology in the simulator, we need to write a network partitioning algorithm for that topology. Ideally we would like a generalized algorithm that would discover the optimal partitioning to minimize locking given any network. But this is not part of the scope of this project and has not been done. (***LOL NP COMPLETE??)
+operations on a channel's queue. However, this method adds an additional layer of complexity for the user. For each topology in the simulator, we need to write a network partitioning algorithm for that topology. Ideally we would like a generalized algorithm that would discover the optimal partitioning to minimize locking given any network, but this is not within the scope of this project and is a very difficult (NP-Complete) problem by itself.
 
 \subsubsection{Barriering Every Cycle}
 While the difficulty of efficiently partitioning the network created
@@ -175,14 +175,14 @@ performs its reads, it will observe that all its input channels are empty
 and assume this is correct, when in reality, the flits simply have not
 been written from the previous simulation cycle.\\
 ~\\
-In order to successfully solve this data race, we initially place a
+In order to successfully solve this data race, we initially placed a
 barrier after every cycle of the simulation.  This then mandated that
 after a thread simulates a cycle, it must wait for all the other threads
 in the simulator to reach the same point.  This ensures that all flits are
 written into their proper channels before any thread attempts to read them
 out when simulating the next cycle.  While this guarantees correctness, it
 can add significant
-synchronization overhead. Transient load imbalances in the network may occur even under uniform random traffic pattern, this will the cause some threads to run slower temporarily. The barrier will amplify these transient load imbalance since the simulator will run as fast as the slowest thread. In the next section we describe how we were
+synchronization overhead. Transient load imbalances in the network may occur even under uniform random traffic patterns and this will the cause some threads to run slower temporarily. The barrier will amplify these transient load imbalances since the simulator will only run as fast as the slowest thread. In the next section we describe how we were
 able to remove the barrier and the locks around the queues in order to
 improve concurrency and minimize synchronization overheads.
 
@@ -190,17 +190,17 @@ improve concurrency and minimize synchronization overheads.
 In order to improve the concurrency of our network simulator, we decided
 to incorporate the lock-free queues described in \cite{LF}.  The advantage
 that these queues provide is that they allow multiple readers and writers
-to the queue simultaneously.  While our simulator only requires that we
-be able to have one reader and one writer, simultaneously, these queues
+to access the queue simultaneously.  While our simulator only requires that we
+be able to have one reader and one writer simultaneously, these queues
 still allow us to remove any lock overhead from the simulation.  For
 completeness we give a brief overview the implementation of lock-free
 queues.
 
 \subsubsection{Implementation}
-Lock-free queues are based on the universal concurrent access algorithm
+Lock-free queues are based on the universal lock-free algorithm
 \cite{LF} that assumes that any access to the shared data structure can
 see the data structure in any potential partially updated state.  The
-algorithm then allows for the access to either help other accesses to
+algorithm then allows for the access to help other accesses to
 complete before actually completing itself.  While this may sound
 conceptually simple, the combinatorial number of states of the data
 structure and different readers and writers is astounding.\\
@@ -217,16 +217,16 @@ wrapped in an AtomicReference object.  This object ensures that the any
 items in the queue can only be written to atomically.  A diagram of how
 this works can be seen in Figure (need figure here).\\
 ~\\
-We initially implemented this AtomicReference object with a Pthread
+We initially implemented this AtomicReference object with a PThread
 lock.  While this provided a finer granularity of access to shared
 objects than previously, we realized that the overhead in the number of
 locks was tremendous.  Instead we relied upon an extension to GCC 4.1.2
-(need citation) that provided an atomic \_\_compare\_and\_exchange operation.
+that provided an atomic \_\_compare\_and\_exchange operation.
 This operation was significantly less costly in terms of synchronization
 overhead and was also much faster.\\
 ~\\
 After testing our lock-free queues, we replaced all of
-the queues in the simulator with our new queue implementation.  While this
+the queues in the simulator with our lock-free queue implementation.  While this
 proved fairly straight forward, we didn't initially account for the high
 overhead that the lock-free queues themselves created.  The lock-free
 queues involve the creation of multiple objects and accessing the
@@ -235,19 +235,19 @@ as well as rearranging many pointers.  In some cases this overhead proved
 to be extreme.  In order to remove it, we created a common interface that
 was shared between the lock-free queues and the STL queue.  This then
 allowed us to create dynamic instances of either a shared queue or an STL
-queue depending on whether the channel was shared.  This significantly
-improved our performance as we will demonstrate in the section \ref{results}.
+queue depending on whether the channel was shared or not.  This significantly
+improved our performance as we will demonstrate in section \ref{results}.
 
 \subsubsection{Guaranteeing Correctness Without a Barrier}
 After adding the lock-free queues to our implementation, we realized that
 they would provide little benefit if the barrier were not also removed to
-allow threads to run ahead.  In order to remove the barrier, we had to add
+allow threads to run ahead.  In order to remove the barrier and still ensure correctness of the simulator, we had to add
 an additional piece of data to each shared queue: a semaphore.  This
 semaphore would be used in the following way: anytime a write operation
 occurred to the queue, an up operation was performed.  Similarly, anytime
 a pop operation occurred to the queue, a down operation would have to be
 performed first.  We also modified the routers such that for every cycle
-of simulation, they would at perform at least one up operation on every
+of simulation, they would perform at least one up operation on every
 channel that they shared with another thread even if they didn't actually
 write any flits to that channel.  Note that a down operation is not able
 to proceed if the semaphore equals zero, implying that no router can ever
@@ -258,11 +258,11 @@ concurrency present in the simulation by allowing different threads to be
 simulating different cycles simultaneously.
 
 \subsection{Fusing Loops}
-The last operation that we performed on our code was to the inner loops in figure~\ref{fig:runtime} together.  The initial simulator implementation was written to make it
+The last operation that we performed on our code was to fuse the inner loops in figure~\ref{fig:runtime} together.  The initial simulator implementation was written to make it
 easy to understand the code and not for performance.  We moved all these operations into a single
 'for' loop in order to help improve some of the temporal locality of the
 code.  Not surprisingly this operation allowed the system to take
-advantage of the cache hierarchy and provide additional performance gain.
+advantage of the cache hierarchy and provided additional performance gain.
 
 \section{Results \label{results}}
 Having completed a parallel implementation of our network simulator, our
@@ -277,7 +277,7 @@ the simulator as well as any potential bottlenecks.
 The first step in analyzing our parallelized network simulator was to
 determine the performance of the different synchronization mechanisms that
 we had employed at different points in development.  Figure \ref{synch}
-shows the performance of the various synchronization mechansims on a
+shows the performance of the various synchronization mechanisms on a
 single node of the Hotbox cluster that consists of two Intel Xeon Quad
 cores.  We only ran experiments up to 8 threads as this is the maximum
 number of hardware thread contexts available without encountering the
@@ -285,9 +285,10 @@ overhead of using ethernet to communicate between nodes.\\
 \begin{figure}[h]
 \centering
 \includegraphics[width=3in,height=3in]{synch.eps}
-\caption{\label{org} This figure shows the performance of the different
-synchronization mechanisms on up to eight threads.}
+\caption{\label{synch} This figure shows the performance of the different
+synchronization mechanisms on up to eight threads on the Hotbox cluster.}
 \end{figure}
+~\\
 From these results we can see that our hypotheses were confirmed regarding
 the performance of the various synchronization mechanisms.  Barriering
 every cycle added significant overhead to performance and ultimately
@@ -308,12 +309,12 @@ communication.  In order to determine exactly what was causing us to lose
 performance we then proceeded to run several experiments to find the
 bottlenecks in the program.
 
-\subsection{Determining Scalability Bottlenecks}
+\subsection{Locating Scalability Bottlenecks}
 Having observed the somewhat poor performance of our application we then
 set about attempting to determine the reason for such poor performance.
 Our initial hypothesis was that application was memory bound based on the
 fact that there is a significant amount of data being processed in our
-simulator.  In addition to this, the fact that Pthreads is a shared memory
+simulator.  In addition to this, the fact that PThreads is a shared memory
 programming model implies that if the working set cannot fit inside the L2
 cache, then there will be a significant amount of data being moved both to
 and from main memory.\\
@@ -328,7 +329,7 @@ results of this experiment can be seen in Figure \ref{smp}.\\
 \centering
 \includegraphics[height=3in,width=3in]{smp.eps}
 \caption{\label{smp}This figure shows the performance of the simulator on
-up to 16 threads on a simulated SMP machine.  The speedup is relative to
+up to 16 threads on a simulated SMP machine on the Hotbox cluster.  The speedup is relative to
 the sequential simulator.}
 \end{figure}
 From the result of this experiment we were able to see that bandwidth was
@@ -354,7 +355,7 @@ four threaded run of the parallel simulator on the Hotbox cluster.}
 From this figure we could see that essentially the speedup was independent
 of problem size.  This meant that regardless of the size of the network
 simulated, the four-threaded version ultimately was constrained by the
-same relative to the sequential version.  The fact that the speedup
+same effect as the sequential version.  The fact that the speedup
 attained was significantly less than a linear speedup of 4 indicated that
 the threads were not compute bound.  Instead we hypothesized that false
 sharing was causing the four threads to thrash each others' caches.\\
@@ -363,7 +364,7 @@ To confirm our diagnosis of false sharing, we decided to run the simulator
 on the both the Niagara T2 and T2+ machines.  Since these machines were
 better designed to deal with long latency loads and stores, our hope was
 that they would be able to mitigate the effects of false sharing to some
-extend.  The results from this experiment can be seen in figure
+extent.  The results from this experiment can be seen in figure
 \ref{niagara}.
 \begin{figure}[h]
 \centering
