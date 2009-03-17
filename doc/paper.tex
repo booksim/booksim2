@@ -6,15 +6,9 @@
 \usepackage{indentfirst}
 \usepackage{algorithm}
 \usepackage{algorithmic}
-\setlength{\textwidth}{6.5in}
-\setlength{\textheight}{9.5in}
-\setlength{\topmargin}{0in}
-\setlength{\oddsidemargin}{0in}
-\setlength{\evensidemargin}{0in}
-\setlength{\topmargin}{0in}
-\setlength{\headheight}{0in}
-\setlength{\headsep}{0in}
-\setlength{\topskip}{0.5in}
+\usepackage[top=1in, bottom=1in, left=0.75in, right=0.75in]{geometry}
+\setlength{\columnsep}{2pc}
+\usepackage[small]{caption}
 %% be sure to change the:
 % Section number, Day, and time
 % Date and year
@@ -219,7 +213,7 @@ this works can be seen in Figure \ref{lfqueue}.\\
 ~\\
 \begin{figure}[h]
 \centering
-\includegraphics[width=3in, height=2.25in]{lfqueue.eps}
+\includegraphics[width=3in]{lfqueue.eps}
 \caption{This figure demonstrates the layout of the objects associated with a lock-free queue of length 2 (the sentinel value does not count to towards the length of the list).  Note that the pointer to the next element in the list, does not point directly to next list node, but instead to the wrapper AtomicReference class.  Also note that the sentinel is not an actual maintained pointer, but will always point to the same AtomicReference as the Head Node.  It is included in this diagram for clarity.}
 \label{lfqueue}
 \end{figure}
@@ -291,7 +285,7 @@ number of hardware thread contexts available without encountering the
 overhead of using ethernet to communicate between nodes.\\
 \begin{figure}[h]
 \centering
-\includegraphics[width=3in,height=3in]{synch.eps}
+\includegraphics[width=3in]{synch.eps}
 \caption{\label{synch} This figure shows the performance of the different
 synchronization mechanisms on up to eight threads on the Hotbox cluster.}
 \end{figure}
@@ -336,7 +330,7 @@ amount of memory bandwidth available to the entire application.  The
 results of this experiment can be seen in Figure \ref{smp}.\\
 \begin{figure}[h]
 \centering
-\includegraphics[height=3in,width=3in]{smp.eps}
+\includegraphics[width=3in]{smp.eps}
 \caption{\label{smp}This figure shows the performance of the simulator on
 up to 16 threads on a simulated SMP machine on the Hotbox cluster.  The speedup is relative to
 the sequential simulator.}
@@ -358,7 +352,7 @@ sequential time for simulating the same size network on the Hotbox
 cluster.  The results can be seen in Figure \ref{probsize}.
 \begin{figure}[h]
 \centering
-\includegraphics[height=3in,width=3in]{probsize.eps}
+\includegraphics[width=3in]{probsize.eps}
 \caption{\label{probsize}This figure shows the speedup versus network size of a
 four threaded run of the parallel simulator on the Hotbox cluster.}
 \end{figure}
@@ -378,7 +372,7 @@ extent.  The results from this experiment can be seen in figure
 \ref{niagara}.\\
 \begin{figure}[h]
 \centering
-\includegraphics[height=3in,width=3in]{niagara.eps}
+\includegraphics[width=3in]{niagara.eps}
 \caption{\label{niagara}This figure shows the speedup of the parallel simulator
 up to 64 threads on the Niagara T2 and T2+ machines.}
 \end{figure}
