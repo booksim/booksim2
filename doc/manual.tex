@@ -107,36 +107,17 @@ Section~\ref{sec:config_params} for reference.
 \subsection{Downloading and building the simulator}
 \label{sec:download}
 
-The latest version of the simulator is available from
-\texttt{http://cva.stanford.edu} as a compressed tar archive.  UNIX/Linux
-users can extract this archive using the tar utility
+The latest version of the simulator can be checked out from Booksim's sourceforge subversion (SVN) repository. Make sure SVN is installed on your machine and run 
 \begin{verbatim}
-
-  tar xvfz booksim-2.0.tar.gz  
+svn co https://booksim.svn.sourceforge.net/svnroot/booksim booksim 
 \end{verbatim}
 
-Windows users can use a compression program such as Winrar to extract
-the archive.
-
-The simulator itself is written in C++ and has been specifically
-tested with GNU's G++ compiler (version $\ge3$).  In addition, both a
-LEX and YACC tool (also known as FLEX and BISON) are needed to create
-the configuration parser.  These are standard tools in any UNIX/Linux
-development environment.  It is suggested that Windows users download
-the CYGWIN versions (\texttt{http://www.cygwin.com}) of these UNIX
-development tools to simplify their compilation process.  The
+The simulator files should now be in \texttt{booksim/trunk/src/}. The simulator itself is written in C++ and has been specifically
+tested with GNU's G++ compiler (version $\ge3$). The front end of the simulator uses LEX and YACC generated parser to process the simulator configuration file. But if you do not plan on making changes to the front end parser, the LEX and YACC are not needed. The
 \texttt{Makefile} should be edited so that the first lines give the
-paths to the tools.  At Stanford, for example, the compiler, YACC, and
-LEX are stored in the \texttt{/usr/pubsw/bin} directory.  The
-\texttt{Makefile} reflects this:
-\begin{verbatim}
-CPP    = /usr/pubsw/bin/g++
-YACC   = /usr/pubsw/bin/bison -d
-LEX    = /usr/pubsw/bin/flex
-\end{verbatim}
-Then, the simulator can be compiled by running \texttt{make} in the
-directory that contains the \texttt{Makefile}.
+paths to the tools. The default \texttt{Makefile} should work on the Stanford Leland machines. Type \texttt{make} to build the simulator. 
 
+For Windows users: the above instructions has been tested to work with the newest version of Cygwin. 
 \subsection{Running a simulation}
 \label{sec:run_example}
 
@@ -144,11 +125,11 @@ The syntax of the simulator is simply
 \begin{verbatim}
   ./booksim [configfile]
 \end{verbatim}
-The optional parameter \texttt{configfile} is a file that contains
+The parameter \texttt{configfile} is a file that contains
 configuration information for the simulator.  So, for example, to
 simulate the performance of a simple $8 \times 8$ torus (8-ary 2-cube)
 network on uniform traffic, a configuration such as the one shown in
-Figure~\ref{fig:config_example} could be used. This particular configuration is stored in examples/torus88.
+Figure~\ref{fig:config_example} could be used. This particular configuration is stored in \texttt{examples/torus88}.
 
 \begin{figure}
 \begin{verbatim}
@@ -174,13 +155,13 @@ network.}
 
 In addition to specifying the topology, the configuration file also
 contains basic information about the routing algorithm, flow control,
-and traffic.  This simple example uses dimension-order routing and and four
+and traffic.  This simple example uses dimension-order routing and four
 virtual channels.  The \texttt{injection\_rate} parameter
-is added to tell the simulator to inject 0.15 packets per simulation
+is added to tell the simulator to inject (on average) 0.15 packets per simulation
 cycle per node.  The packets are default to size of 1 flit.  Also, any line of the configuration
 that begins with \texttt{//} is treated as a comment and ignored by
 the simulator.  A detailed list of configuration parameters is given in
-Section~\ref{sec:config_params}.
+Section~\ref{sec:config_params}. Any parameters not specified by the user will take on a default value. The default value for every parameter in the simulator is in the file \texttt{booksim\_config.cpp}.
 
 \subsection{Simulation output}
 
@@ -197,11 +178,6 @@ also displayed.
 
 \begin{figure}
 \begin{verbatim}
-% Average latency = 6.02008
-% Accepted packets = 0.11 at node 52 (avg = 0.147094)
-% latency change    = 1
-% throughput change = 1
->>>>>>> variant B
 BEGIN Configuration File
 Name: examples/torus88
 // Topology
@@ -217,29 +193,28 @@ traffic = uniform;
 injection_rate = 0.15;
 
 END Configuration File
-Unable to open flit watch file, continuing with simulation
 0%=================================
-% Average latency = 10.6252
-% Accepted packets = 0.119 at node 5 (avg = 0.148875)
-lat(1) = 10.6252;
+% Average latency = 10.3206
+% Accepted packets = 0.113 at node 38 (avg = 0.149031)
+lat(1) = 10.3206;
 bins = [ 0 ...999];
-freq = [ 0 0 124 16 497 71 920 166 1336 303 1553 436 1351 
-406 926 328 537 213 173 77 43 24 13 6 5 2 1 1 0 ...]
+freq = [ 0 0 145 4 550 52 988 137 1439 285 1656 428 1359 417 958 294 453 163 143
+ 49 10 7 1 0 ....
 
-...
+....
 
 % Warmed up ...Time used is 3000 cycles
 
-...
+....
 
 % Draining all recorded packets ...
 % Draining remaining packets ...
-Time taken is 6031 cycles
+Time taken is 6030 cycles
 ====== Traffic class 0 ======
-Overall average latency = 10.658 (1 samples)
-Overall average accepted rate = 0.148383 (1 samples)
-Overall min accepted rate = 0.134279 (1 samples)
-Average hops = 5.01172 (57148 samples)
+Overall average latency = 10.2897 (1 samples)
+Overall average accepted rate = 0.14834 (1 samples)
+Overall min accepted rate = 0.129043 (1 samples)
+Average hops = 4.99839 (57153 samples)
 \end{verbatim}
 \caption{Simulator output from running the \texttt{examples/torus88}
 configuration file.}
@@ -255,14 +230,14 @@ before final latency and throughput numbers are reported.  Details of
 the configuration parameters used to control the length of the
 simulation phases are covered in Section~\ref{sec:sim_params}.
 
-\section{Examples}
+\section{Example}
 \label{sec:examples}
 
 One of the most basic performance measures of any interconnection
 network is its latency versus offered load.
 Figure~\ref{fig:lat_vs_load} shows a simple configuration file for
 making this measurement in a 8-ary 2-mesh network under the transpose
-traffic pattern.  This configuration was used to generate Figure 25.2
+traffic pattern.  This configuration was used to generate a single data point in Figure 25.2
 in PPIN.  The particular configuration accounts for some small delays
 and pipelining of the input-queued router and also introduces a small
 input speedup to account for any inefficiencies in allocation.  By
@@ -313,7 +288,7 @@ const_flits_per_packet = 20;
 // Simulation
 
 sim_type       = latency;
-injection_rate = 0.005;
+injection_rate = 0.01;
 \end{verbatim}
 \caption{A typical configuration file (\texttt{examples/mesh88\_lat})
 for creating a latency versus offered load curve for a 8-ary 2-mesh
@@ -328,7 +303,7 @@ All information used to configure a simulation is passed through a
 configuration file as illustrated by the example in
 Section~\ref{sec:run_example}.  This section lists the existing
 configuration parameters --- a user can incorporate additional options
-by changing the \texttt{booksim\_config.cpp} file. Most configuration parameters have default values that should work without user specification
+by changing the \texttt{booksim\_config.cpp} file.
 
 \subsection{Topologies}
 \label{sec:topos}
@@ -373,13 +348,13 @@ the network's dimension.
 
 \item[fat tree] Fat Tree topology with 3 levels. Nodes are routers are arranged in a tree structure but the number of links between levels stays constant. At the bottom \texttt{k} nodes shares a level 0 router.
 
-\item[flattened butterfly] A topology based on *** 
+\item[flattened butterfly] A topology based on the paper "Flattened butterfly: a cost-efficient topology for high-radix networks" ISCA 2007
 
 \item[quad tree] A quad tree topology.
 
 \item[tree 4]
 
-\item[cmo] Concentrated Multi-dimensional Octagon created by Sang Kyun Kim and Wook-Jin Chung.
+\item[cmo] Concentrated Multi-dimensional Octagon created by Sang Kyun Kim and Wook-Jin Chung from  EE382C several years ago.
 
 \item[MECS] A topology based on ***. Currently it only supports single-flit packets. 
 
@@ -650,8 +625,8 @@ particular statistics.
 
 \end{opt_list}
 
-\appendix
 
+\appendix
 \section{Random number generation}
 
 The simulator uses Knuth's integer and floating point pseudorandom
