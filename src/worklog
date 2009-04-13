@@ -1,0 +1,8 @@
+continue form pbooksim.
+
+
+credit has been changed, the variable vc has been changed from an array to an int. Dynamic array can't be safely transported through MPI. All reference to vc has been changed to int. As far as I can tell, you don't really need it to be arrays. I think .
+
+Scratch the above, the vc array is for somthing... solution... no input speedup
+
+so apparently [vc] is the number of credits piggy backing. VCS from the same port can piggy back on the same credit.. but how does that work, only a single flit get forwarded. I think it is still related the the input/output speedup
