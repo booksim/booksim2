@@ -1,0 +1,55 @@
+// Dragonfly
+//
+// Flow co1	ntrol
+//
+
+// Total number of VCs must match the above assignments
+num_vcs     = 3;
+
+vc_buf_size = 256;
+
+wait_for_tail_credit = 0;
+
+//
+// Router architecture
+//
+vc_allocator = islip; 
+sw_allocator = islip;
+alloc_iters  = 4;
+
+credit_delay   = 0;
+routing_delay  = 0;
+vc_alloc_delay = 0;
+sw_alloc_delay = 0;
+st_final_delay = 0;
+
+input_speedup     = 1;
+output_speedup    = 1;
+internal_speedup  = 1.7;
+
+
+//iq_routing_delay = 0;
+//row_routing_delay = 0;
+//subsw_alloc_delay = 0;
+//out_alloc_delay = 0;
+
+warmup_periods = 3;
+sim_count          = 1;
+
+sample_period  = 100;  
+
+
+routing_function = min;
+
+priority = none;
+traffic       = uniform ;
+
+injection_rate =0.2;
+const_flits_per_packet = 1;
+
+topology = dragonflynew;
+
+k  = 4;
+n  = 1;
+
+threads=2;
