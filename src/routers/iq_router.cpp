@@ -408,7 +408,7 @@ void IQRouter::_AddVCRequests( VC* cur_vc, int input_index, bool watch )
       // reflected in "out_priority".
 
       if ( dest_vc->IsAvailableFor( out_vc ) ) {
-	_vc_allocator->AddRequest( input_index, output*_vcs + out_vc, 1, 
+	_vc_allocator->AddRequest( input_index, output*_vcs + out_vc, out_vc, 
 				   in_priority, out_priority );
 	if ( watch ) {
 	  cout << "available" << endl;
