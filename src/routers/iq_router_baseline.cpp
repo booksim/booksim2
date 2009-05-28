@@ -77,7 +77,9 @@ IQRouterBaseline::IQRouterBaseline( const Configuration& config,
     cout << "ERROR: Unknown sw_allocator type " << alloc_type << endl;
     exit(-1);
   }
-
+  
+  _speculative = config.GetInt( "speculative" ) ;
+  
   if ( _speculative == 2 ) {
     
     string filter_spec_grants;
