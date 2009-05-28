@@ -58,7 +58,7 @@ MECSRouter::MECSRouter(const Configuration& config,
   : Router( config, parent, name,  id, inputs, outputs ){
 
 
-  sub_router = new IQRouter(config, this, name,  id, inputs, outputs );
+  sub_router = new IQRouterBaseline(config, this, name,  id, inputs, outputs );
   
 
   n  = new MECSCombiner(this, name, 0, id);

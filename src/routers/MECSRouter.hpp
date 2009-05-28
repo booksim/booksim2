@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _MECSROUTER_HPP_
 
 #include "router.hpp"
-#include "iq_router.hpp"
+#include "iq_router_baseline.hpp"
 #include "MECSForwarder.hpp"
 #include "MECSCreditForwarder.hpp"
 #include "MECSCombiner.hpp"
@@ -44,7 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class MECSRouter: public Router{
 
   //The underlying operating router
-  IQRouter*  sub_router;
+  IQRouterBaseline*  sub_router;
   //muxes drop-off points into the subrouter
   MECSCombiner* n;
   MECSCombiner* e;

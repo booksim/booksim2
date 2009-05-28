@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "kncube.hpp"
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
-#include "iq_router.hpp"
+ //#include "iq_router.hpp"
 
 
 KNCube::KNCube( const Configuration &config, bool mesh ) :

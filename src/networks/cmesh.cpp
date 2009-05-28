@@ -49,7 +49,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
 #include "cmesh.hpp"
-#include "iq_router.hpp"
 
 int CMesh::_cX = 0 ;
 int CMesh::_cY = 0 ;

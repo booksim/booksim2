@@ -28,8 +28,8 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _IQ_ROUTER_HPP_
-#define _IQ_ROUTER_HPP_
+#ifndef _IQ_ROUTER_BASE_HPP_
+#define _IQ_ROUTER_BASE_HPP_
 
 #include <string>
 #include <queue>
@@ -37,7 +37,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "module.hpp"
 #include "router.hpp"
 #include "vc.hpp"
-#include "allocator.hpp"
 #include "routefunc.hpp"
 #include "outputset.hpp"
 #include "buffer_state.hpp"
@@ -77,20 +76,14 @@ public:
   friend ostream& operator<<( ostream& os, const BufferMonitor& obj ) ;
 } ;
 
-class IQRouter : public Router {
+class IQRouterBase : public Router {
+
+protected:
   int  _vcs ;
   int  _vc_size ;
-  int  _speculative ;
-  int  _filter_spec_grants ;
 
   VC          **_vc;
   BufferState *_next_vcs;
-
-  Allocator *_vc_allocator;
-  Allocator *_sw_allocator;
-  Allocator *_spec_sw_allocator;
-
-  int *_sw_rr_offset;
 
   tRoutingFunction   _rf;
 
@@ -113,14 +106,12 @@ class IQRouter : public Router {
 
   void _InputQueuing( );
   void _Route( );
-  void _VCAlloc( );
-  void _SWAlloc( );
   void _OutputQueuing( );
 
   void _SendFlits( );
   void _SendCredits( );
   
-  void _AddVCRequests( VC* cur_vc, int input_index, bool watch = false );
+  
   // ----------------------------------------
   //
   //   Router Power Modelling
@@ -128,20 +119,17 @@ class IQRouter : public Router {
   // ----------------------------------------
 public:
   SwitchMonitor switchMonitor ;
-  
-public:
-
   BufferMonitor bufferMonitor ;
   
 public:
-  IQRouter( const Configuration& config,
+  IQRouterBase( const Configuration& config,
 	    Module *parent, string name, int id,
 	    int inputs, int outputs );
   
-  virtual ~IQRouter( );
+  virtual ~IQRouterBase( );
   
   virtual void ReadInputs( );
-  virtual void InternalStep( );
+  virtual void InternalStep( ) = 0;
   virtual void WriteOutputs( );
   
   void Display( ) const;

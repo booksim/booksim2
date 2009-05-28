@@ -37,7 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "config_utils.hpp"
 #include "trafficmanager.hpp"
 #include "flitchannel.hpp"
-#include "iq_router.hpp"
+#include "iq_router_base.hpp"
 #include "flit.hpp"
 
 

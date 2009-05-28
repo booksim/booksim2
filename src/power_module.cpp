@@ -501,7 +501,7 @@ void Power_Module::run(){
 
   Router** routers =net->GetRouters();
   for(int i = 0; i<net->NumRouters();i++){
-    IQRouter* temp = dynamic_cast<IQRouter*>(routers[i]);
+    IQRouterBase* temp = dynamic_cast<IQRouterBase*>(routers[i]);
     BufferMonitor * bm = temp->GetBufferMonitor();
     calcBuffer(bm);
     SwitchMonitor * sm = temp->GetSwitchMonitor();
