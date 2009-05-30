@@ -149,7 +149,6 @@ void IQRouterBaseline::_AddVCRequests( VC* cur_vc, int input_index, bool watch )
 
   route_set    = cur_vc->GetRouteSet( );
   out_priority = cur_vc->GetPriority( );
-  in_priority = out_priority;
 
   for ( int output = 0; output < _outputs; ++output ) {
     vc_cnt = route_set->NumVCs( output );
