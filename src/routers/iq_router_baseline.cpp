@@ -140,47 +140,6 @@ void IQRouterBaseline::InternalStep( )
   _OutputQueuing( );
 }
 
-void IQRouterBaseline::_AddVCRequests( VC* cur_vc, int input_index, bool watch )
-{
-  const OutputSet *route_set;
-  BufferState *dest_vc;
-  int vc_cnt, out_vc;
-  int in_priority, out_priority;
-
-  route_set    = cur_vc->GetRouteSet( );
-  out_priority = cur_vc->GetPriority( );
-
-  for ( int output = 0; output < _outputs; ++output ) {
-    vc_cnt = route_set->NumVCs( output );
-    dest_vc = &_next_vcs[output];
-
-    for ( int vc_index = 0; vc_index < vc_cnt; ++vc_index ) {
-      out_vc = route_set->GetVC( output, vc_index, &in_priority );
-
-      if ( watch ) {
-	cout << "  trying vc " << out_vc << " (out = " << output << ") ... ";
-      }
-     
-      // On the input input side, a VC might request several output 
-      // VCs.  These VCs can be prioritized by the routing function
-      // and this is reflected in "in_priority".  On the output,
-      // if multiple VCs are requesting the same output VC, the priority
-      // of VCs is based on the actual packet priorities, which is
-      // reflected in "out_priority".
-
-      if ( dest_vc->IsAvailableFor( out_vc ) ) {
-	_vc_allocator->AddRequest( input_index, output*_vcs + out_vc, out_vc, 
-				   in_priority, out_priority );
-	if ( watch ) {
-	  cout << "available" << endl;
-	}
-      } else if ( watch ) {
-	cout << "busy" << endl;
-      }
-    }
-  }
-}
-
 void IQRouterBaseline::_VCAlloc( )
 {
   VC          *cur_vc;
