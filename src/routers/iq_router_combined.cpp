@@ -295,7 +295,7 @@ void IQRouterCombined::_Alloc( )
 	    
 	    if ( f->watch ) {
 	      cout << "Granted VC allocation at " << _fullname 
-		   << " (input: " << input << ", vc: " << vc << " )" << endl
+		   << " (input: " << input << ", vc: " << vc << ")" << endl
 		   << *f;
 	    }
 	  }
