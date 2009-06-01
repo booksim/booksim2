@@ -218,7 +218,7 @@ void IQRouterBaseline::_VCAlloc( )
 	
 	const OutputSet *route_set    = cur_vc->GetRouteSet( );
 	int out_priority = cur_vc->GetPriority( );
-	int in_priority = out_priority;
+	int in_priority;
 	
 	for ( int output = 0; output < _outputs; ++output ) {
 	  int vc_cnt = route_set->NumVCs( output );

@@ -55,8 +55,6 @@ class IQRouterBaseline : public IQRouterBase {
   void _VCAlloc( );
   void _SWAlloc( );
   
-  void _AddVCRequests( VC* cur_vc, int input_index, bool watch = false );
-  
 public:
   IQRouterBaseline( const Configuration& config,
 	    Module *parent, string name, int id,
