@@ -42,25 +42,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "config_utils.hpp"
 
 class Router : public Module {
+
 protected:
   int _id;
-
   
   int _inputs;
   int _outputs;
- 
+  
   int _input_speedup;
   int _output_speedup;
-
-  int _routing_delay;
-  int _vc_alloc_delay;
-  int _sw_alloc_delay;
+  
   int _st_prepare_delay;
   int _st_final_delay;
-
+  
   int _credit_delay;
-
-
+  
   vector<FlitChannel *>   *_input_channels;
   vector<CreditChannel *> *_input_credits;
   vector<FlitChannel *>   *_output_channels;

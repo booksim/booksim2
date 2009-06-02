@@ -60,7 +60,11 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   int wqe_vc = config.GetInt("write_request_end_vc");   
   int wrb_vc = config.GetInt("write_reply_begin_vc");   
   int wre_vc = config.GetInt("write_reply_end_vc");     
-
+  
+  _routing_delay    = config.GetInt( "routing_delay" );
+  _vc_alloc_delay   = config.GetInt( "vc_alloc_delay" );
+  _sw_alloc_delay   = config.GetInt( "sw_alloc_delay" );
+  
   // Routing
   _rf = GetRoutingFunction( config );
 
@@ -197,14 +201,11 @@ void IQRouterBase::_ReceiveFlits( )
 {
   Flit *f;
 
-  bufferMonitor.cycle() ;
-
   for ( int input = 0; input < _inputs; ++input ) { 
     f = (*_input_channels)[input]->ReceiveFlit();
 
     if ( f ) {
       _input_buffer[input].push( f );
-      bufferMonitor.write( input, f ) ;
     }
   }
 }
@@ -224,20 +225,19 @@ void IQRouterBase::_ReceiveCredits( )
 
 void IQRouterBase::_InputQueuing( )
 {
-  Flit   *f;
-  Credit *c;
-  VC     *cur_vc;
+  bufferMonitor.cycle() ;
 
   for ( int input = 0; input < _inputs; ++input ) {
     if ( !_input_buffer[input].empty( ) ) {
-      f = _input_buffer[input].front( );
+      Flit * f = _input_buffer[input].front( );
       _input_buffer[input].pop( );
 
-      cur_vc = &_vc[input][f->vc];
+      VC * cur_vc = &_vc[input][f->vc];
 
       if ( !cur_vc->AddFlit( f ) ) {
 	Error( "VC buffer overflow" );
       }
+      bufferMonitor.write( input, f ) ;
 
       if ( f->watch ) {
 	cout << "Received flit at " << _fullname 

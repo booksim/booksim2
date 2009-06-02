@@ -89,7 +89,11 @@ protected:
 
   PipelineFIFO<Flit>   *_crossbar_pipe;
   PipelineFIFO<Credit> *_credit_pipe;
-
+  
+  int _routing_delay;
+  int _vc_alloc_delay;
+  int _sw_alloc_delay;
+  
   queue<Flit *> *_input_buffer;
   queue<Flit *> *_output_buffer;
 

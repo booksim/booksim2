@@ -49,6 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //////////////////Sub router types//////////////////////
 #include "iq_router_baseline.hpp"
 #include "iq_router_combined.hpp"
+#include "iq_router_split.hpp"
 #include "event_router.hpp"
 #include "MECSRouter.hpp"
 ///////////////////////////////////////////////////////
@@ -61,9 +62,6 @@ Router::Router( const Configuration& config,
   _inputs( inputs ),
   _outputs( outputs )
 {
-  _routing_delay    = config.GetInt( "routing_delay" );
-  _vc_alloc_delay   = config.GetInt( "vc_alloc_delay" );
-  _sw_alloc_delay   = config.GetInt( "sw_alloc_delay" );
   _st_prepare_delay = config.GetInt( "st_prepare_delay" );
   _st_final_delay   = config.GetInt( "st_final_delay" );
   _credit_delay     = config.GetInt( "credit_delay" );
@@ -164,6 +162,8 @@ Router *Router::NewRouter( const Configuration& config,
     }
   } else if ( type == "iq_combined" ) {
     r = new IQRouterCombined( config, parent, name, id, inputs, outputs );
+  } else if ( type == "iq_split" ) {
+    r = new IQRouterSplit( config, parent, name, id, inputs, outputs );
   } else if ( type == "event" ) {
     r = new EventRouter( config, parent, name, id, inputs, outputs );
   } else {
