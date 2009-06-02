@@ -70,9 +70,8 @@ int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
     for (int offset = 1 ; offset <= _input_size ; offset++ ) {
       int input = (_pointer + offset) % _input_size;
       if ( _request[input].valid ) {
-	if ( ( _selected < 0 ) //||
-	     /*( _request[_selected].pri < _request[index].pri )*/
-	     )
+	if ( ( _selected < 0 ) ||
+	     ( _request[_selected].pri < _request[input].pri ) )
 	  _selected = input ;
       }
     }

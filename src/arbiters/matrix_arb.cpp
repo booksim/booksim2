@@ -97,8 +97,8 @@ int MatrixArbiter::Arbitrate( int* id, int* pri ) {
 	bool grant = true;
 	for ( int i = 0 ; i < _input_size ; i++ ) {
 	  if ( _request[i].valid &&
-	       ( _Priority(i,input) //||
-		 /*( _request[i].pri > _request[index].pri )*/
+	       ( _Priority(i,input) ||
+		 ( _request[i].pri > _request[input].pri )
 		 ) ) {
 	    grant = false ;
 	    break ;
