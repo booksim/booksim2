@@ -122,23 +122,10 @@ IQRouterBaseline::~IQRouterBaseline( )
   delete [] _sw_rr_offset;
 }
   
-void IQRouterBaseline::InternalStep( )
+void IQRouterBaseline::_Alloc( )
 {
-  _InputQueuing( );
-  _Route( );
   _VCAlloc( );
   _SWAlloc( );
-  
-  for ( int input = 0; input < _inputs; ++input ) {
-    for ( int vc = 0; vc < _vcs; ++vc ) {
-      _vc[input][vc].AdvanceTime( );
-    }
-  }
-
-  _crossbar_pipe->Advance( );
-  _credit_pipe->Advance( );
-
-  _OutputQueuing( );
 }
 
 void IQRouterBaseline::_VCAlloc( )

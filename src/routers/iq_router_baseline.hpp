@@ -54,6 +54,7 @@ class IQRouterBaseline : public IQRouterBase {
 
   void _VCAlloc( );
   void _SWAlloc( );
+  virtual void _Alloc( );
   
 public:
   IQRouterBaseline( const Configuration& config,
@@ -61,8 +62,6 @@ public:
 	    int inputs, int outputs );
   
   virtual ~IQRouterBaseline( );
-  
-  virtual void InternalStep( );
   
 };
 

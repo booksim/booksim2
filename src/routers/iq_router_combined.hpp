@@ -49,7 +49,7 @@ class IQRouterCombined : public IQRouterBase {
   int *_vc_rr_offset;
   int *_sw_rr_offset;
   
-  void _Alloc( );
+  virtual void _Alloc( );
   
 public:
   IQRouterCombined( const Configuration& config,
@@ -57,8 +57,6 @@ public:
 	    int inputs, int outputs );
   
   virtual ~IQRouterCombined( );
-  
-  virtual void InternalStep( );
   
 };
 

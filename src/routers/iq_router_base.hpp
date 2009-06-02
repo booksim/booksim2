@@ -104,9 +104,10 @@ protected:
   void _ReceiveFlits( );
   void _ReceiveCredits( );
 
-  void _InputQueuing( );
-  void _Route( );
-  void _OutputQueuing( );
+  virtual void _InputQueuing( );
+  virtual void _Route( );
+  virtual void _Alloc( ) = 0;
+  virtual void _OutputQueuing( );
 
   void _SendFlits( );
   void _SendCredits( );
@@ -129,7 +130,7 @@ public:
   virtual ~IQRouterBase( );
   
   virtual void ReadInputs( );
-  virtual void InternalStep( ) = 0;
+  virtual void InternalStep( );
   virtual void WriteOutputs( );
   
   void Display( ) const;

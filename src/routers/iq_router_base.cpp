@@ -161,6 +161,24 @@ void IQRouterBase::ReadInputs( )
   _ReceiveCredits( );
 }
 
+void IQRouterBase::InternalStep( )
+{
+  _InputQueuing( );
+  _Route( );
+  _Alloc( );
+  
+  for ( int input = 0; input < _inputs; ++input ) {
+    for ( int vc = 0; vc < _vcs; ++vc ) {
+      _vc[input][vc].AdvanceTime( );
+    }
+  }
+
+  _crossbar_pipe->Advance( );
+  _credit_pipe->Advance( );
+
+  _OutputQueuing( );
+}
+
 void IQRouterBase::WriteOutputs( )
 {
   _SendFlits( );
