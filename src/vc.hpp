@@ -82,9 +82,10 @@ public:
   bool AddFlit( Flit *f );
   Flit *FrontFlit( );
   Flit *RemoveFlit( );
-
+  
   bool Empty( ) const;
-
+  bool Full( ) const;
+  
   eVCState GetState( ) const;
   int      GetStateTime( ) const;
   void     SetState( eVCState s );

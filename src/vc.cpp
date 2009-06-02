@@ -132,6 +132,11 @@ bool VC::Empty( ) const
   return _buffer.empty( );
 }
 
+bool VC::Full( ) const
+{
+  return (int)_buffer.size( ) == _size;
+}
+
 VC::eVCState VC::GetState( ) const
 {
   return _state;
