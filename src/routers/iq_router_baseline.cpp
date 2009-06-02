@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <assert.h>
 
+#include "globals.hpp"
 #include "random_utils.hpp"
 #include "iq_router_baseline.hpp"
 
@@ -168,10 +169,10 @@ void IQRouterBaseline::_VCAlloc( )
 	
   	f = cur_vc->FrontFlit( );
 	if ( f->watch ) {
-	  cout << "VC requesting allocation at " << _fullname << endl;
-	  cout << "  input: = " << input 
-	       << "  vc: " << vc << endl;
-	  cout << *f;
+	  cout << "VC requesting allocation at " << _fullname
+	       << " at time " << GetSimTime() << endl
+	       << "  Input: " << input << " VC: " << vc << endl
+	       << *f;
 	  watched = true;
 	}
 	
@@ -245,8 +246,9 @@ void IQRouterBaseline::_VCAlloc( )
 	
 	if ( f->watch ) {
 	  cout << "Granted VC allocation at " << _fullname 
-	       << " (input index " << input_and_vc << " )" << endl;
-	  cout << *f;
+	       << " at time " << GetSimTime() << endl
+	       << "  Input: " << match_input << " VC: " << match_vc << endl
+	       << *f;
 	}
       }
     }
@@ -300,81 +302,107 @@ void IQRouterBaseline::_SWAlloc( )
 	
 	cur_vc = &_vc[input][vc];
 
-	if ((cur_vc->GetState( ) == VC::active) && !cur_vc->Empty() ) {
+	if((cur_vc->GetStateTime() >= _sw_alloc_delay) &&
+	   !cur_vc->Empty()) {
 	  
-	  dest_vc = &_next_vcs[cur_vc->GetOutputPort( )];
-	  
-	  if ( !dest_vc->IsFullFor( cur_vc->GetOutputVC( ) ) ) {
+	  switch(cur_vc->GetState()) {
 	    
-	    // When input_speedup > 1, the virtual channel buffers
-	    // are interleaved to create multiple input ports to
-	    // the switch.  Similarily, the output ports are
-	    // interleaved based on their originating input when
-	    // output_speedup > 1.
-
-	    assert( expanded_input == (vc%_input_speedup)*_inputs + input );
-	    expanded_output = (input%_output_speedup)*_outputs + cur_vc->GetOutputPort( );
+	  case VC::active:
+	    {
+	      
+	      dest_vc = &_next_vcs[cur_vc->GetOutputPort( )];
+	      
+	      if ( !dest_vc->IsFullFor( cur_vc->GetOutputVC( ) ) ) {
+		
+		// When input_speedup > 1, the virtual channel buffers are 
+		// interleaved to create multiple input ports to the switch. 
+		// Similarily, the output ports are interleaved based on their 
+		// originating input when output_speedup > 1.
+		
+		assert( expanded_input == (vc%_input_speedup)*_inputs + input );
+		expanded_output = 
+		  (input%_output_speedup)*_outputs + cur_vc->GetOutputPort( );
+		
+		if ( ( _switch_hold_in[expanded_input] == -1 ) && 
+		     ( _switch_hold_out[expanded_output] == -1 ) ) {
+		  
+		  // We could have requested this same input-output pair in a 
+		  // previous iteration; only replace the previous request if 
+		  // the current request has a higher priority (this is default 
+		  // behavior of the allocators).  Switch allocation priorities 
+		  // are strictly determined by the packet priorities.
+		  
+		  Flit * f = cur_vc->FrontFlit();
+		  assert(f);
+		  if(f->watch)
+		    cout << "Switch allocation requested at " << _fullname
+			 << " at time " << GetSimTime() << endl
+			 << "  Input: " << input << " VC: " << vc
+			 << "  Output: " << cur_vc->GetOutputPort() << endl
+		       << *f;
+		  
+		  if( _speculative == 1 )
+		    _sw_allocator->AddRequest(expanded_input, expanded_output, 
+					      vc, 1, 1);
+		  else
+		    _sw_allocator->AddRequest(expanded_input, expanded_output, 
+					      vc, cur_vc->GetPriority( ), 
+					      cur_vc->GetPriority( ));
+		  any_nonspec_reqs = true;
+		  any_nonspec_output_reqs[expanded_output] = true;
+		  
+		}
+	      }
+	    }
+	    break;
 	    
-	    if ( ( _switch_hold_in[expanded_input] == -1 ) && 
-		 ( _switch_hold_out[expanded_output] == -1 ) ) {
+	    
+	    //
+	    // The following models the speculative VC allocation aspects 
+	    // of the pipeline. An input VC with a request in for an egress
+	    // virtual channel will also speculatively bid for the switch
+	    // regardless of whether the VC allocation succeeds. These
+	    // speculative requests are handled in a separate allocator so 
+	    // as to prevent them from interfering with non-speculative bids
+	    //
+	  case VC::vc_spec:
+	  case VC::vc_spec_grant:
+	    {
 	      
-	      // We could have requested this same input-output pair in a 
-	      // previous iteration; only replace the previous request if the 
-	      // current request has a higher priority (this is default behavior
-	      // of the allocators).  Switch allocation priorities are strictly 
-	      // determined by the packet priorities.
+	      assert( _speculative > 0 );
+	      assert( expanded_input == (vc%_input_speedup)*_inputs + input );
+	      expanded_output = 
+		(input%_output_speedup)*_outputs + cur_vc->GetOutputPort( );
 	      
-	      if( _speculative == 1 )
-		_sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
-					   1, 
-					   1);
-	      else
-		_sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
-					   cur_vc->GetPriority( ), 
-					   cur_vc->GetPriority( ));
-	      any_nonspec_reqs = true;
-	      any_nonspec_output_reqs[expanded_output] = true;
+	      if ( ( _switch_hold_in[expanded_input] == -1 ) && 
+		   ( _switch_hold_out[expanded_output] == -1 ) ) {
+		
+		Flit * f = cur_vc->FrontFlit();
+		assert(f);
+		if(f->watch)
+		  cout << "Speculative switch allocation requested at "
+		       << _fullname << " at time " << GetSimTime() << endl
+		       << "  Input: " << input << " VC: " << vc
+		       << "  Output: " << cur_vc->GetOutputPort() << endl
+		       << *f;
+		
+		// Speculative requests are sent to the allocator with a 
+		// priority of 0 regardless of whether there is buffer space 
+		// available at the downstream router because request is 
+		// speculative. 
+		if( _speculative == 1 )
+		  _sw_allocator->AddRequest(expanded_input, expanded_output, vc,
+					    0, 0);
+		else
+		  _spec_sw_allocator->AddRequest(expanded_input, 
+						 expanded_output, vc,
+						 cur_vc->GetPriority( ), 
+						 cur_vc->GetPriority( ));
+	      }
 	      
 	    }
+	    break;
 	  }
-	}
-	
-
-	//
-	// The following models the speculative VC allocation aspects 
-	// of the pipeline. An input VC with a request in for an egress
-	// virtual channel will also speculatively bid for the switch
-	// regardless of whether the VC allocation succeeds. These
-	// speculative requests are handled in a separate allocator so 
-	// as to prevent them from interfering with non-speculative bids
-	//
-	bool enter_spec_sw_req = !cur_vc->Empty() &&
-	  ((cur_vc->GetState() == VC::vc_spec) ||
-	   (cur_vc->GetState() == VC::vc_spec_grant)) ;
-
-	if ( enter_spec_sw_req ) {
-	 
-	  assert( _speculative > 0 );
-	  assert( expanded_input == (vc%_input_speedup)*_inputs + input );
-	  expanded_output = (input%_output_speedup)*_outputs + cur_vc->GetOutputPort( );
-	  
-	  if ( ( _switch_hold_in[expanded_input] == -1 ) && 
-	       ( _switch_hold_out[expanded_output] == -1 ) ) {
-	    
-	    // Speculative requests are sent to the allocator with a priority
-	    // of 0 regardless of whether there is buffer space available
-	    // at the downstream router because request is speculative. 
-	    if( _speculative == 1 )
-	      _sw_allocator->AddRequest( expanded_input, expanded_output, vc,
-					 0, 
-					 0);
-	    else
-	      _spec_sw_allocator->AddRequest( expanded_input, expanded_output, 
-					      vc,
-					      cur_vc->GetPriority( ), 
-					      cur_vc->GetPriority( ));
-	  }
-	  
 	}
 	vc = ( vc + 1 ) % _vcs;
       }
@@ -474,17 +502,24 @@ void IQRouterBaseline::_SWAlloc( )
 	    _switch_hold_out[expanded_output] = expanded_input;
 	  }
 	  
-	  assert( ( cur_vc->GetState( ) == VC::active ) && 
-		  ( !cur_vc->Empty( ) ) && 
-		  ( cur_vc->GetOutputPort( ) == ( expanded_output % _outputs ) ) );
+	  assert(cur_vc->GetState() == VC::active);
+	  assert(!cur_vc->Empty());
+	  assert(cur_vc->GetOutputPort() == (expanded_output % _outputs));
 	  
-	  dest_vc = &_next_vcs[cur_vc->GetOutputPort( )];
+	  dest_vc = &_next_vcs[output];
 	  
 	  if ( dest_vc->IsFullFor( cur_vc->GetOutputVC( ) ) )
 	    continue ;
 	  
 	  // Forward flit to crossbar and send credit back
 	  f = cur_vc->RemoveFlit( );
+	  assert(f);
+	  if(f->watch)
+	    cout << "Granted switch allocation at " << _fullname 
+		 << " at time " << GetSimTime() << endl
+		 << "  Input: " << input << " VC: " << vc
+		 << "  Output: " << output << endl
+		 << *f;
 	  
 	  f->hops++;
 	  
@@ -495,10 +530,11 @@ void IQRouterBaseline::_SWAlloc( )
 	  bufferMonitor.read(input, f) ;
 	  
 	  if ( f->watch ) {
-	    cout << "Forwarding flit through crossbar at " << _fullname << ":" << endl;
-	    cout << *f;
-	    cout << "  input: " << expanded_input 
-		 << "  output: " << expanded_output << endl ;
+	    cout << "Forwarding flit through crossbar at " << _fullname 
+		 << " at time " << GetSimTime() << endl
+		 << "  Input: " << expanded_input 
+		 << " Output: " << expanded_output << endl
+		 << *f;
 	  }
 	  
 	  if ( !c ) {
@@ -518,6 +554,9 @@ void IQRouterBaseline::_SWAlloc( )
 	    _switch_hold_in[expanded_input]   = -1;
 	    _switch_hold_vc[expanded_input]   = -1;
 	    _switch_hold_out[expanded_output] = -1;
+	  } else {
+	    // reset state timer for next flit
+	    cur_vc->SetState( VC::active );
 	  }
 	  
 	  _sw_rr_offset[expanded_input] = ( f->vc + 1 ) % _vcs;

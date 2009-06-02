@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <assert.h>
 
+#include "globals.hpp"
 #include "random_utils.hpp"
 #include "iq_router_base.hpp"
 
@@ -221,8 +222,9 @@ void IQRouterBase::_InputQueuing( )
       }
 
       if ( f->watch ) {
-	cout << "Received flit at " << _fullname << endl;
-	cout << *f;
+	cout << "Received flit at " << _fullname 
+	     << " at time " << GetSimTime() << endl
+	     << *f;
       }
     }
   }
@@ -290,6 +292,9 @@ void IQRouterBase::_OutputQueuing( )
 
       if ( f ) {
 	_output_buffer[output].push( f );
+	if(f->watch)
+	  cout << "Sending flit to channel at " << _fullname
+	       << " at time " << GetSimTime() << endl;
       }
     }
   }  

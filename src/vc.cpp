@@ -36,8 +36,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *This class calls the routing functions
  */
 
+#include "globals.hpp"
 #include "booksim.hpp"
 #include "vc.hpp"
+
+const char * VC::STATE_NAME[] = {"idle",
+				 "routing",
+				 "vc_alloc",
+				 "active",
+				 "vc_spec",
+				 "vc_spec_grant"};
 
 VC::VC( const Configuration& config, int outputs ) :
   Module( )
@@ -136,13 +144,22 @@ int VC::GetStateTime( ) const
 
 void VC::SetState( eVCState s )
 {
-  _state = s;
-  _state_time = 0;
+  Flit * f = FrontFlit();
 
+  if(f && f->watch)
+    cout << "VC " << _fullname << " changed state"
+	 << " at time " << GetSimTime() << endl
+	 << "  Old: " << STATE_NAME[_state]
+	 << " New: " << STATE_NAME[s] << endl;
+  
+  // do not reset state time for speculation-related pseudo state transitions
+  if(!((_state == vc_spec) && (s == vc_spec_grant)) &&
+     !((_state == vc_spec_grant) && (s == active)))
+    _state_time = 0;
+  
+  _state = s;
+  
   if ( s == active ) {
-    Flit *f;
-    
-    f = FrontFlit( );
     if ( f ) {
       _pri = f->pri;
     }

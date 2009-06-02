@@ -46,6 +46,8 @@ public:
 		  vc_spec, vc_spec_grant  };
 
 private:
+  static const char * STATE_NAME[];
+  
   int _size;
 
   queue<Flit *> _buffer;

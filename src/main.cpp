@@ -71,6 +71,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///////////////////////////////////////////////////////////////////////////////
 //Global declarations
 //////////////////////
+
+ /* the current traffic manager instance */
+TrafficManager * trafficManager = NULL;
+
+int GetSimTime() {
+  return trafficManager->getTime();
+}
+
 /* printing activity factor*/
 bool _print_activity = false;
 
@@ -210,7 +218,6 @@ bool AllocatorSim( const Configuration& config )
   /*tcc and characterize are legacy
    *not sure how to use them 
    */
-  TrafficManager *trafficManager ;
   trafficManager = new TrafficManager( config, net ) ;
 
   /*Start the simulation run

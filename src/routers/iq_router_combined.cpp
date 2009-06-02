@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <assert.h>
 
+#include "globals.hpp"
 #include "random_utils.hpp"
 #include "iq_router_combined.hpp"
 
@@ -78,6 +79,7 @@ IQRouterCombined::~IQRouterCombined( )
   
 void IQRouterCombined::InternalStep( )
 {
+  
   _InputQueuing( );
   _Route( );
   _Alloc( );
@@ -121,7 +123,8 @@ void IQRouterCombined::_Alloc( )
 	
 	VC * cur_vc = &_vc[input][vc];
 	
-	if(!cur_vc->Empty()) {
+	if((cur_vc->GetStateTime() >= _sw_alloc_delay) &&
+	   !cur_vc->Empty()) {
 	  
 	  switch(cur_vc->GetState()) {
 	    
@@ -152,6 +155,15 @@ void IQRouterCombined::_Alloc( )
 		    if(dest_vc->IsAvailableFor(out_vc) &&
 		       !dest_vc->IsFullFor(out_vc)) {
 		      
+		      Flit * f = cur_vc->FrontFlit();
+		      assert(f);
+		      if(f->watch) {
+			cout << "Requesting switch and VC allocation at "
+			     << _fullname << " at time " << GetSimTime() << endl
+			     << "  Input: " << input << " VC: " << vc << endl
+			     << *f;
+		      }
+	
 		      // We could have requested this same input-output pair in 
 		      // a previous iteration; only replace the previous request
 		      // if the current request has a higher priority (this is 
@@ -163,14 +175,6 @@ void IQRouterCombined::_Alloc( )
 						vc, cur_vc->GetPriority(), 
 						cur_vc->GetPriority());
 		      
-		      Flit * f = cur_vc->FrontFlit();
-		      if(f->watch) {
-			cout << "VC requesting allocation at " << _fullname 
-			     << " (input: " << input << ", vc: " << vc << ")"
-			     << endl
-			     << *f;
-		      }
-	
 		      // we're done once we have found at least one suitable VC
 		      break;
 		    }
@@ -198,6 +202,15 @@ void IQRouterCombined::_Alloc( )
 		if((_switch_hold_in[expanded_input] == -1) && 
 		   (_switch_hold_out[expanded_output] == -1)) {
 		  
+		  Flit * f = cur_vc->FrontFlit();
+		  assert(f);
+		  if(f->watch) {
+		    cout << "Requesting switch allocation at " << _fullname
+			 << " at time " << GetSimTime() << endl
+			 << "  Input: " << input << " VC: " << vc << endl
+			 << *f;
+		  }
+	
 		  // We could have requested this same input-output pair in a 
 		  // previous iteration; only replace the previous request if 
 		  // the current request has a higher priority (this is default 
@@ -263,6 +276,7 @@ void IQRouterCombined::_Alloc( )
 	
 	BufferState * dest_vc = &_next_vcs[output];
 	Flit * f = cur_vc->FrontFlit();
+	assert(f);
 	
 	switch(cur_vc->GetState()) {
 
@@ -293,9 +307,10 @@ void IQRouterCombined::_Alloc( )
 	    
 	    _vc_rr_offset[expanded_input*_vcs+vc] = (output + 1) % _outputs;
 	    
-	    if ( f->watch ) {
+	    if(f->watch) {
 	      cout << "Granted VC allocation at " << _fullname 
-		   << " (input: " << input << ", vc: " << vc << ")" << endl
+		   << " at time " << GetSimTime() << endl
+		   << "  Input: " << input << " VC: " << vc << endl
 		   << *f;
 	    }
 	  }
@@ -319,6 +334,14 @@ void IQRouterCombined::_Alloc( )
 	  
 	  // Forward flit to crossbar and send credit back
 	  f = cur_vc->RemoveFlit();
+	  
+	  if(f->watch) {
+	    cout << "Granted switch allocation at " << _fullname 
+		 << " at time " << GetSimTime() << endl
+		 << "  Input: " << input << " VC: " << vc << endl
+		 << *f;
+	  }
+	  
 	  f->hops++;
 	  
 	  //
@@ -328,11 +351,11 @@ void IQRouterCombined::_Alloc( )
 	  bufferMonitor.read(input, f);
 	  
 	  if(f->watch) {
-	    cout << "Forwarding flit through crossbar at " << _fullname << ":"
-		 << endl
-		 << *f
-		 << "  input: " << expanded_input  
-		 << "  output: " << expanded_output << endl;
+	    cout << "Forwarding flit through crossbar at " << _fullname 
+		 << " at time " << GetSimTime() << endl
+		 << "  Input: " << expanded_input
+		 << " Output: " << expanded_output << endl
+		 << *f;
 	  }
 	  
 	  if (c == NULL) {
@@ -352,6 +375,9 @@ void IQRouterCombined::_Alloc( )
 	    _switch_hold_in[expanded_input] = -1;
 	    _switch_hold_vc[expanded_input] = -1;
 	    _switch_hold_out[expanded_output] = -1;
+	  } else {
+	    // reset state timer for next flit
+	    cur_vc->SetState(VC::active);
 	  }
 	  
 	  _sw_rr_offset[expanded_input] = (f->vc + 1) % _vcs;

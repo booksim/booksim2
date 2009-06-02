@@ -900,8 +900,10 @@ void TrafficManager::_Step( )
 
       if ( f ) {
         if ( f->watch ) {
-	  cout << "ejected flit " << f->id << " at output " << output << endl;
-	  cout << "sending credit for " << f->vc << endl;
+	  cout << "ejected flit " << f->id << " at output " << output
+	       << " at time " << _time << endl;
+	  cout << "Sending credit for " << f->vc
+	       << " at time " << _time << endl;
         }
       
         cred = new Credit( 1 );

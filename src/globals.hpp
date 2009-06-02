@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*all declared in main.cpp*/
 
+int GetSimTime();
 
 extern bool _print_activity;
 
@@ -65,7 +66,7 @@ extern int    gConstPacketSize;
 
 extern int *gNodeStates;
 
-extern string watch_file;
+extern std::string watch_file;
 
 extern bool _use_noc_latency;
 #endif
