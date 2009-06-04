@@ -42,8 +42,12 @@ class VCRouter;
 
 class VC : public Module {
 public:
-  enum eVCState { idle, routing, vc_alloc, active, 
-		  vc_spec, vc_spec_grant  };
+  enum eVCState { state_min = 0, idle = state_min, routing, vc_alloc, active, 
+		  vc_spec, vc_spec_grant, state_max = vc_spec_grant };
+  struct state_info_t {
+    const char * name;
+    int cycles;
+  };
 
 private:
   int _size;
@@ -65,13 +69,8 @@ private:
   int _routing_cycles;
   
   static int total_cycles;
-  static int vc_alloc_cycles;
-  static int active_cycles;
-  static int idle_cycles;
-  static int routing_cycles;
+  static state_info_t state_info[];
   static int occupancy;
-  
-  static const char * STATE_NAMES[];
   
   int _pri;
 
