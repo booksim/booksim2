@@ -49,7 +49,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //////////////////Sub router types//////////////////////
 #include "iq_router_baseline.hpp"
 #include "iq_router_combined.hpp"
-#include "iq_router_split.hpp"
 #include "event_router.hpp"
 #include "MECSRouter.hpp"
 ///////////////////////////////////////////////////////
