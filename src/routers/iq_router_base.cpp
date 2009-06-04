@@ -250,10 +250,10 @@ void IQRouterBase::_InputQueuing( )
   for ( int input = 0; input < _inputs; ++input ) {
     for ( int vc = 0; vc < _vcs; ++vc ) {
 
-      cur_vc = &_vc[input][vc];
+      VC * cur_vc = &_vc[input][vc];
       
       if ( cur_vc->GetState( ) == VC::idle ) {
-	f = cur_vc->FrontFlit( );
+	Flit * f = cur_vc->FrontFlit( );
 
 	if ( f ) {
 	  if ( !f->head ) {
@@ -269,7 +269,7 @@ void IQRouterBase::_InputQueuing( )
 
   for ( int output = 0; output < _outputs; ++output ) {
     if ( !_out_cred_buffer[output].empty( ) ) {
-      c = _out_cred_buffer[output].front( );
+      Credit * c = _out_cred_buffer[output].front( );
       _out_cred_buffer[output].pop( );
    
       _next_vcs[output].ProcessCredit( c );
