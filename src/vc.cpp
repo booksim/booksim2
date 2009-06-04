@@ -40,12 +40,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include "vc.hpp"
 
-const char * VC::STATE_NAME[] = {"idle",
+const char * VC::STATE_NAMES[] = {"idle",
 				 "routing",
 				 "vc_alloc",
 				 "active",
 				 "vc_spec",
 				 "vc_spec_grant"};
+
+int VC::total_cycles = 0;
+int VC::vc_alloc_cycles = 0;
+int VC::active_cycles = 0;
+int VC::idle_cycles = 0;
+int VC::routing_cycles = 0;
+int VC::occupancy = 0;
 
 VC::VC( const Configuration& config, int outputs ) :
   Module( )
@@ -79,6 +86,7 @@ void VC::_Init( const Configuration& config, int outputs )
   _vc_alloc_cycles = 0;
   _active_cycles   = 0;
   _idle_cycles     = 0;
+  _routing_cycles     = 0;
 
   _pri = 0;
 
@@ -154,23 +162,24 @@ void VC::SetState( eVCState s )
   if(f && f->watch)
     cout << "VC " << _fullname << " changed state"
 	 << " at time " << GetSimTime() << endl
-	 << "  Old: " << STATE_NAME[_state]
-	 << " New: " << STATE_NAME[s] << endl;
+	 << "  Old: " << STATE_NAMES[_state]
+	 << " New: " << STATE_NAMES[s] << endl;
   
   // do not reset state time for speculation-related pseudo state transitions
   if(!((_state == vc_spec) && (s == vc_spec_grant)) &&
      !((_state == vc_spec_grant) && (s == active)))
     _state_time = 0;
   
-  _state = s;
-  
-  if ( s == active ) {
+  if ( (_state == idle) && (s != idle) ) {
     if ( f ) {
       _pri = f->pri;
     }
 
     _occupied_cnt++;
   }
+
+  _state = s;
+  
 }
 
 const OutputSet *VC::GetRouteSet( ) const
@@ -213,15 +222,16 @@ void VC::AdvanceTime( )
 {
   _state_time++;
 
-  _total_cycles++;
+  _total_cycles++; total_cycles++;
   switch( _state ) {
-  case idle          : _idle_cycles++; break;
-  case active        : _active_cycles++; break;
-  case vc_spec_grant : _active_cycles++; break;
-  case vc_alloc      : _vc_alloc_cycles++; break;
-  case vc_spec       : _vc_alloc_cycles++; break;
-  case routing       : break;
+  case idle          : _idle_cycles++; idle_cycles++; break;
+  case active        : _active_cycles++; active_cycles++; break;
+  case vc_spec_grant : _active_cycles++; active_cycles++; break;
+  case vc_alloc      : _vc_alloc_cycles++; vc_alloc_cycles++; break;
+  case vc_spec       : _vc_alloc_cycles++; vc_alloc_cycles++; break;
+  case routing       : _routing_cycles++; routing_cycles++; break;
   }
+  occupancy += _buffer.size();
 }
 
 // ==== Debug functions ====
@@ -244,18 +254,21 @@ void VC::Display( ) const
 //       << "active " << 100.0 * (double)_active_cycles / (double)_total_cycles << "% "
 //       << endl;
   if ( _state != VC::idle ) {
-    cout << _fullname << ":  state: "  ;
-    switch (_state) {
-    case routing: cout << "routing"; break ;
-    case vc_alloc: cout << "vc_alloc"; break ;
-    case active: cout << "active"; break ;
-    case vc_spec: cout << "vc_spec"; break ;
-    case vc_spec_grant: cout << "vc_sepc_grant"; break ;
-    }
-      
-    cout << " out_port: " << _out_port
-	 << " out_vc " << _out_vc 
+    cout << _fullname << ": "
+	 << " state: " << STATE_NAMES[_state]
+	 << " out_port: " << _out_port
+	 << " out_vc: " << _out_vc 
 	 << " fill: " << _buffer.size() 
 	 << endl ;
   }
+}
+
+void VC::DisplayStats( )
+{
+  cout << "VC state breakdown:" << endl
+       << "  idle:      " << (float)idle_cycles/(float)total_cycles << endl
+       << "  routing:   " << (float)routing_cycles/(float)total_cycles << endl
+       << "  vc_alloc:  " << (float)vc_alloc_cycles/(float)total_cycles << endl
+       << "  active:    " << (float)active_cycles/(float)total_cycles << endl
+       << "  occupancy: " << (float)occupancy/(float)total_cycles << endl;
 }

@@ -46,8 +46,6 @@ public:
 		  vc_spec, vc_spec_grant  };
 
 private:
-  static const char * STATE_NAME[];
-  
   int _size;
 
   queue<Flit *> _buffer;
@@ -59,11 +57,22 @@ private:
   int _out_port, _out_vc;
 
   int _occupied_cnt;
+
   int _total_cycles;
   int _vc_alloc_cycles;
   int _active_cycles;
   int _idle_cycles;
-
+  int _routing_cycles;
+  
+  static int total_cycles;
+  static int vc_alloc_cycles;
+  static int active_cycles;
+  static int idle_cycles;
+  static int routing_cycles;
+  static int occupancy;
+  
+  static const char * STATE_NAMES[];
+  
   int _pri;
 
 
@@ -108,6 +117,7 @@ public:
   bool IsWatched( ) const;
   int GetSize() const;
   void Display( ) const;
+  static void DisplayStats( );
 };
 
 #endif 

@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fstream>
 #include "trafficmanager.hpp"
 #include "random_utils.hpp" 
+#include "vc.hpp"
 
 //batched time-mode, know what you are doing
 bool timed_mode = false;
@@ -1262,6 +1263,7 @@ bool TrafficManager::Run( )
   }
   
   DisplayStats();
+  VC::DisplayStats();
   return true;
 }
 
