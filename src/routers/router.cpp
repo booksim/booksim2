@@ -162,8 +162,6 @@ Router *Router::NewRouter( const Configuration& config,
     }
   } else if ( type == "iq_combined" ) {
     r = new IQRouterCombined( config, parent, name, id, inputs, outputs );
-  } else if ( type == "iq_split" ) {
-    r = new IQRouterSplit( config, parent, name, id, inputs, outputs );
   } else if ( type == "event" ) {
     r = new EventRouter( config, parent, name, id, inputs, outputs );
   } else {
