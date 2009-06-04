@@ -104,13 +104,15 @@ void IQRouterCombined::_Alloc( )
 	
 	VC * cur_vc = &_vc[input][vc];
 	
-	if((cur_vc->GetStateTime() >= _sw_alloc_delay) &&
-	   !cur_vc->Empty()) {
+	if((cur_vc->GetStateTime() >= _sw_alloc_delay) && !cur_vc->Empty()) {
 	  
 	  switch(cur_vc->GetState()) {
 	    
 	  case VC::vc_alloc:
 	    {
+	      Flit * f = cur_vc->FrontFlit();
+	      assert(f);
+	      
 	      const OutputSet * route_set = cur_vc->GetRouteSet();
 	      int output = _vc_rr_offset[expanded_input*_vcs+vc];
 	      
@@ -136,15 +138,15 @@ void IQRouterCombined::_Alloc( )
 		    if(dest_vc->IsAvailableFor(out_vc) &&
 		       !dest_vc->IsFullFor(out_vc)) {
 		      
-		      Flit * f = cur_vc->FrontFlit();
-		      assert(f);
 		      if(f->watch) {
-			cout << "Requesting switch and VC allocation at "
+			cout << "Switch and VC allocation requested at "
 			     << _fullname << " at time " << GetSimTime() << endl
 			     << "  Input: " << input << " VC: " << vc << endl
+			     << "  Output: " << output << " VC: " << out_vc 
+			     << endl
 			     << *f;
 		      }
-	
+
 		      // We could have requested this same input-output pair in 
 		      // a previous iteration; only replace the previous request
 		      // if the current request has a higher priority (this is 
@@ -186,12 +188,13 @@ void IQRouterCombined::_Alloc( )
 		  Flit * f = cur_vc->FrontFlit();
 		  assert(f);
 		  if(f->watch) {
-		    cout << "Requesting switch allocation at " << _fullname
+		    cout << "Switch allocation requested at " << _fullname
 			 << " at time " << GetSimTime() << endl
 			 << "  Input: " << input << " VC: " << vc << endl
+			 << "  Output: " << output << endl
 			 << *f;
 		  }
-	
+		  
 		  // We could have requested this same input-output pair in a 
 		  // previous iteration; only replace the previous request if 
 		  // the current request has a higher priority (this is default 
@@ -292,6 +295,7 @@ void IQRouterCombined::_Alloc( )
 	      cout << "Granted VC allocation at " << _fullname 
 		   << " at time " << GetSimTime() << endl
 		   << "  Input: " << input << " VC: " << vc << endl
+		   << "  Output: " << output << " VC: " << sel_vc << endl
 		   << *f;
 	    }
 	  }
@@ -320,6 +324,7 @@ void IQRouterCombined::_Alloc( )
 	    cout << "Granted switch allocation at " << _fullname 
 		 << " at time " << GetSimTime() << endl
 		 << "  Input: " << input << " VC: " << vc << endl
+		 << "  Output: " << output << endl
 		 << *f;
 	  }
 	  
@@ -334,8 +339,8 @@ void IQRouterCombined::_Alloc( )
 	  if(f->watch) {
 	    cout << "Forwarding flit through crossbar at " << _fullname 
 		 << " at time " << GetSimTime() << endl
-		 << "  Input: " << expanded_input
-		 << " Output: " << expanded_output << endl
+		 << "  Input: " << expanded_input << endl
+		 << "  Output: " << expanded_output << endl
 		 << *f;
 	  }
 	  

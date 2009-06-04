@@ -235,6 +235,7 @@ void IQRouterBaseline::_VCAlloc( )
 	  cout << "Granted VC allocation at " << _fullname 
 	       << " at time " << GetSimTime() << endl
 	       << "  Input: " << match_input << " VC: " << match_vc << endl
+	       << "  Output: " << output << " VC: " << vc << endl
 	       << *f;
 	}
       }
@@ -321,13 +322,17 @@ void IQRouterBaseline::_SWAlloc( )
 		  
 		  Flit * f = cur_vc->FrontFlit();
 		  assert(f);
-		  if(f->watch)
+		  if(f->watch) {
 		    cout << "Switch allocation requested at " << _fullname
 			 << " at time " << GetSimTime() << endl
-			 << "  Input: " << input << " VC: " << vc
+			 << "  Input: " << input << " VC: " << vc << endl
 			 << "  Output: " << cur_vc->GetOutputPort() << endl
-		       << *f;
+			 << *f;
+		  }
 		  
+		  // dub: for the old-style speculation implementation, we 
+		  // overload the packet priorities to prioritize 
+		  // non-speculative requests over speculative ones
 		  if( _speculative == 1 )
 		    _sw_allocator->AddRequest(expanded_input, expanded_output, 
 					      vc, 1, 1);
@@ -354,8 +359,7 @@ void IQRouterBaseline::_SWAlloc( )
 	    //
 	  case VC::vc_spec:
 	  case VC::vc_spec_grant:
-	    {
-	      
+	    {	      
 	      assert( _speculative > 0 );
 	      assert( expanded_input == (vc%_input_speedup)*_inputs + input );
 	      expanded_output = 
@@ -366,17 +370,17 @@ void IQRouterBaseline::_SWAlloc( )
 		
 		Flit * f = cur_vc->FrontFlit();
 		assert(f);
-		if(f->watch)
+		if(f->watch) {
 		  cout << "Speculative switch allocation requested at "
 		       << _fullname << " at time " << GetSimTime() << endl
-		       << "  Input: " << input << " VC: " << vc
+		       << "  Input: " << input << " VC: " << vc << endl
 		       << "  Output: " << cur_vc->GetOutputPort() << endl
 		       << *f;
+		}
 		
-		// Speculative requests are sent to the allocator with a 
-		// priority of 0 regardless of whether there is buffer space 
-		// available at the downstream router because request is 
-		// speculative. 
+		// dub: for the old-style speculation implementation, we 
+		// overload the packet priorities to prioritize non-speculative 
+		// requests over speculative ones
 		if( _speculative == 1 )
 		  _sw_allocator->AddRequest(expanded_input, expanded_output, vc,
 					    0, 0);
@@ -386,7 +390,6 @@ void IQRouterBaseline::_SWAlloc( )
 						 cur_vc->GetPriority( ), 
 						 cur_vc->GetPriority( ));
 	      }
-	      
 	    }
 	    break;
 	  }
