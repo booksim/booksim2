@@ -266,4 +266,5 @@ void VC::DisplayStats( )
     cout << "  " << state_info[state].name
 	 << ": " << (float)state_info[state].cycles/(float)total_cycles << endl;
   }
+  cout << "  occupancy: " << (float)occupancy/(float)total_cycles << endl;
 }
