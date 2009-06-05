@@ -165,13 +165,13 @@ void IQRouterBaseline::_VCAlloc( )
 	
 	const OutputSet *route_set    = cur_vc->GetRouteSet( );
 	int out_priority = cur_vc->GetPriority( );
-	int in_priority;
 	
 	for ( int output = 0; output < _outputs; ++output ) {
 	  int vc_cnt = route_set->NumVCs( output );
 	  BufferState *dest_vc = &_next_vcs[output];
 	  
 	  for ( int vc_index = 0; vc_index < vc_cnt; ++vc_index ) {
+	    int in_priority;
 	    int out_vc = route_set->GetVC( output, vc_index, &in_priority );
 	    
 	    if ( f->watch ) {
@@ -362,33 +362,49 @@ void IQRouterBaseline::_SWAlloc( )
 	    {	      
 	      assert( _speculative > 0 );
 	      assert( expanded_input == (vc%_input_speedup)*_inputs + input );
-	      expanded_output = 
-		(input%_output_speedup)*_outputs + cur_vc->GetOutputPort( );
 	      
-	      if ( ( _switch_hold_in[expanded_input] == -1 ) && 
-		   ( _switch_hold_out[expanded_output] == -1 ) ) {
-		
-		Flit * f = cur_vc->FrontFlit();
-		assert(f);
-		if(f->watch) {
-		  cout << "Speculative switch allocation requested at "
-		       << _fullname << " at time " << GetSimTime() << endl
-		       << "  Input: " << input << " VC: " << vc << endl
-		       << "  Output: " << cur_vc->GetOutputPort() << endl
-		       << *f;
+	      const OutputSet * route_set = cur_vc->GetRouteSet( );
+	      int out_priority = cur_vc->GetPriority( );
+	      
+	      for ( int output = 0; output < _outputs; ++output ) {
+		int vc_cnt = route_set->NumVCs( output );
+		if ( vc_cnt != 0 ) {
+		  int in_priority = 0;
+		  for ( int vc_index = 0; vc_index < vc_cnt; ++vc_index ) {
+		    int vc_prio;
+		    int out_vc = route_set->GetVC( output, vc_index, &vc_prio );
+		    if ( vc_prio > in_priority ) {
+		      in_priority = vc_prio;
+		    }
+		  }
+		  expanded_output = (input%_output_speedup)*_outputs + output;
+		  
+		  if ( ( _switch_hold_in[expanded_input] == -1 ) && 
+		       ( _switch_hold_out[expanded_output] == -1 ) ) {
+		    
+		    Flit * f = cur_vc->FrontFlit();
+		    assert(f);
+		    if(f->watch) {
+		      cout << "Speculative switch allocation requested at "
+			   << _fullname << " at time " << GetSimTime() << endl
+			   << "  Input: " << input << " VC: " << vc << endl
+			   << "  Output: " << cur_vc->GetOutputPort() << endl
+			   << *f;
+		    }
+		    
+		    // dub: for the old-style speculation implementation, we 
+		    // overload the packet priorities to prioritize non-
+		    // speculative requests over speculative ones
+		    if( _speculative == 1 )
+		      _sw_allocator->AddRequest(expanded_input, expanded_output,
+						vc, 0, 0);
+		    else
+		      _spec_sw_allocator->AddRequest(expanded_input, 
+						     expanded_output, vc,
+						     in_priority + out_priority,
+						     out_priority);
+		  }
 		}
-		
-		// dub: for the old-style speculation implementation, we 
-		// overload the packet priorities to prioritize non-speculative 
-		// requests over speculative ones
-		if( _speculative == 1 )
-		  _sw_allocator->AddRequest(expanded_input, expanded_output, vc,
-					    0, 0);
-		else
-		  _spec_sw_allocator->AddRequest(expanded_input, 
-						 expanded_output, vc,
-						 cur_vc->GetPriority( ), 
-						 cur_vc->GetPriority( ));
 	      }
 	    }
 	    break;
@@ -482,9 +498,12 @@ void IQRouterBaseline::_SWAlloc( )
 	}
 
 	// Detect speculative switch requests which succeeded when VC 
-	// allocation failed and prevenet the switch from forwarding
-	if ( cur_vc->GetState() == VC::active ) {
-
+	// allocation failed and prevenet the switch from forwarding;
+	// also, in case the routing function can return multiple outputs, 
+	// check to make sure VC allocation and speculative switch allocation 
+	// pick the same output port.
+	if ( ( cur_vc->GetState() == VC::active ) &&
+	     ( cur_vc->GetOutputPort() == output ) ) {
 
 	  if ( _hold_switch_for_packet ) {
 	    _switch_hold_in[expanded_input] = expanded_output;
@@ -494,7 +513,7 @@ void IQRouterBaseline::_SWAlloc( )
 	  
 	  assert(cur_vc->GetState() == VC::active);
 	  assert(!cur_vc->Empty());
-	  assert(cur_vc->GetOutputPort() == (expanded_output % _outputs));
+	  assert(cur_vc->GetOutputPort() == output);
 	  
 	  dest_vc = &_next_vcs[output];
 	  
