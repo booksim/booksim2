@@ -1278,7 +1278,7 @@ void TrafficManager::DisplayStats() {
 	   << "," << _load
 	   << "," << _flit_rate
 	   << "," << _overall_latency[c]->Average( )
-	   << "," << _overall_accepted_min->Average( )
+	   << "," << _overall_accepted->Average( )
 	   << "," << _overall_accepted_min->Average( )
 	   << "," << _hop_stats->Average( )
 	   << endl;
