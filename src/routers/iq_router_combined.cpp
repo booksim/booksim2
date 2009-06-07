@@ -104,110 +104,92 @@ void IQRouterCombined::_Alloc( )
 	
 	VC * cur_vc = &_vc[input][vc];
 	
-	if((cur_vc->GetStateTime() >= _sw_alloc_delay) && !cur_vc->Empty()) {
+	VC::eVCState vc_state = cur_vc->GetState();
+
+	if(!cur_vc->Empty() &&
+	   ((vc_state == VC::vc_alloc) || (vc_state == VC::active)) &&
+	   (cur_vc->GetStateTime() >= _sw_alloc_delay)) {
 	  
-	  switch(cur_vc->GetState()) {
+	  const OutputSet * route_set = cur_vc->GetRouteSet();
+	  Flit * f = cur_vc->FrontFlit();
+	  assert(f);
+	  
+	  int output = _vc_rr_offset[expanded_input*_vcs+vc];
+	  
+	  for(int output_index = 0; output_index < _outputs; ++output_index) {
 	    
-	  case VC::vc_alloc:
-	    {
-	      Flit * f = cur_vc->FrontFlit();
-	      assert(f);
-	      
-	      const OutputSet * route_set = cur_vc->GetRouteSet();
-	      int output = _vc_rr_offset[expanded_input*_vcs+vc];
-	      
-	      for(int output_index = 0; output_index < _outputs; 
-		  ++output_index) {
-
-		// When input_speedup > 1, the virtual channel buffers are 
-		// interleaved to create multiple input ports to the switch.
-		// Similarily, the output ports are interleaved based on their 
-		// originating input when output_speedup > 1.
-		
-		assert(expanded_input == (vc%_input_speedup)*_inputs+input);
-		int expanded_output = (input%_output_speedup)*_outputs + output;
-		
-		if((_switch_hold_in[expanded_input] == -1) && 
-		   (_switch_hold_out[expanded_output] == -1)) {
-		  
-		  int vc_cnt = route_set->NumVCs(output);
-		  BufferState * dest_vc = &_next_vcs[output];
-		  
-		  for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
-		    int out_vc = route_set->GetVC(output, vc_index, NULL);
-		    if(dest_vc->IsAvailableFor(out_vc) &&
-		       !dest_vc->IsFullFor(out_vc)) {
-		      
-		      if(f->watch) {
-			cout << "Switch and VC allocation requested at "
-			     << _fullname << " at time " << GetSimTime() << endl
-			     << "  Input: " << input << " VC: " << vc << endl
-			     << "  Output: " << output << " VC: " << out_vc 
-			     << endl
-			     << *f;
-		      }
-
-		      // We could have requested this same input-output pair in 
-		      // a previous iteration; only replace the previous request
-		      // if the current request has a higher priority (this is 
-		      // default behavior of the allocators). Switch allocation 
-		      // priorities are strictly determined by the packet 
-		      // priorities.
-		      
-		      _sw_allocator->AddRequest(expanded_input, expanded_output,
-						vc, cur_vc->GetPriority(), 
-						cur_vc->GetPriority());
-		      
-		      // we're done once we have found at least one suitable VC
-		      break;
-		    }
-		  }
-		}
-		output = (output + 1) % _outputs;
-	      }
-	      break;
+	    // in active state, we only care about our assigned output port
+	    if(vc_state == VC::active) {
+	      output = cur_vc->GetOutputPort();
 	    }
 	    
-	  case VC::active:
-	    {
-	      int output = cur_vc->GetOutputPort();
+	    // When input_speedup > 1, the virtual channel buffers are 
+	    // interleaved to create multiple input ports to the switch.
+	    // Similarily, the output ports are interleaved based on their 
+	    // originating input when output_speedup > 1.
+	    
+	    assert(expanded_input == (vc%_input_speedup)*_inputs+input);
+	    int expanded_output = (input%_output_speedup)*_outputs + output;
+	    
+	    if((_switch_hold_in[expanded_input] == -1) && 
+	       (_switch_hold_out[expanded_output] == -1)) {
+	      
 	      BufferState * dest_vc = &_next_vcs[output];
-	      if(!dest_vc->IsFullFor(cur_vc->GetOutputVC())) {
-		
-		// When input_speedup > 1, the virtual channel buffers are 
-		// interleaved to create multiple input ports to the switch.
-		// Similarily, the output ports are interleaved based on their 
-		// originating input when output_speedup > 1.
-		
-		assert(expanded_input == (vc%_input_speedup)*_inputs + input);
-		int expanded_output = (input%_output_speedup)*_outputs + output;
-		
-		if((_switch_hold_in[expanded_input] == -1) && 
-		   (_switch_hold_out[expanded_output] == -1)) {
-		  
-		  Flit * f = cur_vc->FrontFlit();
-		  assert(f);
-		  if(f->watch) {
-		    cout << "Switch allocation requested at " << _fullname
-			 << " at time " << GetSimTime() << endl
-			 << "  Input: " << input << " VC: " << vc << endl
-			 << "  Output: " << output << endl
-			 << *f;
-		  }
-		  
-		  // We could have requested this same input-output pair in a 
-		  // previous iteration; only replace the previous request if 
-		  // the current request has a higher priority (this is default 
-		  // behavior of the allocators). Switch allocation priorities 
-		  // are strictly determined by the packet priorities.
-		  
-		  _sw_allocator->AddRequest(expanded_input, expanded_output, vc,
-					    cur_vc->GetPriority(), 
-					    cur_vc->GetPriority());
+	      
+	      bool do_request = false;
+	      int in_priority;
+	      
+	      // check if any suitable VCs are available and determine the 
+	      // highest priority for this port
+	      int vc_cnt = route_set->NumVCs(output);
+	      assert(!((vc_state == VC::active) && (vc_cnt == 0)));
+	      for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
+		int vc_prio;
+		int out_vc = route_set->GetVC(output, vc_index, &vc_prio);
+		if((((vc_state == VC::vc_alloc) &&
+		     dest_vc->IsAvailableFor(out_vc)) || 
+		    ((vc_state == VC::active) &&
+		     (out_vc == cur_vc->GetOutputVC()))) &&
+		   (!do_request || (vc_prio > in_priority)) &&
+		   !dest_vc->IsFullFor(out_vc)) {
+		  do_request = true;
+		  in_priority = vc_prio;
 		}
 	      }
+	      
+	      if(do_request) {
+		
+		if(f->watch) {
+		  cout << "Switch ";
+		  if(vc_state == VC::vc_alloc) {
+		    cout << "and VC ";
+		  }
+		  cout << "allocation requested at "
+		       << _fullname << " at time " << GetSimTime() << endl
+		       << "  Input: " << input << " VC: " << vc << endl
+		       << "  Output: " << output 
+		       << endl
+		       << *f;
+		}
+		
+		// We could have requested this same input-output pair in a 
+		// previous iteration; only replace the previous request if the 
+		// current request has a higher priority (this is default 
+		// behavior of the allocators). Switch allocation priorities 
+		// are strictly determined by the packet priorities.
+		
+		_sw_allocator->AddRequest(expanded_input, expanded_output, vc, 
+					  in_priority, cur_vc->GetPriority());
+		
+	      }
+	    }
+
+	    // in active state, we only care about our assigned output port
+	    if(vc_state == VC::active) {
 	      break;
 	    }
+	    
+	    output = (output + 1) % _outputs;
 	  }
 	}
 	vc = (vc + 1) % _vcs;
