@@ -259,7 +259,7 @@ void VC::Display( ) const
   }
 }
 
-void VC::DisplayStats( )
+void VC::DisplayStats( bool print_csv )
 {
   cout << "VC state breakdown:" << endl;
   for(eVCState state = state_min; state <= state_max; state = eVCState(state+1)) {
@@ -267,4 +267,11 @@ void VC::DisplayStats( )
 	 << ": " << (float)state_info[state].cycles/(float)total_cycles << endl;
   }
   cout << "  occupancy: " << (float)occupancy/(float)total_cycles << endl;
+  if(print_csv) {
+    cout << "vc_stats:";
+    for(eVCState state = state_min; state <= state_max; state = eVCState(state+1)) {
+      cout << (float)state_info[state].cycles/(float)total_cycles << ",";
+    }
+    cout << (float)occupancy/(float)total_cycles << endl;
+  }
 }

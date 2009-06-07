@@ -116,7 +116,7 @@ public:
   bool IsWatched( ) const;
   int GetSize() const;
   void Display( ) const;
-  static void DisplayStats( );
+  static void DisplayStats( bool print_csv = false );
 };
 
 #endif 
