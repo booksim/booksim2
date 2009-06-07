@@ -1263,7 +1263,7 @@ bool TrafficManager::Run( )
   }
   
   DisplayStats();
-  VC::DisplayStats();
+  VC::DisplayStats(_print_csv_results);
   return true;
 }
 
