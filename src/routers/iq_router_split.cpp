@@ -122,14 +122,28 @@ void IQRouterSplit::_InputQueuing( )
 void IQRouterSplit::_Alloc( )
 {
   // bypassing
+  
+  // suppress bypass if any flits are in the same input port and VC
   bool req_for_input_vc[_inputs][_vcs];
-  bool req_for_input[_inputs];
-  bool req_for_output[_outputs];
   memset(req_for_input_vc, false, _inputs*_vcs*sizeof(bool));
+  
+  // suppress bypass if any flits at the same input port are ready to go
+  bool req_for_input[_inputs];
   memset(req_for_input, false, _inputs*sizeof(bool));
+  
+  // suppress bypass if any flits are ready to go to the same output port
+  bool req_for_output[_outputs];
   memset(req_for_output, false, _outputs*sizeof(bool));
   
+  // keep track of fast-path grants
+  int fast_path_grants[_inputs];
+  
+  _sw_allocator->Clear( );
+  
   for(int input = 0; input < _inputs; ++input) {
+    
+    fast_path_grants[input] = -1;
+    
     for(int vc = 0; vc < _vcs; ++vc) {
       
       // skip check if this is a VC that has only a newly arrived flit
@@ -187,11 +201,7 @@ void IQRouterSplit::_Alloc( )
 	break;
       }
     }
-  }
-  
-  _sw_allocator->Clear( );
-  
-  for(int input = 0; input < _inputs; ++input) {
+
     for(int s = 0; s < _input_speedup; ++s) {
       int expanded_input  = s*_inputs + input;
       
@@ -310,24 +320,52 @@ void IQRouterSplit::_Alloc( )
     
     int vc = _use_fast_path[input];
     if(vc >= 0) {
+      
       VC * cur_vc = &_vc[input][vc];
-      switch(cur_vc->GetState()) {
-      case VC::vc_alloc:
-	{
-	  
-	}
-	break;
-      case VC::active:
-	{
+      VC::eVCState vc_state = cur_vc->GetState();
+      const OutputSet * route_set = cur_vc->GetRouteSet();
+      int active_vc = cur_vc->GetOutputVC();
+      
+      assert(!cur_vc->Empty());
+      
+      for(int output = 0; output < _outputs; ++output) {
 
+	if(vc_state == VC::active) {
+	  output = cur_vc->GetOutputPort();
 	}
-	break;
+	
+	BufferState * dest_vc = &_next_vcs[output];
+	
+	int vc_cnt = route_set->NumVCs(output);
+	assert(!((vc_state == VC::active) && (vc_cnt == 0)));
+	
+	for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
+	  int vc_prio;
+	  int out_vc = route_set->GetVC(output, vc_index, &vc_prio);
+	  
+	  if((((vc_state == VC::vc_alloc) && dest_vc->IsAvailableFor(out_vc)) ||
+	      ((vc_state == VC::active) && (out_vc == active_vc))) &&
+	     !dest_vc->IsFullFor(out_vc)) {
+	    _fast_path_arbiters[output]->AddRequest(input, out_vc, vc_prio);
+	  }
+	}
+	
+	if(vc_state == VC::active) {
+	  break;
+	}
+	
       }
     }
     
   }
   
   _sw_allocator->Allocate();
+  
+  // perform arbitration to generate fast-path grants
+  for(int output = 0; output < _outputs; ++output) {
+    int input = _fast_path_arbiters[output]->Arbitrate();
+    fast_path_grants[input] = output;
+  }
   
   // Winning flits cross the switch
 
@@ -483,6 +521,68 @@ void IQRouterSplit::_Alloc( )
 	} 
       }
     }
+    
+    int output = fast_path_grants[input];
+    int vc = _use_fast_path[input];
+    
+    if((vc >= 0) && !req_for_input_vc[input][vc] &&
+       !req_for_input[input] &&
+       (output >= 0) && !req_for_output[output]) {
+      
+      VC * cur_vc = &_vc[input][vc];
+      BufferState * dest_vc = &_next_vcs[output];
+      
+      assert(!((cur_vc->GetState() == VC::vc_alloc) &&
+	       !dest_vc->IsAvailableFor(cur_vc->GetOutputVC())));
+      assert(!dest_vc->IsFullFor(cur_vc->GetOutputVC()));
+      
+      // Forward flit to crossbar and send credit back
+      Flit * f = cur_vc->RemoveFlit();
+      
+      if(f->watch) {
+	cout << "Granted fast-path switch allocation at " << _fullname 
+	     << " at time " << GetSimTime() << endl
+	     << "  Input: " << input << " VC: " << vc << endl
+	     << "  Output: " << output << endl
+	     << *f;
+      }
+      
+      f->hops++;
+      
+      //
+      // Switch Power Modelling
+      //
+      switchMonitor.traversal(input, output, f);
+      bufferMonitor.read(input, f);
+      
+      if(f->watch) {
+	cout << "Forwarding flit through crossbar at " << _fullname 
+	     << " at time " << GetSimTime() << endl
+	     << "  Input: " << input << endl
+	     << "  Output: " << output << endl
+	     << *f;
+      }
+      
+      if (c == NULL) {
+	c = _NewCredit(_vcs);
+      }
+      
+      c->vc[c->vc_cnt] = f->vc;
+      c->vc_cnt++;
+      c->dest_router = f->from_router;
+      f->vc = cur_vc->GetOutputVC();
+      dest_vc->SendingFlit(f);
+      
+      _crossbar_pipe->Write(f, output);
+      
+      if(f->tail) {
+	cur_vc->SetState(VC::idle);
+      } else {
+	// reset state timer for next flit
+	cur_vc->SetState(VC::active);
+      }
+    }
+    
     _credit_pipe->Write(c, input);
   }
 }
