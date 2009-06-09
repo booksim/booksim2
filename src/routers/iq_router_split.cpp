@@ -49,7 +49,7 @@ IQRouterSplit::IQRouterSplit( const Configuration& config,
   int iters;
 
   // check constraints
-  if(_routing_delay == 0)
+  if(_routing_delay != 0)
     Error("This router architecture requires lookahead routing!");
   
   // Allocate the allocators
