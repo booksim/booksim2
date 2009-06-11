@@ -39,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include <math.h>
 #include <iostream>
+#include <stdio.h>
 
 #include "stats.hpp"
 
