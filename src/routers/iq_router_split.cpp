@@ -97,16 +97,25 @@ IQRouterSplit::~IQRouterSplit( )
   
   delete [] _use_fast_path;
 }
-  
+
 void IQRouterSplit::_InputQueuing( )
 {
   for ( int input = 0; input < _inputs; ++input ) {
     _use_fast_path[input] = -1;
     if ( !_input_buffer[input].empty( ) ) {
       Flit * f = _input_buffer[input].front( );
+      _input_buffer[input].pop();
+      
+      VC * cur_vc = &_vc[input][f->vc];
+      
+      if ( f->watch ) {
+	cout << "Received flit at " << _fullname 
+	     << " at time " << GetSimTime() << endl
+	     << *f;
+      }
       
       // try to send new arrivals through fast path
-      if(_vc[input][f->vc].Empty()) {
+      if(cur_vc->Empty()) {
 	if ( f->watch ) {
 	  cout << "Attempting to use fast path at " << _fullname
 	       << " at time " << GetSimTime() << endl
@@ -114,9 +123,14 @@ void IQRouterSplit::_InputQueuing( )
 	}
 	_use_fast_path[input] = f->vc;
       }
+      
+      if ( !cur_vc->AddFlit( f ) ) {
+	Error( "VC buffer overflow" );
+      }
+      bufferMonitor.write( input, f ) ;
+      
     }
   }
-  IQRouterBase::_InputQueuing();
 }
 
 void IQRouterSplit::_Alloc( )
