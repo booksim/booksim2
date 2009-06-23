@@ -131,6 +131,36 @@ void IQRouterSplit::_InputQueuing( )
       
     }
   }
+
+  for ( int input = 0; input < _inputs; ++input ) {
+    for ( int vc = 0; vc < _vcs; ++vc ) {
+
+      VC * cur_vc = &_vc[input][vc];
+      
+      if ( cur_vc->GetState( ) == VC::idle ) {
+	Flit * f = cur_vc->FrontFlit( );
+
+	if ( f ) {
+	  if ( !f->head ) {
+	    Error( "Received non-head flit at idle VC" );
+	  }
+
+	  cur_vc->Route( _rf, this, f, input );
+	  cur_vc->SetState( VC::routing );
+	}
+      }
+    }
+  }  
+
+  for ( int output = 0; output < _outputs; ++output ) {
+    if ( !_out_cred_buffer[output].empty( ) ) {
+      Credit * c = _out_cred_buffer[output].front( );
+      _out_cred_buffer[output].pop( );
+   
+      _next_vcs[output].ProcessCredit( c );
+      delete c;
+    }
+  }
 }
 
 void IQRouterSplit::_Alloc( )
@@ -335,6 +365,8 @@ void IQRouterSplit::_Alloc( )
     int vc = _use_fast_path[input];
     if(vc >= 0) {
       
+      cerr << "### entering fast path" << endl;
+      
       VC * cur_vc = &_vc[input][vc];
       VC::eVCState vc_state = cur_vc->GetState();
       const OutputSet * route_set = cur_vc->GetRouteSet();
@@ -342,24 +374,40 @@ void IQRouterSplit::_Alloc( )
       
       assert(!cur_vc->Empty());
       
+      // dub: FIXME: the following breaks for routing functions that can return 
+      // more than one candidate output!
       for(int output = 0; output < _outputs; ++output) {
-
+	
 	if(vc_state == VC::active) {
 	  output = cur_vc->GetOutputPort();
 	}
+	
+	cerr << "### checking for requests to output port " << output << endl;
 	
 	BufferState * dest_vc = &_next_vcs[output];
 	
 	int vc_cnt = route_set->NumVCs(output);
 	assert(!((vc_state == VC::active) && (vc_cnt == 0)));
 	
+	if(vc_cnt == 0) cerr << "### no suitable VCs found" << endl;
 	for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
 	  int vc_prio;
 	  int out_vc = route_set->GetVC(output, vc_index, &vc_prio);
-	  
+	
+	  cerr << "### checking for requests to VC " << out_vc << endl;
 	  if((((vc_state == VC::vc_alloc) && dest_vc->IsAvailableFor(out_vc)) ||
 	      ((vc_state == VC::active) && (out_vc == active_vc))) &&
 	     !dest_vc->IsFullFor(out_vc)) {
+	    Flit * f = cur_vc->FrontFlit();
+	    assert(f);
+	    if(f->watch) {
+	      cout << "Fast-path arbitration requested at "
+		   << _fullname << " at time " << GetSimTime() << endl
+		   << "  Input: " << input << " VC: " << vc << endl
+		   << "  Output: " << output 
+		   << endl
+		   << *f;
+	    }
 	    _fast_path_arbiters[output]->AddRequest(input, out_vc, vc_prio);
 	  }
 	}
@@ -378,7 +426,9 @@ void IQRouterSplit::_Alloc( )
   // perform arbitration to generate fast-path grants
   for(int output = 0; output < _outputs; ++output) {
     int input = _fast_path_arbiters[output]->Arbitrate();
-    fast_path_grants[input] = output;
+    if(input >= 0) {
+      fast_path_grants[input] = output;
+    }
   }
   
   // Winning flits cross the switch
@@ -536,8 +586,8 @@ void IQRouterSplit::_Alloc( )
       }
     }
     
-    int output = fast_path_grants[input];
     int vc = _use_fast_path[input];
+    int output = fast_path_grants[input];
     
     if((vc >= 0) && !req_for_input_vc[input][vc] &&
        !req_for_input[input] &&

@@ -47,7 +47,7 @@ ostream& operator<<( ostream& os, const Flit& f )
      << " Head: " << f.head << " Tail: " << f.tail << endl;
   os << "  Source : " << f.src << "  Dest : " << f.dest << " Intm: "<<f.intm<<endl;
   os << "  Injection time : " << f.time << " Delay: "<<f.delay<<" Phase: "<<f.ph<< endl;
-  os << "  From router "<<f.from_router<< endl;
+  os << "  From router "<<f.from_router<< " VC: " << f.vc << endl;
   return os;
 }
 
