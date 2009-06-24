@@ -107,29 +107,32 @@ Section~\ref{sec:config_params} for reference.
 \subsection{Downloading and building the simulator}
 \label{sec:download}
 
-The latest version of the simulator can be checked out from Booksim's sourceforge subversion (SVN) repository. Make sure SVN is installed on your machine and run 
+The latest official release of the simulator can be checked out from Booksim's sourceforge subversion (SVN) repository. Make sure SVN is installed on your machine and run the following command:
 \begin{verbatim}
-svn co https://booksim.svn.sourceforge.net/svnroot/booksim booksim 
+svn co https://booksim.svn.sourceforge.net/svnroot/booksim
 \end{verbatim}
 
-The simulator files should now be in \texttt{booksim/trunk/src/}. The simulator itself is written in C++ and has been specifically
-tested with GNU's G++ compiler (version $\ge3$). The front end of the simulator uses LEX and YACC generated parser to process the simulator configuration file. But if you do not plan on making changes to the front end parser, the LEX and YACC are not needed. The
-\texttt{Makefile} should be edited so that the first lines give the
-paths to the tools. The default \texttt{Makefile} should work on the Stanford Leland machines. Type \texttt{make} to build the simulator. 
+The simulator files should now be in the \texttt{booksim/trunk/src/} directory.
+The simulator itself is written in C++ and has been specifically tested with GNU's G++ compiler (version $\ge3$).
+The front end of the simulator uses LEX and YACC generated parser to process the simulator configuration file; however, unless you plan on making changes to the front end parser, LEX and YACC are not needed.
+The \texttt{Makefile} should be edited so that the first few lines reflect the correct paths to the tools for your particular system.
+The default \texttt{Makefile} should work on the Stanford Leland machines.
+Type \texttt{make} to build the simulator. 
 
-For Windows users: the above instructions has been tested to work with the newest version of Cygwin. 
+A note for Windows users:
+The above instructions have been tested to work with the newest version of Cygwin.
+
 \subsection{Running a simulation}
 \label{sec:run_example}
 
-The syntax of the simulator is simply
+The simulator is invoked using the following command line:
 \begin{verbatim}
   ./booksim [configfile]
 \end{verbatim}
-The parameter \texttt{configfile} is a file that contains
-configuration information for the simulator.  So, for example, to
-simulate the performance of a simple $8 \times 8$ torus (8-ary 2-cube)
-network on uniform traffic, a configuration such as the one shown in
-Figure~\ref{fig:config_example} could be used. This particular configuration is stored in \texttt{examples/torus88}.
+
+The parameter \texttt{configfile} is a file that contains configuration information for the simulator.
+So, for example, to simulate the performance of a simple $8 \times 8$ torus (8-ary 2-cube) network on uniform traffic, a configuration such as the one shown in Figure~\ref{fig:config_example} could be used.
+This particular example configuration file can be found in the \texttt{examples/torus88} directory.
 
 \begin{figure}
 \begin{verbatim}
@@ -153,15 +156,14 @@ network.}
 \label{fig:config_example}
 \end{figure}
 
-In addition to specifying the topology, the configuration file also
-contains basic information about the routing algorithm, flow control,
-and traffic.  This simple example uses dimension-order routing and four
-virtual channels.  The \texttt{injection\_rate} parameter
-is added to tell the simulator to inject (on average) 0.15 packets per simulation
-cycle per node.  The packets are default to size of 1 flit.  Also, any line of the configuration
-that begins with \texttt{//} is treated as a comment and ignored by
-the simulator.  A detailed list of configuration parameters is given in
-Section~\ref{sec:config_params}. Any parameters not specified by the user will take on a default value. The default value for every parameter in the simulator is in the file \texttt{booksim\_config.cpp}.
+In addition to specifying the topology, the configuration file also contains basic information about the routing algorithm, flow control, and traffic.
+This simple example uses dimension-order routing and four virtual channels.
+The \texttt{injection\_rate} parameter is added to tell the simulator to inject (on average) 0.15 packets per simulation cycle per node.
+Packet size defaults to a single flit.
+Also, any line of the configuration file that begins with \texttt{//} is treated as a comment and ignored by the simulator.
+A detailed list of configuration parameters is given in Section~\ref{sec:config_params}.
+Any parameters not specified by the user will take on default values.
+The default value for every parameter in the simulator is specified in the file \texttt{booksim\_config.cpp}.
 
 \subsection{Simulation output}
 
