@@ -63,16 +63,18 @@ IQRouterSplit::IQRouterSplit( const Configuration& config,
 					   _outputs*_output_speedup,
 					   iters, arb_type );
   
-  _fast_path_arbiters = new Arbiter * [_outputs];
-  ostringstream arb_name;
-  for(int i = 0; i < _outputs; ++i) {
-    arb_name << "arb_o" << i;
-    _fast_path_arbiters[i] = Arbiter::NewArbiter(this, arb_name.str(), arb_type,
-						 _inputs);
-  }
+  config.GetStr( "fp_sw_allocator", alloc_type );
+  config.GetStr( "fp_sw_alloc_arb_type", arb_type );
+  iters = config.GetInt("fp_sw_alloc_iters");
+  if(iters == 0) iters = config.GetInt("alloc_iters");
+  _fast_path_allocator = Allocator::NewAllocator( this, "fp_sw_allocator", 
+						  alloc_type, 
+						  _inputs*_input_speedup, 
+						  _outputs*_output_speedup,
+						  iters, arb_type );
   
-  _vc_rr_offset = new int [_inputs*_input_speedup*_vcs];
-  for ( int i = 0; i < _inputs*_input_speedup*_vcs; ++i ) {
+  _vc_rr_offset = new int [_inputs*_vcs];
+  for ( int i = 0; i < _inputs*_vcs; ++i ) {
     _vc_rr_offset[i] = 0;
   }
   _sw_rr_offset = new int [_inputs*_input_speedup];
@@ -80,84 +82,139 @@ IQRouterSplit::IQRouterSplit( const Configuration& config,
     _sw_rr_offset[i] = 0;
   }
   
-  _use_fast_path = new int[_inputs];
+  _fast_path_vcs = new int [_inputs];
+  _fast_path_flits = new Flit * [_inputs];
+  for(int i = 0; i < _inputs; i++) {
+    _fast_path_vcs[i] = -1;
+    _fast_path_flits[i] = NULL;
+  }
 }
 
 IQRouterSplit::~IQRouterSplit( )
 {
   delete _sw_allocator;
-  
-  for(int i = 0; i < _outputs; ++i) {
-    delete _fast_path_arbiters[i];
-  }
-  delete [] _fast_path_arbiters;
+  delete _fast_path_allocator;
   
   delete [] _vc_rr_offset;
   delete [] _sw_rr_offset;
   
-  delete [] _use_fast_path;
+  delete [] _fast_path_vcs;
+  delete [] _fast_path_flits;
 }
 
 void IQRouterSplit::_InputQueuing( )
 {
-  for ( int input = 0; input < _inputs; ++input ) {
-    _use_fast_path[input] = -1;
-    if ( !_input_buffer[input].empty( ) ) {
-      Flit * f = _input_buffer[input].front( );
+  for(int input = 0; input < _inputs; ++input) {
+    
+    // dub: handle flits that tried to use the fast path in the last cycle but 
+    // failed
+    Flit * f = _fast_path_flits[input];
+    if(f != NULL) {
+      if(f->watch) {
+	cout << "Moving flit from fast path to slow path at " << _fullname
+	     << " at time " << GetSimTime() << endl
+	     << *f;
+      }
+      VC * cur_vc = &_vc[input][_fast_path_vcs[input]];
+      assert(cur_vc->Empty());
+      if(!cur_vc->AddFlit(f)) {
+	Error("VC buffer overflow");
+      }
+      
+      // dub: buffer power was already accounted for when the flit first entered
+      // the router, so we don't need to account for it again here
+      
+    }
+    
+    _fast_path_vcs[input] = -1;
+    _fast_path_flits[input] = NULL;
+    
+    if(!_input_buffer[input].empty()) {
+      f = _input_buffer[input].front();
       _input_buffer[input].pop();
       
       VC * cur_vc = &_vc[input][f->vc];
       
-      if ( f->watch ) {
+      if(f->watch) {
 	cout << "Received flit at " << _fullname 
 	     << " at time " << GetSimTime() << endl
 	     << *f;
       }
       
-      // try to send new arrivals through fast path
       if(cur_vc->Empty()) {
-	if ( f->watch ) {
-	  cout << "Attempting to use fast path at " << _fullname
+	
+	// try to send new arrivals through fast path if no previous flits are 
+	// buffered for the given VC
+	if(f->watch) {
+	  cout << "Processing flit in fast path at " << _fullname
 	       << " at time " << GetSimTime() << endl
 	       << *f;
 	}
-	_use_fast_path[input] = f->vc;
+	_fast_path_vcs[input] = f->vc;
+	_fast_path_flits[input] = f;
+	
+      } else {
+
+	// otherwise, use the regular flit pipeline
+	if(f->watch) {
+	  cout << "Processing flit in slow path at " << _fullname 
+	       << " at time " << GetSimTime() << endl
+	       << *f;
+	}
+	if(!cur_vc->AddFlit(f)) {
+	  Error("VC buffer overflow");
+	}
+	
       }
       
-      if ( !cur_vc->AddFlit( f ) ) {
-	Error( "VC buffer overflow" );
-      }
-      bufferMonitor.write( input, f ) ;
+      // dub: while fast-path flits are treated separately from a logical point 
+      // of view, they would probably still use the buffer in a physical 
+      // implementation to avoid having to add a separate flit-wide pipeline 
+      // register and an accompanying select mux at the crossbar inputs
+      bufferMonitor.write(input, f) ;
       
     }
   }
 
-  for ( int input = 0; input < _inputs; ++input ) {
-    for ( int vc = 0; vc < _vcs; ++vc ) {
-
-      VC * cur_vc = &_vc[input][vc];
+  for(int input = 0; input < _inputs; ++input) {
+    
+    Flit * f = _fast_path_flits[input];
+    if(f != NULL) {
+      VC * cur_vc = &_vc[input][_fast_path_vcs[input]];
+      if(cur_vc->GetState() == VC::idle) {
+	if(!f->head) {
+	  Error("Received non-head flit at idle VC");
+	}
+	cur_vc->Route(_rf, this, f, input);
+	cur_vc->SetState(VC::routing);
+      }
+    }
+    
+    for(int vc = 0; vc < _vcs; ++vc) {
       
-      if ( cur_vc->GetState( ) == VC::idle ) {
-	Flit * f = cur_vc->FrontFlit( );
+      VC * cur_vc = &_vc[input][vc];
+      assert((vc != _fast_path_vcs[input]) || (cur_vc->FrontFlit() == NULL));
+      
+      if(cur_vc->GetState( ) == VC::idle) {
+	f = cur_vc->FrontFlit( );
 
-	if ( f ) {
-	  if ( !f->head ) {
-	    Error( "Received non-head flit at idle VC" );
+	if(f != NULL) {
+	  if(!f->head) {
+	    Error("Received non-head flit at idle VC");
 	  }
-
-	  cur_vc->Route( _rf, this, f, input );
-	  cur_vc->SetState( VC::routing );
+	  
+	  cur_vc->Route(_rf, this, f, input);
+	  cur_vc->SetState(VC::routing);
 	}
       }
     }
-  }  
-
-  for ( int output = 0; output < _outputs; ++output ) {
-    if ( !_out_cred_buffer[output].empty( ) ) {
-      Credit * c = _out_cred_buffer[output].front( );
-      _out_cred_buffer[output].pop( );
-   
-      _next_vcs[output].ProcessCredit( c );
+  }
+  
+  for(int output = 0; output < _outputs; ++output) {
+    if(!_out_cred_buffer[output].empty()) {
+      Credit * c = _out_cred_buffer[output].front();
+      _out_cred_buffer[output].pop();
+      _next_vcs[output].ProcessCredit(c);
       delete c;
     }
   }
@@ -167,85 +224,19 @@ void IQRouterSplit::_Alloc( )
 {
   // bypassing
   
-  // suppress bypass if any flits are in the same input port and VC
-  bool req_for_input_vc[_inputs][_vcs];
-  memset(req_for_input_vc, false, _inputs*_vcs*sizeof(bool));
-  
   // suppress bypass if any flits at the same input port are ready to go
-  bool req_for_input[_inputs];
-  memset(req_for_input, false, _inputs*sizeof(bool));
+  bool req_for_input[_inputs*_input_speedup];
+  memset(req_for_input, false, _inputs*_input_speedup*sizeof(bool));
   
   // suppress bypass if any flits are ready to go to the same output port
-  bool req_for_output[_outputs];
-  memset(req_for_output, false, _outputs*sizeof(bool));
-  
-  // keep track of fast-path grants
-  int fast_path_grants[_inputs];
+  bool req_for_output[_outputs*_output_speedup];
+  memset(req_for_output, false, _outputs*_output_speedup*sizeof(bool));
   
   _sw_allocator->Clear( );
+  _fast_path_allocator->Clear( );
   
   for(int input = 0; input < _inputs; ++input) {
     
-    fast_path_grants[input] = -1;
-    
-    for(int vc = 0; vc < _vcs; ++vc) {
-      
-      // skip check if this is a VC that has only a newly arrived flit
-      if(_use_fast_path[input] == vc) {
-	continue;
-      }
-      
-      VC * cur_vc = &_vc[input][vc];
-      
-      // if no flits are available in the current VC, there can be no conflict!
-      if(cur_vc->Empty()) {
-	continue;
-      }
-      
-      // since we have lookahead routing, we should not still be routing here
-      assert(cur_vc->GetState() != VC::routing);
-      
-      // this router doesn't use speculation, so we should never be in one of 
-      // the speculation-related states here
-      assert(cur_vc->GetState() != VC::vc_spec);
-      assert(cur_vc->GetState() != VC::vc_spec_grant);
-      
-      switch(cur_vc->GetState()) {
-	
-      case VC::vc_alloc:
-	{
-	  req_for_input_vc[input][vc] = true;
-	  const OutputSet * route_set = cur_vc->GetRouteSet();
-	  for(int output = 0; output < _outputs; ++output) {
-	    int vc_cnt = route_set->NumVCs(output);
-	    BufferState * dest_vc = &_next_vcs[output];
-	    for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
-	      int out_vc = route_set->GetVC(output, vc_index, NULL);
-	      if(dest_vc->IsAvailableFor(out_vc) && 
-		 !dest_vc->IsFullFor(out_vc)) {
-		req_for_input[input] = true;
-		req_for_output[output] = true;
-		break;
-	      }
-	    }
-	  }
-	}
-	break;
-	
-      case VC::active:
-	{
-	  req_for_input_vc[input][vc] = true;
-	  int output = cur_vc->GetOutputPort();
-	  BufferState * dest_vc = &_next_vcs[output];
-	  if(!dest_vc->IsFullFor(cur_vc->GetOutputVC())) {
-	    req_for_input[input] = true;
-	    req_for_output[output] = true;
-	  }
-	}
-	break;
-      }
-    }
-
     for(int s = 0; s < _input_speedup; ++s) {
       int expanded_input  = s*_inputs + input;
       
@@ -263,7 +254,8 @@ void IQRouterSplit::_Alloc( )
 	// handled in a different iteration of the enclosing loop over 's'.
 	// dub: Furthermore, we skip this iteration if the current VC has only a
 	// single, newly arrived flit.
-	if(((vc % _input_speedup) != s) || (_use_fast_path[input] == vc)) {
+	if(((vc % _input_speedup) != s) ||
+	   (_fast_path_vcs[input] == vc)) {
 	  vc = (vc + 1) % _vcs;
 	  continue;
 	}
@@ -280,7 +272,7 @@ void IQRouterSplit::_Alloc( )
 	  Flit * f = cur_vc->FrontFlit();
 	  assert(f);
 	  
-	  int output = _vc_rr_offset[expanded_input*_vcs+vc];
+	  int output = _vc_rr_offset[input*_vcs+vc];
 	  
 	  for(int output_index = 0; output_index < _outputs; ++output_index) {
 	    
@@ -333,8 +325,9 @@ void IQRouterSplit::_Alloc( )
 		  cout << "allocation requested at "
 		       << _fullname << " at time " << GetSimTime() << endl
 		       << "  Input: " << input << " VC: " << vc << endl
-		       << "  Output: " << output 
-		       << endl
+		       << "  Output: " << output << endl
+		       << "  Exp. Input: " << expanded_input << endl
+		       << "  Exp. Output: " << expanded_output << endl
 		       << *f;
 		}
 		
@@ -346,6 +339,9 @@ void IQRouterSplit::_Alloc( )
 		
 		_sw_allocator->AddRequest(expanded_input, expanded_output, vc, 
 					  in_priority, cur_vc->GetPriority());
+		
+		req_for_input[expanded_input] = true;
+		req_for_output[expanded_output] = true;
 		
 	      }
 	    }
@@ -360,76 +356,92 @@ void IQRouterSplit::_Alloc( )
 	}
 	vc = (vc + 1) % _vcs;
       }
-    }
-    
-    int vc = _use_fast_path[input];
-    if(vc >= 0) {
       
-      cerr << "### entering fast path" << endl;
+      // since only a single flit can arrive in any given cycle, only do 
+      // fast-path handling once regardless of speedup
+      Flit * f = _fast_path_flits[input];
       
-      VC * cur_vc = &_vc[input][vc];
-      VC::eVCState vc_state = cur_vc->GetState();
-      const OutputSet * route_set = cur_vc->GetRouteSet();
-      int active_vc = cur_vc->GetOutputVC();
-      
-      assert(!cur_vc->Empty());
-      
-      // dub: FIXME: the following breaks for routing functions that can return 
-      // more than one candidate output!
-      for(int output = 0; output < _outputs; ++output) {
+      if((f != NULL) && ((_fast_path_vcs[input] % _input_speedup) == s)) {
 	
-	if(vc_state == VC::active) {
-	  output = cur_vc->GetOutputPort();
-	}
+	assert(_fast_path_vcs[input] >= 0);
 	
-	cerr << "### checking for requests to output port " << output << endl;
+	if(f->watch)
+	  cout << "Entering fast path at " << _fullname 
+	       << " at time " << GetSimTime() << endl
+	       << *f;
 	
-	BufferState * dest_vc = &_next_vcs[output];
+	VC * cur_vc = &_vc[input][_fast_path_vcs[input]];
 	
-	int vc_cnt = route_set->NumVCs(output);
-	assert(!((vc_state == VC::active) && (vc_cnt == 0)));
+	VC::eVCState vc_state = cur_vc->GetState();
+	const OutputSet * route_set = cur_vc->GetRouteSet();
+	int active_vc = cur_vc->GetOutputVC();
 	
-	if(vc_cnt == 0) cerr << "### no suitable VCs found" << endl;
-	for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
-	  int vc_prio;
-	  int out_vc = route_set->GetVC(output, vc_index, &vc_prio);
+	assert(cur_vc->Empty());
 	
-	  cerr << "### checking for requests to VC " << out_vc << endl;
-	  if((((vc_state == VC::vc_alloc) && dest_vc->IsAvailableFor(out_vc)) ||
-	      ((vc_state == VC::active) && (out_vc == active_vc))) &&
-	     !dest_vc->IsFullFor(out_vc)) {
-	    Flit * f = cur_vc->FrontFlit();
-	    assert(f);
-	    if(f->watch) {
-	      cout << "Fast-path arbitration requested at "
-		   << _fullname << " at time " << GetSimTime() << endl
-		   << "  Input: " << input << " VC: " << vc << endl
-		   << "  Output: " << output 
-		   << endl
-		   << *f;
-	    }
-	    _fast_path_arbiters[output]->AddRequest(input, out_vc, vc_prio);
+	for(int output = 0; output < _outputs; ++output) {
+	  
+	  if(vc_state == VC::active) {
+	    output = cur_vc->GetOutputPort();
 	  }
+	  
+	  if(f->watch)
+	    cout << "Checking for requests to output port " << output 
+		 << "..." << endl;
+	  
+	  BufferState * dest_vc = &_next_vcs[output];
+	  
+	  int vc_cnt = route_set->NumVCs(output);
+	  assert(!((vc_state == VC::active) && (vc_cnt == 0)));
+	  
+	  int expanded_output = (input%_output_speedup)*_outputs + output;
+	  
+	  if(f->watch)
+	    if(vc_cnt == 0)
+	      cout << " no suitable VCs found" << endl;
+	  for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
+	    int vc_prio;
+	    int out_vc = route_set->GetVC(output, vc_index, &vc_prio);
+	    
+	    if(f->watch)
+	      cout << " checking for requests to VC " << out_vc << endl;
+	    if((((vc_state == VC::vc_alloc) && 
+		 dest_vc->IsAvailableFor(out_vc)) ||
+		((vc_state == VC::active) && (out_vc == active_vc))) &&
+	       !dest_vc->IsFullFor(out_vc)) {
+	      if(f->watch) {
+		cout << "Fast-path switch ";
+		if(vc_state == VC::vc_alloc) {
+		  cout << "and VC ";
+		}
+		cout << "allocation requested at "
+		     << _fullname << " at time " << GetSimTime() << endl
+		     << "  Input: " << input << " VC: " << f->vc << endl
+		     << "  Output: " << output << endl
+		     << "  Exp. Input: " << expanded_input << endl
+		     << "  Exp. Output: " << expanded_output << endl
+ 		     << *f;
+	      }
+	      _fast_path_allocator->AddRequest(expanded_input, expanded_output,
+					       f->vc, vc_prio, 
+					       cur_vc->GetPriority());
+	    }
+	  }
+	  
+	  if(f->watch)
+	    cout << "Done checking for requests to output port " << output 
+		 << "..." << endl;
+	  
+	  if(vc_state == VC::active) {
+	    break;
+	  }
+	  
 	}
-	
-	if(vc_state == VC::active) {
-	  break;
-	}
-	
       }
     }
-    
   }
   
   _sw_allocator->Allocate();
-  
-  // perform arbitration to generate fast-path grants
-  for(int output = 0; output < _outputs; ++output) {
-    int input = _fast_path_arbiters[output]->Arbitrate();
-    if(input >= 0) {
-      fast_path_grants[input] = output;
-    }
-  }
+  _fast_path_allocator->Allocate();
   
   // Winning flits cross the switch
 
@@ -458,7 +470,7 @@ void IQRouterSplit::_Alloc( )
 	vc = _switch_hold_vc[expanded_input];
 	cur_vc = &_vc[input][vc];
 	
-	if (cur_vc->Empty()) { // Cancel held match if VC is empty
+	if(cur_vc->Empty()) { // Cancel held match if VC is empty
 	  expanded_output = -1;
 	}
       } else {
@@ -504,7 +516,7 @@ void IQRouterSplit::_Alloc( )
 	    cur_vc->SetOutput(output, sel_vc);
 	    dest_vc->TakeBuffer(sel_vc);
 	    
-	    _vc_rr_offset[expanded_input*_vcs+vc] = (output + 1) % _outputs;
+	    _vc_rr_offset[input*_vcs+vc] = (output + 1) % _outputs;
 	    
 	    if(f->watch) {
 	      cout << "Granted VC allocation at " << _fullname 
@@ -540,6 +552,8 @@ void IQRouterSplit::_Alloc( )
 		 << " at time " << GetSimTime() << endl
 		 << "  Input: " << input << " VC: " << vc << endl
 		 << "  Output: " << output << endl
+		 << "  Exp. Input: " << expanded_input << endl
+		 << "  Exp. Output: " << expanded_output << endl
 		 << *f;
 	  }
 	  
@@ -584,66 +598,120 @@ void IQRouterSplit::_Alloc( )
 	  _sw_rr_offset[expanded_input] = (f->vc + 1) % _vcs;
 	} 
       }
-    }
-    
-    int vc = _use_fast_path[input];
-    int output = fast_path_grants[input];
-    
-    if((vc >= 0) && !req_for_input_vc[input][vc] &&
-       !req_for_input[input] &&
-       (output >= 0) && !req_for_output[output]) {
       
-      VC * cur_vc = &_vc[input][vc];
-      BufferState * dest_vc = &_next_vcs[output];
-      
-      assert(!((cur_vc->GetState() == VC::vc_alloc) &&
-	       !dest_vc->IsAvailableFor(cur_vc->GetOutputVC())));
-      assert(!dest_vc->IsFullFor(cur_vc->GetOutputVC()));
-      
-      // Forward flit to crossbar and send credit back
-      Flit * f = cur_vc->RemoveFlit();
-      
-      if(f->watch) {
-	cout << "Granted fast-path switch allocation at " << _fullname 
-	     << " at time " << GetSimTime() << endl
-	     << "  Input: " << input << " VC: " << vc << endl
-	     << "  Output: " << output << endl
-	     << *f;
-      }
-      
-      f->hops++;
-      
-      //
-      // Switch Power Modelling
-      //
-      switchMonitor.traversal(input, output, f);
-      bufferMonitor.read(input, f);
-      
-      if(f->watch) {
-	cout << "Forwarding flit through crossbar at " << _fullname 
-	     << " at time " << GetSimTime() << endl
-	     << "  Input: " << input << endl
-	     << "  Output: " << output << endl
-	     << *f;
-      }
-      
-      if (c == NULL) {
-	c = _NewCredit(_vcs);
-      }
-      
-      c->vc[c->vc_cnt] = f->vc;
-      c->vc_cnt++;
-      c->dest_router = f->from_router;
-      f->vc = cur_vc->GetOutputVC();
-      dest_vc->SendingFlit(f);
-      
-      _crossbar_pipe->Write(f, output);
-      
-      if(f->tail) {
-	cur_vc->SetState(VC::idle);
-      } else {
-	// reset state timer for next flit
-	cur_vc->SetState(VC::active);
+      vc = _fast_path_vcs[input];
+      if((vc >= 0) && ((vc % _input_speedup) == s)) {
+	
+	Flit * f = _fast_path_flits[input];
+	assert(f);
+	
+	expanded_output = _fast_path_allocator->OutputAssigned(expanded_input);
+	int output = expanded_output % _outputs;
+	
+	if(!req_for_input[expanded_input] &&
+	   (expanded_output >= 0) && !req_for_output[expanded_output]) {
+	  
+	  if(f->watch) {
+	    cout << "Granted fast-path switch allocation at " << _fullname 
+		 << " at time " << GetSimTime() << endl
+		 << "  Input: " << input << " VC: " << f->vc << endl
+		 << "  Output: " << output << endl
+		 << "  Exp. Input: " << expanded_input << endl
+		 << "  Exp. Output: " << expanded_output << endl
+		 << *f;
+	  }
+	  
+	  _fast_path_flits[input] = NULL;
+	  
+	  VC * cur_vc = &_vc[input][vc];
+	  BufferState * dest_vc = &_next_vcs[output];
+	  
+	  assert(cur_vc->Empty());
+	  
+	  switch(cur_vc->GetState()) {
+	    
+	  case VC::vc_alloc:
+	    {
+	      const OutputSet * route_set = cur_vc->GetRouteSet();
+	      int sel_prio = -1;
+	      int sel_vc = -1;
+	      int vc_cnt = route_set->NumVCs(output);
+	      
+	      for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
+		int out_prio;
+		int out_vc = route_set->GetVC(output, vc_index, &out_prio);
+		if(dest_vc->IsAvailableFor(out_vc) && 
+		   !dest_vc->IsFullFor(out_vc) && 
+		   (out_prio > sel_prio)) {
+		  sel_vc = out_vc;
+		  sel_prio = out_prio;
+		}
+	      }
+	      
+	      // we should only get to this point if some VC requested 
+	      // allocation
+	      assert(sel_vc > -1);
+	      
+	      cur_vc->SetState(VC::active);
+	      cur_vc->SetOutput(output, sel_vc);
+	      dest_vc->TakeBuffer(sel_vc);
+	      
+	      _vc_rr_offset[expanded_input*_vcs+vc] = (output + 1) % _outputs;
+	      
+	      if(f->watch) {
+		cout << "Granted VC allocation at " << _fullname 
+		     << " at time " << GetSimTime() << endl
+		     << "  Input: " << input << " VC: " << vc << endl
+		     << "  Output: " << output << " VC: " << sel_vc << endl
+		     << *f;
+	      }
+	    }
+	    // NOTE: from here, we just fall through to the code for VC::active!
+	  
+	  case VC::active:
+	    {
+	      
+	      assert(!dest_vc->IsFullFor(cur_vc->GetOutputVC()));
+	      
+	      // Forward flit to crossbar and send credit back
+	      
+	      f->hops++;
+	      
+	      //
+	      // Switch Power Modelling
+	      //
+	      switchMonitor.traversal(input, output, f);
+	      bufferMonitor.read(input, f);
+	      
+	      if(f->watch) {
+		cout << "Forwarding flit through crossbar at " << _fullname 
+		     << " at time " << GetSimTime() << endl
+		     << "  Input: " << expanded_input << endl
+		     << "  Output: " << expanded_output << endl
+		     << *f;
+	      }
+	      
+	      if (c == NULL) {
+		c = _NewCredit(_vcs);
+	      }
+	      
+	      c->vc[c->vc_cnt] = f->vc;
+	      c->vc_cnt++;
+	      c->dest_router = f->from_router;
+	      f->vc = cur_vc->GetOutputVC();
+	      dest_vc->SendingFlit(f);
+	      
+	      _crossbar_pipe->Write(f, expanded_output);
+	      
+	      if(f->tail) {
+		cur_vc->SetState(VC::idle);
+	      } else {
+		// reset state timer for next flit
+		cur_vc->SetState(VC::active);
+	      }
+	    }
+	  }
+	}
       }
     }
     

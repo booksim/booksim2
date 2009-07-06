@@ -36,7 +36,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "module.hpp"
 #include "vc.hpp"
 #include "allocator.hpp"
-#include "arbiter.hpp"
 #include "routefunc.hpp"
 #include "outputset.hpp"
 #include "buffer_state.hpp"
@@ -46,12 +45,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class IQRouterSplit : public IQRouterBase {
   
   Allocator *_sw_allocator;
-  Arbiter **_fast_path_arbiters;
+  Allocator *_fast_path_allocator;
   
   int *_vc_rr_offset;
   int *_sw_rr_offset;
   
-  int * _use_fast_path;
+  int * _fast_path_vcs;
+  Flit ** _fast_path_flits;
   
 protected:
   virtual void _Alloc( );

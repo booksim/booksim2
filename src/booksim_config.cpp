@@ -152,16 +152,19 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField( "vc_allocator", "islip" ); 
   AddStrField( "sw_allocator", "islip" ); 
+  AddStrField( "fp_sw_allocator", "islip" ); 
   
   AddStrField( "vc_alloc_arb_type", "round_robin" );
   AddStrField( "sw_alloc_arb_type", "round_robin" );
+  AddStrField( "fp_sw_alloc_arb_type", "round_robin" );
   
   _int_map["alloc_iters"] = 1;
   
   // dub: allow setting the number of iterations for each allocator separately
-  // (a value of -1 indicates it should inherit its value from alloc_iters)
+  // (a value of 0 indicates it should inherit its value from alloc_iters)
   _int_map["vc_alloc_iters"] = 0;
   _int_map["sw_alloc_iters"] = 0;
+  _int_map["fp_sw_alloc_iters"] = 0;
 
   //==== Traffic ========================================
 
