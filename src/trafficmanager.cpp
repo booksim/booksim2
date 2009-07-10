@@ -544,6 +544,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   }
 
   if(_use_read_write){
+    if(stype < 0) {
       if (stype ==-1) {
 	packet_type = Flit::READ_REQUEST;
 	size = _read_request_size;
