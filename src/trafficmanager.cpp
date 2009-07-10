@@ -346,13 +346,12 @@ Flit *TrafficManager::_NewFlit( )
   //the constructor should initialize everything
   f = new Flit();
   f->id    = _cur_id;
-  _in_flight[_cur_id] = true;
-  if(flits_to_watch.size()!=0   && 
-     flits_to_watch.find(_cur_id)!=flits_to_watch.end()){
+  _total_in_flight_flits.insert(_cur_id);
+  set<int>::iterator iter = flits_to_watch.find(_cur_id);
+  if(iter != flits_to_watch.end()){
+    flits_to_watch.erase(iter);
     f->watch =true;
-    map<int, bool>::iterator match;
-    match = flits_to_watch.find( f->id );
-    flits_to_watch.erase(match);
+    _measured_in_flight_flits.insert(_cur_id);
   }
   ++_cur_id;
   return f;
@@ -363,15 +362,20 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   static int sample_num = 0;
   deadlock_counter = 1;
 
-  map<int, bool>::iterator match;
+  set<int>::iterator match = _total_in_flight_flits.find( f->id );
 
-  match = _in_flight.find( f->id );
-
-  if ( match != _in_flight.end( ) ) {
+  if ( match != _total_in_flight_flits.end( ) ) {
+    _total_in_flight_flits.erase( match );
     if ( f->watch ) {
       cout << "Matched flit ID = " << f->id << endl;
+      match = _measured_in_flight_flits.find(f->id);
+      if(match != _measured_in_flight_flits.end()) {
+	_measured_in_flight_flits.erase(match);
+      } else {
+	cout << "Unmatched flit! ID = " << f->id << endl;
+	Error( "" );
+      }
     }
-    _in_flight.erase( match );
   } else {
     cout << "Unmatched flit! ID = " << f->id << endl;
     Error( "" );
@@ -462,7 +466,7 @@ int TrafficManager::_IssuePacket( int source, int cl ) const
       //check to make sure it is on time yet
       if (!_repliesPending[source].empty()) {
 	result = _repliesPending[source].front();
-	pending_time = (_repliesDetails.find(result)->second)->time;
+	pending_time = _repliesDetails.find(result)->second->time;
       }
       if (pending_time<=_qtime[source][0]) {
 	result = _repliesPending[source].front();
@@ -500,7 +504,7 @@ int TrafficManager::_IssuePacket( int source, int cl ) const
       //check to make sure it is on time yet
       if (!_repliesPending[source].empty()) {
 	result = _repliesPending[source].front();
-	pending_time = (_repliesDetails.find(result)->second)->time;
+	pending_time = _repliesDetails.find(result)->second->time;
       }
       if (pending_time<=_qtime[source][0]) {
 	result = _repliesPending[source].front();
@@ -540,32 +544,32 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   }
 
   if(_use_read_write){
-    if (stype ==-1) {
-      packet_type = Flit::READ_REQUEST;
-      size = _read_request_size;
+      if (stype ==-1) {
+	packet_type = Flit::READ_REQUEST;
+	size = _read_request_size;
+      } else if (stype == -2) {
+	packet_type = Flit::WRITE_REQUEST;
+	size = _write_request_size;
+      } else {
+	Error("Invalid packet type!");
+      }
       packet_destination = _traffic_function( source, _limit );
-    }
-    else if (stype == -2) {
-      packet_type = Flit::WRITE_REQUEST;
-      size = _write_request_size;
-      packet_destination = _traffic_function( source, _limit );
-    }
-    else  {
-      Packet_Reply* temp = _repliesDetails.find(stype)->second;
+    } else  {
+      Packet_Reply* temp = _repliesDetails[stype];
       
       if (temp->type == Flit::READ_REQUEST) {//read reply
 	size = _read_reply_size;
-	packet_destination = temp->source;
 	packet_type = Flit::READ_REPLY;
-	time = temp->time;
-      } else {  //write reply
+      } else if(temp->type == Flit::WRITE_REQUEST) {  //write reply
 	size = _write_reply_size;
-	packet_destination = temp->source;
 	packet_type = Flit::WRITE_REPLY;
-	time = temp->time;
+      } else {
+	Error("Invalid packet type!");
       }
+      packet_destination = temp->source;
+      time = temp->time;
 
-      _repliesDetails.erase(_repliesDetails.find(stype));
+      _repliesDetails.erase(stype);
       delete temp;
     }
   } else {
@@ -990,15 +994,15 @@ void TrafficManager::_DisplayRemaining( ) const
   cout << "Remaining flits (" << _measured_in_flight << " measurement packets, "
        << _total_in_flight << " total) : ";
 
-  map<int, bool>::const_iterator iter;
+  set<int>::const_iterator iter;
   int i;
-  for ( iter = _in_flight.begin( ), i = 0;
-	( iter != _in_flight.end( ) ) && ( i < 10 );
+  for ( iter = _total_in_flight_flits.begin( ), i = 0;
+	( iter != _total_in_flight_flits.end( ) ) && ( i < 10 );
 	iter++, i++ ) {
-    cout << iter->first << " ";
+    cout << *iter << " ";
   }
 
-  i = _in_flight.size();
+  i = _total_in_flight_flits.size();
   if(i > 10)
     cout << "[...] (" << i << " flits total)";
 
@@ -1320,7 +1324,7 @@ void TrafficManager::_LoadWatchList(){
     while(!watch_list.eof()){
       getline(watch_list,line);
       if(line!=""){
-	flits_to_watch[atoi(line.c_str())]= true;
+	flits_to_watch.insert(atoi(line.c_str()));
       }
     }
 

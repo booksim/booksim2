@@ -32,7 +32,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _TRAFFICMANAGER_HPP_
 
 #include <list>
-#include<map>
+#include <map>
+#include <set>
 
 #include "module.hpp"
 #include "config_utils.hpp"
@@ -80,7 +81,8 @@ protected:
 
   int                 _measured_in_flight;
   int                 _total_in_flight;
-  map<int,bool> _in_flight;
+  set<int> _measured_in_flight_flits;
+  set<int> _total_in_flight_flits;
   bool                _empty_network;
   bool _use_lagging;
 
@@ -160,7 +162,7 @@ protected:
   tRoutingFunction  _routing_function;
   tInjectionProcess _injection_process;
 
-  map<int,bool> flits_to_watch;
+  set<int> flits_to_watch;
 
   bool _print_csv_results;
   string _traffic;
