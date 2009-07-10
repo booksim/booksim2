@@ -234,19 +234,20 @@ void IQRouterBase::_InputQueuing( )
 
       VC * cur_vc = &_vc[input][f->vc];
 
-      if ( !cur_vc->AddFlit( f ) ) {
-	Error( "VC buffer overflow" );
-      }
-      bufferMonitor.write( input, f ) ;
-
       if ( f->watch ) {
 	cout << "Received flit at " << _fullname 
 	     << " at time " << GetSimTime() << endl
 	     << *f;
       }
+
+      if ( !cur_vc->AddFlit( f ) ) {
+	Error( "VC buffer overflow" );
+      }
+      bufferMonitor.write( input, f ) ;
+      
     }
   }
-      
+  
   for ( int input = 0; input < _inputs; ++input ) {
     for ( int vc = 0; vc < _vcs; ++vc ) {
 
@@ -260,7 +261,6 @@ void IQRouterBase::_InputQueuing( )
 	    Error( "Received non-head flit at idle VC" );
 	  }
 
-	  cur_vc->Route( _rf, this, f, input );
 	  cur_vc->SetState( VC::routing );
 	}
       }
@@ -280,18 +280,18 @@ void IQRouterBase::_InputQueuing( )
 
 void IQRouterBase::_Route( )
 {
-  VC *cur_vc;
-
   for ( int input = 0; input < _inputs; ++input ) {
     for ( int vc = 0; vc < _vcs; ++vc ) {
 
-      cur_vc = &_vc[input][vc];
+      VC * cur_vc = &_vc[input][vc];
 
       if ( ( cur_vc->GetState( ) == VC::routing ) &&
 	   ( cur_vc->GetStateTime( ) >= _routing_delay ) ) {
 	
+	Flit * f = cur_vc->FrontFlit( );
+	cur_vc->Route( _rf, this, f, input );
 	cur_vc->SetState( VC::vc_alloc ) ;
-
+	
       }
     }
   }
@@ -299,14 +299,10 @@ void IQRouterBase::_Route( )
 
 void IQRouterBase::_OutputQueuing( )
 {
-  Flit   *f;
-  Credit *c;
-  int expanded_output;
-
   for ( int output = 0; output < _outputs; ++output ) {
     for ( int t = 0; t < _output_speedup; ++t ) {
-      expanded_output = _outputs*t + output;
-      f = _crossbar_pipe->Read( expanded_output );
+      int expanded_output = _outputs*t + output;
+      Flit * f = _crossbar_pipe->Read( expanded_output );
 
       if ( f ) {
 	_output_buffer[output].push( f );
@@ -318,7 +314,7 @@ void IQRouterBase::_OutputQueuing( )
   }  
 
   for ( int input = 0; input < _inputs; ++input ) {
-    c = _credit_pipe->Read( input );
+    Credit * c = _credit_pipe->Read( input );
 
     if ( c ) {
       _in_cred_buffer[input].push( c );
