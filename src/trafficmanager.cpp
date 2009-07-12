@@ -1334,6 +1334,7 @@ void TrafficManager::DisplayStats() {
       cout << "results:"
 	   << c
 	   << "," << _traffic
+	   << "," << _use_read_write
 	   << "," << _packet_size
 	   << "," << _load
 	   << "," << _flit_rate
