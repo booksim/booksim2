@@ -33,7 +33,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <list>
 #include <map>
-#include <set>
 
 #include "module.hpp"
 #include "config_utils.hpp"
@@ -81,8 +80,8 @@ protected:
 
   int                 _measured_in_flight;
   int                 _total_in_flight;
-  set<int> _measured_in_flight_flits;
-  set<int> _total_in_flight_flits;
+  map<int, Flit *> _measured_in_flight_flits;
+  map<int, Flit *> _total_in_flight_flits;
   bool                _empty_network;
   bool _use_lagging;
 
@@ -162,7 +161,7 @@ protected:
   tRoutingFunction  _routing_function;
   tInjectionProcess _injection_process;
 
-  set<int> flits_to_watch;
+  map<int, Flit *> flits_to_watch;
 
   bool _print_csv_results;
   string _traffic;

@@ -346,12 +346,11 @@ Flit *TrafficManager::_NewFlit( )
   //the constructor should initialize everything
   f = new Flit();
   f->id    = _cur_id;
-  _total_in_flight_flits.insert(_cur_id);
-  set<int>::iterator iter = flits_to_watch.find(_cur_id);
+  _total_in_flight_flits[_cur_id] = f;
+  map<int, Flit *>::iterator iter = flits_to_watch.find(_cur_id);
   if(iter != flits_to_watch.end()){
-    flits_to_watch.erase(iter);
     f->watch =true;
-    _measured_in_flight_flits.insert(_cur_id);
+    iter->second = f;
   }
   ++_cur_id;
   return f;
@@ -362,25 +361,31 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   static int sample_num = 0;
   deadlock_counter = 1;
 
-  set<int>::iterator match = _total_in_flight_flits.find( f->id );
+  map<int, Flit *>::iterator match = _total_in_flight_flits.find(f->id);
 
   if ( match != _total_in_flight_flits.end( ) ) {
     _total_in_flight_flits.erase( match );
     if ( f->watch ) {
       cout << "Matched flit ID = " << f->id << endl;
-      match = _measured_in_flight_flits.find(f->id);
-      if(match != _measured_in_flight_flits.end()) {
-	_measured_in_flight_flits.erase(match);
-      } else {
-	cout << "Unmatched flit! ID = " << f->id << endl;
-	Error( "" );
-      }
     }
   } else {
     cout << "Unmatched flit! ID = " << f->id << endl;
     Error( "" );
   }
   
+  if(f->record) {
+    match = _measured_in_flight_flits.find(f->id);
+    if(match != _measured_in_flight_flits.end()) {
+      _measured_in_flight_flits.erase(match);
+      if(f->watch) {
+	cout << "Matched measured flit ID = " << f->id << endl;
+      }
+    } else {
+      cout << "Unmatched measured flit! ID = " << f->id << endl;
+      Error( "" );
+    }
+  }
+
   if ( f->watch ) { 
     cout << "Ejecting flit " << f->id 
 	 << ",  lat = " << _time - f->time
@@ -556,7 +561,8 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       }
       packet_destination = _traffic_function( source, _limit );
     } else  {
-      Packet_Reply* temp = _repliesDetails[stype];
+      map<int, Packet_Reply*>::iterator iter = _repliesDetails.find(stype);
+      Packet_Reply* temp = iter->second;
       
       if (temp->type == Flit::READ_REQUEST) {//read reply
 	size = _read_reply_size;
@@ -570,7 +576,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       packet_destination = temp->source;
       time = temp->time;
 
-      _repliesDetails.erase(stype);
+      _repliesDetails.erase(iter);
       delete temp;
     }
   } else {
@@ -604,6 +610,10 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     f->src    = source;
     f->time   = time;
     f->record = record;
+    
+    if(record) {
+      _measured_in_flight_flits[f->id] = f;
+    }
     
     if(_trace || f->watch){
       cout<<"New Flit "<<f->src<<endl;
@@ -992,23 +1002,35 @@ int TrafficManager::_ComputeAccepted( double *avg, double *min ) const
 
 void TrafficManager::_DisplayRemaining( ) const 
 {
-  cout << "Remaining flits (" << _measured_in_flight << " measurement packets, "
-       << _total_in_flight << " total) : ";
-
-  set<int>::const_iterator iter;
+  map<int, Flit *>::const_iterator iter;
   int i;
+
+  cout << "% Remaining flits: ";
   for ( iter = _total_in_flight_flits.begin( ), i = 0;
 	( iter != _total_in_flight_flits.end( ) ) && ( i < 10 );
 	iter++, i++ ) {
-    cout << *iter << " ";
+    cout << iter->first << " ";
   }
-
-  i = _total_in_flight_flits.size();
-  if(i > 10)
-    cout << "[...] (" << i << " flits total)";
-
-  cout << endl;
-
+  if(_total_in_flight_flits.size() > 10)
+    cout << "[...] ";
+  
+  cout << "(" << _total_in_flight_flits.size() << " flits"
+       << ", " << _total_in_flight << " packets"
+       << ")" << endl;
+  
+  cout << "% Measured flits: ";
+  for ( iter = _measured_in_flight_flits.begin( ), i = 0;
+	( iter != _measured_in_flight_flits.end( ) ) && ( i < 10 );
+	iter++, i++ ) {
+    cout << iter->first << " ";
+  }
+  if(_measured_in_flight_flits.size() > 10)
+    cout << "[...] ";
+  
+  cout << "(" << _measured_in_flight_flits.size() << " flits"
+       << ", " << _measured_in_flight << " packets"
+       << ")" << endl;
+  
 }
 
 bool TrafficManager::_SingleSim( )
@@ -1152,7 +1174,7 @@ bool TrafficManager::_SingleSim( )
 
       // Fail safe for latency mode, throughput will ust continue
       if ( ( _sim_mode == latency ) && ( cur_latency >_latency_thres ) ) {
-	cout << "Average latency is getting huge" << endl;
+	cout << "% Average latency exceeded " << _latency_thres << " cycles. Aborting simulation." << endl;
 	converged = 0; 
 	_sim_state = warming_up;
 	break;
@@ -1218,7 +1240,33 @@ bool TrafficManager::_SingleSim( )
 	  ++empty_steps;
 	
 	  if ( empty_steps % 1000 == 0 ) {
+	    
+	    double acc_latency = 0.0;
+	    int acc_count = 0;
+	    for(int c = 0; c < _classes; c++) {
+	      acc_latency += _latency_stats[c]->Average() * _latency_stats[c]->NumSamples();
+	      acc_count += _latency_stats[c]->NumSamples();
+	    }
+	    
+	    int res_latency = 0;
+	    int res_count = 0;
+	    map<int, Flit *>::const_iterator iter;
+	    for(iter = _measured_in_flight_flits.begin(); 
+		iter != _measured_in_flight_flits.end(); 
+		iter++) {
+	      res_latency += _time - iter->second->time;
+	      res_count++;
+	    }
+
+	    if((acc_latency + res_latency) / (acc_count + res_count) > _latency_thres) {
+	      cout << "% Average latency exceeded " << _latency_thres << " cycles. Aborting simulation." << endl;
+	      converged = 0; 
+	      _sim_state = warming_up;
+	      break;
+	    }
+
 	    _DisplayRemaining( ); 
+	    
 	  }
 	}
       }
@@ -1325,7 +1373,7 @@ void TrafficManager::_LoadWatchList(){
     while(!watch_list.eof()){
       getline(watch_list,line);
       if(line!=""){
-	flits_to_watch.insert(atoi(line.c_str()));
+	flits_to_watch[atoi(line.c_str())] = NULL;
       }
     }
 
