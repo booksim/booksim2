@@ -45,17 +45,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class IQRouterSplit : public IQRouterBase {
   
   Allocator *_sw_allocator;
-  Allocator *_fast_path_allocator;
   
   int *_vc_rr_offset;
   int *_sw_rr_offset;
   
-  int * _fast_path_vcs;
-  Flit ** _fast_path_flits;
+  bool * _use_fast_path;
   
 protected:
   virtual void _Alloc( );
-  virtual void _InputQueuing( );
 
 public:
   IQRouterSplit( const Configuration& config,
