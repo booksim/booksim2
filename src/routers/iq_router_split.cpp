@@ -480,7 +480,7 @@ void IQRouterSplit::_Alloc( )
 	    _sw_rr_offset[expanded_input] = (f->vc + 1) % _vcs;
 	  }
 	  
-	  if(cur_vc->Empty()) {
+	  if(cur_vc->Empty() && !_use_fast_path[input*_vcs+f->vc]) {
 	    if(f->watch) {
 	      cout << "Enabling fast path for input " << input
 		   << ", VC " << f->vc << " at " << _fullname
@@ -496,6 +496,7 @@ void IQRouterSplit::_Alloc( )
     
     int vc = fast_path_vcs[input];
     if(vc >= 0) {
+      assert(_use_fast_path[input*_vcs+vc]);
       int expanded_input = (vc % _input_speedup) * _inputs + input;
       int expanded_output = _sw_allocator->OutputAssigned(expanded_input);
       if((expanded_output < 0) ||
