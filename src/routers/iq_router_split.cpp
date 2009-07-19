@@ -95,6 +95,8 @@ void IQRouterSplit::_Alloc( )
   
   for(int input = 0; input < _inputs; ++input) {
     
+    fast_path_vcs[input] = -1;
+    
     for(int s = 0; s < _input_speedup; ++s) {
       int expanded_input  = s*_inputs + input;
       
@@ -212,8 +214,6 @@ void IQRouterSplit::_Alloc( )
       }
     }
     
-    fast_path_vcs[input] = -1;
-    
     // dub: handle fast-path flits separately so we know all switch requests 
     // from other VCs that are on the regular path have been issued already
     for(int vc = 0; vc < _vcs; vc++) {
@@ -225,6 +225,9 @@ void IQRouterSplit::_Alloc( )
 	 !cur_vc->Empty() &&
 	 ((vc_state == VC::vc_alloc) || (vc_state == VC::active)) && 
 	 (cur_vc->GetStateTime() >= _sw_alloc_delay)) {
+	
+	// dub: "There can be only one!"
+	assert(fast_path_vcs[input] < 0);
 	
 	fast_path_vcs[input] = vc;
 	
@@ -503,11 +506,11 @@ void IQRouterSplit::_Alloc( )
 	
 	if(f->watch) {
 	  cout << "Disabling fast path for input " << input
-	       << ", VC << " << vc << " at " << _fullname
+	       << ", VC " << vc << " at " << _fullname
 	       << " at time " << GetSimTime() << endl
 	       << *f;
 	}
-	_use_fast_path[input*_vcs+f->vc] = true;
+	_use_fast_path[input*_vcs+f->vc] = false;
       }
     }
     
