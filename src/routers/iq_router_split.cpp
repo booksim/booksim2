@@ -483,7 +483,7 @@ void IQRouterSplit::_Alloc( )
 	  if(cur_vc->Empty()) {
 	    if(f->watch) {
 	      cout << "Enabling fast path for input " << input
-		   << ", VC << " << f->vc << " at " << _fullname
+		   << ", VC " << f->vc << " at " << _fullname
 		   << " at time " << GetSimTime() << endl
 		   << *f;
 	    }
