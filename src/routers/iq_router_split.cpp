@@ -510,7 +510,7 @@ void IQRouterSplit::_Alloc( )
 	       << " at time " << GetSimTime() << endl
 	       << *f;
 	}
-	_use_fast_path[input*_vcs+f->vc] = false;
+	_use_fast_path[input*_vcs+vc] = false;
       }
     }
     
