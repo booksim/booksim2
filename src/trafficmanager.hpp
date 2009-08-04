@@ -114,7 +114,14 @@ protected:
   Stats **_accepted_packets;
   Stats *_overall_accepted;
   Stats *_overall_accepted_min;
-
+  
+  Stats * _vc_ready_nonspec;
+  Stats * _vc_ready_spec;
+  Stats * _vc_grant_nonspec;
+  Stats * _vc_grant_spec;
+  
+  map<string, Stats *> _stats;
+  
   // ============ Simulation parameters ============ 
 
   enum eSimState { warming_up, running, draining, done };
@@ -208,6 +215,8 @@ public:
   const Stats * GetHops() { return _hop_stats; }
 
   int getTime() { return _time;}
+  Stats * getStats(const string & name) { return _stats[name]; }
+
 };
 
 #endif

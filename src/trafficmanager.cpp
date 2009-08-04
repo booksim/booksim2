@@ -161,33 +161,51 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   for ( int c = 0; c < _classes; ++c ) {
     tmp_name << "latency_stat_" << c;
     _latency_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _latency_stats[c];
     tmp_name.seekp( 0, ios::beg );
 
     tmp_name << "overall_latency_stat_" << c;
     _overall_latency[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _overall_latency[c];
     tmp_name.seekp( 0, ios::beg );  
   }
 
-  _pair_latency = new Stats * [_dests];
-  _hop_stats    = new Stats( this, "hop_stats", 1.0, 20 );;
-
-  _accepted_packets = new Stats * [_dests];
+  _hop_stats    = new Stats( this, "hop_stats", 1.0, 20 );
+  _stats["hop_stats"] = _hop_stats;
 
   _overall_accepted     = new Stats( this, "overall_acceptance" );
+  _stats["overall_acceptance"] = _overall_accepted;
+  
   _overall_accepted_min = new Stats( this, "overall_min_acceptance" );
-
+  _stats["overall_min_acceptance"] = _overall_accepted_min;
+  
+  _pair_latency = new Stats * [_dests];
+  _accepted_packets = new Stats * [_dests];
+  
   for ( int i = 0; i < _dests; ++i ) {
     tmp_name << "pair_stat_" << i;
     _pair_latency[i] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+    _stats[tmp_name.str()] = _pair_latency[i];
     tmp_name.seekp( 0, ios::beg );
 
     tmp_name << "accepted_stat_" << i;
     _accepted_packets[i] = new Stats( this, tmp_name.str( ) );
+    _stats[tmp_name.str()] = _accepted_packets[i];
     tmp_name.seekp( 0, ios::beg );    
   }
-
+  
+  int num_vcs = config.GetInt("num_vcs");
+  _vc_ready_nonspec = new Stats(this, "vc_ready_nonspec", 1.0, num_vcs+1);
+  _stats["vc_ready_nonspec"] = _vc_ready_nonspec;
+  _vc_ready_spec = new Stats(this, "vc_ready_spec", 1.0, num_vcs+1);
+  _stats["vc_ready_spec"] = _vc_ready_spec;
+  _vc_grant_nonspec = new Stats(this, "vc_grant_nonspec", 1.0, num_vcs+1);
+  _stats["vc_grant_nonspec"] = _vc_grant_nonspec;
+  _vc_grant_spec = new Stats(this, "vc_grant_spec", 1.0, num_vcs+1);
+  _stats["vc_grant_spec"] = _vc_grant_spec;
+  
   deadlock_counter = 1;
-
+  
   // ============ Simulation parameters ============ 
 
   if(config.GetInt( "injection_rate_uses_flits" )) {
@@ -292,6 +310,12 @@ TrafficManager::~TrafficManager( )
   delete [] _accepted_packets;
   delete [] _pair_latency;
   delete [] _partial_internal_cycles;
+
+  delete _vc_ready_nonspec;
+  delete _vc_ready_spec;
+  delete _vc_grant_nonspec;
+  delete _vc_grant_spec;
+
 }
 
 
@@ -978,6 +1002,12 @@ void TrafficManager::_ClearStats( )
     _accepted_packets[i]->Clear( );
     _pair_latency[i]->Clear( );
   }
+  
+  _vc_ready_nonspec->Clear();
+  _vc_ready_spec->Clear();
+  _vc_grant_nonspec->Clear();
+  _vc_grant_spec->Clear();
+  
 }
 
 int TrafficManager::_ComputeAccepted( double *avg, double *min ) const 
@@ -1342,6 +1372,10 @@ void TrafficManager::DisplayStats() {
 	   << "," << _overall_accepted->Average( )
 	   << "," << _overall_accepted_min->Average( )
 	   << "," << _hop_stats->Average( )
+	   << "," << _vc_ready_nonspec->Average()
+	   << "," << _vc_ready_spec->Average()
+	   << "," << _vc_grant_nonspec->Average()
+	   << "," << _vc_grant_spec->Average()
 	   << endl;
     }
 
@@ -1360,6 +1394,15 @@ void TrafficManager::DisplayStats() {
 
   cout << "Average hops = " << _hop_stats->Average( )
        << " (" << _hop_stats->NumSamples( ) << " samples)" << endl;
+
+  cout << "VC ready (nonspec) = " << _vc_ready_nonspec->Average( )
+       << " (" << _vc_ready_nonspec->NumSamples( ) << " samples)" << endl;
+  cout << "VC ready (spec) = " << _vc_ready_spec->Average( )
+       << " (" << _vc_ready_spec->NumSamples( ) << " samples)" << endl;
+  cout << "VC grant (nonspec) = " << _vc_grant_nonspec->Average( )
+       << " (" << _vc_grant_nonspec->NumSamples( ) << " samples)" << endl;
+  cout << "VC grant (spec) = " << _vc_grant_spec->Average( )
+       << " (" << _vc_grant_spec->NumSamples( ) << " samples)" << endl;
   
 }
 

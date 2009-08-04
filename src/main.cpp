@@ -79,6 +79,11 @@ int GetSimTime() {
   return trafficManager->getTime();
 }
 
+class Stats;
+Stats * GetStats(const std::string & name) {
+  return trafficManager->getStats(name);
+}
+
 /* printing activity factor*/
 bool _print_activity = false;
 

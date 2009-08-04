@@ -34,24 +34,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 
 #include "module.hpp"
-#include "vc.hpp"
-#include "allocator.hpp"
-#include "routefunc.hpp"
-#include "outputset.hpp"
-#include "buffer_state.hpp"
-#include "pipefifo.hpp"
 #include "iq_router_base.hpp"
+
+class Stats;
+class Allocator;
 
 class IQRouterBaseline : public IQRouterBase {
   int  _speculative ;
   int  _filter_spec_grants ;
-
+  
   Allocator *_vc_allocator;
   Allocator *_sw_allocator;
   Allocator *_spec_sw_allocator;
-
+  
   int *_sw_rr_offset;
-
+  
   void _VCAlloc( );
   void _SWAlloc( );
   virtual void _Alloc( );

@@ -36,6 +36,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 int GetSimTime();
 
+class Stats;
+Stats * GetStats(const std::string & name);
+
 extern bool _print_activity;
 
 extern int gK;

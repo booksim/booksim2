@@ -37,6 +37,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "globals.hpp"
 #include "random_utils.hpp"
+#include "stats.hpp"
+#include "vc.hpp"
+#include "routefunc.hpp"
+#include "outputset.hpp"
+#include "buffer_state.hpp"
+#include "pipefifo.hpp"
+#include "allocator.hpp"
 #include "iq_router_baseline.hpp"
 
 IQRouterBaseline::IQRouterBaseline( const Configuration& config,
@@ -109,6 +116,7 @@ IQRouterBaseline::IQRouterBaseline( const Configuration& config,
   for ( int i = 0; i < _inputs*_input_speedup; ++i ) {
     _sw_rr_offset[i] = 0;
   }
+  
 }
 
 IQRouterBaseline::~IQRouterBaseline( )
@@ -267,6 +275,8 @@ void IQRouterBaseline::_SWAlloc( )
     _spec_sw_allocator->Clear( );
   
   for ( input = 0; input < _inputs; ++input ) {
+    int vc_ready_nonspec = 0;
+    int vc_ready_spec = 0;
     for ( int s = 0; s < _input_speedup; ++s ) {
       expanded_input  = s*_inputs + input;
       
@@ -341,7 +351,7 @@ void IQRouterBaseline::_SWAlloc( )
 					      vc, 0, cur_vc->GetPriority( ));
 		  any_nonspec_reqs = true;
 		  any_nonspec_output_reqs[expanded_output] = true;
-		  
+		  vc_ready_nonspec++;
 		}
 	      }
 	    }
@@ -407,6 +417,7 @@ void IQRouterBaseline::_SWAlloc( )
 		      _spec_sw_allocator->AddRequest(expanded_input, 
 						     expanded_output, vc,
 						     in_priority, out_priority);
+		    vc_ready_spec++;
 		  }
 		}
 	      }
@@ -417,6 +428,8 @@ void IQRouterBaseline::_SWAlloc( )
 	vc = ( vc + 1 ) % _vcs;
       }
     }
+    GetStats("vc_ready_nonspec")->AddSample(vc_ready_nonspec);
+    GetStats("vc_ready_spec")->AddSample(vc_ready_spec);
   }
 
   _sw_allocator->Allocate( );
@@ -449,7 +462,10 @@ void IQRouterBaseline::_SWAlloc( )
 
   for ( int input = 0; input < _inputs; ++input ) {
     c = 0;
-
+    
+    int vc_grant_nonspec = 0;
+    int vc_grant_spec = 0;
+    
     for ( int s = 0; s < _input_speedup; ++s ) {
 
       bool use_spec_grant = false;
@@ -495,9 +511,14 @@ void IQRouterBaseline::_SWAlloc( )
 	output = expanded_output % _outputs;
 
 	if ( _switch_hold_in[expanded_input] == -1 ) {
-	  vc = (use_spec_grant ?
-		_spec_sw_allocator :
-		_sw_allocator)->ReadRequest( expanded_input, expanded_output );
+	  if(use_spec_grant) {
+	    vc = _spec_sw_allocator->ReadRequest(expanded_input, 
+						 expanded_output);
+	    vc_grant_spec++;
+	  } else {
+	    vc = _sw_allocator->ReadRequest(expanded_input, expanded_output);
+	    vc_grant_nonspec++;
+	  }
 	  cur_vc = &_vc[input][vc];
 	}
 
@@ -577,5 +598,7 @@ void IQRouterBaseline::_SWAlloc( )
       }
     }
     _credit_pipe->Write( c, input );
+    GetStats("vc_grant_nonspec")->AddSample(vc_grant_nonspec);
+    GetStats("vc_grant_spec")->AddSample(vc_grant_spec);
   }
 }
