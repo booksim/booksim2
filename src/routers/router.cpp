@@ -50,6 +50,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "iq_router_baseline.hpp"
 #include "iq_router_combined.hpp"
 #include "iq_router_split.hpp"
+#include "iq_router_bypass.hpp"
 #include "event_router.hpp"
 #include "MECSRouter.hpp"
 ///////////////////////////////////////////////////////
@@ -164,6 +165,8 @@ Router *Router::NewRouter( const Configuration& config,
     r = new IQRouterCombined( config, parent, name, id, inputs, outputs );
   } else if ( type == "iq_split" ) {
     r = new IQRouterSplit( config, parent, name, id, inputs, outputs );
+  } else if ( type == "iq_bypass" ) {
+    r = new IQRouterBypass( config, parent, name, id, inputs, outputs );
   } else if ( type == "event" ) {
     r = new EventRouter( config, parent, name, id, inputs, outputs );
   } else {
