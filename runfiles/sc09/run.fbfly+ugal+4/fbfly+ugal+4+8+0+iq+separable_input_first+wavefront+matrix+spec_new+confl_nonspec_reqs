@@ -1,0 +1,80 @@
+num_vcs = 4;
+
+read_request_begin_vc  = 0;
+read_request_end_vc    = 1;
+write_request_begin_vc = 0;
+write_request_end_vc   = 1;
+write_reply_begin_vc   = 2;
+write_reply_end_vc     = 3;
+read_reply_begin_vc    = 2;
+read_reply_end_vc      = 3;
+
+topology = flatfly;
+
+routing_function = ugal;
+
+c  = 4;
+k  = 4;
+n  = 2;
+
+x  = 4;
+y  = 4;
+xr = 2;
+yr = 2;
+
+limit = 64;
+
+
+alloc_iters = 1;
+
+credit_delay   = 2;
+routing_delay  = 0;
+sw_alloc_delay = 1;
+st_final_delay = 1;
+
+input_speedup    = 1;
+output_speedup   = 1;
+internal_speedup = 1.0;
+
+use_read_write = 1;
+
+batch_size = 1000;
+
+warmup_periods = 3;
+
+sample_period  = 1000;  
+
+sim_count = 1;
+
+sim_type = latency;
+
+print_activity = 0;
+
+print_csv_results = 1;
+
+
+wait_for_tail_credit = 0;
+
+vc_buf_size = 8;
+
+vc_allocator = separable_input_first;
+vc_alloc_arb_type = matrix;
+sw_allocator = wavefront;
+sw_alloc_arb_type = matrix;
+
+const_flits_per_packet = 5;
+
+traffic = uniform;
+
+injection_rate = 0.5000;
+injection_rate_uses_flits = 1;
+
+vc_alloc_delay = 1;
+speculative = 2;
+filter_spec_grants = confl_nonspec_reqs;
+
+read_request_size  = 1;
+read_reply_size    = 5;
+write_request_size = 5;
+write_reply_size   = 1;
+router = iq;
