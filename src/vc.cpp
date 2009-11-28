@@ -226,8 +226,10 @@ void VC::Route( tRoutingFunction rf, const Router* router, const Flit* f, int in
 
 void VC::AdvanceTime( )
 {
-  _state_time++;
-
+  if(!Empty()) {
+    _state_time++;
+  }
+  
   _total_cycles++; total_cycles++;
   switch( _state ) {
   case idle          : _idle_cycles++; break;
