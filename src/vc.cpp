@@ -41,12 +41,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vc.hpp"
 
 int VC::total_cycles = 0;
-VC::state_info_t VC::state_info[] = {{"idle", 0},
-				     {"routing", 0},
-				     {"vc_alloc", 0},
-				     {"active", 0},
-				     {"vc_spec", 0},
-				     {"vc_spec_grant", 0}};
+const char * const VC::VCSTATE[] = {"idle",
+				    "routing",
+				    "vc_alloc",
+				    "active",
+				    "vc_spec",
+				    "vc_spec_grant"};
+
+VC::state_info_t VC::state_info[] = {{0},
+				     {0},
+				     {0},
+				     {0},
+				     {0},
+				     {0}};
 int VC::occupancy = 0;
 
 VC::VC( const Configuration& config, int outputs ) :
@@ -157,9 +164,9 @@ void VC::SetState( eVCState s )
   if(f && f->watch)
     cout << "VC " << _fullname << " changed state"
 	 << " at time " << GetSimTime() << endl
-	 << "  Old: " << state_info[_state].name
+	 << "  Old: " << VCSTATE[_state]
 	 << " (" << _state_time << ")"
-	 << " New: " << state_info[s].name << " (";
+	 << " New: " << VCSTATE[s] << " (";
   
   // do not reset state time for speculation-related pseudo state transitions
   if(!((_state == vc_spec) && (s == vc_spec_grant)) &&
@@ -255,7 +262,7 @@ void VC::Display( ) const
 //       << endl;
   if ( _state != VC::idle ) {
     cout << _fullname << ": "
-	 << " state: " << state_info[_state].name
+	 << " state: " << VCSTATE[_state]
 	 << " out_port: " << _out_port
 	 << " out_vc: " << _out_vc 
 	 << " fill: " << _buffer.size() 
@@ -273,7 +280,7 @@ void VC::DisplayStats( bool print_csv )
   }
   cout << "VC state breakdown:" << endl;
   for(eVCState state = state_min; state <= state_max; state = eVCState(state+1)) {
-    cout << "  " << state_info[state].name
+    cout << "  " << VCSTATE[state]
 	 << ": " << (float)state_info[state].cycles/(float)total_cycles << endl;
   }
   cout << "  occupancy: " << (float)occupancy/(float)total_cycles << endl;

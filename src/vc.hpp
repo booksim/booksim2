@@ -45,10 +45,10 @@ public:
   enum eVCState { state_min = 0, idle = state_min, routing, vc_alloc, active, 
 		  vc_spec, vc_spec_grant, state_max = vc_spec_grant };
   struct state_info_t {
-    const char * name;
     int cycles;
   };
-
+  static const char * const VCSTATE[];
+  
 private:
   int _size;
 
