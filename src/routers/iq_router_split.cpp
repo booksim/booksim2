@@ -90,6 +90,7 @@ IQRouterSplit::~IQRouterSplit( )
 
 void IQRouterSplit::_Alloc( )
 {
+  bool watched = false;
   int fast_path_vcs[_inputs];
   _sw_allocator->Clear( );
   
@@ -223,7 +224,7 @@ void IQRouterSplit::_Alloc( )
 	      
 	      if(do_request) {
 		
-		if(f->watch)
+		if(f->watch) {
 		  cout << GetSimTime() << " | " << _fullname << " | " 
 		       << "VC " << vc << " at input "
 		       << input << " requests output " << output 
@@ -231,6 +232,8 @@ void IQRouterSplit::_Alloc( )
 		       << ", exp. input: " << expanded_input
 		       << ", exp. output: " << expanded_output
 		       << ")." << endl;
+		  watched = true;
+		}
 		
 		// We could have requested this same input-output pair in a 
 		// previous iteration; only replace the previous request if the 
@@ -375,7 +378,7 @@ void IQRouterSplit::_Alloc( )
 	  
 	  if(do_request) {
 	    
-	    if(f->watch)
+	    if(f->watch) {
 	      cout << GetSimTime() << " | " << _fullname << " | " 
 		   << "VC " << vc << " at input "
 		   << input << " requests output " << output 
@@ -383,6 +386,8 @@ void IQRouterSplit::_Alloc( )
 		   << ", exp. input: " << expanded_input
 		   << ", exp. output: " << expanded_output
 		   << ")." << endl;
+	      watched = true;
+	    }
 	    
 	    // We could have requested this same input-output pair in a 
 	    // previous iteration; only replace the previous request if the 
@@ -402,6 +407,9 @@ void IQRouterSplit::_Alloc( )
       }
     }
   }
+  
+  if(watched)
+    _sw_allocator->PrintRequests();
   
   _sw_allocator->Allocate();
   

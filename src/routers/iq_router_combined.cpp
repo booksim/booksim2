@@ -79,6 +79,8 @@ IQRouterCombined::~IQRouterCombined( )
   
 void IQRouterCombined::_Alloc( )
 {
+  bool watched = false;
+  
   _sw_allocator->Clear( );
   
   for(int input = 0; input < _inputs; ++input) {
@@ -159,7 +161,7 @@ void IQRouterCombined::_Alloc( )
 	      
 	      if(do_request) {
 		
-		if(f->watch)
+		if(f->watch) {
 		  cout << GetSimTime() << " | " << _fullname << " | " 
 		       << "VC " << vc << " at input "
 		       << input << " requests output " << output 
@@ -167,6 +169,8 @@ void IQRouterCombined::_Alloc( )
 		       << ", exp. input: " << expanded_input
 		       << ", exp. output: " << expanded_output
 		       << ")." << endl;
+		  watched = true;
+		}
 		
 		// We could have requested this same input-output pair in a 
 		// previous iteration; only replace the previous request if the 
@@ -192,6 +196,9 @@ void IQRouterCombined::_Alloc( )
       }
     }
   }
+  
+  if(watched)
+    _sw_allocator->PrintRequests();
   
   _sw_allocator->Allocate();
   

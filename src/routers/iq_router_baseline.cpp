@@ -145,10 +145,9 @@ void IQRouterBaseline::_VCAlloc( )
   int         match_vc;
 
   Flit        *f;
-  bool        watched;
+  bool        watched = false;
 
   _vc_allocator->Clear( );
-  watched = false;
 
   for ( int input = 0; input < _inputs; ++input ) {
     for ( int vc = 0; vc < _vcs; ++vc ) {
@@ -264,6 +263,8 @@ void IQRouterBaseline::_SWAlloc( )
   int expanded_input;
   int expanded_output;
   
+  bool        watched = false;
+
   bool any_nonspec_reqs = false;
   bool any_nonspec_output_reqs[_outputs*_output_speedup];
   memset(any_nonspec_output_reqs, 0, _outputs*_output_speedup*sizeof(bool));
@@ -330,13 +331,15 @@ void IQRouterBaseline::_SWAlloc( )
 		  
 		  Flit * f = cur_vc->FrontFlit();
 		  assert(f);
-		  if(f->watch)
+		  if(f->watch) {
 		    cout << GetSimTime() << " | " << _fullname << " | "
 			 << "VC " << vc << " at input " << input 
 			 << " requested output " << output 
 			 << " (non-spec., exp. input: " << expanded_input
 			 << ", exp. output: " << expanded_output
 			 << ", flit: " << f->id << ")." << endl;
+		    watched = true;
+		  }
 		  
 		  // dub: for the old-style speculation implementation, we 
 		  // overload the packet priorities to prioritize 
@@ -397,13 +400,15 @@ void IQRouterBaseline::_SWAlloc( )
 		    
 		    Flit * f = cur_vc->FrontFlit();
 		    assert(f);
-		    if(f->watch)
+		    if(f->watch) {
 		      cout << GetSimTime() << " | " << _fullname << " | "
 			   << "VC " << vc << " at input " << input 
 			   << " requested output " << output
 			   << " (non-spec., exp. input: " << expanded_input
 			   << ", exp. output: " << expanded_output
 			   << ", flit: " << f->id << ")." << endl;
+		      watched = true;
+		    }
 		    
 		    // dub: for the old-style speculation implementation, we 
 		    // overload the packet priorities to prioritize non-
@@ -429,10 +434,16 @@ void IQRouterBaseline::_SWAlloc( )
     GetStats("vc_ready_nonspec")->AddSample(vc_ready_nonspec);
     GetStats("vc_ready_spec")->AddSample(vc_ready_spec);
   }
-
-  _sw_allocator->Allocate( );
-  if ( _speculative == 2 )
-    _spec_sw_allocator->Allocate( );
+  
+  if(watched) {
+    _sw_allocator->PrintRequests();
+    if(_speculative == 2)
+      _spec_sw_allocator->PrintRequests();
+  }
+  
+  _sw_allocator->Allocate();
+  if(_speculative == 2)
+    _spec_sw_allocator->Allocate();
   
   // Promote virtual channel grants marked as speculative to active
   // now that the speculative switch request has been processed. Those
