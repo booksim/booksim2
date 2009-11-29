@@ -159,33 +159,21 @@ int VC::GetStateTime( ) const
 
 void VC::SetState( eVCState s )
 {
-  Flit * f = FrontFlit();
-  
-  if(f && f->watch)
-    cout << "VC " << _fullname << " changed state"
-	 << " at time " << GetSimTime() << endl
-	 << "  Old: " << VCSTATE[_state]
-	 << " (" << _state_time << ")"
-	 << " New: " << VCSTATE[s] << " (";
-  
   // do not reset state time for speculation-related pseudo state transitions
   if(!((_state == vc_spec) && (s == vc_spec_grant)) &&
      !((_state == vc_spec_grant) && (s == active)))
     _state_time = 0;
   
-  if(f && f->watch)
-    cout << _state_time << ")" << endl;
+  Flit * f = FrontFlit();
   
   if ( (_state == idle) && (s != idle) ) {
     if ( f ) {
       _pri = f->pri;
     }
-
     _occupied_cnt++;
   }
 
   _state = s;
-  
 }
 
 const OutputSet *VC::GetRouteSet( ) const
