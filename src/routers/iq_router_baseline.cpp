@@ -163,11 +163,11 @@ void IQRouterBaseline::_VCAlloc( )
 	   ( cur_vc->GetStateTime( ) >= _vc_alloc_delay ) ) {
 	
   	f = cur_vc->FrontFlit( );
-	if ( f->watch ) {
-	  cout << "VC requesting allocation at " << _fullname
-	       << " at time " << GetSimTime() << endl
-	       << "  Input: " << input << " VC: " << vc << endl
-	       << *f;
+	if(f->watch) {
+	  cout << GetSimTime() << " | " << _fullname << " | " 
+	       << "VC " << vc << " at input " << input
+	       << " is requesting VC allocation for flit " << f->id
+	       << "." << endl;
 	  watched = true;
 	}
 	
@@ -182,10 +182,6 @@ void IQRouterBaseline::_VCAlloc( )
 	    int in_priority;
 	    int out_vc = route_set->GetVC( output, vc_index, &in_priority );
 	    
-	    if ( f->watch ) {
-	      cout << "  trying vc " << out_vc << " (out = " << output << ") ... ";
-	    }
-	    
 	    // On the input input side, a VC might request several output 
 	    // VCs.  These VCs can be prioritized by the routing function
 	    // and this is reflected in "in_priority".  On the output,
@@ -193,14 +189,18 @@ void IQRouterBaseline::_VCAlloc( )
 	    // of VCs is based on the actual packet priorities, which is
 	    // reflected in "out_priority".
 	    
-	    if ( dest_vc->IsAvailableFor( out_vc ) ) {
-	      _vc_allocator->AddRequest( input*_vcs + vc, output*_vcs + out_vc, 
-					 out_vc, in_priority, out_priority );
-	      if ( f->watch ) {
-		cout << "available" << endl;
-	      }
-	    } else if ( f->watch ) {
-	      cout << "busy" << endl;
+	    if(dest_vc->IsAvailableFor(out_vc)) {
+	      if(f->watch)
+		cout << GetSimTime() << " | " << _fullname << " | "
+		     << "Requesting VC " << out_vc << " at output " << output 
+		     << "." << endl;
+	      _vc_allocator->AddRequest(input*_vcs + vc, output*_vcs + out_vc, 
+					out_vc, in_priority, out_priority);
+	    } else {
+	      if(f->watch)
+		cout << GetSimTime() << " | " << _fullname << " | "
+		     << "VC " << out_vc << " at output " << output 
+		     << " is unavailable." << endl;
 	    }
 	  }
 	}
@@ -239,13 +239,11 @@ void IQRouterBaseline::_VCAlloc( )
 
 	f = cur_vc->FrontFlit( );
 	
-	if ( f->watch ) {
-	  cout << "Granted VC allocation at " << _fullname 
-	       << " at time " << GetSimTime() << endl
-	       << "  Input: " << match_input << " VC: " << match_vc << endl
-	       << "  Output: " << output << " VC: " << vc << endl
-	       << *f;
-	}
+	if(f->watch)
+	  cout << GetSimTime() << " | " << _fullname << " | "
+	       << "Granted VC " << vc << " at output " << output
+	       << " to VC " << match_vc << " at input " << match_input
+	       << " (flit: " << f->id << ")." << endl;
       }
     }
   }
@@ -332,13 +330,13 @@ void IQRouterBaseline::_SWAlloc( )
 		  
 		  Flit * f = cur_vc->FrontFlit();
 		  assert(f);
-		  if(f->watch) {
-		    cout << "Switch allocation requested at " << _fullname
-			 << " at time " << GetSimTime() << endl
-			 << "  Input: " << input << " VC: " << vc << endl
-			 << "  Output: " << cur_vc->GetOutputPort() << endl
-			 << *f;
-		  }
+		  if(f->watch)
+		    cout << GetSimTime() << " | " << _fullname << " | "
+			 << "VC " << vc << " at input " << input 
+			 << " requested output " << output 
+			 << " (non-spec., exp. input: " << expanded_input
+			 << ", exp. output: " << expanded_output
+			 << ", flit: " << f->id << ")." << endl;
 		  
 		  // dub: for the old-style speculation implementation, we 
 		  // overload the packet priorities to prioritize 
@@ -399,13 +397,13 @@ void IQRouterBaseline::_SWAlloc( )
 		    
 		    Flit * f = cur_vc->FrontFlit();
 		    assert(f);
-		    if(f->watch) {
-		      cout << "Speculative switch allocation requested at "
-			   << _fullname << " at time " << GetSimTime() << endl
-			   << "  Input: " << input << " VC: " << vc << endl
-			   << "  Output: " << cur_vc->GetOutputPort() << endl
-			   << *f;
-		    }
+		    if(f->watch)
+		      cout << GetSimTime() << " | " << _fullname << " | "
+			   << "VC " << vc << " at input " << input 
+			   << " requested output " << output
+			   << " (non-spec., exp. input: " << expanded_input
+			   << ", exp. output: " << expanded_output
+			   << ", flit: " << f->id << ")." << endl;
 		    
 		    // dub: for the old-style speculation implementation, we 
 		    // overload the packet priorities to prioritize non-
@@ -549,11 +547,12 @@ void IQRouterBaseline::_SWAlloc( )
 	  f = cur_vc->RemoveFlit( );
 	  assert(f);
 	  if(f->watch)
-	    cout << "Granted switch allocation at " << _fullname 
-		 << " at time " << GetSimTime() << endl
-		 << "  Input: " << input << " VC: " << vc
-		 << "  Output: " << output << endl
-		 << *f;
+	    cout << GetSimTime() << " | " << _fullname << " | "
+		 << "Output " << output
+		 << " granted to VC " << vc << " at input " << input
+		 << " (exp. input: " << expanded_input
+		 << ", exp. output: " << expanded_output
+		 << ", flit: " << f->id << ")." << endl;
 	  
 	  f->hops++;
 	  
@@ -563,13 +562,12 @@ void IQRouterBaseline::_SWAlloc( )
 	  switchMonitor.traversal( input, output, f) ;
 	  bufferMonitor.read(input, f) ;
 	  
-	  if ( f->watch ) {
-	    cout << "Forwarding flit through crossbar at " << _fullname 
-		 << " at time " << GetSimTime() << endl
-		 << "  Input: " << expanded_input 
-		 << " Output: " << expanded_output << endl
-		 << *f;
-	  }
+	  if(f->watch)
+	    cout << GetSimTime() << " | " << _fullname << " | "
+		 << "Forwarding flit " << f->id << " through crossbar "
+		 << "(exp. input: " << expanded_input
+		 << ", exp. output: " << expanded_output
+		 << ")." << endl;
 	  
 	  if ( !c ) {
 	    c = _NewCredit( _vcs );

@@ -231,15 +231,17 @@ void IQRouterBase::_InputQueuing( )
     if ( !_input_buffer[input].empty( ) ) {
       Flit * f = _input_buffer[input].front( );
       _input_buffer[input].pop( );
-
+      
       VC * cur_vc = &_vc[input][f->vc];
-
-      if ( f->watch ) {
-	cout << "Received flit at " << _fullname 
-	     << " at time " << GetSimTime() << endl
-	     << *f;
-      }
-
+      
+      if(f->watch)
+	cout << GetSimTime() << " | " << _fullname << " | "
+	     << "VC " << f->vc << " at input " << input 
+	     << " received flit " << f->id << " from channel (state: "
+	     << VC::VCSTATE[cur_vc->GetState()] << ", empty: "
+	     << cur_vc->Empty() << ", full: "
+	     << cur_vc->Full() << ")." << endl;
+      
       if ( !cur_vc->AddFlit( f ) ) {
 	Error( "VC buffer overflow" );
       }
@@ -307,8 +309,9 @@ void IQRouterBase::_OutputQueuing( )
       if ( f ) {
 	_output_buffer[output].push( f );
 	if(f->watch)
-	  cout << "Sending flit to channel at " << _fullname
-	       << " at time " << GetSimTime() << endl;
+	  cout << GetSimTime() << " | " << _fullname << " | "
+	       << "VC " << f->vc << " at output " << output 
+	       << " sent flit " << f->id << " to channel." << endl;
       }
     }
   }  
