@@ -159,15 +159,32 @@ int VC::GetStateTime( ) const
 
 void VC::SetState( eVCState s )
 {
-  // do not reset state time for speculation-related pseudo state transitions
-  if(!((_state == vc_spec) && (s == vc_spec_grant)) &&
-     !((_state == vc_spec_grant) && (s == active)))
-    _state_time = 0;
-  
   Flit * f = FrontFlit();
   
-  if ( (_state == idle) && (s != idle) ) {
-    if ( f ) {
+  if(f && f->watch)
+    cout << GetSimTime() << " | " << _fullname << " | "
+	 << "Changing state from " << VC::VCSTATE[_state]
+	 << " to " << VC::VCSTATE[s] << "." << endl;
+  
+  // do not reset state time for speculation-related pseudo state transitions
+  if(((_state == vc_spec) && (s == vc_spec_grant)) ||
+     ((_state == vc_spec_grant) && (s == active))) {
+    assert(f);
+    if(f->watch)
+      cout << GetSimTime() << " | " << _fullname << " | "
+	   << "Keeping state time at " << _state_time << "." << endl;
+  } else {
+    if(f && f->watch)
+      cout << GetSimTime() << " | " << _fullname << " | "
+	   << "Resetting state time to zero." << endl;
+    _state_time = 0;
+  }
+  
+  if((_state == idle) && (s != idle)) {
+    if(f) {
+      if(f->watch)
+	cout << GetSimTime() << " | " << _fullname << " | "
+	     << "Setting priority to " << f->pri << "." << endl;
       _pri = f->pri;
     }
     _occupied_cnt++;
