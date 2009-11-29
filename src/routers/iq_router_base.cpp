@@ -234,13 +234,16 @@ void IQRouterBase::_InputQueuing( )
       
       VC * cur_vc = &_vc[input][f->vc];
       
-      if(f->watch)
+      if(f->watch) {
 	cout << GetSimTime() << " | " << _fullname << " | "
 	     << "VC " << f->vc << " at input " << input 
 	     << " received flit " << f->id << " from channel (state: "
 	     << VC::VCSTATE[cur_vc->GetState()] << ", empty: "
-	     << cur_vc->Empty() << ", full: "
-	     << cur_vc->Full() << ")." << endl;
+	     << cur_vc->Empty();
+	if(cur_vc->FrontFlit())
+	  cout << ", front: " << cur_vc->FrontFlit()->id;
+	cout << ")." << endl;
+      }
       
       if ( !cur_vc->AddFlit( f ) ) {
 	Error( "VC buffer overflow" );
