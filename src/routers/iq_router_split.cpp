@@ -190,26 +190,24 @@ void IQRouterSplit::_Alloc( )
 		int vc_prio;
 		int out_vc = route_set->GetVC(output, vc_index, &vc_prio);
 		
-		switch(vc_state) {
-		case VC::vc_alloc:
-		  if(!dest_vc->IsAvailableFor(out_vc)) {
-		    if(f->watch)
-		      cout << GetSimTime() << " | " << _fullname << " | " 
-			   << "VC " << out_vc << " at output "
-			   << output << " is busy." << endl;
-		    continue;
-		  }
-		  break;
-		case VC::active:
-		  if(out_vc != cur_vc->GetOutputVC())
-		    continue;
-		  if(dest_vc->IsFullFor(out_vc)) {
-		    if(f->watch)
-		      cout << GetSimTime() << " | " << _fullname << " | " 
-			   << "VC " << out_vc << " at output "
-			   << output << " has no buffers available." << endl;
-		    continue;
-		  }
+		if((vc_state == VC::vc_alloc) &&
+		   !dest_vc->IsAvailableFor(out_vc)) {
+		  if(f->watch)
+		    cout << GetSimTime() << " | " << _fullname << " | " 
+			 << "VC " << out_vc << " at output "
+			 << output << " is busy." << endl;
+		  continue;
+		} else if((vc_state == VC::active) && 
+			  (out_vc != cur_vc->GetOutputVC())) {
+		  continue;
+		}
+		
+		if(dest_vc->IsFullFor(out_vc)) {
+		  if(f->watch)
+		    cout << GetSimTime() << " | " << _fullname << " | " 
+			 << "VC " << out_vc << " at output "
+			 << output << " has no buffers available." << endl;
+		  continue;
 		}
 		
 		if(f->watch)
@@ -263,18 +261,23 @@ void IQRouterSplit::_Alloc( )
     // from other VCs that are on the regular path have been issued already
     for(int vc = 0; vc < _vcs; vc++) {
       
-      VC * cur_vc = &_vc[input][vc];
-      VC::eVCState vc_state = cur_vc->GetState();
-      
-      if(cur_vc->FrontFlit() && cur_vc->FrontFlit()->watch)
-	cout << GetSimTime() << " | " << _fullname << " | " 
-	     << "Saw flit " << cur_vc->FrontFlit()->id
-	     << " in fast path." << endl;
-      
-      if(_use_fast_path[input*_vcs+vc] && !cur_vc->Empty()) {
+      if(_use_fast_path[input*_vcs+vc]) {
+	
+	VC * cur_vc = &_vc[input][vc];
+	
+	if(cur_vc->Empty()) {
+	  continue;
+	}
 	
 	Flit * f = cur_vc->FrontFlit();
 	assert(f);
+	
+	if(f->watch)
+	  cout << GetSimTime() << " | " << _fullname << " | " 
+	       << "Saw flit " << f->id
+	       << " in fast path." << endl;
+	
+	VC::eVCState vc_state = cur_vc->GetState();
 	
 	if(((vc_state != VC::vc_alloc) && (vc_state != VC::active)) ||
 	   (cur_vc->GetStateTime() < _sw_alloc_delay)) {
@@ -344,26 +347,24 @@ void IQRouterSplit::_Alloc( )
 	    int vc_prio;
 	    int out_vc = route_set->GetVC(output, vc_index, &vc_prio);
 	    
-	    switch(vc_state) {
-	    case VC::vc_alloc:
-	      if(!dest_vc->IsAvailableFor(out_vc)) {
-		if(f->watch)
-		  cout << GetSimTime() << " | " << _fullname << " | " 
-		       << "VC " << out_vc << " at output "
-		       << output << " is busy." << endl;
-		continue;
-	      }
-	      break;
-	    case VC::active:
-	      if(out_vc != cur_vc->GetOutputVC())
-		continue;
-	      if(dest_vc->IsFullFor(out_vc)) {
-		if(f->watch)
-		  cout << GetSimTime() << " | " << _fullname << " | " 
-		       << "VC " << out_vc << " at output "
-		       << output << " has no buffers available." << endl;
-		continue;
-	      }
+	    if((vc_state == VC::vc_alloc) && 
+	       !dest_vc->IsAvailableFor(out_vc)) {
+	      if(f->watch)
+		cout << GetSimTime() << " | " << _fullname << " | " 
+		     << "VC " << out_vc << " at output "
+		     << output << " is busy." << endl;
+	      continue;
+	    } else if((vc_state == VC::active) && 
+		      (out_vc != cur_vc->GetOutputVC())) {
+	      continue;
+	    }
+	    
+	    if(dest_vc->IsFullFor(out_vc)) {
+	      if(f->watch)
+		cout << GetSimTime() << " | " << _fullname << " | " 
+		     << "VC " << out_vc << " at output "
+		     << output << " has no buffers available." << endl;
+	      continue;
 	    }
 	    
 	    if(f->watch)
@@ -378,7 +379,7 @@ void IQRouterSplit::_Alloc( )
 	  
 	  if(do_request) {
 	    
-	    if(f->watch) {
+	    if(f->watch)
 	      cout << GetSimTime() << " | " << _fullname << " | " 
 		   << "VC " << vc << " at input "
 		   << input << " requests output " << output 
@@ -386,8 +387,6 @@ void IQRouterSplit::_Alloc( )
 		   << ", exp. input: " << expanded_input
 		   << ", exp. output: " << expanded_output
 		   << ")." << endl;
-	      watched = true;
-	    }
 	    
 	    // We could have requested this same input-output pair in a 
 	    // previous iteration; only replace the previous request if the 
@@ -412,6 +411,20 @@ void IQRouterSplit::_Alloc( )
     _sw_allocator->PrintRequests();
   
   _sw_allocator->Allocate();
+  
+  if(watched) {
+    cout << "Grants:" << endl;
+    for(int input = 0; input < _inputs; ++input)
+      for(int s = 0; s < _input_speedup; ++s) {
+	int expanded_input = s * _inputs + input;
+	int expanded_output = _sw_allocator->OutputAssigned(expanded_input);
+	if(expanded_output > -1) {
+	  int output = expanded_output % _outputs;
+	  int vc = _sw_allocator->ReadRequest(expanded_input, expanded_output);
+	  cout << input << " --> " << output << " (vc:" << vc << ")" << endl;
+	}
+      }
+  }
   
   // Winning flits cross the switch
 
@@ -500,14 +513,40 @@ void IQRouterSplit::_Alloc( )
 	    for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
 	      int out_prio;
 	      int out_vc = route_set->GetVC(output, vc_index, &out_prio);
-	      if(dest_vc->IsAvailableFor(out_vc) && 
-		 !dest_vc->IsFullFor(out_vc) && 
-		 (out_prio > sel_prio)) {
+	      if(!dest_vc->IsAvailableFor(out_vc)) {
+		if(f->watch)
+		  cout << GetSimTime() << " | " << _fullname << " | "
+		       << "VC " << out_vc << " at output "
+		       << output << " is busy." << endl;
+		continue;
+	      }
+	      if(dest_vc->IsFullFor(out_vc)) {
+		if(f->watch)
+		  cout << GetSimTime() << " | " << _fullname << " | " 
+		       << "VC " << out_vc << " at output "
+		       << output << " has no buffers available." << endl;
+		continue;
+	      }
+	      
+	      if(f->watch)
+		cout << GetSimTime() << " | " << _fullname << " | " 
+		     << "VC " << out_vc << " at output "
+		     << output << " is available." << endl;
+	      if(out_prio > sel_prio) {
 		sel_vc = out_vc;
 		sel_prio = out_prio;
 	      }
 	    }
 	    
+	    if(sel_vc < 0) {
+	      cout << "XXX" << endl
+		   << "Flit " << f->id
+		   << ", VC " << vc
+		   << ", input " << input << ":" << endl
+		   << "None of " << vc_cnt << " VCs at output " << output 
+		   << " were suitable and available." << endl 
+		   << "XXX" << endl;
+	    }
 	    // we should only get to this point if some VC requested 
 	    // allocation
 	    assert(sel_vc > -1);
