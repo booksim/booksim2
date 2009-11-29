@@ -263,7 +263,8 @@ void IQRouterCombined::_Alloc( )
 	    // we should only get to this point if some VC requested allocation
 	    assert(sel_vc > -1);
 	    
-	    cur_vc->SetState(VC::active);
+	    // dub: this is taken care of later on
+	    //cur_vc->SetState(VC::active);
 	    cur_vc->SetOutput(output, sel_vc);
 	    dest_vc->TakeBuffer(sel_vc);
 	    
@@ -285,7 +286,7 @@ void IQRouterCombined::_Alloc( )
 	    _switch_hold_out[expanded_output] = expanded_input;
 	  }
 	  
-	  assert(cur_vc->GetState() == VC::active);
+	  //assert(cur_vc->GetState() == VC::active);
 	  assert(!cur_vc->Empty());
 	  assert(cur_vc->GetOutputPort() == output);
 	  
@@ -333,7 +334,14 @@ void IQRouterCombined::_Alloc( )
 	  _crossbar_pipe->Write(f, expanded_output);
 	  
 	  if(f->tail) {
-	    cur_vc->SetState(VC::idle);
+	    if(cur_vc->Empty()) {
+	      cur_vc->SetState(VC::idle);
+	    } else if(_routing_delay > 0) {
+	      cur_vc->SetState(VC::routing);
+	    } else {
+	      cur_vc->Route(_rf, this, cur_vc->FrontFlit(), input);
+	      cur_vc->SetState(VC::vc_alloc);
+	    }
 	    _switch_hold_in[expanded_input] = -1;
 	    _switch_hold_vc[expanded_input] = -1;
 	    _switch_hold_out[expanded_output] = -1;

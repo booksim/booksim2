@@ -461,6 +461,11 @@ void IQRouterSplit::_Alloc( )
 		 << " at input " << input << " (flit: " << f->id
 		 << ")." << endl;
 	} else {
+	  if(f->watch)
+	    cout << GetSimTime() << " | " << _fullname << " | "
+		 << "Slow-path allocation successful for VC " << vc
+		 << " at input " << input << " (flit: " << f->id
+		 << ")." << endl;
 	  if(fvc >= 0) {
 	    assert(_use_fast_path[input*_vcs+fvc]);
 	    VC * fast_vc = &_vc[input][fvc];
@@ -499,7 +504,8 @@ void IQRouterSplit::_Alloc( )
 	    // allocation
 	    assert(sel_vc > -1);
 	    
-	    cur_vc->SetState(VC::active);
+	    // dub: this is taken care of later on
+	    //cur_vc->SetState(VC::active);
 	    cur_vc->SetOutput(output, sel_vc);
 	    dest_vc->TakeBuffer(sel_vc);
 	    
@@ -521,7 +527,7 @@ void IQRouterSplit::_Alloc( )
 	    _switch_hold_out[expanded_output] = expanded_input;
 	  }
 	  
-	  assert(cur_vc->GetState() == VC::active);
+	  //assert(cur_vc->GetState() == VC::active);
 	  assert(!cur_vc->Empty());
 	  assert(cur_vc->GetOutputPort() == output);
 	  
@@ -571,7 +577,12 @@ void IQRouterSplit::_Alloc( )
 	  _crossbar_pipe->Write(f, expanded_output);
 	  
 	  if(f->tail) {
-	    cur_vc->SetState(VC::idle);
+	    if(cur_vc->Empty()) {
+	      cur_vc->SetState(VC::idle);
+	    } else {
+	      cur_vc->Route(_rf, this, cur_vc->FrontFlit(), input);
+	      cur_vc->SetState(VC::vc_alloc);
+	    }
 	    _switch_hold_in[expanded_input] = -1;
 	    _switch_hold_vc[expanded_input] = -1;
 	    _switch_hold_out[expanded_output] = -1;
