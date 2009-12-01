@@ -167,7 +167,8 @@ void VC::SetState( eVCState s )
 	 << " to " << VC::VCSTATE[s] << "." << endl;
   
   // do not reset state time for speculation-related pseudo state transitions
-  if(((_state == vc_spec) && (s == vc_spec_grant)) ||
+  if(((_state == vc_alloc) && (s == vc_spec)) ||
+     ((_state == vc_spec) && (s == vc_spec_grant)) ||
      ((_state == vc_spec_grant) && (s == active))) {
     assert(f);
     if(f->watch)
