@@ -254,7 +254,7 @@ int main( int argc, char **argv )
     cout << "Usage: " << argv[0] << " configfile" << endl;
     return 0;
   }
-
+  
   /*print the configuration file at the begining of the reprot
    */
   ifstream in(argv[1]);
@@ -267,6 +267,12 @@ int main( int argc, char **argv )
   }
   cout << "END Configuration File" << endl;
 
+  if(argc > 2) {
+    double inj_rate = atof(argv[2]);
+    cout << "Overriding injection rate: " << inj_rate << endl;
+    config.Assign("injection_rate", inj_rate);
+  }
+  
   /*initialize routing, traffic, injection functions
    */
   InitializeRoutingMap( );
