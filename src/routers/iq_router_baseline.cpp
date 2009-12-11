@@ -411,7 +411,7 @@ void IQRouterBaseline::_SWAlloc( )
 		  if((!do_request || (vc_prio > in_priority)) && 
 		     ((_speculative < 3) ||
 		      dest_vc->IsAvailableFor(out_vc)) &&
-		     ((_speculative != 3) || 
+		     ((_speculative < 4) || 
 		      !dest_vc->IsFullFor(out_vc))) {
 		    do_request = true;
 		    in_priority = vc_prio;
@@ -448,10 +448,6 @@ void IQRouterBaseline::_SWAlloc( )
 		    if( _speculative == 1 )
 		      _sw_allocator->AddRequest(expanded_input, expanded_output,
 						vc, 0, 0);
-		    else if( ( _speculative == 4 ) && any_free )
-		      _sw_allocator->AddRequest(expanded_input, 
-						expanded_output, vc,
-						any_priority, out_priority);
 		    else
 		      _spec_sw_allocator->AddRequest(expanded_input, 
 						     expanded_output, vc,
