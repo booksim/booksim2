@@ -168,8 +168,7 @@ void VC::SetState( eVCState s )
   
   // do not reset state time for speculation-related pseudo state transitions
   if(((_state == vc_alloc) && (s == vc_spec)) ||
-     ((_state == vc_spec) && (s == vc_spec_grant)) ||
-     ((_state == vc_spec_grant) && (s == active))) {
+     ((_state == vc_spec) && (s == vc_spec_grant))) {
     assert(f);
     if(f->watch)
       cout << GetSimTime() << " | " << _fullname << " | "

@@ -470,20 +470,6 @@ void IQRouterBaseline::_SWAlloc( )
   if(_speculative >= 2)
     _spec_sw_allocator->Allocate();
   
-  // Promote virtual channel grants marked as speculative to active
-  // now that the speculative switch request has been processed. Those
-  // not marked active will not release flits speculatiely sent to the
-  // switch to reflect the failure to secure buffering at the downstream
-  // router
-  for ( int input = 0 ; input < _inputs ; input++ ) {
-    for ( int vc = 0 ; vc < _vcs ; vc++ ) {
-      cur_vc = &_vc[input][vc] ;
-      if ( cur_vc->GetState() == VC::vc_spec_grant ) {
-	cur_vc->SetState( VC::active ) ;	
-      } 
-    }
-  }
-
   // Winning flits cross the switch
 
   _crossbar_pipe->WriteAll( 0 );
@@ -559,7 +545,8 @@ void IQRouterBaseline::_SWAlloc( )
 	// also, in case the routing function can return multiple outputs, 
 	// check to make sure VC allocation and speculative switch allocation 
 	// pick the same output port.
-	if ( ( cur_vc->GetState() == VC::active ) &&
+	if ( ( ( cur_vc->GetState() == VC::vc_spec_grant ) ||
+	       ( cur_vc->GetState() == VC::active ) ) &&
 	     ( cur_vc->GetOutputPort() == output ) ) {
 	  
 	  if(use_spec_grant) {
@@ -574,7 +561,8 @@ void IQRouterBaseline::_SWAlloc( )
 	    _switch_hold_out[expanded_output] = expanded_input;
 	  }
 	  
-	  assert(cur_vc->GetState() == VC::active);
+	  assert((cur_vc->GetState() == VC::vc_spec_grant) ||
+		 (cur_vc->GetState() == VC::active));
 	  assert(!cur_vc->Empty());
 	  assert(cur_vc->GetOutputPort() == output);
 	  
@@ -590,10 +578,10 @@ void IQRouterBaseline::_SWAlloc( )
 	    cout << GetSimTime() << " | " << _fullname << " | "
 		 << "Output " << output
 		 << " granted to VC " << vc << " at input " << input;
-	    if(use_spec_grant)
-	      cout << "(spec";
+	    if(cur_vc->GetState() == VC::vc_spec_grant)
+	      cout << " (spec";
 	    else
-	      cout << "(nonspec";
+	      cout << " (non-spec";
 	    cout << ", exp. input: " << expanded_input
 		 << ", exp. output: " << expanded_output
 		 << ", flit: " << f->id << ")." << endl;
@@ -657,6 +645,15 @@ void IQRouterBaseline::_SWAlloc( )
 	} 
       }
     }
+    
+    // Promote all other virtual channel grants marked as speculative to active.
+    for ( int vc = 0 ; vc < _vcs ; vc++ ) {
+      cur_vc = &_vc[input][vc] ;
+      if ( cur_vc->GetState() == VC::vc_spec_grant ) {
+	cur_vc->SetState( VC::active ) ;	
+      } 
+    }
+    
     _credit_pipe->Write( c, input );
     GetStats("vc_grant_nonspec")->AddSample(vc_grant_nonspec);
     GetStats("vc_grant_spec")->AddSample(vc_grant_spec);
