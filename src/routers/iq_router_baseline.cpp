@@ -548,10 +548,8 @@ void IQRouterBaseline::_SWAlloc( )
 	  if(use_spec_grant) {
 	    vc = _spec_sw_allocator->ReadRequest(expanded_input, 
 						 expanded_output);
-	    vc_grant_spec++;
 	  } else {
 	    vc = _sw_allocator->ReadRequest(expanded_input, expanded_output);
-	    vc_grant_nonspec++;
 	  }
 	  cur_vc = &_vc[input][vc];
 	}
@@ -563,7 +561,13 @@ void IQRouterBaseline::_SWAlloc( )
 	// pick the same output port.
 	if ( ( cur_vc->GetState() == VC::active ) &&
 	     ( cur_vc->GetOutputPort() == output ) ) {
-
+	  
+	  if(use_spec_grant) {
+	    vc_grant_spec++;
+	  } else {
+	    vc_grant_nonspec++;
+	  }
+	  
 	  if ( _hold_switch_for_packet ) {
 	    _switch_hold_in[expanded_input] = expanded_output;
 	    _switch_hold_vc[expanded_input] = vc;
@@ -582,13 +586,18 @@ void IQRouterBaseline::_SWAlloc( )
 	  // Forward flit to crossbar and send credit back
 	  f = cur_vc->RemoveFlit( );
 	  assert(f);
-	  if(f->watch)
+	  if(f->watch) {
 	    cout << GetSimTime() << " | " << _fullname << " | "
 		 << "Output " << output
-		 << " granted to VC " << vc << " at input " << input
-		 << " (exp. input: " << expanded_input
+		 << " granted to VC " << vc << " at input " << input;
+	    if(use_spec_grant)
+	      cout << "(spec";
+	    else
+	      cout << "(nonspec";
+	    cout << ", exp. input: " << expanded_input
 		 << ", exp. output: " << expanded_output
 		 << ", flit: " << f->id << ")." << endl;
+	  }
 	  
 	  f->hops++;
 	  
@@ -635,6 +644,16 @@ void IQRouterBaseline::_SWAlloc( )
 	  }
 	  
 	  _sw_rr_offset[expanded_input] = ( f->vc + 1 ) % _vcs;
+	} else {
+	  assert(cur_vc->GetState() == VC::vc_spec);
+	  Flit * f = cur_vc->FrontFlit();
+	  assert(f);
+	  if(f->watch)
+	    cout << GetSimTime() << " | " << _fullname << " | "
+		 << "Speculation failed at output " << output
+		 << "(exp. input: " << expanded_input
+		 << ", exp. output: " << expanded_output
+		 << ", flit: " << f->id << ")." << endl;
 	} 
       }
     }
