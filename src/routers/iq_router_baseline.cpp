@@ -88,7 +88,7 @@ IQRouterBaseline::IQRouterBaseline( const Configuration& config,
   
   _speculative = config.GetInt( "speculative" ) ;
   
-  if ( _speculative == 2 ) {
+  if ( _speculative >= 2 ) {
     
     string filter_spec_grants;
     config.GetStr("filter_spec_grants", filter_spec_grants);
@@ -124,7 +124,7 @@ IQRouterBaseline::~IQRouterBaseline( )
   delete _vc_allocator;
   delete _sw_allocator;
 
-  if ( _speculative == 2 )
+  if ( _speculative >= 2 )
     delete _spec_sw_allocator;
 
   delete [] _sw_rr_offset;
@@ -270,7 +270,7 @@ void IQRouterBaseline::_SWAlloc( )
   memset(any_nonspec_output_reqs, 0, _outputs*_output_speedup*sizeof(bool));
   
   _sw_allocator->Clear( );
-  if ( _speculative == 2 )
+  if ( _speculative >= 2 )
     _spec_sw_allocator->Clear( );
   
   for ( input = 0; input < _inputs; ++input ) {
@@ -378,6 +378,7 @@ void IQRouterBaseline::_SWAlloc( )
 	      
 	      for ( int output = 0; output < _outputs; ++output ) {
 		
+		/*
 		// check if we can use any VCs at this port
 		int vc_cnt = route_set->NumVCs( output );
 		if ( vc_cnt > 0 ) {
@@ -392,6 +393,37 @@ void IQRouterBaseline::_SWAlloc( )
 		      in_priority = vc_prio;
 		    }
 		  }
+		*/
+		
+		BufferState * dest_vc = &_next_vcs[output];
+		
+		bool do_request = false;
+		int in_priority;
+		bool any_free = false;
+		int any_priority;
+		
+		// check if any suitable VCs are available and determine the 
+		// highest priority for this port
+		int vc_cnt = route_set->NumVCs(output);
+		for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
+		  int vc_prio;
+		  int out_vc = route_set->GetVC(output, vc_index, &vc_prio);
+		  if((!do_request || (vc_prio > in_priority)) && 
+		     ((_speculative < 3) ||
+		      dest_vc->IsAvailableFor(out_vc)) &&
+		     ((_speculative != 3) || 
+		      !dest_vc->IsFullFor(out_vc))) {
+		    do_request = true;
+		    in_priority = vc_prio;
+		    if((!any_free || (vc_prio > any_priority)) &&
+		       !dest_vc->IsFullFor(out_vc)) {
+		      any_free = true;
+		      any_priority = vc_prio;
+		    }
+		  }
+		}
+	      
+		if(do_request) {
 		  
 		  expanded_output = (input%_output_speedup)*_outputs + output;
 		  
@@ -416,6 +448,10 @@ void IQRouterBaseline::_SWAlloc( )
 		    if( _speculative == 1 )
 		      _sw_allocator->AddRequest(expanded_input, expanded_output,
 						vc, 0, 0);
+		    else if( ( _speculative == 4 ) && any_free )
+		      _sw_allocator->AddRequest(expanded_input, 
+						expanded_output, vc,
+						any_priority, out_priority);
 		    else
 		      _spec_sw_allocator->AddRequest(expanded_input, 
 						     expanded_output, vc,
@@ -437,12 +473,12 @@ void IQRouterBaseline::_SWAlloc( )
   
   if(watched) {
     _sw_allocator->PrintRequests();
-    if(_speculative == 2)
+    if(_speculative >= 2)
       _spec_sw_allocator->PrintRequests();
   }
   
   _sw_allocator->Allocate();
-  if(_speculative == 2)
+  if(_speculative >= 2)
     _spec_sw_allocator->Allocate();
   
   // Promote virtual channel grants marked as speculative to active
@@ -492,7 +528,7 @@ void IQRouterBaseline::_SWAlloc( )
 	}
       } else {
 	expanded_output = _sw_allocator->OutputAssigned( expanded_input );
-	if ( ( _speculative == 2 ) && ( expanded_output < 0 ) ) {
+	if ( ( _speculative >= 2 ) && ( expanded_output < 0 ) ) {
 	  expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
 	  if ( expanded_output >= 0 ) {
 	    switch ( _filter_spec_grants ) {
