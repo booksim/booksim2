@@ -399,8 +399,6 @@ void IQRouterBaseline::_SWAlloc( )
 		
 		bool do_request = false;
 		int in_priority;
-		bool any_free = false;
-		int any_priority;
 		
 		// check if any suitable VCs are available and determine the 
 		// highest priority for this port
@@ -415,11 +413,6 @@ void IQRouterBaseline::_SWAlloc( )
 		      !dest_vc->IsFullFor(out_vc))) {
 		    do_request = true;
 		    in_priority = vc_prio;
-		    if((!any_free || (vc_prio > any_priority)) &&
-		       !dest_vc->IsFullFor(out_vc)) {
-		      any_free = true;
-		      any_priority = vc_prio;
-		    }
 		  }
 		}
 	      
