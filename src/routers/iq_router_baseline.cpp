@@ -429,7 +429,7 @@ void IQRouterBaseline::_SWAlloc( )
 		      cout << GetSimTime() << " | " << _fullname << " | "
 			   << "VC " << vc << " at input " << input 
 			   << " requested output " << output
-			   << " (non-spec., exp. input: " << expanded_input
+			   << " (spec., exp. input: " << expanded_input
 			   << ", exp. output: " << expanded_output
 			   << ", flit: " << f->id << ")." << endl;
 		      watched = true;
