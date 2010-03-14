@@ -56,8 +56,6 @@ void SeparableOutputFirstAllocator::Allocate() {
 //  cout << "SeparableOutputFirstAllocator::Allocate()" << endl ;
 //  PrintRequests() ;
   
-  list<sRequest> out_reqs[_outputs];
-  
   for ( int input = 0 ; input < _inputs ; input++ ) {
     
     // Add requests to the output arbiters
