@@ -257,19 +257,21 @@ int main( int argc, char **argv )
   
   /*print the configuration file at the begining of the reprot
    */
-  ifstream in(argv[1]);
-  char c;
-  cout << "BEGIN Configuration File" << endl;
-  cout << "Name: " << argv[1] << endl;
-  while (!in.eof()) {
-    in.get(c);
-    cout << c ;
+  if(config.GetInt("print_config_file")) {
+    ifstream in(argv[1]);
+    char c;
+    cout << "BEGIN Configuration File" << endl;
+    cout << "Name: " << argv[1] << endl;
+    while (!in.eof()) {
+      in.get(c);
+      cout << c ;
+    }
+    cout << "END Configuration File" << endl;
   }
-  cout << "END Configuration File" << endl;
-
+  
   if(argc > 2) {
     double inj_rate = atof(argv[2]);
-    cout << "Overriding injection rate: " << inj_rate << endl;
+    cout << "% Overriding injection rate: " << inj_rate << endl;
     config.Assign("injection_rate", inj_rate);
   }
   
