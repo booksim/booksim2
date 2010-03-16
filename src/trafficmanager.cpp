@@ -1190,8 +1190,7 @@ bool TrafficManager::_SingleSim( )
 	cout << "% Average latency = " << cur_latency << endl;
 	cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 	cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
-	cout << "bins = (0:999);" << endl;
-	cout << "freq = ";
+	cout << "lat_hist(" << total_phases + 1 << ",:) = ";
 	_latency_stats[0]->Display();
 	cout << ";" << endl;
       } 
@@ -1212,8 +1211,7 @@ bool TrafficManager::_SingleSim( )
 	cout << "% Average latency = " << cur_latency << endl;
 	cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 	cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
-	cout << "bins = (0:999);" << endl;
-	cout << "freq = ";
+	cout << "lat_hist(" << total_phases + 1 << ",:) = ";
 	_latency_stats[0]->Display();
 	cout << ";" << endl;
       }
@@ -1256,10 +1254,23 @@ bool TrafficManager::_SingleSim( )
       cout << "% Average latency = " << cur_latency << endl;
       cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
       cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
-      cout << "bins = (0:999);" << endl;
-      cout << "freq = ";
+      cout << "lat_hist(" << total_phases + 1 << ",:) = ";
       _latency_stats[0]->Display();
       cout << ";" << endl;
+      cout << "pair_sent(" << total_phases + 1 << ",:) = [ ";
+      for(int i = 0; i < _sources; ++i) {
+	for(int j = 0; j < _dests; ++j) {
+	  cout << _pair_latency[i*_dests+j]->NumSamples( ) << " ";
+	}
+      }
+      cout << "];" << endl;
+      cout << "pair_lat(" << total_phases + 1 << ",:) = [ ";
+      for(int i = 0; i < _sources; ++i) {
+	for(int j = 0; j < _dests; ++j) {
+	  cout << _pair_latency[i*_dests+j]->Average( ) << " ";
+	}
+      }
+      cout << "];" << endl;
       cout << "thru(" << total_phases + 1 << ",:) = [ ";
       for ( int d = 0; d < _dests; ++d ) {
 	cout << _accepted_packets[d]->Average( ) << " ";
