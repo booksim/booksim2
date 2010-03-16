@@ -43,6 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ostream& operator<<( ostream& os, const Flit& f )
 {
   os << "  Flit ID: " << f.id << " (" << &f << ")" 
+     << " Packet ID: " << f.pid
      << " Type: " << f.type 
      << " Head: " << f.head << " Tail: " << f.tail << endl;
   os << "  Source : " << f.src << "  Dest : " << f.dest << " Intm: "<<f.intm<<endl;
@@ -63,6 +64,7 @@ Flit::Flit()
   sn        = 0 ;
   rob_time  = 0 ;
   id        = -1 ;
+  pid       = -1 ;
   hops      = 0 ;
   watch     = false ;
   record    = false ;

@@ -78,10 +78,10 @@ protected:
   bool         **_qdrained;
   list<Flit *> ***_partial_packets;
 
-  int                 _measured_in_flight;
-  int                 _total_in_flight;
   map<int, Flit *> _measured_in_flight_flits;
+  map<int, Flit *> _measured_in_flight_packets;
   map<int, Flit *> _total_in_flight_flits;
+  map<int, Flit *> _total_in_flight_packets;
   bool                _empty_network;
   bool _use_lagging;
 
@@ -159,6 +159,7 @@ protected:
   float *_partial_internal_cycles;
 
   int _cur_id;
+  int _cur_pid;
   int _time;
 
   list<Flit *> _used_flits;
@@ -169,6 +170,7 @@ protected:
   tInjectionProcess _injection_process;
 
   map<int, Flit *> flits_to_watch;
+  map<int, Flit *> packets_to_watch;
 
   bool _print_csv_results;
   string _traffic;

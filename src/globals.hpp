@@ -69,7 +69,7 @@ extern int    gConstPacketSize;
 
 extern int *gNodeStates;
 
-extern std::string watch_file;
+extern std::string _watch_file;
 
 extern bool _use_noc_latency;
 #endif

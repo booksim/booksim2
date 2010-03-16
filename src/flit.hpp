@@ -56,6 +56,7 @@ struct Flit {
   int  rob_time;
 
   int  id;
+  int  pid;
   bool record;
 
   int  src;

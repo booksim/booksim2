@@ -139,7 +139,7 @@ int    gConstPacketSize;
 int *gNodeStates = 0;
 
 //flits to watch
-string watch_file;
+string _watch_file;
 
 //latency type, noc or conventional network
 bool _use_noc_latency;
@@ -286,7 +286,7 @@ int main( int argc, char **argv )
   
   _use_read_write = (config.GetInt("use_read_write")==1);
   
-  config.GetStr( "watch_file", watch_file );
+  config.GetStr( "watch_file", _watch_file );
 
   _use_noc_latency = (config.GetInt("use_noc_latency")==1);
 

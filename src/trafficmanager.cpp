@@ -48,7 +48,8 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   
   _net    = net;
   _cur_id = 0;
-
+  _cur_pid = 0;
+  
   _sources = _net[0]->NumSources( );
   _dests   = _net[0]->NumDests( );
   
@@ -100,9 +101,6 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _warmup_time        = -1;
   _drain_time         = -1;
   _empty_network      = false;
-
-  _measured_in_flight = 0;
-  _total_in_flight    = 0;
 
   _qtime              = new int * [_sources];
   _qdrained           = new bool * [_sources];
@@ -373,7 +371,7 @@ Flit *TrafficManager::_NewFlit( )
   _total_in_flight_flits[_cur_id] = f;
   map<int, Flit *>::iterator iter = flits_to_watch.find(_cur_id);
   if(iter != flits_to_watch.end()){
-    f->watch =true;
+    f->watch = true;
     iter->second = f;
   }
   ++_cur_id;
@@ -424,10 +422,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   }
 
   if ( f->tail ) {
-    _total_in_flight--;
-    if ( _total_in_flight < 0 ) {
-      Error( "Total in flight count dropped below zero!" );
+    map<int, Flit *>::iterator iter = _total_in_flight_packets.find(f->pid);
+    if ( iter == _total_in_flight_packets.end() ) {
+      cout << "Unmatched packet! ID = " << f->pid << endl;
+      Error( "" );
     }
+    _total_in_flight_packets.erase(iter);
     
     //code the source of request, look carefully, its tricky ;)
     if (f->type == Flit::READ_REQUEST) {
@@ -475,10 +475,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       }
       
       if ( f->record ) {
-	_measured_in_flight--;
-	if ( _measured_in_flight < 0 ){ 
-	  Error( "Measured in flight count dropped below zero!" );
+	map<int, Flit *>::iterator iter = _measured_in_flight_packets.find(f->pid);
+	if ( iter == _measured_in_flight_packets.end() ){ 
+	  cout << "Unmatched measured packet! ID = " << f->pid << endl;
+	  Error( "" );
 	}
+	_measured_in_flight_packets.erase(iter);
       }
     }
   }
@@ -619,17 +621,24 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 
   if ( ( _sim_state == running ) ||
        ( ( _sim_state == draining ) && ( time < _drain_time ) ) ) {
-    ++_measured_in_flight;
     record = true;
   } else {
     record = false;
   }
-  ++_total_in_flight;
 
   sub_network = DivisionAlgorithm(packet_type);
-
+  
+  map<int, Flit *>::iterator iter = packets_to_watch.find(_cur_pid);
+  bool watch  = (iter != packets_to_watch.end());
+  
+  if ( watch ) { 
+    cout << "Generating packet " << _cur_pid << " at time " << time << endl;
+  }
+  
   for ( int i = 0; i < size; ++i ) {
     f = _NewFlit( );
+    f->pid = _cur_pid;
+    f->watch |= watch;
     f->subnetwork = sub_network;
     f->src    = source;
     f->time   = time;
@@ -648,6 +657,13 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       f->head = true;
       //packets are only generated to nodes smaller or equal to limit
       f->dest = packet_destination;
+      _total_in_flight_packets[f->pid] = f;
+      if(watch) {
+	iter->second = f;
+      }
+      if(record) {
+	_measured_in_flight_packets[f->pid] = f;
+      }
     } else {
       f->head = false;
       f->dest = -1;
@@ -675,6 +691,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 
     _partial_packets[source][cl][sub_network].push_back( f );
   }
+  ++_cur_pid;
 }
 
 
@@ -966,7 +983,7 @@ bool TrafficManager::_PacketsOutstanding( ) const
 {
   bool outstanding;
 
-  if ( _measured_in_flight == 0 ) {
+  if ( _measured_in_flight_packets.empty() ) {
     outstanding = false;
 
     for ( int c = 0; c < _classes; ++c ) {
@@ -984,7 +1001,7 @@ bool TrafficManager::_PacketsOutstanding( ) const
     }
   } else {
 #ifdef DEBUG_DRAIN
-    cout << "in flight = " << _measured_in_flight << endl;
+    cout << "in flight = " << _measured_in_flight_packets.size() << endl;
 #endif
     outstanding = true;
   }
@@ -1045,7 +1062,7 @@ void TrafficManager::_DisplayRemaining( ) const
     cout << "[...] ";
   
   cout << "(" << _total_in_flight_flits.size() << " flits"
-       << ", " << _total_in_flight << " packets"
+       << ", " << _total_in_flight_packets.size() << " packets"
        << ")" << endl;
   
   cout << "% Measured flits: ";
@@ -1058,7 +1075,7 @@ void TrafficManager::_DisplayRemaining( ) const
     cout << "[...] ";
   
   cout << "(" << _measured_in_flight_flits.size() << " flits"
-       << ", " << _measured_in_flight << " packets"
+       << ", " << _measured_in_flight_packets.size() << " packets"
        << ")" << endl;
   
 }
@@ -1138,7 +1155,7 @@ bool TrafficManager::_SingleSim( )
 	_latency_stats[0]->Display();
       } 
     }
-    cout<<"Total inflight "<<_total_in_flight<<endl;
+    cout << "Total inflight " << _total_in_flight_packets.size() << endl;
     converged = 1;
 
   } else if(_sim_mode == batch && !timed_mode){//batch mode   
@@ -1160,7 +1177,7 @@ bool TrafficManager::_SingleSim( )
     cout << "batch size of "<<_batch_size  <<  " sent. Time used is " << _time << " cycles" <<endl;
     cout<< "Draining the Network...................\n";
     empty_steps = 0;
-    while( (_drain_measured_only ? _measured_in_flight : _total_in_flight) > 0 ) { 
+    while( (_drain_measured_only ? _measured_in_flight_packets.size() : _total_in_flight_packets.size()) > 0 ) { 
       _Step( ); 
       ++empty_steps;
       
@@ -1308,7 +1325,7 @@ bool TrafficManager::_SingleSim( )
     cout << "% Draining remaining packets ..." << endl;
     _empty_network = true;
     empty_steps = 0;
-    while( (_drain_measured_only ? _measured_in_flight : _total_in_flight) > 0 ) { 
+    while( (_drain_measured_only ? _measured_in_flight_packets.size() : _total_in_flight_packets.size()) > 0 ) { 
       _Step( ); 
       ++empty_steps;
 
@@ -1410,17 +1427,20 @@ void TrafficManager::DisplayStats() {
 void TrafficManager::_LoadWatchList(){
   ifstream watch_list;
   string line;
-  string delimiter = ",";
-  watch_list.open(watch_file.c_str());
-
-  if(watch_list.is_open()){
-    while(!watch_list.eof()){
-      getline(watch_list,line);
-      if(line!=""){
-	flits_to_watch[atoi(line.c_str())] = NULL;
+  watch_list.open(_watch_file.c_str());
+  
+  if(watch_list.is_open()) {
+    while(!watch_list.eof()) {
+      getline(watch_list, line);
+      if(line != "") {
+	if(line[0] == 'p') {
+	  packets_to_watch[atoi(line.c_str()+1)] = NULL;
+	} else {
+	  flits_to_watch[atoi(line.c_str())] = NULL;
+	}
       }
     }
-
+    
   } else {
     //cout<<"Unable to open flit watch file, continuing with simulation\n";
   }
