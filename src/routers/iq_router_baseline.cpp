@@ -192,6 +192,8 @@ void IQRouterBaseline::_VCAlloc( )
 	      if(f->watch)
 		cout << GetSimTime() << " | " << _fullname << " | "
 		     << "Requesting VC " << out_vc << " at output " << output 
+		     << " with priorities " << in_priority
+		     << " and " << out_priority
 		     << "." << endl;
 	      _vc_allocator->AddRequest(input*_vcs + vc, output*_vcs + out_vc, 
 					out_vc, in_priority, out_priority);
@@ -337,7 +339,9 @@ void IQRouterBaseline::_SWAlloc( )
 			 << " requested output " << output 
 			 << " (non-spec., exp. input: " << expanded_input
 			 << ", exp. output: " << expanded_output
-			 << ", flit: " << f->id << ")." << endl;
+			 << ", flit: " << f->id
+			 << ", prio: " << cur_vc->GetPriority()
+			 << ")." << endl;
 		    watched = true;
 		  }
 		  
@@ -349,7 +353,8 @@ void IQRouterBaseline::_SWAlloc( )
 					      vc, 1, 1);
 		  else
 		    _sw_allocator->AddRequest(expanded_input, expanded_output, 
-					      vc, 0, cur_vc->GetPriority( ));
+					      vc, cur_vc->GetPriority( ), 
+					      cur_vc->GetPriority( ));
 		  any_nonspec_reqs = true;
 		  any_nonspec_output_reqs[expanded_output] = true;
 		  vc_ready_nonspec++;
@@ -374,48 +379,26 @@ void IQRouterBaseline::_SWAlloc( )
 	      assert( expanded_input == (vc%_input_speedup)*_inputs + input );
 	      
 	      const OutputSet * route_set = cur_vc->GetRouteSet( );
-	      int out_priority = cur_vc->GetPriority( );
 	      
 	      for ( int output = 0; output < _outputs; ++output ) {
-		
-		/*
-		// check if we can use any VCs at this port
-		int vc_cnt = route_set->NumVCs( output );
-		if ( vc_cnt > 0 ) {
-		  
-		  // determine highest priority for this port
-		  int in_priority;
-		  int out_vc = route_set->GetVC( output, 0, &in_priority );
-		  for ( int vc_index = 1; vc_index < vc_cnt; ++vc_index ) {
-		    int vc_prio;
-		    out_vc = route_set->GetVC( output, vc_index, &vc_prio );
-		    if ( vc_prio > in_priority ) {
-		      in_priority = vc_prio;
-		    }
-		  }
-		*/
 		
 		BufferState * dest_vc = &_next_vcs[output];
 		
 		bool do_request = false;
-		int in_priority;
 		
-		// check if any suitable VCs are available and determine the 
-		// highest priority for this port
+		// check if any suitable VCs are available
 		int vc_cnt = route_set->NumVCs(output);
 		for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
 		  int vc_prio;
 		  int out_vc = route_set->GetVC(output, vc_index, &vc_prio);
-		  if((!do_request || (vc_prio > in_priority)) && 
-		     ((_speculative < 3) ||
-		      dest_vc->IsAvailableFor(out_vc)) &&
-		     ((_speculative < 4) || 
-		      !dest_vc->IsFullFor(out_vc))) {
+		  if(!do_request && 
+		     ((_speculative < 3) || dest_vc->IsAvailableFor(out_vc)) &&
+		     ((_speculative < 4) || !dest_vc->IsFullFor(out_vc))) {
 		    do_request = true;
-		    in_priority = vc_prio;
+		    break;
 		  }
 		}
-	      
+		
 		if(do_request) {
 		  
 		  expanded_output = (input%_output_speedup)*_outputs + output;
@@ -431,7 +414,9 @@ void IQRouterBaseline::_SWAlloc( )
 			   << " requested output " << output
 			   << " (spec., exp. input: " << expanded_input
 			   << ", exp. output: " << expanded_output
-			   << ", flit: " << f->id << ")." << endl;
+			   << ", flit: " << f->id
+			   << ", prio: " << cur_vc->GetPriority()
+			   << ")." << endl;
 		      watched = true;
 		    }
 		    
@@ -444,7 +429,8 @@ void IQRouterBaseline::_SWAlloc( )
 		    else
 		      _spec_sw_allocator->AddRequest(expanded_input, 
 						     expanded_output, vc,
-						     in_priority, out_priority);
+						     cur_vc->GetPriority( ), 
+						     cur_vc->GetPriority( ));
 		    vc_ready_spec++;
 		  }
 		}
