@@ -123,13 +123,11 @@ void Stats::Display( ) const
 {
   int b;
 
-  cout << "bins = [ "<<0<<" ..." << _num_bins-1<<"];" << endl;
-
-  cout << "freq = [ ";
+  cout << "[ ";
   for ( b = 0; b < _num_bins; ++b ) {
     cout << _hist[b] << " ";
   }
-  cout << "];" << endl;
+  cout << "]" << endl;
 
  FILE *ostream=fopen("stat","w");
 

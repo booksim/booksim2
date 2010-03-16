@@ -106,11 +106,14 @@ protected:
   // ============ Statistics ============
 
   Stats **_latency_stats;     
-  Stats **_overall_latency;  
+  Stats **_overall_min_latency;  
+  Stats **_overall_avg_latency;  
+  Stats **_overall_max_latency;  
 
   Stats **_pair_latency;
   Stats *_hop_stats;
 
+  Stats **_sent_packets;
   Stats **_accepted_packets;
   Stats *_overall_accepted;
   Stats *_overall_accepted_min;
@@ -173,6 +176,7 @@ protected:
   map<int, Flit *> packets_to_watch;
 
   bool _print_csv_results;
+  bool _print_vc_stats;
   string _traffic;
   bool _drain_measured_only;
 
@@ -193,7 +197,7 @@ protected:
 
   void _ClearStats( );
 
-  int  _ComputeAccepted( double *avg, double *min ) const;
+  int  _ComputeStats( Stats ** stats, double *avg, double *min ) const;
 
   virtual bool _SingleSim( );
 
@@ -211,7 +215,7 @@ public:
 
   void DisplayStats();
 
-  const Stats * GetOverallLatency(int c) { return _overall_latency[c]; }
+  const Stats * GetOverallLatency(int c) { return _overall_avg_latency[c]; }
   const Stats * GetAccepted() { return _overall_accepted; }
   const Stats * GetAcceptedMin() { return _overall_accepted_min; }
   const Stats * GetHops() { return _hop_stats; }

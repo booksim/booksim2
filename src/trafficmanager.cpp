@@ -154,7 +154,9 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   // ============ Statistics ============ 
 
   _latency_stats   = new Stats * [_classes];
-  _overall_latency = new Stats * [_classes];
+  _overall_min_latency = new Stats * [_classes];
+  _overall_avg_latency = new Stats * [_classes];
+  _overall_max_latency = new Stats * [_classes];
 
   for ( int c = 0; c < _classes; ++c ) {
     tmp_name << "latency_stat_" << c;
@@ -162,9 +164,17 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     _stats[tmp_name.str()] = _latency_stats[c];
     tmp_name.seekp( 0, ios::beg );
 
-    tmp_name << "overall_latency_stat_" << c;
-    _overall_latency[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_latency[c];
+    tmp_name << "overall_min_latency_stat_" << c;
+    _overall_min_latency[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _overall_min_latency[c];
+    tmp_name.seekp( 0, ios::beg );  
+    tmp_name << "overall_avg_latency_stat_" << c;
+    _overall_avg_latency[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _overall_avg_latency[c];
+    tmp_name.seekp( 0, ios::beg );  
+    tmp_name << "overall_max_latency_stat_" << c;
+    _overall_max_latency[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _overall_max_latency[c];
     tmp_name.seekp( 0, ios::beg );  
   }
 
@@ -177,15 +187,25 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _overall_accepted_min = new Stats( this, "overall_min_acceptance" );
   _stats["overall_min_acceptance"] = _overall_accepted_min;
   
-  _pair_latency = new Stats * [_dests];
+  _pair_latency = new Stats * [_sources*_dests];
+  _sent_packets = new Stats * [_sources];
   _accepted_packets = new Stats * [_dests];
   
-  for ( int i = 0; i < _dests; ++i ) {
-    tmp_name << "pair_stat_" << i;
-    _pair_latency[i] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-    _stats[tmp_name.str()] = _pair_latency[i];
-    tmp_name.seekp( 0, ios::beg );
+  for ( int i = 0; i < _sources; ++i ) {
+    tmp_name << "sent_stat_" << i;
+    _sent_packets[i] = new Stats( this, tmp_name.str( ) );
+    _stats[tmp_name.str()] = _sent_packets[i];
+    tmp_name.seekp( 0, ios::beg );    
 
+    for ( int j = 0; j < _dests; ++j ) {
+      tmp_name << "pair_stat_" << i << "_" << j;
+      _pair_latency[i*_dests+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+      _stats[tmp_name.str()] = _pair_latency[i*_dests+j];
+      tmp_name.seekp( 0, ios::beg );
+    }
+  }
+
+  for ( int i = 0; i < _dests; ++i ) {
     tmp_name << "accepted_stat_" << i;
     _accepted_packets[i] = new Stats( this, tmp_name.str( ) );
     _stats[tmp_name.str()] = _accepted_packets[i];
@@ -252,6 +272,7 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _include_queuing = config.GetInt( "include_queuing" );
 
   _print_csv_results = config.GetInt( "print_csv_results" );
+  _print_vc_stats = config.GetInt( "print_vc_stats" );
   config.GetStr( "traffic", _traffic ) ;
   _drain_measured_only = config.GetInt( "drain_measured_only" );
   _LoadWatchList();
@@ -286,7 +307,9 @@ TrafficManager::~TrafficManager( )
 
   for ( int c = 0; c < _classes; ++c ) {
     delete _latency_stats[c];
-    delete _overall_latency[c];
+    delete _overall_min_latency[c];
+    delete _overall_avg_latency[c];
+    delete _overall_max_latency[c];
   }
   for (int i = 0; i < duplicate_networks; ++i) {
     delete [] class_array[i];
@@ -294,17 +317,27 @@ TrafficManager::~TrafficManager( )
   delete[] class_array;
 
   delete [] _latency_stats;
-  delete [] _overall_latency;
+  delete [] _overall_min_latency;
+  delete [] _overall_avg_latency;
+  delete [] _overall_max_latency;
 
   delete _hop_stats;
   delete _overall_accepted;
   delete _overall_accepted_min;
 
-  for ( int i = 0; i < _dests; ++i ) {
-    delete _accepted_packets[i];
-    delete _pair_latency[i];
+  for ( int i = 0; i < _sources; ++i ) {
+    delete _sent_packets[i];
+
+    for ( int j = 0; j < _dests; ++j ) {
+      delete _pair_latency[i*_dests+j];
+    }
   }
 
+  for ( int i = 0; i < _dests; ++i ) {
+    delete _accepted_packets[i];
+  }
+
+  delete [] _sent_packets;
   delete [] _accepted_packets;
   delete [] _pair_latency;
   delete [] _partial_internal_cycles;
@@ -470,9 +503,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       }
       ++sample_num;
    
-      if ( f->src == 0 ) {
-	_pair_latency[dest]->AddSample( _time - f->time);
-      }
+      _pair_latency[f->src*_dests+dest]->AddSample( _time - f->time );
       
       if ( f->record ) {
 	map<int, Flit *>::iterator iter = _measured_in_flight_packets.find(f->pid);
@@ -1015,9 +1046,16 @@ void TrafficManager::_ClearStats( )
     _latency_stats[c]->Clear( );
   }
   
+  for ( int i = 0; i < _sources; ++i ) {
+    _sent_packets[i]->Clear( );
+
+    for ( int j = 0; j < _dests; ++j ) {
+      _pair_latency[i*_dests+j]->Clear( );
+    }
+  }
+
   for ( int i = 0; i < _dests; ++i ) {
     _accepted_packets[i]->Clear( );
-    _pair_latency[i]->Clear( );
   }
   
   _vc_ready_nonspec->Clear();
@@ -1027,7 +1065,7 @@ void TrafficManager::_ClearStats( )
   
 }
 
-int TrafficManager::_ComputeAccepted( double *avg, double *min ) const 
+int TrafficManager::_ComputeStats( Stats ** stats, double *avg, double *min ) const 
 {
   int dmin;
 
@@ -1035,11 +1073,11 @@ int TrafficManager::_ComputeAccepted( double *avg, double *min ) const
   *avg = 0.0;
 
   for ( int d = 0; d < _dests; ++d ) {
-    if ( _accepted_packets[d]->Average( ) < *min ) {
-      *min = _accepted_packets[d]->Average( );
+    if ( stats[d]->Average( ) < *min ) {
+      *min = stats[d]->Average( );
       dmin = d;
     }
-    *avg += _accepted_packets[d]->Average( );
+    *avg += stats[d]->Average( );
   }
 
   *avg /= (double)_dests;
@@ -1146,13 +1184,16 @@ bool TrafficManager::_SingleSim( )
 	cout <<_sim_state<< "%=================================" << endl;
 	int dmin;
 	cur_latency = _latency_stats[0]->Average( );
-	dmin = _ComputeAccepted( &avg, &min );
+	dmin = _ComputeStats( _accepted_packets, &avg, &min );
 	cur_accepted = avg;
 	
 	cout << "% Average latency = " << cur_latency << endl;
 	cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 	cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
+	cout << "bins = (0:999);" << endl;
+	cout << "freq = ";
 	_latency_stats[0]->Display();
+	cout << ";" << endl;
       } 
     }
     cout << "Total inflight " << _total_in_flight_packets.size() << endl;
@@ -1165,13 +1206,16 @@ bool TrafficManager::_SingleSim( )
 	cout <<_sim_state<< "%=================================" << endl;
 	int dmin;
 	cur_latency = _latency_stats[0]->Average( );
-	dmin = _ComputeAccepted( &avg, &min );
+	dmin = _ComputeStats( _accepted_packets, &avg, &min );
 	cur_accepted = avg;
 	
 	cout << "% Average latency = " << cur_latency << endl;
 	cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 	cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
+	cout << "bins = (0:999);" << endl;
+	cout << "freq = ";
 	_latency_stats[0]->Display();
+	cout << ";" << endl;
       }
     }
     cout << "batch size of "<<_batch_size  <<  " sent. Time used is " << _time << " cycles" <<endl;
@@ -1207,12 +1251,15 @@ bool TrafficManager::_SingleSim( )
       cout <<_sim_state<< "%=================================" << endl;
       int dmin;
       cur_latency = _latency_stats[0]->Average( );
-      dmin = _ComputeAccepted( &avg, &min );
+      dmin = _ComputeStats( _accepted_packets, &avg, &min );
       cur_accepted = avg;
       cout << "% Average latency = " << cur_latency << endl;
       cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
       cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
+      cout << "bins = (0:999);" << endl;
+      cout << "freq = ";
       _latency_stats[0]->Display();
+      cout << ";" << endl;
       cout << "thru(" << total_phases + 1 << ",:) = [ ";
       for ( int d = 0; d < _dests; ++d ) {
 	cout << _accepted_packets[d]->Average( ) << " ";
@@ -1354,10 +1401,12 @@ bool TrafficManager::Run( )
     //the power script depend on it
     cout << "Time taken is " << _time << " cycles" <<endl; 
     for ( int c = 0; c < _classes; ++c ) {
-      _overall_latency[c]->AddSample( _latency_stats[c]->Average( ) );
+      _overall_min_latency[c]->AddSample( _latency_stats[c]->Min( ) );
+      _overall_avg_latency[c]->AddSample( _latency_stats[c]->Average( ) );
+      _overall_max_latency[c]->AddSample( _latency_stats[c]->Max( ) );
     }
     
-    _ComputeAccepted( &avg, &min );
+    _ComputeStats( _accepted_packets, &avg, &min );
     _overall_accepted->AddSample( avg );
     _overall_accepted_min->AddSample( min );
   }
@@ -1370,7 +1419,9 @@ bool TrafficManager::Run( )
 	 << "," << _load
 	 << "," << _flit_rate << ",";
   }
-  VC::DisplayStats(_print_csv_results);
+  if(_print_vc_stats) {
+    VC::DisplayStats(_print_csv_results);
+  }
   return true;
 }
 
@@ -1385,7 +1436,9 @@ void TrafficManager::DisplayStats() {
 	   << "," << _packet_size
 	   << "," << _load
 	   << "," << _flit_rate
-	   << "," << _overall_latency[c]->Average( )
+	   << "," << _overall_min_latency[c]->Average( )
+	   << "," << _overall_avg_latency[c]->Average( )
+	   << "," << _overall_max_latency[c]->Average( )
 	   << "," << _overall_accepted->Average( )
 	   << "," << _overall_accepted_min->Average( )
 	   << "," << _hop_stats->Average( )
@@ -1398,8 +1451,12 @@ void TrafficManager::DisplayStats() {
 
     cout << "====== Traffic class " << c << " ======" << endl;
     
-    cout << "Overall average latency = " << _overall_latency[c]->Average( )
-	 << " (" << _overall_latency[c]->NumSamples( ) << " samples)" << endl;
+    cout << "Overall minimum latency = " << _overall_min_latency[c]->Average( )
+	 << " (" << _overall_min_latency[c]->NumSamples( ) << " samples)" << endl;
+    cout << "Overall average latency = " << _overall_avg_latency[c]->Average( )
+	 << " (" << _overall_avg_latency[c]->NumSamples( ) << " samples)" << endl;
+    cout << "Overall maximum latency = " << _overall_max_latency[c]->Average( )
+	 << " (" << _overall_max_latency[c]->NumSamples( ) << " samples)" << endl;
     
     cout << "Overall average accepted rate = " << _overall_accepted->Average( )
 	 << " (" << _overall_accepted->NumSamples( ) << " samples)" << endl;
@@ -1412,15 +1469,16 @@ void TrafficManager::DisplayStats() {
   cout << "Average hops = " << _hop_stats->Average( )
        << " (" << _hop_stats->NumSamples( ) << " samples)" << endl;
 
-  cout << "VC ready (nonspec) = " << _vc_ready_nonspec->Average( )
-       << " (" << _vc_ready_nonspec->NumSamples( ) << " samples)" << endl;
-  cout << "VC ready (spec) = " << _vc_ready_spec->Average( )
-       << " (" << _vc_ready_spec->NumSamples( ) << " samples)" << endl;
-  cout << "VC grant (nonspec) = " << _vc_grant_nonspec->Average( )
-       << " (" << _vc_grant_nonspec->NumSamples( ) << " samples)" << endl;
-  cout << "VC grant (spec) = " << _vc_grant_spec->Average( )
-       << " (" << _vc_grant_spec->NumSamples( ) << " samples)" << endl;
-  
+  if(_print_vc_stats) {
+    cout << "VC ready (nonspec) = " << _vc_ready_nonspec->Average( )
+	 << " (" << _vc_ready_nonspec->NumSamples( ) << " samples)" << endl;
+    cout << "VC ready (spec) = " << _vc_ready_spec->Average( )
+	 << " (" << _vc_ready_spec->NumSamples( ) << " samples)" << endl;
+    cout << "VC grant (nonspec) = " << _vc_grant_nonspec->Average( )
+	 << " (" << _vc_grant_nonspec->NumSamples( ) << " samples)" << endl;
+    cout << "VC grant (spec) = " << _vc_grant_spec->Average( )
+	 << " (" << _vc_grant_spec->NumSamples( ) << " samples)" << endl;
+  }
 }
 
 //read the watchlist
