@@ -85,7 +85,7 @@ void CMesh::_ComputeSize( const Configuration &config ) {
   xrouter = config.GetInt("xr");
   yrouter = config.GetInt("yr");
 
-  _express_channels = (config.GetInt("_expression_channels") == 1);
+  _express_channels = (config.GetInt("express_channels") == 1);
 
   gK = _k = k ;
   gN = _n = n ;
