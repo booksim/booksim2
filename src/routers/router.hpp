@@ -89,8 +89,6 @@ public:
   void OutChannelFault( int c, bool fault = true );
   bool IsFaultyOutput( int c ) const;
 
-  const string& Name() ;
-
   int GetID( ) const;
 
 

@@ -37,12 +37,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 
 class Module {
-protected:
+private:
   string _name;
   string _fullname;
 
   vector<Module *> _children;
 
+protected:
   void _AddChild( Module *child );
 
 public:
@@ -51,6 +52,9 @@ public:
   virtual ~Module( ) { }
   
   void SetName( Module *parent, const string& name );
+
+  inline const string & Name() const { return _name; }
+  inline const string & FullName() const { return _fullname; }
 
   void DisplayHierarchy( int level = 0 ) const;
 

@@ -159,7 +159,7 @@ void ChaosRouter::ReadInputs( )
       _input_frame[input].push( f );
 
       if ( f->watch ) {
-	cout << "Flit arriving at " << _fullname 
+	cout << "Flit arriving at " << FullName() 
 	     << " on channel " << input << endl;
 	cout << *f;
       }
@@ -362,7 +362,7 @@ int ChaosRouter::_MultiQueueForOutput( int output ) const
       if ( ( _multi_state[m] == filling ) ||
 	   ( _multi_state[m] == full ) ) {
 	mq_oldest = m;
-	//cout << "DEROUTING at " << _fullname << endl;
+	//cout << "DEROUTING at " << FullName() << endl;
 	break;
       }
     }
@@ -435,10 +435,10 @@ void ChaosRouter::_NextInterestingChannel( )
   }
     
   if ( interesting ) {
-    //cout << _cur_channel << " is interesting at " << _fullname << endl;
+    //cout << _cur_channel << " is interesting at " << FullName() << endl;
     
     if ( mq_index != -1 ) {
-      //cout << "Match for multi-queue " << mq_index << " at " << _fullname 
+      //cout << "Match for multi-queue " << mq_index << " at " << FullName() 
       //    << ", output matched = " << _output_matched[_cur_channel] << endl;
       
       _output_matched[_cur_channel] = true;
@@ -447,7 +447,7 @@ void ChaosRouter::_NextInterestingChannel( )
       _output_matched[_cur_channel] = true;
       _input_output_match[in_index] = _cur_channel;
       
-      //cout << "Match for input " << in_index << " at " << _fullname << endl;
+      //cout << "Match for input " << in_index << " at " << FullName() << endl;
       
       if ( _input_state[in_index] == full ) {
 	_input_state[in_index] = leaving;
@@ -534,7 +534,7 @@ void ChaosRouter::_OutputAdvance( )
 	if ( f->watch ) {
 	  cout << "Flit traversing crossbar from input queue " 
 	       << i << " at " 
-	       << _fullname << endl;
+	       << FullName() << endl;
 	  cout << *f;
 	}
 
@@ -573,7 +573,7 @@ void ChaosRouter::_OutputAdvance( )
 	
 	if ( f->watch ) {
 	  cout << "Flit stored in multiqueue at " 
-	       << _fullname << endl;
+	       << FullName() << endl;
 	  cout << "State = " << _multi_state[mq] << endl;
 	  cout << *f;
 	}
@@ -621,7 +621,7 @@ void ChaosRouter::_OutputAdvance( )
       if ( f->watch ) {
 	cout << "Flit traversing crossbar from multiqueue slot "
 	     << m << " at " 
-	     << _fullname << endl;
+	     << FullName() << endl;
 	cout << *f;
       }
 

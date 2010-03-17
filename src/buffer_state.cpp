@@ -224,7 +224,7 @@ int BufferState::Size(int vc) const{
 
 void BufferState::Display( ) const
 {
-  cout << _fullname << " :" << endl;
+  cout << FullName() << " :" << endl;
   for ( int v = 0; v < _vcs; ++v ) {
     cout << "  buffer class " << v << endl;
     cout << "    in_use = " << _in_use[v] 

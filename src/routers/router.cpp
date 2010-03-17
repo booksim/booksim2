@@ -117,11 +117,6 @@ void Router::AddOutputChannel( FlitChannel *channel, CreditChannel *backchannel 
   channel->SetSource( this ) ;
 }
 
-const string& Router::Name() 
-{
-  return _name ; 
-}
-
 int Router::GetID( ) const
 {
   return _id;

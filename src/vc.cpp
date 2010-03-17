@@ -162,7 +162,7 @@ void VC::SetState( eVCState s )
   Flit * f = FrontFlit();
   
   if(f && f->watch)
-    cout << GetSimTime() << " | " << _fullname << " | "
+    cout << GetSimTime() << " | " << FullName() << " | "
 	 << "Changing state from " << VC::VCSTATE[_state]
 	 << " to " << VC::VCSTATE[s] << "." << endl;
   
@@ -171,11 +171,11 @@ void VC::SetState( eVCState s )
      ((_state == vc_spec) && (s == vc_spec_grant))) {
     assert(f);
     if(f->watch)
-      cout << GetSimTime() << " | " << _fullname << " | "
+      cout << GetSimTime() << " | " << FullName() << " | "
 	   << "Keeping state time at " << _state_time << "." << endl;
   } else {
     if(f && f->watch)
-      cout << GetSimTime() << " | " << _fullname << " | "
+      cout << GetSimTime() << " | " << FullName() << " | "
 	   << "Resetting state time to zero." << endl;
     _state_time = 0;
   }
@@ -183,7 +183,7 @@ void VC::SetState( eVCState s )
   if((_state == idle) && (s != idle)) {
     if(f) {
       if(f->watch)
-	cout << GetSimTime() << " | " << _fullname << " | "
+	cout << GetSimTime() << " | " << FullName() << " | "
 	     << "Setting priority to " << f->pri << "." << endl;
       _pri = f->pri;
     }
@@ -262,13 +262,13 @@ bool VC::IsWatched( ) const
 
 void VC::Display( ) const
 {
-//  cout << _fullname << " : "
+//  cout << FullName() << " : "
 //       << "idle " << 100.0 * (double)_idle_cycles / (double)_total_cycles << "% "
 //       << "vc_alloc " << 100.0 * (double)_vc_alloc_cycles / (double)_total_cycles << "% "
 //       << "active " << 100.0 * (double)_active_cycles / (double)_total_cycles << "% "
 //       << endl;
   if ( _state != VC::idle ) {
-    cout << _fullname << ": "
+    cout << FullName() << ": "
 	 << " state: " << VCSTATE[_state]
 	 << " out_port: " << _out_port
 	 << " out_vc: " << _out_vc 

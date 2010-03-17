@@ -158,7 +158,7 @@ void SeparableAllocator::PrintRequests( ) const {
     list<sRequest>::const_iterator it  = _requests[input].begin() ;
     list<sRequest>::const_iterator end = _requests[input].end() ;
 
-    cout << _fullname << "/ip" << input << ":" << endl;
+    cout << FullName() << "/ip" << input << ":" << endl;
     while ( it != end ) {
       const sRequest& req = *it ;
       cout << "   label = " << req.label

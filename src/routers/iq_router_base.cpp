@@ -129,10 +129,10 @@ IQRouterBase::IQRouterBase( const Configuration& config,
 IQRouterBase::~IQRouterBase( )
 {
   if(_print_activity){
-    cout << _name << ".bufferMonitor:" << endl ; 
+    cout << Name() << ".bufferMonitor:" << endl ; 
     cout << bufferMonitor << endl ;
     
-    cout << _name << ".switchMonitor:" << endl ; 
+    cout << Name() << ".switchMonitor:" << endl ; 
     cout << "Inputs=" << _inputs ;
     cout << "Outputs=" << _outputs ;
     cout << switchMonitor << endl ;
@@ -235,7 +235,7 @@ void IQRouterBase::_InputQueuing( )
       VC * cur_vc = &_vc[input][f->vc];
       
       if(f->watch) {
-	cout << GetSimTime() << " | " << _fullname << " | "
+	cout << GetSimTime() << " | " << FullName() << " | "
 	     << "VC " << f->vc << " at input " << input 
 	     << " received flit " << f->id << " from channel (state: "
 	     << VC::VCSTATE[cur_vc->GetState()] << ", empty: "
@@ -312,7 +312,7 @@ void IQRouterBase::_OutputQueuing( )
       if ( f ) {
 	_output_buffer[output].push( f );
 	if(f->watch)
-	  cout << GetSimTime() << " | " << _fullname << " | "
+	  cout << GetSimTime() << " | " << FullName() << " | "
 	       << "VC " << f->vc << " at output " << output 
 	       << " sent flit " << f->id << " to channel." << endl;
       }

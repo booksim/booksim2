@@ -288,7 +288,7 @@ void EventRouter::_ProcessWaiting( int output, int out_vc )
     _output_state[output].SetInputVC( out_vc, w->vc );
 
     if ( w->watch ) {
-      cout << "Dequeuing waiting arrival event at " << _fullname 
+      cout << "Dequeuing waiting arrival event at " << FullName() 
 	   << " for flit " << w->id << endl;
     }
     
@@ -306,7 +306,7 @@ void EventRouter::_ProcessWaiting( int output, int out_vc )
       _transport_queue[output].push( tevt );
       
       if ( tevt->watch ) {
-	cout << "Injecting transport event at " << _fullname 
+	cout << "Injecting transport event at " << FullName() 
 	     << " for flit " << tevt->id << endl;
       }
       
@@ -377,7 +377,7 @@ void EventRouter::_IncomingFlits( )
       }
       
       if ( f->watch ) {
-	cout << "Received flit at " << _fullname << ".  Output port = " 
+	cout << "Received flit at " << FullName() << ".  Output port = " 
 	     << cur_vc->GetOutputPort( ) << ", output VC = " 
 	     << cur_vc->GetOutputVC( ) << endl;
 	cout << *f;
@@ -409,7 +409,7 @@ void EventRouter::_IncomingFlits( )
 	_arrival_pipe->Write( aevt, input );
 
 	if ( aevt->watch ) {
-	  cout << "Injected arrival event at " << _fullname 
+	  cout << "Injected arrival event at " << FullName() 
 	       << " for flit " << aevt->id << endl;
 	}
       }
@@ -458,12 +458,12 @@ void EventRouter::_SendTransport( int input, int output, tArrivalEvent *aevt )
     _transport_queue[output].push( tevt );
 	
     if ( tevt->watch ) {
-      cout << "Injecting transport event at " << _fullname 
+      cout << "Injecting transport event at " << FullName() 
 	   << " for flit " << tevt->id << endl;
     }
   } else {
     if ( aevt->watch ) {
-      cout << "No credits available at " << _fullname 
+      cout << "No credits available at " << FullName() 
 	   << " for flit " << aevt->id << " storing presence." << endl;
     }
     
@@ -555,7 +555,7 @@ void EventRouter::_ArrivalArb( int output )
     _arrival_queue[input].pop( );
 
     if ( aevt->watch ) {
-      cout << "Processing arrival event at " << _fullname 
+      cout << "Processing arrival event at " << FullName() 
 	     << " for flit " << aevt->id << endl;
     }
       
@@ -645,7 +645,7 @@ void EventRouter::_TransportArb( int input )
     tevt = _transport_queue[output].front( );
     
     if ( tevt->watch ) {
-      cout << "Processing transport event at " << _fullname 
+      cout << "Processing transport event at " << FullName() 
 	   << " for flit " << tevt->id << endl;
     }
 
@@ -701,7 +701,7 @@ void EventRouter::_TransportArb( int input )
     _credit_pipe->Write( c, input );
     
     if ( f->watch && c->tail ) {
-      cout << _fullname << " sending tail credit back for flit " << f->id << endl;
+      cout << FullName() << " sending tail credit back for flit " << f->id << endl;
     }
 
     // Update and forward the flit to the crossbar
@@ -711,7 +711,7 @@ void EventRouter::_TransportArb( int input )
     _crossbar_pipe->Write( f, output );
 
     if ( f->watch ) {
-      cout << "Forwarding flit through crossbar at " << _fullname << ":" << endl;
+      cout << "Forwarding flit through crossbar at " << FullName() << ":" << endl;
       cout << *f;
     }  
   }
@@ -863,7 +863,7 @@ void EventNextVCState::PushWaiting( int vc, tWaiting *w )
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
 
   if ( w->watch ) {
-    cout << _fullname << " pushing flit " << w->id
+    cout << FullName() << " pushing flit " << w->id
 	 << " onto a waiting queue of length " << _waiting[vc].size( ) << endl;
   }
 

@@ -177,7 +177,7 @@ void DenseAllocator::RemoveRequest( int in, int out, int label )
 
 void DenseAllocator::PrintRequests( ) const
 {
-  cout << "requests for " << _fullname << endl;
+  cout << "requests for " << FullName() << endl;
   for ( int i = 0; i < _inputs; ++i ) {
     for ( int j = 0; j < _outputs; ++j ) {
       cout << ( _request[i][j].label != -1 ) << " ";
