@@ -53,7 +53,7 @@ class IQRouterCombined : public IQRouterBase {
   
 public:
   IQRouterCombined( const Configuration& config,
-	    Module *parent, string name, int id,
+	    Module *parent, const string & name, int id,
 	    int inputs, int outputs );
   
   virtual ~IQRouterCombined( );

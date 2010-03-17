@@ -38,7 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "stats.hpp"
 
 EventRouter::EventRouter( const Configuration& config,
-		    Module *parent, string name, int id,
+		    Module *parent, const string & name, int id,
 		    int inputs, int outputs )
   : Router( config,
 	    parent, name,

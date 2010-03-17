@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "iq_router_split.hpp"
 
 IQRouterSplit::IQRouterSplit( const Configuration& config,
-		    Module *parent, string name, int id,
+		    Module *parent, const string & name, int id,
 		    int inputs, int outputs )
   : IQRouterBase( config, parent, name, id, inputs, outputs )
 {
