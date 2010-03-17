@@ -64,7 +64,7 @@ class CMeshX2 : public Network {
 
 public:
 
-  CMeshX2( const Configuration &config );
+  CMeshX2( const Configuration &config, const string & name );
   ~CMeshX2( );
 
   void  WriteFlit( Flit *f, int source );

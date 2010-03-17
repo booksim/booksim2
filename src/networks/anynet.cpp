@@ -41,8 +41,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //this is a hack, I can't easily get the routing talbe out of the network
 map<int, int>* global_routing_table;
 
-AnyNet::AnyNet( const Configuration &config )
-  :  Network( config ){
+AnyNet::AnyNet( const Configuration &config, const string & name )
+  :  Network( config, name ){
 
   _ComputeSize( config );
   _Alloc( );

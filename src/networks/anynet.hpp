@@ -54,7 +54,7 @@ class AnyNet : public Network {
   int findPath(int router, int dest, int* hop_count,map<int, bool>* visited); 
 
 public:
-  AnyNet( const Configuration &config );
+  AnyNet( const Configuration &config, const string & name );
 
   int GetN( ) const{ return -1;}
   int GetK( ) const{ return -1;}

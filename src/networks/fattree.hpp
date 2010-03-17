@@ -76,7 +76,7 @@ class FatTree : public Network {
 public:
 
   static void RegisterRoutingFunctions ();
-  FatTree( const Configuration& config );
+  FatTree( const Configuration& config, const string & name );
   ~FatTree();
 
 };

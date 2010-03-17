@@ -40,8 +40,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "singlenet.hpp"
 
-SingleNet::SingleNet( const Configuration &config ) :
-  Network( config )
+SingleNet::SingleNet( const Configuration &config, const string & name ) :
+Network( config, name )
 {
   _ComputeSize( config );
   _Alloc( );

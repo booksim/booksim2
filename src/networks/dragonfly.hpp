@@ -54,7 +54,7 @@ class DragonFlyNew : public Network {
 
  
 public:
-  DragonFlyNew( const Configuration &config );
+  DragonFlyNew( const Configuration &config, const string & name );
 
   int GetN( ) const;
   int GetK( ) const;

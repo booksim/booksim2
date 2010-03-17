@@ -43,8 +43,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  //#include "iq_router.hpp"
 
 
-KNCube::KNCube( const Configuration &config, bool mesh ) :
-  Network( config )
+KNCube::KNCube( const Configuration &config, const string & name, bool mesh ) :
+Network( config, name )
 {
   _mesh = mesh;
 

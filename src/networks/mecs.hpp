@@ -50,7 +50,7 @@ class MECS : public Network {
 
 
 public:
-  MECS( const Configuration &config );
+  MECS( const Configuration &config, const string & name );
 
   int GetN( ) const {return _n;}
   int GetK( ) const {return _k;}

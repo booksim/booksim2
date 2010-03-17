@@ -61,7 +61,7 @@ class QTree : public Network {
 
 public:
 
-  QTree( const Configuration& config );
+  QTree( const Configuration& config, const string & name );
   static void RegisterRoutingFunctions() ;
 
   static int HeightFromID( int id );

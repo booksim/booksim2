@@ -41,6 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <stdlib.h>
 #include <fstream>
+#include <sstream>
 #include "booksim.hpp"
 #include "routefunc.hpp"
 #include "traffic.hpp"
@@ -158,51 +159,53 @@ bool AllocatorSim( const Configuration& config )
    */
   net = new Network*[networks];
   for (int i = 0; i < networks; ++i) {
+    ostringstream name;
+    name << "network_" << i;
     if ( topo == "torus" ) {
       KNCube::RegisterRoutingFunctions() ;
-      net[i] = new KNCube( config, true );
+      net[i] = new KNCube( config, name.str(), true );
     } else if ( topo == "mesh" ) {
       KNCube::RegisterRoutingFunctions() ;
-      net[i] = new KNCube( config, false );
+      net[i] = new KNCube( config, name.str(), false );
     } else if ( topo == "cmesh" ) {
       CMesh::RegisterRoutingFunctions() ;
-      net[i] = new CMesh( config );
+      net[i] = new CMesh( config, name.str() );
     } else if ( topo == "cmeshx2" ) {
       CMeshX2::RegisterRoutingFunctions() ;
-      net[i] = new CMeshX2( config );
+      net[i] = new CMeshX2( config, name.str() );
     } else if ( topo == "fly" ) {
       KNFly::RegisterRoutingFunctions() ;
-      net[i] = new KNFly( config );
+      net[i] = new KNFly( config, name.str() );
     } else if ( topo == "single" ) {
       SingleNet::RegisterRoutingFunctions() ;
-      net[i] = new SingleNet( config );
+      net[i] = new SingleNet( config, name.str() );
     } else if ( topo == "isolated_mesh" ) {
       IsolatedMesh::RegisterRoutingFunctions() ;
-      net[i] = new IsolatedMesh( config );
+      net[i] = new IsolatedMesh( config, name.str() );
     } else if ( topo == "qtree" ) {
       QTree::RegisterRoutingFunctions() ;
-      net[i] = new QTree( config );
+      net[i] = new QTree( config, name.str() );
     } else if ( topo == "tree4" ) {
       Tree4::RegisterRoutingFunctions() ;
-      net[i] = new Tree4( config );
+      net[i] = new Tree4( config, name.str() );
     } else if ( topo == "fattree" ) {
       FatTree::RegisterRoutingFunctions() ;
-      net[i] = new FatTree( config );
+      net[i] = new FatTree( config, name.str() );
     } else if ( topo == "flatfly" ) {
       FlatFlyOnChip::RegisterRoutingFunctions() ;
-      net[i] = new FlatFlyOnChip( config );
+      net[i] = new FlatFlyOnChip( config, name.str() );
     } else if ( topo == "cmo"){
       CMO::RegisterRoutingFunctions() ;
-      net[i] = new CMO(config);
+      net[i] = new CMO(config, name.str());
     } else if ( topo == "MECS"){
       MECS::RegisterRoutingFunctions() ;
-      net[i] = new MECS(config);
+      net[i] = new MECS(config, name.str());
     } else if ( topo == "anynet"){
       AnyNet::RegisterRoutingFunctions() ;
-      net[i] = new AnyNet(config);
+      net[i] = new AnyNet(config, name.str());
     } else if ( topo == "dragonflynew"){
       DragonFlyNew::RegisterRoutingFunctions() ;
-      net[i] = new DragonFlyNew(config);
+      net[i] = new DragonFlyNew(config, name.str());
     }else {
       cerr << "Unknown topology " << topo << endl;
       exit(-1);

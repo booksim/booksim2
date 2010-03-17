@@ -59,8 +59,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define INJECT_LATENCY 1
 #define CHANNEL_LATENCY 1
 
-FatTree::FatTree( const Configuration& config )
-  : Network( config )
+FatTree::FatTree( const Configuration& config, const string & name )
+: Network( config, name )
 {
   _ComputeSize( config );
   _Alloc( );

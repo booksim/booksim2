@@ -49,7 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class CMesh : public Network {
 public:
-  CMesh( const Configuration &config );
+  CMesh( const Configuration &config, const string & name );
   int GetN() const;
   int GetK() const;
   void SetChannelCookie( int cookie );

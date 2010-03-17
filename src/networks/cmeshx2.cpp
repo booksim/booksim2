@@ -42,12 +42,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cmesh.hpp"
 #include "misc_utils.hpp"
 
-CMeshX2::CMeshX2( const Configuration &config ) 
-  : Network( config ) 
+CMeshX2::CMeshX2( const Configuration &config, const string & name ) 
+: Network( config, name ) 
 {
 
-  _subMesh[0] = new CMesh( config );
-  _subMesh[1] = new CMesh( config );
+  _subMesh[0] = new CMesh( config, name );
+  _subMesh[1] = new CMesh( config, name );
 
   int k = config.GetInt( "k" ) ;
   int n = config.GetInt( "n" ) ;

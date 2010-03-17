@@ -55,8 +55,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "tree4.hpp"
 #include "misc_utils.hpp"
 
-Tree4::Tree4( const Configuration& config )
-  : Network ( config )
+Tree4::Tree4( const Configuration& config, const string & name )
+: Network ( config, name )
 {
   _ComputeSize( config );
   _Alloc( );

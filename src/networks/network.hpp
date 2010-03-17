@@ -73,7 +73,7 @@ protected:
   void _Alloc( );
 
 public:
-  Network( const Configuration &config );
+  Network( const Configuration &config, const string & name );
   virtual ~Network( );
 
   virtual void WriteFlit( Flit *f, int source );

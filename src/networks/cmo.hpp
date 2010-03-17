@@ -61,7 +61,7 @@ class CMO : public Network {
   int _SliceNode( int node );
   
 public:
-  CMO( const Configuration &config );
+  CMO( const Configuration &config, const string & name );
 
   int GetC( ) const;
 

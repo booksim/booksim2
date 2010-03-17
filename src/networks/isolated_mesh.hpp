@@ -64,7 +64,7 @@ class IsolatedMesh : public Network {
 
 public:
 
-  IsolatedMesh( const Configuration &config );
+  IsolatedMesh( const Configuration &config, const string & name );
   ~IsolatedMesh( );
   static void RegisterRoutingFunctions() ;
 

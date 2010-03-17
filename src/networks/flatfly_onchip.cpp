@@ -70,8 +70,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Used for UGAL and valiant. Half of the total VCs, to define two traffic classes.
 short FlatFlyOnChip::half_vcs = 0;
 
-FlatFlyOnChip::FlatFlyOnChip( const Configuration &config ) :
-  Network( config )
+FlatFlyOnChip::FlatFlyOnChip( const Configuration &config, const string & name ) :
+  Network( config, name )
 {
 
   _ComputeSize( config );

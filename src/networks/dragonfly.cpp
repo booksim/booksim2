@@ -76,8 +76,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // bool is_cray = false;
 
-DragonFlyNew::DragonFlyNew( const Configuration &config ) :
-  Network( config )
+DragonFlyNew::DragonFlyNew( const Configuration &config, const string & name ) :
+Network( config, name )
 {
 
   _ComputeSize( config );

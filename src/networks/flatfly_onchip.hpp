@@ -60,7 +60,7 @@ class FlatFlyOnChip : public Network {
 
  
 public:
-  FlatFlyOnChip( const Configuration &config );
+  FlatFlyOnChip( const Configuration &config, const string & name );
 
   int GetN( ) const;
   int GetK( ) const;

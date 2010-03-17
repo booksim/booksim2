@@ -48,8 +48,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "qtree.hpp"
 #include "misc_utils.hpp"
 
-QTree::QTree( const Configuration& config )
-  : Network ( config )
+QTree::QTree( const Configuration& config, const string & name )
+: Network ( config, name )
 {
   _ComputeSize( config );
   _Alloc( );

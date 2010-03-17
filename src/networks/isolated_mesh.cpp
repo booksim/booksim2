@@ -48,12 +48,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "kncube.hpp"
 #include "misc_utils.hpp"
 
-IsolatedMesh::IsolatedMesh( const Configuration &config ) 
-  : Network( config ) 
+IsolatedMesh::IsolatedMesh( const Configuration &config, const string & name ) 
+: Network( config, name ) 
 {
 
-  _subMesh[0] = new KNCube( config, false );
-  _subMesh[1] = new KNCube( config, false );
+  _subMesh[0] = new KNCube( config, name, false );
+  _subMesh[1] = new KNCube( config, name, false );
 
   int k = config.GetInt( "k");
   int n = config.GetInt( "n");

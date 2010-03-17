@@ -39,7 +39,7 @@ class SingleNet : public Network {
   void _BuildNet( const Configuration &config );
 
 public:
-  SingleNet( const Configuration &config );
+  SingleNet( const Configuration &config, const string & name );
 
   static void RegisterRoutingFunctions();
   void Display( ) const;

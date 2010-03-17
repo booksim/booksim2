@@ -52,8 +52,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-CMO::CMO( const Configuration &config ) :
-  Network( config )
+CMO::CMO( const Configuration &config, const string & name ) :
+Network( config, name )
 {
   _ComputeSize( config );
   _Alloc( );

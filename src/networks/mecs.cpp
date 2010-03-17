@@ -55,7 +55,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //#define DEBUG_MECS
 
 
-MECS::MECS( const Configuration &config ): Network( config ){
+MECS::MECS( const Configuration &config, const string & name ) : 
+Network( config, name ){
   _ComputeSize( config );
   _Alloc( );
   _BuildNet( config );

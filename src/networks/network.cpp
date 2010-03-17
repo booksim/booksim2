@@ -41,8 +41,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-Network::Network( const Configuration &config ) :
-  Module( 0, "network" )
+Network::Network( const Configuration &config, const string & name ) :
+  Module( 0, name )
 {
   _size     = -1; 
   _sources  = -1; 
