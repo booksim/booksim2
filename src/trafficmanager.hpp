@@ -113,8 +113,8 @@ protected:
   Stats **_pair_latency;
   Stats *_hop_stats;
 
-  Stats **_sent_packets;
-  Stats **_accepted_packets;
+  Stats **_sent_flits;
+  Stats **_accepted_flits;
   Stats *_overall_accepted;
   Stats *_overall_accepted_min;
   
