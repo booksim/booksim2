@@ -410,7 +410,6 @@ void IQRouterSplit::_Alloc( )
   if(watched) {
     *_watch_out << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
     _sw_allocator->PrintRequests(_watch_out);
-    *_watch_out << endl;
   }
   
   _sw_allocator->Allocate();
