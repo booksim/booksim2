@@ -188,13 +188,13 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _stats["overall_min_acceptance"] = _overall_accepted_min;
   
   _pair_latency = new Stats * [_sources*_dests];
-  _sent_packets = new Stats * [_sources];
-  _accepted_packets = new Stats * [_dests];
+  _sent_flits = new Stats * [_sources];
+  _accepted_flits = new Stats * [_dests];
   
   for ( int i = 0; i < _sources; ++i ) {
     tmp_name << "sent_stat_" << i;
-    _sent_packets[i] = new Stats( this, tmp_name.str( ) );
-    _stats[tmp_name.str()] = _sent_packets[i];
+    _sent_flits[i] = new Stats( this, tmp_name.str( ) );
+    _stats[tmp_name.str()] = _sent_flits[i];
     tmp_name.seekp( 0, ios::beg );    
 
     for ( int j = 0; j < _dests; ++j ) {
@@ -207,8 +207,8 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
 
   for ( int i = 0; i < _dests; ++i ) {
     tmp_name << "accepted_stat_" << i;
-    _accepted_packets[i] = new Stats( this, tmp_name.str( ) );
-    _stats[tmp_name.str()] = _accepted_packets[i];
+    _accepted_flits[i] = new Stats( this, tmp_name.str( ) );
+    _stats[tmp_name.str()] = _accepted_flits[i];
     tmp_name.seekp( 0, ios::beg );    
   }
   
@@ -262,6 +262,7 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     timed_mode = true;
   }
   else {
+    // FIXME: This adds two pointers, not two strings!
     Error( "Unknown sim_type " + sim_type );
   }
 
@@ -326,7 +327,7 @@ TrafficManager::~TrafficManager( )
   delete _overall_accepted_min;
 
   for ( int i = 0; i < _sources; ++i ) {
-    delete _sent_packets[i];
+    delete _sent_flits[i];
 
     for ( int j = 0; j < _dests; ++j ) {
       delete _pair_latency[i*_dests+j];
@@ -334,11 +335,11 @@ TrafficManager::~TrafficManager( )
   }
 
   for ( int i = 0; i < _dests; ++i ) {
-    delete _accepted_packets[i];
+    delete _accepted_flits[i];
   }
 
-  delete [] _sent_packets;
-  delete [] _accepted_packets;
+  delete [] _sent_flits;
+  delete [] _accepted_flits;
   delete [] _pair_latency;
   delete [] _partial_internal_cycles;
 
@@ -1009,10 +1010,10 @@ void TrafficManager::_Step( )
         _net[i]->WriteCredit( cred, output );
         _RetireFlit( f, output );
       
-        _accepted_packets[output]->AddSample( 1 );
+        _accepted_flits[output]->AddSample( 1 );
       } else {
         _net[i]->WriteCredit( 0, output );
-        _accepted_packets[output]->AddSample( 0 );
+        _accepted_flits[output]->AddSample( 0 );
       }
     }
   }
@@ -1055,7 +1056,7 @@ void TrafficManager::_ClearStats( )
   }
   
   for ( int i = 0; i < _sources; ++i ) {
-    _sent_packets[i]->Clear( );
+    _sent_flits[i]->Clear( );
 
     for ( int j = 0; j < _dests; ++j ) {
       _pair_latency[i*_dests+j]->Clear( );
@@ -1063,7 +1064,7 @@ void TrafficManager::_ClearStats( )
   }
 
   for ( int i = 0; i < _dests; ++i ) {
-    _accepted_packets[i]->Clear( );
+    _accepted_flits[i]->Clear( );
   }
   
   _vc_ready_nonspec->Clear();
@@ -1193,7 +1194,7 @@ bool TrafficManager::_SingleSim( )
 	*_stats_out << "%=================================" << endl;
 	int dmin;
 	cur_latency = _latency_stats[0]->Average( );
-	dmin = _ComputeStats( _accepted_packets, &avg, &min );
+	dmin = _ComputeStats( _accepted_flits, &avg, &min );
 	cur_accepted = avg;
 	
 	cout << "Average latency = " << cur_latency << endl;
@@ -1214,7 +1215,7 @@ bool TrafficManager::_SingleSim( )
 	*_stats_out << "%=================================" << endl;
 	int dmin;
 	cur_latency = _latency_stats[0]->Average( );
-	dmin = _ComputeStats( _accepted_packets, &avg, &min );
+	dmin = _ComputeStats( _accepted_flits, &avg, &min );
 	cur_accepted = avg;
 	
 	cout << "Average latency = " << cur_latency << endl;
@@ -1258,7 +1259,7 @@ bool TrafficManager::_SingleSim( )
       *_stats_out << "%=================================" << endl;
       int dmin;
       cur_latency = _latency_stats[0]->Average( );
-      dmin = _ComputeStats( _accepted_packets, &avg, &min );
+      dmin = _ComputeStats( _accepted_flits, &avg, &min );
       cur_accepted = avg;
       cout << "Average latency = " << cur_latency << endl;
       cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
@@ -1281,7 +1282,7 @@ bool TrafficManager::_SingleSim( )
       *_stats_out << "];" << endl;
       *_stats_out << "thru(" << total_phases + 1 << ",:) = [ ";
       for ( int d = 0; d < _dests; ++d ) {
-	*_stats_out << _accepted_packets[d]->Average( ) << " ";
+	*_stats_out << _accepted_flits[d]->Average( ) << " ";
       }
       *_stats_out << "];" << endl;
 
@@ -1425,7 +1426,7 @@ bool TrafficManager::Run( )
       _overall_max_latency[c]->AddSample( _latency_stats[c]->Max( ) );
     }
     
-    _ComputeStats( _accepted_packets, &avg, &min );
+    _ComputeStats( _accepted_flits, &avg, &min );
     _overall_accepted->AddSample( avg );
     _overall_accepted_min->AddSample( min );
   }
