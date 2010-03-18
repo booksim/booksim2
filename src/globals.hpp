@@ -72,6 +72,7 @@ extern int *gNodeStates;
 
 extern std::string _watch_file;
 extern std::ostream * _watch_out;
+extern std::ostream * _stats_out;
 
 extern bool _use_noc_latency;
 #endif

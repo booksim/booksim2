@@ -63,6 +63,9 @@ public:
 
 
   void Display( ) const;
+
+  operator const string() const;
+
 };
 
 #endif

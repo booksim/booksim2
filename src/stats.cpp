@@ -39,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include <math.h>
 #include <iostream>
+#include <sstream>
 #include <stdio.h>
 
 #include "stats.hpp"
@@ -121,11 +122,19 @@ void Stats::AddSample( int val )
 
 void Stats::Display( ) const
 {
-  int b;
+  cout << (string)*this << endl;
+}
 
-  cout << "[ ";
+Stats::operator const string() const {
+  int b;
+  
+  ostringstream os;
+  
+  os << "[ ";
   for ( b = 0; b < _num_bins; ++b ) {
-    cout << _hist[b] << " ";
+    os << _hist[b] << " ";
   }
-  cout << "]" << endl;
+  os << "]";
+  
+  return os.str();
 }

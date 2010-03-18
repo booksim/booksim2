@@ -1098,7 +1098,7 @@ void TrafficManager::_DisplayRemaining( ) const
   map<int, Flit *>::const_iterator iter;
   int i;
 
-  cout << "% Remaining flits: ";
+  cout << "Remaining flits: ";
   for ( iter = _total_in_flight_flits.begin( ), i = 0;
 	( iter != _total_in_flight_flits.end( ) ) && ( i < 10 );
 	iter++, i++ ) {
@@ -1111,7 +1111,7 @@ void TrafficManager::_DisplayRemaining( ) const
        << ", " << _total_in_flight_packets.size() << " packets"
        << ")" << endl;
   
-  cout << "% Measured flits: ";
+  cout << "Measured flits: ";
   for ( iter = _measured_in_flight_flits.begin( ), i = 0;
 	( iter != _measured_in_flight_flits.end( ) ) && ( i < 10 );
 	iter++, i++ ) {
@@ -1189,18 +1189,18 @@ bool TrafficManager::_SingleSim( )
     while(_time<_sample_period){
       _Step();
       if ( _time % 10000 == 0 ) {
-	cout <<_sim_state<< "%=================================" << endl;
+	cout << _sim_state << endl;
+	*_stats_out << "%=================================" << endl;
 	int dmin;
 	cur_latency = _latency_stats[0]->Average( );
 	dmin = _ComputeStats( _accepted_packets, &avg, &min );
 	cur_accepted = avg;
 	
-	cout << "% Average latency = " << cur_latency << endl;
-	cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
-	cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
-	cout << "lat_hist(" << total_phases + 1 << ",:) = ";
-	_latency_stats[0]->Display();
-	cout << ";" << endl;
+	cout << "Average latency = " << cur_latency << endl;
+	cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
+	*_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
+	*_stats_out << "lat_hist(" << total_phases + 1 << ",:) = "
+		    << (string)*_latency_stats[0] << ";" << endl;
       } 
     }
     cout << "Total inflight " << _total_in_flight_packets.size() << endl;
@@ -1210,18 +1210,18 @@ bool TrafficManager::_SingleSim( )
     while(_packets_sent[0] < _batch_size){
       _Step();
       if ( _time % 1000 == 0 ) {
-	cout <<_sim_state<< "%=================================" << endl;
+	cout << _sim_state << endl;
+	*_stats_out << "%=================================" << endl;
 	int dmin;
 	cur_latency = _latency_stats[0]->Average( );
 	dmin = _ComputeStats( _accepted_packets, &avg, &min );
 	cur_accepted = avg;
 	
-	cout << "% Average latency = " << cur_latency << endl;
-	cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
-	cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
-	cout << "lat_hist(" << total_phases + 1 << ",:) = ";
-	_latency_stats[0]->Display();
-	cout << ";" << endl;
+	cout << "Average latency = " << cur_latency << endl;
+	cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
+	*_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
+	*_stats_out << "lat_hist(" << total_phases + 1 << ",:) = "
+		    << (string)*_latency_stats[0] << ";" << endl;
       }
     }
     cout << "batch size of "<<_batch_size  <<  " sent. Time used is " << _time << " cycles" <<endl;
@@ -1254,67 +1254,67 @@ bool TrafficManager::_SingleSim( )
       
       for ( iter = 0; iter < _sample_period; ++iter ) { _Step( ); } 
       
-      cout <<_sim_state<< "%=================================" << endl;
+      cout << _sim_state << endl;
+      *_stats_out << "%=================================" << endl;
       int dmin;
       cur_latency = _latency_stats[0]->Average( );
       dmin = _ComputeStats( _accepted_packets, &avg, &min );
       cur_accepted = avg;
-      cout << "% Average latency = " << cur_latency << endl;
-      cout << "% Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
-      cout << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
-      cout << "lat_hist(" << total_phases + 1 << ",:) = ";
-      _latency_stats[0]->Display();
-      cout << ";" << endl;
-      cout << "pair_sent(" << total_phases + 1 << ",:) = [ ";
+      cout << "Average latency = " << cur_latency << endl;
+      cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
+      *_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
+      *_stats_out << "lat_hist(" << total_phases + 1 << ",:) = "
+		  << (string)*_latency_stats[0] << ";" << endl;
+      *_stats_out << "pair_sent(" << total_phases + 1 << ",:) = [ ";
       for(int i = 0; i < _sources; ++i) {
 	for(int j = 0; j < _dests; ++j) {
-	  cout << _pair_latency[i*_dests+j]->NumSamples( ) << " ";
+	  *_stats_out << _pair_latency[i*_dests+j]->NumSamples( ) << " ";
 	}
       }
-      cout << "];" << endl;
-      cout << "pair_lat(" << total_phases + 1 << ",:) = [ ";
+      *_stats_out << "];" << endl;
+      *_stats_out << "pair_lat(" << total_phases + 1 << ",:) = [ ";
       for(int i = 0; i < _sources; ++i) {
 	for(int j = 0; j < _dests; ++j) {
-	  cout << _pair_latency[i*_dests+j]->Average( ) << " ";
+	  *_stats_out << _pair_latency[i*_dests+j]->Average( ) << " ";
 	}
       }
-      cout << "];" << endl;
-      cout << "thru(" << total_phases + 1 << ",:) = [ ";
+      *_stats_out << "];" << endl;
+      *_stats_out << "thru(" << total_phases + 1 << ",:) = [ ";
       for ( int d = 0; d < _dests; ++d ) {
-	cout << _accepted_packets[d]->Average( ) << " ";
+	*_stats_out << _accepted_packets[d]->Average( ) << " ";
       }
-      cout << "];" << endl;
+      *_stats_out << "];" << endl;
 
       // Fail safe for latency mode, throughput will ust continue
       if ( ( _sim_mode == latency ) && ( cur_latency >_latency_thres ) ) {
-	cout << "% Average latency exceeded " << _latency_thres << " cycles. Aborting simulation." << endl;
+	cout << "Average latency exceeded " << _latency_thres << " cycles. Aborting simulation." << endl;
 	converged = 0; 
 	_sim_state = warming_up;
 	break;
       }
 
-      cout << "% latency change    = " << fabs( ( cur_latency - prev_latency ) / cur_latency ) << endl;
-      cout << "% throughput change = " << fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) << endl;
+      cout << "latency change    = " << fabs( ( cur_latency - prev_latency ) / cur_latency ) << endl;
+      cout << "throughput change = " << fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) << endl;
 
       if ( _sim_state == warming_up ) {
 	if ( _warmup_periods == 0 ) {
 	  if ( _sim_mode == latency ) {
 	    if ( ( fabs( ( cur_latency - prev_latency ) / cur_latency ) < warmup_threshold ) &&
 		 ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < warmup_threshold ) ) {
-	      cout << "% Warmed up ..." <<  "Time used is " << _time << " cycles" <<endl;
+	      cout << "Warmed up ..." <<  "Time used is " << _time << " cycles" <<endl;
 	      clear_last = true;
 	      _sim_state = running;
 	    }
 	  } else {
 	    if ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < warmup_threshold ) {
-	      cout << "% Warmed up ..." << "Time used is " << _time << " cycles" << endl;
+	      cout << "Warmed up ..." << "Time used is " << _time << " cycles" << endl;
 	      clear_last = true;
 	      _sim_state = running;
 	    }
 	  }
 	} else {
 	  if ( total_phases + 1 >= _warmup_periods ) {
-	    cout << "% Warmed up ..." <<  "Time used is " << _time << " cycles" <<endl;
+	    cout << "Warmed up ..." <<  "Time used is " << _time << " cycles" <<endl;
 	    clear_last = true;
 	    _sim_state = running;
 	  }
@@ -1344,7 +1344,7 @@ bool TrafficManager::_SingleSim( )
       ++converged;
 
       if ( _sim_mode == latency ) {
-	cout << "% Draining all recorded packets ..." << endl;
+	cout << "Draining all recorded packets ..." << endl;
 	_sim_state  = draining;
 	_drain_time = _time;
 	empty_steps = 0;
@@ -1372,7 +1372,7 @@ bool TrafficManager::_SingleSim( )
 	    }
 
 	    if((acc_latency + res_latency) / (acc_count + res_count) > _latency_thres) {
-	      cout << "% Average latency exceeded " << _latency_thres << " cycles. Aborting simulation." << endl;
+	      cout << "Average latency exceeded " << _latency_thres << " cycles. Aborting simulation." << endl;
 	      converged = 0; 
 	      _sim_state = warming_up;
 	      break;
@@ -1388,7 +1388,7 @@ bool TrafficManager::_SingleSim( )
     }
 
     // Empty any remaining packets
-    cout << "% Draining remaining packets ..." << endl;
+    cout << "Draining remaining packets ..." << endl;
     _empty_network = true;
     empty_steps = 0;
     while( (_drain_measured_only ? _measured_in_flight_packets.size() : _total_in_flight_packets.size()) > 0 ) { 
