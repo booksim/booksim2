@@ -36,6 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "event_router.hpp"
 #include "stats.hpp"
+#include "globals.hpp"
 
 EventRouter::EventRouter( const Configuration& config,
 		    Module *parent, const string & name, int id,
@@ -377,10 +378,11 @@ void EventRouter::_IncomingFlits( )
       }
       
       if ( f->watch ) {
-	cout << "Received flit at " << FullName() << ".  Output port = " 
-	     << cur_vc->GetOutputPort( ) << ", output VC = " 
-	     << cur_vc->GetOutputVC( ) << endl;
-	cout << *f;
+	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+		    << "Received flit at " << FullName() << ".  Output port = " 
+		    << cur_vc->GetOutputPort( ) << ", output VC = " 
+		    << cur_vc->GetOutputVC( ) << endl
+		    << *f;
       }
 
       // In cut-through mode, only head flits generate arrivals,
@@ -701,7 +703,8 @@ void EventRouter::_TransportArb( int input )
     _credit_pipe->Write( c, input );
     
     if ( f->watch && c->tail ) {
-      cout << FullName() << " sending tail credit back for flit " << f->id << endl;
+      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		  << FullName() << " sending tail credit back for flit " << f->id << endl;
     }
 
     // Update and forward the flit to the crossbar
@@ -711,8 +714,9 @@ void EventRouter::_TransportArb( int input )
     _crossbar_pipe->Write( f, output );
 
     if ( f->watch ) {
-      cout << "Forwarding flit through crossbar at " << FullName() << ":" << endl;
-      cout << *f;
+      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		  << "Forwarding flit through crossbar at " << FullName() << ":" << endl
+		  << *f;
     }  
   }
 }

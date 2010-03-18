@@ -420,9 +420,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
   if ( match != _total_in_flight_flits.end( ) ) {
     _total_in_flight_flits.erase( match );
-    if ( f->watch ) {
-      cout << "Matched flit ID = " << f->id << endl;
-    }
   } else {
     cout << "Unmatched flit! ID = " << f->id << endl;
     Error( "" );
@@ -432,9 +429,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     match = _measured_in_flight_flits.find(f->id);
     if(match != _measured_in_flight_flits.end()) {
       _measured_in_flight_flits.erase(match);
-      if(f->watch) {
-	cout << "Matched measured flit ID = " << f->id << endl;
-      }
     } else {
       cout << "Unmatched measured flit! ID = " << f->id << endl;
       Error( "" );
@@ -442,10 +436,14 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   }
 
   if ( f->watch ) { 
-    cout << "Ejecting flit " << f->id 
-	 << ",  lat = " << _time - f->time
-	 << ", src = " << f->src 
-	 << ", dest = " << f->dest << endl;
+    *_watch_out << GetSimTime() << " | "
+		<< "node" << dest << " | "
+		<< "Retiring flit " << f->id 
+		<< " (packet " << f->pid
+		<< ", lat = " << _time - f->time
+		<< ", src = " << f->src 
+		<< ", dest = " << f->dest
+		<< ")." << endl;
   }
 
   if ( f->head && ( f->dest != dest ) ) {
@@ -663,7 +661,10 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   bool watch  = (iter != packets_to_watch.end());
   
   if ( watch ) { 
-    cout << "Generating packet " << _cur_pid << " at time " << time << endl;
+    *_watch_out << GetSimTime() << " | "
+		<< "node" << source << " | "
+		<< "Generating packet: " << _cur_pid
+		<< "." << endl;
   }
   
   for ( int i = 0; i < size; ++i ) {
@@ -679,7 +680,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       _measured_in_flight_flits[f->id] = f;
     }
     
-    if(_trace || f->watch){
+    if(_trace){
       cout<<"New Flit "<<f->src<<endl;
     }
     f->type = packet_type;
@@ -716,8 +717,10 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     f->vc  = -1;
 
     if ( f->watch ) { 
-      cout << "Generating flit at time " << time << endl;
-      cout << *f;
+      *_watch_out << GetSimTime() << " | "
+		  << "node" << source << " | "
+		  << "Generating flit: " << _cur_id
+		  << "." << endl;
     }
 
     _partial_packets[source][cl][sub_network].push_back( f );
@@ -988,10 +991,15 @@ void TrafficManager::_Step( )
 
       if ( f ) {
         if ( f->watch ) {
-	  cout << "ejected flit " << f->id << " at output " << output
-	       << " at time " << _time << endl;
-	  cout << "Sending credit for " << f->vc
-	       << " at time " << _time << endl;
+	  *_watch_out << GetSimTime() << " | "
+		      << "node" << output << " | "
+		      << "Ejecting flit " << f->id
+		      << " (packet " << f->pid << ")"
+		      << " from VC " << f->vc
+		      << "." << endl;
+	  *_watch_out << GetSimTime() << " | "
+		      << "node" << output << " | "
+		      << "Injecting credit for VC " << f->vc << "." << endl;
         }
       
         cred = new Credit( 1 );

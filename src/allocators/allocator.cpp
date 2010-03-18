@@ -175,16 +175,18 @@ void DenseAllocator::RemoveRequest( int in, int out, int label )
   _request[in][out].label = -1;
 }
 
-void DenseAllocator::PrintRequests( ) const
+void DenseAllocator::PrintRequests( ostream * os ) const
 {
-  cout << "requests for " << FullName() << endl;
+  if(!os) os = &cout;
+  *os << "Requests = [ ";
   for ( int i = 0; i < _inputs; ++i ) {
+    *os << "[ ";
     for ( int j = 0; j < _outputs; ++j ) {
-      cout << ( _request[i][j].label != -1 ) << " ";
+      *os << ( _request[i][j].label != -1 ) << " ";
     }
-    cout << endl;
+    *os << "] ";
   }
-  cout << endl;
+  *os << "].";
 }
 
 //==================================================
@@ -405,33 +407,37 @@ void SparseAllocator::RemoveRequest( int in, int out, int label )
   }
 }
 
-void SparseAllocator::PrintRequests( ) const
+void SparseAllocator::PrintRequests( ostream * os ) const
 {
   list<sRequest>::const_iterator iter;
-
-  cout << "input requests:" << endl;
+  
+  if(!os) os = &cout;
+  
+  *os << "Input requests = [ ";
   for ( int input = 0; input < _inputs; ++input ) {
-    cout << "  input " << input << " : ";
+    *os << input << " -> [ ";
     for ( iter = _in_req[input].begin( ); 
 	  iter != _in_req[input].end( ); iter++ ) {
-      cout << iter->port << "  ";
+      *os << iter->port << " ";
     }
-    cout << endl;
+    *os << "]  ";
   }
-
-  cout << "output requests:" << endl;
+  *os << "], output requests = [ ";
   for ( int output = 0; output < _outputs; ++output ) {
-    cout << "  output " << output << " : ";
+    *os << output << " -> ";
     if ( _outmask[output] == 0 ) {
+      *os << "[ ";
       for ( iter = _out_req[output].begin( ); 
 	    iter != _out_req[output].end( ); iter++ ) {
-	cout << iter->port << "  ";
+	*os << iter->port << " ";
       }
-      cout << endl;
+      *os << "]  ";
     } else {
-      cout << "masked" << endl;
+      *os << "masked  ";
     }
+    *os << "] ";
   }
+  *os << "].";
 }
 
 //==================================================

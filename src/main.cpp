@@ -39,8 +39,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <string>
-#include <stdlib.h>
+#include <cstdlib>
+#include <iostream>
 #include <fstream>
+
 #include <sstream>
 #include "booksim.hpp"
 #include "routefunc.hpp"
@@ -141,6 +143,7 @@ int *gNodeStates = 0;
 
 //flits to watch
 string _watch_file;
+ostream * _watch_out = &cout;
 
 //latency type, noc or conventional network
 bool _use_noc_latency;
@@ -254,7 +257,7 @@ int main( int argc, char **argv )
   BookSimConfig config;
 
   if ( !ParseArgs( &config, argc, argv ) ) {
-    cout << "Usage: " << argv[0] << " configfile" << endl;
+    cerr << "Usage: " << argv[0] << " configfile" << endl;
     return 0;
   }
   
@@ -290,11 +293,18 @@ int main( int argc, char **argv )
   _use_read_write = (config.GetInt("use_read_write")==1);
   
   config.GetStr( "watch_file", _watch_file );
-
+  
+  string watch_out_file;
+  config.GetStr( "watch_out", watch_out_file );
+  if(watch_out_file != "-") {
+    _watch_out = new ofstream(watch_out_file.c_str());
+  }
+  
   _use_noc_latency = (config.GetInt("use_noc_latency")==1);
 
   /*configure and run the simulator
    */
   bool result = AllocatorSim( config );
+  
   return result ? -1 : 0;
 }

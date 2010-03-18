@@ -76,7 +76,7 @@ public:
 
   int OutputAssigned( int in ) const;
   int InputAssigned( int out ) const;
-  virtual void PrintRequests( ) const = 0;
+  virtual void PrintRequests( ostream * os = NULL ) const = 0;
 
   static Allocator *NewAllocator( Module *parent, const string& name,
 				  const string &alloc_type, 
@@ -107,7 +107,7 @@ public:
 		   int in_pri = 0, int out_pri = 0 );
   void RemoveRequest( int in, int out, int label = 1 );
 
-  void PrintRequests( ) const;
+  void PrintRequests( ostream * os = NULL ) const;
 };
 
 //==================================================
@@ -137,7 +137,7 @@ public:
 		   int in_pri = 0, int out_pri = 0 );
   void RemoveRequest( int in, int out, int label = 1 );
   
-  void PrintRequests( ) const;
+  void PrintRequests( ostream * os = NULL ) const;
 };
 
 #endif

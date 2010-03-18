@@ -71,7 +71,7 @@ public:
 			   int in_pri = 0, int out_pri = 0 ) ;
   virtual void RemoveRequest( int in, int out, int label = 1 ) ;
   virtual void Allocate() = 0 ;
-  virtual void PrintRequests() const ;
+  virtual void PrintRequests( ostream * os = NULL ) const ;
 
 } ;
 

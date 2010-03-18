@@ -594,12 +594,6 @@ void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel,
     else
       outputs->AddRange( out_port, 0+n+1,gNumVCS-1 );
   }
-  if (f->watch) {
-    cout << "n = " << n << endl ;
-    cout << "WriteRange: " << gWriteReqBeginVC << "," << gWriteReqEndVC << endl;
-    cout << "ReadRange: " << gReadReqBeginVC << "," << gReadReqEndVC << endl ;
-  }
-
 }
 
 // ----------------------------------------------------------------------

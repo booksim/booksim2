@@ -159,9 +159,10 @@ void ChaosRouter::ReadInputs( )
       _input_frame[input].push( f );
 
       if ( f->watch ) {
-	cout << "Flit arriving at " << FullName() 
-	     << " on channel " << input << endl;
-	cout << *f;
+	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+		    << "Flit arriving at " << FullName() 
+		    << " on channel " << input << endl
+		    << *f;
       }
 
       switch( _input_state[input] ) {
@@ -532,10 +533,11 @@ void ChaosRouter::_OutputAdvance( )
 	_crossbar_pipe->Write( f, _input_output_match[i] );
 	
 	if ( f->watch ) {
-	  cout << "Flit traversing crossbar from input queue " 
-	       << i << " at " 
-	       << FullName() << endl;
-	  cout << *f;
+	  *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		      << "Flit traversing crossbar from input queue " 
+		      << i << " at " 
+		      << FullName() << endl
+		      << *f;
 	}
 
 	advanced = true;
@@ -572,10 +574,11 @@ void ChaosRouter::_OutputAdvance( )
 	_multi_queue[mq].push( f );
 	
 	if ( f->watch ) {
-	  cout << "Flit stored in multiqueue at " 
-	       << FullName() << endl;
-	  cout << "State = " << _multi_state[mq] << endl;
-	  cout << *f;
+	  *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		      << "Flit stored in multiqueue at " 
+		      << FullName() << endl
+		      << "State = " << _multi_state[mq] << endl
+		      << *f;
 	}
 
 	advanced = true;
@@ -619,10 +622,11 @@ void ChaosRouter::_OutputAdvance( )
       _crossbar_pipe->Write( f, _multi_match[m] );
 
       if ( f->watch ) {
-	cout << "Flit traversing crossbar from multiqueue slot "
-	     << m << " at " 
-	     << FullName() << endl;
-	cout << *f;
+	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+		    << "Flit traversing crossbar from multiqueue slot "
+		    << m << " at " 
+		    << FullName() << endl
+		    << *f;
       }
 
       if ( f->head ) {

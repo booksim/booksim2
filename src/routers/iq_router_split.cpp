@@ -125,9 +125,9 @@ void IQRouterSplit::_Alloc( )
 	VC::eVCState vc_state = cur_vc->GetState();
 	
 	if(cur_vc->FrontFlit() && cur_vc->FrontFlit()->watch) 
-	  cout << GetSimTime() << " | " << FullName() << " | "
-	       << "Saw flit " << cur_vc->FrontFlit()->id
-	       << " in slow path." << endl;
+	  *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		      << "Saw flit " << cur_vc->FrontFlit()->id
+		      << " in slow path." << endl;
 	
 	if(!cur_vc->Empty()) {
 	  
@@ -137,22 +137,22 @@ void IQRouterSplit::_Alloc( )
 	  if(((vc_state != VC::vc_alloc) && (vc_state != VC::active)) ||
 	     (cur_vc->GetStateTime() < _sw_alloc_delay)) {
 	    if(f->watch)
-	      cout << GetSimTime() << " | " << FullName() << " | " 
-		   << "VC " << vc << " at input " << input 
-		   << " is not ready for slow-path allocation (flit: " << f->id 
-		   << ", state: " << VC::VCSTATE[vc_state] 
-		   << ", state time: " << cur_vc->GetStateTime() 
-		   << ")." << endl;
+	      *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+			  << "VC " << vc << " at input " << input 
+			  << " is not ready for slow-path allocation (flit: " << f->id 
+			  << ", state: " << VC::VCSTATE[vc_state] 
+			  << ", state time: " << cur_vc->GetStateTime() 
+			  << ")." << endl;
 	    vc = (vc + 1) % _vcs;
 	    continue;
 	  }	    
 	  
 	  if(f->watch)
-	    cout << GetSimTime() << " | " << FullName() << " | "
-		 << "VC " << vc << " at input " << input
-		 << " is requesting slow-path allocation (flit: " << f->id 
-		 << ", state: " << VC::VCSTATE[vc_state]
-		 << ")." << endl;
+	    *_watch_out << GetSimTime() << " | " << FullName() << " | "
+			<< "VC " << vc << " at input " << input
+			<< " is requesting slow-path allocation (flit: " << f->id 
+			<< ", state: " << VC::VCSTATE[vc_state]
+			<< ")." << endl;
 	  
 	  const OutputSet * route_set = cur_vc->GetRouteSet();
 	  
@@ -193,9 +193,9 @@ void IQRouterSplit::_Alloc( )
 		if((vc_state == VC::vc_alloc) &&
 		   !dest_vc->IsAvailableFor(out_vc)) {
 		  if(f->watch)
-		    cout << GetSimTime() << " | " << FullName() << " | " 
-			 << "VC " << out_vc << " at output "
-			 << output << " is busy." << endl;
+		    *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+				<< "VC " << out_vc << " at output "
+				<< output << " is busy." << endl;
 		  continue;
 		} else if((vc_state == VC::active) && 
 			  (out_vc != cur_vc->GetOutputVC())) {
@@ -204,16 +204,16 @@ void IQRouterSplit::_Alloc( )
 		
 		if(dest_vc->IsFullFor(out_vc)) {
 		  if(f->watch)
-		    cout << GetSimTime() << " | " << FullName() << " | " 
-			 << "VC " << out_vc << " at output "
-			 << output << " has no buffers available." << endl;
+		    *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+				<< "VC " << out_vc << " at output "
+				<< output << " has no buffers available." << endl;
 		  continue;
 		}
 		
 		if(f->watch)
-		  cout << GetSimTime() << " | " << FullName() << " | " 
-		       << "VC " << out_vc << " at output "
-		       << output << " is available." << endl;
+		  *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+			      << "VC " << out_vc << " at output "
+			      << output << " is available." << endl;
 		if(!do_request || (vc_prio > in_priority)) {
 		  do_request = true;
 		  in_priority = vc_prio;
@@ -223,13 +223,13 @@ void IQRouterSplit::_Alloc( )
 	      if(do_request) {
 		
 		if(f->watch) {
-		  cout << GetSimTime() << " | " << FullName() << " | " 
-		       << "VC " << vc << " at input "
-		       << input << " requests output " << output 
-		       << " (flit: " << f->id
-		       << ", exp. input: " << expanded_input
-		       << ", exp. output: " << expanded_output
-		       << ")." << endl;
+		  *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+			      << "VC " << vc << " at input "
+			      << input << " requests output " << output 
+			      << " (flit: " << f->id
+			      << ", exp. input: " << expanded_input
+			      << ", exp. output: " << expanded_output
+			      << ")." << endl;
 		  watched = true;
 		}
 		
@@ -273,30 +273,30 @@ void IQRouterSplit::_Alloc( )
 	assert(f);
 	
 	if(f->watch)
-	  cout << GetSimTime() << " | " << FullName() << " | " 
-	       << "Saw flit " << f->id
-	       << " in fast path." << endl;
+	  *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+		      << "Saw flit " << f->id
+		      << " in fast path." << endl;
 	
 	VC::eVCState vc_state = cur_vc->GetState();
 	
 	if(((vc_state != VC::vc_alloc) && (vc_state != VC::active)) ||
 	   (cur_vc->GetStateTime() < _sw_alloc_delay)) {
 	  if(f->watch)
-	    cout << GetSimTime() << " | " << FullName() << " | " 
-		 << "VC " << vc << " at input " << input 
-		 << " is not ready for fast-path allocation (flit: " << f->id 
-		 << ", state: " << VC::VCSTATE[vc_state] 
-		 << ", state time: " << cur_vc->GetStateTime() 
-		 << ")." << endl;
+	    *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+			<< "VC " << vc << " at input " << input 
+			<< " is not ready for fast-path allocation (flit: " << f->id 
+			<< ", state: " << VC::VCSTATE[vc_state] 
+			<< ", state time: " << cur_vc->GetStateTime() 
+			<< ")." << endl;
 	  continue;
 	}	    
 	
 	if(f->watch)
-	  cout << GetSimTime() << " | " << FullName() << " | "
-	       << "VC " << vc << " at input " << input
-	       << " is requesting fast-path allocation (flit: " << f->id 
-	       << ", state: " << VC::VCSTATE[vc_state]
-	       << ")." << endl;
+	  *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		      << "VC " << vc << " at input " << input
+		      << " is requesting fast-path allocation (flit: " << f->id 
+		      << ", state: " << VC::VCSTATE[vc_state]
+		      << ")." << endl;
 	
 	if(fast_path_vcs[input] >= 0)
 	  cout << "XXX" << endl
@@ -325,11 +325,11 @@ void IQRouterSplit::_Alloc( )
 	  
 	  if(_sw_allocator->ReadRequest(expanded_input, expanded_output) >= 0) {
 	    if(f->watch)
-	      cout << GetSimTime() << " | " << FullName() << " | "
-		   << "Crossbar slot is already in use by slow path "
-		   << "(exp. input: " << expanded_input
-		   << ", exp. output: " << expanded_output
-		   << ")." << endl;
+	      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+			  << "Crossbar slot is already in use by slow path "
+			  << "(exp. input: " << expanded_input
+			  << ", exp. output: " << expanded_output
+			  << ")." << endl;
 	    if(vc_state == VC::active) {
 	      break;
 	    } else {
@@ -350,9 +350,9 @@ void IQRouterSplit::_Alloc( )
 	    if((vc_state == VC::vc_alloc) && 
 	       !dest_vc->IsAvailableFor(out_vc)) {
 	      if(f->watch)
-		cout << GetSimTime() << " | " << FullName() << " | " 
-		     << "VC " << out_vc << " at output "
-		     << output << " is busy." << endl;
+		*_watch_out << GetSimTime() << " | " << FullName() << " | " 
+			    << "VC " << out_vc << " at output "
+			    << output << " is busy." << endl;
 	      continue;
 	    } else if((vc_state == VC::active) && 
 		      (out_vc != cur_vc->GetOutputVC())) {
@@ -361,16 +361,16 @@ void IQRouterSplit::_Alloc( )
 	    
 	    if(dest_vc->IsFullFor(out_vc)) {
 	      if(f->watch)
-		cout << GetSimTime() << " | " << FullName() << " | " 
-		     << "VC " << out_vc << " at output "
-		     << output << " has no buffers available." << endl;
+		*_watch_out << GetSimTime() << " | " << FullName() << " | " 
+			    << "VC " << out_vc << " at output "
+			    << output << " has no buffers available." << endl;
 	      continue;
 	    }
 	    
 	    if(f->watch)
-	      cout << GetSimTime() << " | " << FullName() << " | " 
-		   << "VC " << out_vc << " at output "
-		   << output << " is available." << endl;
+	      *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+			  << "VC " << out_vc << " at output "
+			  << output << " is available." << endl;
 	    if(!do_request || (vc_prio > in_priority)) {
 	      do_request = true;
 	      in_priority = vc_prio;
@@ -380,13 +380,13 @@ void IQRouterSplit::_Alloc( )
 	  if(do_request) {
 	    
 	    if(f->watch)
-	      cout << GetSimTime() << " | " << FullName() << " | " 
-		   << "VC " << vc << " at input "
-		   << input << " requests output " << output 
-		   << " (flit: " << f->id
-		   << ", exp. input: " << expanded_input
-		   << ", exp. output: " << expanded_output
-		   << ")." << endl;
+	      *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+			  << "VC " << vc << " at input "
+			  << input << " requests output " << output 
+			  << " (flit: " << f->id
+			  << ", exp. input: " << expanded_input
+			  << ", exp. output: " << expanded_output
+			  << ")." << endl;
 	    
 	    // We could have requested this same input-output pair in a 
 	    // previous iteration; only replace the previous request if the 
@@ -407,13 +407,17 @@ void IQRouterSplit::_Alloc( )
     }
   }
   
-  if(watched)
-    _sw_allocator->PrintRequests();
+  if(watched) {
+    *_watch_out << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
+    _sw_allocator->PrintRequests(_watch_out);
+    *_watch_out << endl;
+  }
   
   _sw_allocator->Allocate();
   
   if(watched) {
-    cout << "Grants:" << endl;
+    *_watch_out << GetSimTime() << " | " << _sw_allocator->FullName() << " | "
+		<< "Grants = [ ";
     for(int input = 0; input < _inputs; ++input)
       for(int s = 0; s < _input_speedup; ++s) {
 	int expanded_input = s * _inputs + input;
@@ -421,9 +425,10 @@ void IQRouterSplit::_Alloc( )
 	if(expanded_output > -1) {
 	  int output = expanded_output % _outputs;
 	  int vc = _sw_allocator->ReadRequest(expanded_input, expanded_output);
-	  cout << input << " --> " << output << " (vc:" << vc << ")" << endl;
+	  *_watch_out << input << " -> " << output << " (vc:" << vc << ")  ";
 	}
       }
+    *_watch_out << "]." << endl;
   }
   
   // Winning flits cross the switch
@@ -477,16 +482,16 @@ void IQRouterSplit::_Alloc( )
 	
 	if(vc == fvc) {
 	  if(f->watch)
-	    cout << GetSimTime() << " | " << FullName() << " | "
-		 << "Fast-path allocation successful for VC " << vc
-		 << " at input " << input << " (flit: " << f->id
-		 << ")." << endl;
+	    *_watch_out << GetSimTime() << " | " << FullName() << " | "
+			<< "Fast-path allocation successful for VC " << vc
+			<< " at input " << input << " (flit: " << f->id
+			<< ")." << endl;
 	} else {
 	  if(f->watch)
-	    cout << GetSimTime() << " | " << FullName() << " | "
-		 << "Slow-path allocation successful for VC " << vc
-		 << " at input " << input << " (flit: " << f->id
-		 << ")." << endl;
+	    *_watch_out << GetSimTime() << " | " << FullName() << " | "
+			<< "Slow-path allocation successful for VC " << vc
+			<< " at input " << input << " (flit: " << f->id
+			<< ")." << endl;
 	  if(fvc >= 0) {
 	    assert(_use_fast_path[input*_vcs+fvc]);
 	    VC * fast_vc = &_vc[input][fvc];
@@ -515,23 +520,23 @@ void IQRouterSplit::_Alloc( )
 	      int out_vc = route_set->GetVC(output, vc_index, &out_prio);
 	      if(!dest_vc->IsAvailableFor(out_vc)) {
 		if(f->watch)
-		  cout << GetSimTime() << " | " << FullName() << " | "
-		       << "VC " << out_vc << " at output "
-		       << output << " is busy." << endl;
+		  *_watch_out << GetSimTime() << " | " << FullName() << " | "
+			      << "VC " << out_vc << " at output "
+			      << output << " is busy." << endl;
 		continue;
 	      }
 	      if(dest_vc->IsFullFor(out_vc)) {
 		if(f->watch)
-		  cout << GetSimTime() << " | " << FullName() << " | " 
-		       << "VC " << out_vc << " at output "
-		       << output << " has no buffers available." << endl;
+		  *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+			      << "VC " << out_vc << " at output "
+			      << output << " has no buffers available." << endl;
 		continue;
 	      }
 	      
 	      if(f->watch)
-		cout << GetSimTime() << " | " << FullName() << " | " 
-		     << "VC " << out_vc << " at output "
-		     << output << " is available." << endl;
+		*_watch_out << GetSimTime() << " | " << FullName() << " | " 
+			    << "VC " << out_vc << " at output "
+			    << output << " is available." << endl;
 	      if(out_prio > sel_prio) {
 		sel_vc = out_vc;
 		sel_prio = out_prio;
@@ -559,10 +564,10 @@ void IQRouterSplit::_Alloc( )
 	    _vc_rr_offset[input*_vcs+vc] = (output + 1) % _outputs;
 	    
 	    if(f->watch)
-	      cout << GetSimTime() << " | " << FullName() << " | "
-		   << "VC " << sel_vc << " at output " << output
-		   << " granted to VC " << vc << " at input " << input
-		   << " (flit: " << f->id << ")." << endl;
+	      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+			  << "VC " << sel_vc << " at output " << output
+			  << " granted to VC " << vc << " at input " << input
+			  << " (flit: " << f->id << ")." << endl;
 	  }
 	  // NOTE: from here, we just fall through to the code for VC::active!
 	  
@@ -586,13 +591,13 @@ void IQRouterSplit::_Alloc( )
 	  f = cur_vc->RemoveFlit();
 	  
 	  if(f->watch)
-	    cout << GetSimTime() << " | " << FullName() << " | " 
-		 << "Output " << output
-		 << " granted to VC " << vc << " at input " << input
-		 << " (flit: " << f->id
-		 << ", exp. input: " << expanded_input
-		 << ", exp. output: " << expanded_output
-		 << ")." << endl;
+	    *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+			<< "Output " << output
+			<< " granted to VC " << vc << " at input " << input
+			<< " (flit: " << f->id
+			<< ", exp. input: " << expanded_input
+			<< ", exp. output: " << expanded_output
+			<< ")." << endl;
 	  
 	  f->hops++;
 	  
@@ -603,11 +608,11 @@ void IQRouterSplit::_Alloc( )
 	  bufferMonitor.read(input, f);
 	  
 	  if(f->watch)
-	    cout << GetSimTime() << " | " << FullName() << " | "
-		 << "Forwarding flit " << f->id << " through crossbar "
-		 << "(exp. input: " << expanded_input
-		 << ", exp. output: " << expanded_output
-		 << ")." << endl;
+	    *_watch_out << GetSimTime() << " | " << FullName() << " | "
+			<< "Forwarding flit " << f->id << " through crossbar "
+			<< "(exp. input: " << expanded_input
+			<< ", exp. output: " << expanded_output
+			<< ")." << endl;
 	  
 	  if (c == NULL) {
 	    c = _NewCredit(_vcs);
@@ -644,9 +649,9 @@ void IQRouterSplit::_Alloc( )
 	  
 	  if(cur_vc->Empty() && !_use_fast_path[input*_vcs+vc]) {
 	    if(f->watch)
-	      cout << GetSimTime() << " | " << FullName() << " | "
-		   << "Enabling fast-path allocation for VC " << vc
-		   << " at input " << input << "." << endl;
+	      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+			  << "Enabling fast-path allocation for VC " << vc
+			  << " at input " << input << "." << endl;
 	    _use_fast_path[input*_vcs+vc] = true;
 	  }
 	  
@@ -660,9 +665,9 @@ void IQRouterSplit::_Alloc( )
 	assert(f);
 	
 	if(f->watch)
-	  cout << GetSimTime() << " | " << FullName() << " | "
-	       << "Disabling fast-path allocation for VC " << fvc
-	       << " at input " << input << "." << endl;
+	  *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		      << "Disabling fast-path allocation for VC " << fvc
+		      << " at input " << input << "." << endl;
 	_use_fast_path[input*_vcs+fvc] = false;
       }
     }    

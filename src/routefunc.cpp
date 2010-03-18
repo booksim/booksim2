@@ -733,11 +733,17 @@ void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
     outputs->AddRange( 0, 0, gNumVCS - 1 );
   } else {
     out_port = dor_next_mesh( r->GetID( ), f->dest );
-
+    
     if ( f->watch ) {
-      cout << "flit " << f->id << " (" << f << ") at " << r->GetID( ) << " destined to " 
-	   << f->dest << " using channel " << out_port << ", vc range = [" 
-	   << 0 << "," << gNumVCS - 1 << "] (in_channel is " << in_channel << ")" << endl;
+      *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		  << "Adding VC range [" 
+		  << 0 << "," 
+		  << gNumVCS - 1 << "]"
+		  << " at output port " << out_port
+		  << " for flit " << f->id
+		  << " (input port " << in_channel
+		  << ", destination " << f->dest << ")"
+		  << "." << endl;
     }
     
     outputs->AddRange( out_port, 0, gNumVCS - 1 );
@@ -755,10 +761,15 @@ void dim_order_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
   out_port = dor_next_mesh( r->GetID( ), f->dest );
 
   if ( f->watch ) {
-    cout << "flit " << f->id << " (" << f << ") at " << r->GetID( ) << " destined to " 
-	 << f->dest << " using channel " << out_port << ", vc range = [" 
-	 << f->dest*vcs_per_dest << "," << (f->dest+1)*vcs_per_dest - 1  
-	 << "] (in_channel is " << in_channel << ")" << endl;
+      *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		  << "Adding VC range [" 
+		  << f->dest*vcs_per_dest << "," 
+		  << (f->dest+1)*vcs_per_dest - 1 << "]"
+		  << " at output port " << out_port
+		  << " for flit " << f->id
+		  << " (input port " << in_channel
+		  << ", destination " << f->dest << ")"
+		  << "." << endl;
   }
   
   outputs->AddRange( out_port, f->dest*vcs_per_dest, (f->dest+1)*vcs_per_dest - 1 );
@@ -870,10 +881,16 @@ void min_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
   outputs->AddRange( out_port, 0, 0, 0 );
   
   if ( f->watch ) {
-    cout << "flit " << f->id << " (" << f << ") at " << r->GetID( ) << " destined to " 
-	 << f->dest << " using channel " << out_port << ", vc range = [" 
-	 << 0 << "," << gNumVCS - 1 << "] (in_channel is " << in_channel << ")" << endl;
-  }
+      *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		  << "Adding VC range [" 
+		  << 0 << "," 
+		  << 0 << "]"
+		  << " at output port " << out_port
+		  << " for flit " << f->id
+		  << " (input port " << in_channel
+		  << ", destination " << f->dest << ")"
+		  << "." << endl;
+   }
   
   if ( in_vc != 0 ) { // If not in the escape VC
     // Minimal adaptive for all other channels
@@ -883,8 +900,32 @@ void min_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
       if ( ( cur % gK ) != ( dest % gK ) ) { 
 	// Add minimal direction in dimension 'n'
 	if ( ( cur % gK ) < ( dest % gK ) ) { // Right
+	  if ( f->watch ) {
+	    *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+			<< "Adding VC range [" 
+			<< 1 << "," 
+			<< gNumVCS - 1 << "]"
+			<< " at output port " << 2*n
+			<< " with priority " << 1
+			<< " for flit " << f->id
+			<< " (input port " << in_channel
+			<< ", destination " << f->dest << ")"
+			<< "." << endl;
+	  }
 	  outputs->AddRange( 2*n, 1, gNumVCS - 1, 1 ); 
 	} else { // Left
+	  if ( f->watch ) {
+	    *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+			<< "Adding VC range [" 
+			<< 1 << "," 
+			<< gNumVCS - 1 << "]"
+			<< " at output port " << 2*n+1
+			<< " with priority " << 1
+			<< " for flit " << f->id
+			<< " (input port " << in_channel
+			<< ", destination " << f->dest << ")"
+			<< "." << endl;
+	  }
 	  outputs->AddRange( 2*n + 1, 1, gNumVCS - 1, 1 ); 
 	}
       }
@@ -938,8 +979,9 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
     assert( n < gN );
 
     if ( f->watch ) {
-      cout << "PLANAR ADAPTIVE: flit " << f->id 
-	   << " in adaptive plane " << n << " at " << r->GetID( ) << endl;
+      *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		  << "PLANAR ADAPTIVE: flit " << f->id 
+		  << " in adaptive plane " << n << "." << endl;
     }
 
     // We're in adaptive plane n
@@ -952,7 +994,9 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
 	fault = false;
 
 	if ( f->watch ) {
-	  cout << "PLANAR ADAPTIVE: increasing in dimension " << n << endl;
+	  *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		      << "PLANAR ADAPTIVE: increasing in dimension " << n
+		      << "." << endl;
 	}
       } else {
 	fault = true;
@@ -964,7 +1008,9 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
 	fault = false;
 
 	if ( f->watch ) {
-	  cout << "PLANAR ADAPTIVE: decreasing in dimension " << n << endl;
+	  *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		      << "PLANAR ADAPTIVE: decreasing in dimension " << n
+		      << "." << endl;
 	}
       } else {
 	fault = true;
@@ -1003,7 +1049,9 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
       }
 
       if ( f->watch ) {
-	cout << "PLANAR ADAPTIVE: avoiding 180 in dimension " << n << endl;
+	*_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		    << "PLANAR ADAPTIVE: avoiding 180 in dimension " << n
+		    << "." << endl;
       }
     }
       
@@ -1320,10 +1368,15 @@ void valiant_ni_torus( const Router *r, const Flit *f, int in_channel,
   }
 
   if ( f->watch ) {
-    cout << "flit " << f->id << " (" << f << ") at " << r->GetID( ) << " destined to " 
-	 << f->dest << " using channel " << out_port << ", vc range = [" 
-	 << vc_min << "," << vc_max 
-	 << "] (in_channel is " << in_channel << ")" << endl;
+      *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		  << "Adding VC range [" 
+		  << vc_min << "," 
+		  << vc_max << "]"
+		  << " at output port " << out_port
+		  << " for flit " << f->id
+		  << " (input port " << in_channel
+		  << ", destination " << f->dest << ")"
+		  << "." << endl;
   }
   
   outputs->AddRange( out_port, vc_min, vc_max );
@@ -1381,9 +1434,15 @@ void dim_order_torus( const Router *r, const Flit *f, int in_channel,
   } 
   
   if ( f->watch ) {
-    cout << "flit " << f->id << " (" << f << ") at " << r->GetID( ) << " destined to " 
-	 << f->dest << " using channel " << out_port << ", vc range = [" 
-	 << vc_min << "," << vc_max << "] (in_channel is " << in_channel << ")" << endl;
+      *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		  << "Adding VC range [" 
+		  << vc_min << "," 
+		  << vc_max << "]"
+		  << " at output port " << out_port
+		  << " for flit " << f->id
+		  << " (input port " << in_channel
+		  << ", destination " << f->dest << ")"
+		  << "." << endl;
   }
  
   outputs->AddRange( out_port, vc_min, vc_max );
@@ -1410,10 +1469,15 @@ void dim_order_ni_torus( const Router *r, const Flit *f, int in_channel,
 		  &out_port, &f->ring_par, false );
 
   if ( f->watch ) {
-    cout << "flit " << f->id << " (" << f << ") at " << r->GetID( ) << " destined to " 
-	 << f->dest << " using channel " << out_port << ", vc range = [" 
-	 << f->dest*vcs_per_dest << "," << (f->dest+1)*vcs_per_dest - 1  
-	 << "] (in_channel is " << in_channel << ")" << endl;
+      *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		  << "Adding VC range [" 
+		  << f->dest*vcs_per_dest << "," 
+		  << (f->dest+1)*vcs_per_dest << "]"
+		  << " at output port " << out_port
+		  << " for flit " << f->id
+		  << " (input port " << in_channel
+		  << ", destination " << f->dest << ")"
+		  << "." << endl;
   }
   
   outputs->AddRange( out_port, f->dest*vcs_per_dest, (f->dest+1)*vcs_per_dest - 1 );
@@ -1473,9 +1537,15 @@ void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel,
   } 
   
   if ( f->watch ) {
-    cout << "flit " << f->id << " (" << f << ") at " << r->GetID( ) << " destined to " 
-	 << f->dest << " using channel " << out_port << ", vc range = [" 
-	 << vc_min << "," << vc_max << "] (in_channel is " << in_channel << ")" << endl;
+      *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		  << "Adding VC range [" 
+		  << vc_min << "," 
+		  << vc_max << "]"
+		  << " at output port " << out_port
+		  << " for flit " << f->id
+		  << " (input port " << in_channel
+		  << ", destination " << f->dest << ")"
+		  << "." << endl;
   }
   
   outputs->AddRange( out_port, vc_min, vc_max );
@@ -1535,9 +1605,15 @@ void min_adapt_torus( const Router *r, const Flit *f, int in_channel, OutputSet 
   } 
   
   if ( f->watch ) {
-    cout << "flit " << f->id << " (" << f << ") at " << r->GetID( ) << " destined to " 
-	 << f->dest << " using channel " << out_port << ", vc range = [" 
-	 << 0 << "," << gNumVCS - 1 << "] (in_channel is " << in_channel << ")" << endl;
+      *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		  << "Adding VC range [" 
+		  << 0 << "," 
+		  << gNumVCS - 1 << "]"
+		  << " at output port " << out_port
+		  << " for flit " << f->id
+		  << " (input port " << in_channel
+		  << ", destination " << f->dest << ")"
+		  << "." << endl;
   }
   
   

@@ -48,6 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mecs.hpp"
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
+#include "globals.hpp"
 #include "MECSRouter.hpp"
 #include "MECSChannels.hpp"
 #include "MECSCreditChannel.hpp"
@@ -309,7 +310,9 @@ void dor_MECS( const Router *r, const Flit *f, int in_channel,
   if(rID == dest_router){
     out_port = dest%gK; 
     if(debug)
-      {cout<<f->id<<" Routing to final destination outport "<<out_port<<endl;}
+      {
+	*_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		    <<f->id<<" Routing to final destination outport "<<out_port<<endl;}
     goto dor_done;
   }
   
@@ -317,11 +320,15 @@ void dor_MECS( const Router *r, const Flit *f, int in_channel,
   if(in_channel<gK){
     f->ph = 0;
     if(debug)
-      {cout<<f->id<<" Injected "<<endl;}
+      {
+	*_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		    <<f->id<<" Injected "<<endl;}
     //already in the same X
     if(r_x_location == dest_x_location){
       if(debug)
-	{cout<<f->id<<" Switching to Y"<<endl;}
+	{
+	  *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		      <<f->id<<" Switching to Y"<<endl;}
       f->intm = -1;
       f->ph = 1;
     } else {
@@ -335,7 +342,9 @@ void dor_MECS( const Router *r, const Flit *f, int in_channel,
     //switch over to Y dmension
     if(rID == intm_router){
       if(debug)
-	{cout<<f->id<<" Switching to Y"<<endl;}
+	{
+	  *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		      <<f->id<<" Switching to Y"<<endl;}
       f->intm = -1;
       f->ph = 1;
     } else {
@@ -346,7 +355,9 @@ void dor_MECS( const Router *r, const Flit *f, int in_channel,
 	out_port = gK+3;
       }
       if(debug)
-	{cout<<f->id<<" Routing in X direction"<<out_port<<endl;}
+	{
+	  *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		      <<f->id<<" Routing in X direction"<<out_port<<endl;}
       goto dor_done;
     }
   } 
@@ -358,7 +369,9 @@ void dor_MECS( const Router *r, const Flit *f, int in_channel,
       out_port = gK;
     }
     if(debug)
-      {cout<<f->id<<" Routing in Y direction"<<out_port<<endl;}
+      {
+	*_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		    <<f->id<<" Routing in Y direction"<<out_port<<endl;}
     goto dor_done;
   }
   

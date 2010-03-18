@@ -149,8 +149,12 @@ void SeparableAllocator::RemoveRequest( int in, int out, int label ) {
 
 }
 
-void SeparableAllocator::PrintRequests( ) const {
-
+void SeparableAllocator::PrintRequests( ostream * os ) const {
+  
+  if(!os) os = &cout;
+  
+  *os << "Requests = [ ";
+  
   for ( int input = 0 ; input < _inputs ; input++ ) {
     if ( _requests[input].empty() )
       continue ;
@@ -158,15 +162,16 @@ void SeparableAllocator::PrintRequests( ) const {
     list<sRequest>::const_iterator it  = _requests[input].begin() ;
     list<sRequest>::const_iterator end = _requests[input].end() ;
 
-    cout << FullName() << "/ip" << input << ":" << endl;
+    *os << input << " -> [ ";
     while ( it != end ) {
       const sRequest& req = *it ;
-      cout << "   label = " << req.label
-	   << ", output port = " << req.port
-	   << ", priority = " << req.in_pri
-	   << endl;
+      *os << "(l:" << req.label
+	   << ",o:" << req.port
+	   << ",p:" << req.in_pri
+	   << ") ";
       it++ ;
     }
+    *os << "] ";
   }
-
+  *os << "].";
 }

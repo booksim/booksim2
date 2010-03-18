@@ -235,14 +235,14 @@ void IQRouterBase::_InputQueuing( )
       VC * cur_vc = &_vc[input][f->vc];
       
       if(f->watch) {
-	cout << GetSimTime() << " | " << FullName() << " | "
-	     << "VC " << f->vc << " at input " << input 
-	     << " received flit " << f->id << " from channel (state: "
-	     << VC::VCSTATE[cur_vc->GetState()] << ", empty: "
-	     << cur_vc->Empty();
+	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+		    << "VC " << f->vc << " at input " << input 
+		    << " received flit " << f->id << " from channel (state: "
+		    << VC::VCSTATE[cur_vc->GetState()] << ", empty: "
+		    << cur_vc->Empty();
 	if(cur_vc->FrontFlit())
-	  cout << ", front: " << cur_vc->FrontFlit()->id;
-	cout << ")." << endl;
+	  *_watch_out << ", front: " << cur_vc->FrontFlit()->id;
+	*_watch_out << ")." << endl;
       }
       
       if ( !cur_vc->AddFlit( f ) ) {
@@ -312,9 +312,9 @@ void IQRouterBase::_OutputQueuing( )
       if ( f ) {
 	_output_buffer[output].push( f );
 	if(f->watch)
-	  cout << GetSimTime() << " | " << FullName() << " | "
-	       << "VC " << f->vc << " at output " << output 
-	       << " sent flit " << f->id << " to channel." << endl;
+	  *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		      << "VC " << f->vc << " at output " << output 
+		      << " sent flit " << f->id << " to channel." << endl;
       }
     }
   }  

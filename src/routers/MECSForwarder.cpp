@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "MECSForwarder.hpp"
+#include "globals.hpp"
 
 MECSForwarder::MECSForwarder(Module* parent, string name, int router)
   :Module( parent, name ){
@@ -61,7 +62,8 @@ void MECSForwarder::ReadInputs(){
   Flit *f = chan_in->ReceiveFlit();
   if(f){
     if(f->watch){
-      cout<<f->id<<" at Forwarder "<<location<<endl;
+      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		  <<f->id<<" at Forwarder "<<location<<endl;
     }
     //shoudl the flit be dropped off here?
     if((int)(mecs_transformation(f->intm)/gK) == location ||(int)(mecs_transformation(f->dest)/gK) == location){
@@ -69,12 +71,14 @@ void MECSForwarder::ReadInputs(){
       assert(flit_queue.size()<100); //if this trips, soemthign is wrong
       ff = 0; //terminate if reached the destination
       if(f->watch){
-	cout<<f->id<<" halted at Forwarder "<<location<<endl;
+	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+		    <<f->id<<" halted at Forwarder "<<location<<endl;
       }
     } else {
       ff = f;
       if(f->watch){
-	cout<<f->id<<" moved at Forwarder "<<location<<endl;
+	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+		    <<f->id<<" moved at Forwarder "<<location<<endl;
       }
     }
   }

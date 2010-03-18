@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _GLOBALS_HPP_
 #define _GLOBALS_HPP_
 #include <string>
+#include <iostream>
 
 /*all declared in main.cpp*/
 
@@ -70,6 +71,7 @@ extern int    gConstPacketSize;
 extern int *gNodeStates;
 
 extern std::string _watch_file;
+extern std::ostream * _watch_out;
 
 extern bool _use_noc_latency;
 #endif

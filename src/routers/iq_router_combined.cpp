@@ -162,13 +162,13 @@ void IQRouterCombined::_Alloc( )
 	      if(do_request) {
 		
 		if(f->watch) {
-		  cout << GetSimTime() << " | " << FullName() << " | " 
-		       << "VC " << vc << " at input "
-		       << input << " requests output " << output 
-		       << " (flit: " << f->id
-		       << ", exp. input: " << expanded_input
-		       << ", exp. output: " << expanded_output
-		       << ")." << endl;
+		  *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+			      << "VC " << vc << " at input "
+			      << input << " requests output " << output 
+			      << " (flit: " << f->id
+			      << ", exp. input: " << expanded_input
+			      << ", exp. output: " << expanded_output
+			      << ")." << endl;
 		  watched = true;
 		}
 		
@@ -197,8 +197,11 @@ void IQRouterCombined::_Alloc( )
     }
   }
   
-  if(watched)
-    _sw_allocator->PrintRequests();
+  if(watched) {
+    *_watch_out << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
+    _sw_allocator->PrintRequests( _watch_out );
+    *_watch_out << endl;
+  }
   
   _sw_allocator->Allocate();
   
@@ -278,10 +281,10 @@ void IQRouterCombined::_Alloc( )
 	    _vc_rr_offset[expanded_input*_vcs+vc] = (output + 1) % _outputs;
 	    
 	    if(f->watch)
-	      cout << GetSimTime() << " | " << FullName() << " | "
-		   << "VC " << sel_vc << " at output " << output
-		   << " granted to VC " << vc << " at input " << input
-		   << " (flit: " << f->id << ")." << endl;
+	      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+			  << "VC " << sel_vc << " at output " << output
+			  << " granted to VC " << vc << " at input " << input
+			  << " (flit: " << f->id << ")." << endl;
 	  }
 	  // NOTE: from here, we just fall through to the code for VC::active!
 	  
@@ -305,13 +308,13 @@ void IQRouterCombined::_Alloc( )
 	  f = cur_vc->RemoveFlit();
 	  
 	  if(f->watch)
-	    cout << GetSimTime() << " | " << FullName() << " | " 
-		 << "Output " << output
-		 << " granted to VC " << vc << " at input " << input
-		 << " (flit: " << f->id
-		 << ", exp. input: " << expanded_input
-		 << ", exp. output: " << expanded_output
-		 << ")." << endl;
+	    *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+			<< "Output " << output
+			<< " granted to VC " << vc << " at input " << input
+			<< " (flit: " << f->id
+			<< ", exp. input: " << expanded_input
+			<< ", exp. output: " << expanded_output
+			<< ")." << endl;
 	  
 	  f->hops++;
 	  
@@ -322,11 +325,11 @@ void IQRouterCombined::_Alloc( )
 	  bufferMonitor.read(input, f);
 	  
 	  if(f->watch)
-	    cout << GetSimTime() << " | " << FullName() << " | "
-		 << "Forwarding flit " << f->id << " through crossbar "
-		 << "(exp. input: " << expanded_input
-		 << ", exp. output: " << expanded_output
-		 << ")." << endl;
+	    *_watch_out << GetSimTime() << " | " << FullName() << " | "
+			<< "Forwarding flit " << f->id << " through crossbar "
+			<< "(exp. input: " << expanded_input
+			<< ", exp. output: " << expanded_output
+			<< ")." << endl;
 	  
 	  if (c == NULL) {
 	    c = _NewCredit(_vcs);

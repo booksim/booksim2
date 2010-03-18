@@ -227,7 +227,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["viewer_trace"] = 0;
 
   AddStrField("watch_file", "");
-
+  AddStrField("watch_out", "-");
 
   //==================Power model params=====================
   _int_map["sim_power"] = 0;

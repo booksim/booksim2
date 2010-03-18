@@ -163,10 +163,10 @@ void IQRouterBaseline::_VCAlloc( )
 	
   	f = cur_vc->FrontFlit( );
 	if(f->watch) {
-	  cout << GetSimTime() << " | " << FullName() << " | " 
-	       << "VC " << vc << " at input " << input
-	       << " is requesting VC allocation for flit " << f->id
-	       << "." << endl;
+	  *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+		      << "VC " << vc << " at input " << input
+		      << " is requesting VC allocation for flit " << f->id
+		      << "." << endl;
 	  watched = true;
 	}
 	
@@ -190,18 +190,19 @@ void IQRouterBaseline::_VCAlloc( )
 	    
 	    if(dest_vc->IsAvailableFor(out_vc)) {
 	      if(f->watch)
-		cout << GetSimTime() << " | " << FullName() << " | "
-		     << "Requesting VC " << out_vc << " at output " << output 
-		     << " with priorities " << in_priority
-		     << " and " << out_priority
-		     << "." << endl;
+		*_watch_out << GetSimTime() << " | " << FullName() << " | "
+			    << "Requesting VC " << out_vc
+			    << " at output " << output 
+			    << " with priorities " << in_priority
+			    << " and " << out_priority
+			    << "." << endl;
 	      _vc_allocator->AddRequest(input*_vcs + vc, output*_vcs + out_vc, 
 					out_vc, in_priority, out_priority);
 	    } else {
 	      if(f->watch)
-		cout << GetSimTime() << " | " << FullName() << " | "
-		     << "VC " << out_vc << " at output " << output 
-		     << " is unavailable." << endl;
+		*_watch_out << GetSimTime() << " | " << FullName() << " | "
+			    << "VC " << out_vc << " at output " << output 
+			    << " is unavailable." << endl;
 	    }
 	  }
 	}
@@ -211,7 +212,9 @@ void IQRouterBaseline::_VCAlloc( )
   }
   //  watched = true;
   if ( watched ) {
-    _vc_allocator->PrintRequests( );
+    *_watch_out << GetSimTime() << " | " << _vc_allocator->FullName() << " | ";
+    _vc_allocator->PrintRequests( _watch_out );
+    *_watch_out << endl;
   }
 
   _vc_allocator->Allocate( );
@@ -241,10 +244,10 @@ void IQRouterBaseline::_VCAlloc( )
 	f = cur_vc->FrontFlit( );
 	
 	if(f->watch)
-	  cout << GetSimTime() << " | " << FullName() << " | "
-	       << "Granted VC " << vc << " at output " << output
-	       << " to VC " << match_vc << " at input " << match_input
-	       << " (flit: " << f->id << ")." << endl;
+	  *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		      << "Granted VC " << vc << " at output " << output
+		      << " to VC " << match_vc << " at input " << match_input
+		      << " (flit: " << f->id << ")." << endl;
       }
     }
   }
@@ -334,14 +337,14 @@ void IQRouterBaseline::_SWAlloc( )
 		  Flit * f = cur_vc->FrontFlit();
 		  assert(f);
 		  if(f->watch) {
-		    cout << GetSimTime() << " | " << FullName() << " | "
-			 << "VC " << vc << " at input " << input 
-			 << " requested output " << output 
-			 << " (non-spec., exp. input: " << expanded_input
-			 << ", exp. output: " << expanded_output
-			 << ", flit: " << f->id
-			 << ", prio: " << cur_vc->GetPriority()
-			 << ")." << endl;
+		    *_watch_out << GetSimTime() << " | " << FullName() << " | "
+				<< "VC " << vc << " at input " << input 
+				<< " requested output " << output 
+				<< " (non-spec., exp. input: " << expanded_input
+				<< ", exp. output: " << expanded_output
+				<< ", flit: " << f->id
+				<< ", prio: " << cur_vc->GetPriority()
+				<< ")." << endl;
 		    watched = true;
 		  }
 		  
@@ -409,14 +412,14 @@ void IQRouterBaseline::_SWAlloc( )
 		    Flit * f = cur_vc->FrontFlit();
 		    assert(f);
 		    if(f->watch) {
-		      cout << GetSimTime() << " | " << FullName() << " | "
-			   << "VC " << vc << " at input " << input 
-			   << " requested output " << output
-			   << " (spec., exp. input: " << expanded_input
-			   << ", exp. output: " << expanded_output
-			   << ", flit: " << f->id
-			   << ", prio: " << cur_vc->GetPriority()
-			   << ")." << endl;
+		      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+				  << "VC " << vc << " at input " << input 
+				  << " requested output " << output
+				  << " (spec., exp. input: " << expanded_input
+				  << ", exp. output: " << expanded_output
+				  << ", flit: " << f->id
+				  << ", prio: " << cur_vc->GetPriority()
+				  << ")." << endl;
 		      watched = true;
 		    }
 		    
@@ -447,9 +450,14 @@ void IQRouterBaseline::_SWAlloc( )
   }
   
   if(watched) {
-    _sw_allocator->PrintRequests();
-    if(_speculative >= 2)
-      _spec_sw_allocator->PrintRequests();
+    *_watch_out << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
+    _sw_allocator->PrintRequests( _watch_out );
+    *_watch_out << endl;
+    if(_speculative >= 2) {
+      *_watch_out << GetSimTime() << " | " << _spec_sw_allocator->FullName() << " | ";
+      _spec_sw_allocator->PrintRequests( _watch_out );
+      *_watch_out << endl;
+    }
   }
   
   _sw_allocator->Allocate();
@@ -561,16 +569,16 @@ void IQRouterBaseline::_SWAlloc( )
 	  f = cur_vc->RemoveFlit( );
 	  assert(f);
 	  if(f->watch) {
-	    cout << GetSimTime() << " | " << FullName() << " | "
-		 << "Output " << output
-		 << " granted to VC " << vc << " at input " << input;
+	    *_watch_out << GetSimTime() << " | " << FullName() << " | "
+			<< "Output " << output
+			<< " granted to VC " << vc << " at input " << input;
 	    if(cur_vc->GetState() == VC::vc_spec_grant)
-	      cout << " (spec";
+	      *_watch_out << " (spec";
 	    else
-	      cout << " (non-spec";
-	    cout << ", exp. input: " << expanded_input
-		 << ", exp. output: " << expanded_output
-		 << ", flit: " << f->id << ")." << endl;
+	      *_watch_out << " (non-spec";
+	    *_watch_out << ", exp. input: " << expanded_input
+			<< ", exp. output: " << expanded_output
+			<< ", flit: " << f->id << ")." << endl;
 	  }
 	  
 	  f->hops++;
@@ -582,11 +590,11 @@ void IQRouterBaseline::_SWAlloc( )
 	  bufferMonitor.read(input, f) ;
 	  
 	  if(f->watch)
-	    cout << GetSimTime() << " | " << FullName() << " | "
-		 << "Forwarding flit " << f->id << " through crossbar "
-		 << "(exp. input: " << expanded_input
-		 << ", exp. output: " << expanded_output
-		 << ")." << endl;
+	    *_watch_out << GetSimTime() << " | " << FullName() << " | "
+			<< "Forwarding flit " << f->id << " through crossbar "
+			<< "(exp. input: " << expanded_input
+			<< ", exp. output: " << expanded_output
+			<< ")." << endl;
 	  
 	  if ( !c ) {
 	    c = _NewCredit( _vcs );
@@ -623,11 +631,11 @@ void IQRouterBaseline::_SWAlloc( )
 	  Flit * f = cur_vc->FrontFlit();
 	  assert(f);
 	  if(f->watch)
-	    cout << GetSimTime() << " | " << FullName() << " | "
-		 << "Speculation failed at output " << output
-		 << "(exp. input: " << expanded_input
-		 << ", exp. output: " << expanded_output
-		 << ", flit: " << f->id << ")." << endl;
+	    *_watch_out << GetSimTime() << " | " << FullName() << " | "
+			<< "Speculation failed at output " << output
+			<< "(exp. input: " << expanded_input
+			<< ", exp. output: " << expanded_output
+			<< ", flit: " << f->id << ")." << endl;
 	} 
       }
     }

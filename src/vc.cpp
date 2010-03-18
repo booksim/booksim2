@@ -162,29 +162,29 @@ void VC::SetState( eVCState s )
   Flit * f = FrontFlit();
   
   if(f && f->watch)
-    cout << GetSimTime() << " | " << FullName() << " | "
-	 << "Changing state from " << VC::VCSTATE[_state]
-	 << " to " << VC::VCSTATE[s] << "." << endl;
+    *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		<< "Changing state from " << VC::VCSTATE[_state]
+		<< " to " << VC::VCSTATE[s] << "." << endl;
   
   // do not reset state time for speculation-related pseudo state transitions
   if(((_state == vc_alloc) && (s == vc_spec)) ||
      ((_state == vc_spec) && (s == vc_spec_grant))) {
     assert(f);
     if(f->watch)
-      cout << GetSimTime() << " | " << FullName() << " | "
-	   << "Keeping state time at " << _state_time << "." << endl;
+      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		  << "Keeping state time at " << _state_time << "." << endl;
   } else {
     if(f && f->watch)
-      cout << GetSimTime() << " | " << FullName() << " | "
-	   << "Resetting state time to zero." << endl;
+      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		  << "Resetting state time to zero." << endl;
     _state_time = 0;
   }
   
   if((_state == idle) && (s != idle)) {
     if(f) {
       if(f->watch)
-	cout << GetSimTime() << " | " << FullName() << " | "
-	     << "Setting priority to " << f->pri << "." << endl;
+	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+		    << "Setting priority to " << f->pri << "." << endl;
       _pri = f->pri;
     }
     _occupied_cnt++;

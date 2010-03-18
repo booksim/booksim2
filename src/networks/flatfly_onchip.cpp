@@ -56,7 +56,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "flatfly_onchip.hpp"
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
-
+#include "globals.hpp"
 
 
 
@@ -600,7 +600,8 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
      _ran_intm = find_ran_intm(flatfly_transformation(f->src), dest);
      tmp_out_port =  flatfly_outport(dest, rID);
      if (f->watch){
-       cout << " MIN tmp_out_port: " << tmp_out_port;
+       *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		   << " MIN tmp_out_port: " << tmp_out_port;
      }
 
      _min_queucnt =   r->GetCredit(tmp_out_port, vcBegin + FlatFlyOnChip::half_vcs, vcEnd + FlatFlyOnChip::half_vcs);
@@ -610,7 +611,8 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
      tmp_out_port =  flatfly_outport(_ran_intm, rID);
      
      if (f->watch){
-       cout << " NONMIN tmp_out_port: " << tmp_out_port << endl;
+       *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		   << " NONMIN tmp_out_port: " << tmp_out_port << endl;
      }
      if (_ran_intm >= rID*_concentration && _ran_intm < (rID+1)*_concentration) {
        _nonmin_queucnt = 9999;

@@ -36,6 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 #include "MECSCombiner.hpp"
+#include "globals.hpp"
 
 MECSCombiner::MECSCombiner(Module* parent, string name, int dir, int r)
   : Module(parent, name){
@@ -66,7 +67,8 @@ void MECSCombiner::ReadInputs(){
     f = inputs.at(location)->ReceiveFlit();
     assert(f);
     if(f->watch){
-      cout<<f->id<<" load into router "<<router<<endl;
+      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		  <<f->id<<" load into router "<<router<<endl;
     }
   }
   if(f){

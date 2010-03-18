@@ -44,7 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cmo.hpp"
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
-
+#include "globals.hpp"
 
 #define CMO_ADDR_MASK(dest, cur)      (((dest >> 2) - cur) & 0x7)
 #define CMO_DIM_MASK(dest, cur)       (((dest >> 2) ^ cur) & 0x8)
@@ -426,9 +426,15 @@ void dim_order_cmo( const Router *r, const Flit *f, int in_channel,
   }
 
   if ( f->watch ) {
-    cout << "flit " << f->id << " (" << f << ") at " << r->GetID( ) << " destined to "
-         << f->dest << " using channel " << out_port << ", vc range = ["
-         << vc_min << "," << vc_max << "] (in_channel is " << in_channel << ")" << endl;
+      *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+		  << "Adding VC range [" 
+		  << vc_min << "," 
+		  << vc_max << "]"
+		  << " at output port " << out_port
+		  << " for flit " << f->id
+		  << " (input port " << in_channel
+		  << ", destination " << f->dest << ")"
+		  << "." << endl;
   }
 
   outputs->AddRange( out_port, vc_min, vc_max );
