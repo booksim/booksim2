@@ -214,7 +214,6 @@ void IQRouterBaseline::_VCAlloc( )
   if ( watched ) {
     *_watch_out << GetSimTime() << " | " << _vc_allocator->FullName() << " | ";
     _vc_allocator->PrintRequests( _watch_out );
-    *_watch_out << endl;
   }
 
   _vc_allocator->Allocate( );
@@ -452,11 +451,9 @@ void IQRouterBaseline::_SWAlloc( )
   if(watched) {
     *_watch_out << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
     _sw_allocator->PrintRequests( _watch_out );
-    *_watch_out << endl;
     if(_speculative >= 2) {
       *_watch_out << GetSimTime() << " | " << _spec_sw_allocator->FullName() << " | ";
       _spec_sw_allocator->PrintRequests( _watch_out );
-      *_watch_out << endl;
     }
   }
   

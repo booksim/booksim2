@@ -173,5 +173,5 @@ void SeparableAllocator::PrintRequests( ostream * os ) const {
     }
     *os << "] ";
   }
-  *os << "].";
+  *os << "]." << endl;
 }

@@ -186,7 +186,7 @@ void DenseAllocator::PrintRequests( ostream * os ) const
     }
     *os << "] ";
   }
-  *os << "].";
+  *os << "]." << endl;
 }
 
 //==================================================
@@ -437,7 +437,7 @@ void SparseAllocator::PrintRequests( ostream * os ) const
     }
     *os << "] ";
   }
-  *os << "].";
+  *os << "]." << endl;
 }
 
 //==================================================
