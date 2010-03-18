@@ -1010,10 +1010,12 @@ void TrafficManager::_Step( )
         _net[i]->WriteCredit( cred, output );
         _RetireFlit( f, output );
       
-        _accepted_flits[output]->AddSample( 1 );
+        if( !_empty_network )
+	  _accepted_flits[output]->AddSample( 1 );
       } else {
         _net[i]->WriteCredit( 0, output );
-        _accepted_flits[output]->AddSample( 0 );
+        if( !_empty_network )
+	  _accepted_flits[output]->AddSample( 0 );
       }
     }
   }
