@@ -1434,14 +1434,14 @@ bool TrafficManager::Run( )
   }
   
   DisplayStats();
-  if(_print_csv_results) {
-    cout << "vc_stats:"
-	 << _traffic
-	 << "," << _packet_size
-	 << "," << _load
-	 << "," << _flit_rate << ",";
-  }
   if(_print_vc_stats) {
+    if(_print_csv_results) {
+      cout << "vc_stats:"
+	   << _traffic
+	   << "," << _packet_size
+	   << "," << _load
+	   << "," << _flit_rate << ",";
+    }
     VC::DisplayStats(_print_csv_results);
   }
   return true;
