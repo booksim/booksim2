@@ -206,6 +206,12 @@ void IQRouterBase::_ReceiveFlits( )
 
     if ( f ) {
       _input_buffer[input].push( f );
+      if(f->watch) {
+	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+		    << "Received flit " << f->id
+		    << " from channel at input " << input
+		    << "." << endl;
+      }
     }
   }
 }
@@ -236,12 +242,16 @@ void IQRouterBase::_InputQueuing( )
       
       if(f->watch) {
 	*_watch_out << GetSimTime() << " | " << FullName() << " | "
-		    << "VC " << f->vc << " at input " << input 
-		    << " received flit " << f->id << " from channel (state: "
-		    << VC::VCSTATE[cur_vc->GetState()] << ", empty: "
-		    << cur_vc->Empty();
-	if(cur_vc->FrontFlit())
+		    << "Adding flit " << f->id
+		    << " to VC " << f->vc
+		    << " at input " << input
+		    << " (state: " << VC::VCSTATE[cur_vc->GetState()];
+	if(cur_vc->Empty()) {
+	  *_watch_out << ", empty";
+	} else {
+	  assert(cur_vc->FrontFlit());
 	  *_watch_out << ", front: " << cur_vc->FrontFlit()->id;
+	}
 	*_watch_out << ")." << endl;
       }
       
