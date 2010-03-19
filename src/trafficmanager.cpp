@@ -721,7 +721,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     if ( f->watch ) { 
       *_watch_out << GetSimTime() << " | "
 		  << "node" << source << " | "
-		  << "Generating flit: " << _cur_id
+		  << "Generating flit: " << f->id
 		  << "." << endl;
     }
 
