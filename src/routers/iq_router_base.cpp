@@ -313,8 +313,9 @@ void IQRouterBase::_OutputQueuing( )
 	_output_buffer[output].push( f );
 	if(f->watch)
 	  *_watch_out << GetSimTime() << " | " << FullName() << " | "
-		      << "VC " << f->vc << " at output " << output 
-		      << " sent flit " << f->id << " to channel." << endl;
+		      << "Buffering flit " << f->id
+		      << " at output " << output
+		      << "." << endl;
       }
     }
   }  
@@ -337,6 +338,11 @@ void IQRouterBase::_SendFlits( )
       f = _output_buffer[output].front( );
       f->from_router = this->GetID();
       _output_buffer[output].pop( );
+      if(f->watch)
+	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+		    << "Sending flit " << f->id
+		    << " to channel at output " << output
+		    << "." << endl;
     } else {
       f = 0;
     }
