@@ -176,7 +176,7 @@ void VC::SetState( eVCState s )
   } else {
     if(f && f->watch)
       *_watch_out << GetSimTime() << " | " << FullName() << " | "
-		  << "Resetting state time to zero." << endl;
+		  << "Resetting state time." << endl;
     _state_time = 0;
   }
   
