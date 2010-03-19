@@ -833,6 +833,8 @@ void TrafficManager::_BatchInject(){
         }
       }
       _net[i]->WriteFlit( write_flit ? f : 0, input );
+      if(!_empty_network)
+	_sent_flits[input]->AddSample(write_flit);
       if (write_flit) {
         if (f->tail) // If a tail flit, reduce the number of packets of this class.
           class_array[i][highest_class]--;
@@ -945,6 +947,8 @@ void TrafficManager::_NormalInject(){
         }
       }
       _net[i]->WriteFlit( write_flit ? f : 0, input );
+      if(!_empty_network)
+	_sent_flits[input]->AddSample(write_flit);
       if (write_flit && f->tail) // If a tail flit, reduce the number of packets of this class.
 	class_array[i][highest_class]--;
     }
