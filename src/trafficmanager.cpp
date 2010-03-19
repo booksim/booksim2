@@ -835,10 +835,8 @@ void TrafficManager::_BatchInject(){
       _net[i]->WriteFlit( write_flit ? f : 0, input );
       if(!_empty_network)
 	_sent_flits[input]->AddSample(write_flit);
-      if (write_flit) {
-        if (f->tail) // If a tail flit, reduce the number of packets of this class.
-          class_array[i][highest_class]--;
-      }
+      if (write_flit && f->tail) // If a tail flit, reduce the number of packets of this class.
+	class_array[i][highest_class]--;
     }
   }
 }
@@ -1151,8 +1149,6 @@ bool TrafficManager::_SingleSim( )
   double stopping_threshold;
   double acc_stopping_threshold;
 
-  double min, avg;
-
   bool   clear_last;
 
   _time = 0;
@@ -1199,8 +1195,9 @@ bool TrafficManager::_SingleSim( )
       if ( _time % 10000 == 0 ) {
 	cout << _sim_state << endl;
 	*_stats_out << "%=================================" << endl;
-	int dmin;
 	cur_latency = _latency_stats[0]->Average( );
+	int dmin;
+	double min, avg;
 	dmin = _ComputeStats( _accepted_flits, &avg, &min );
 	cur_accepted = avg;
 	
@@ -1220,8 +1217,9 @@ bool TrafficManager::_SingleSim( )
       if ( _time % 1000 == 0 ) {
 	cout << _sim_state << endl;
 	*_stats_out << "%=================================" << endl;
-	int dmin;
 	cur_latency = _latency_stats[0]->Average( );
+	int dmin;
+	double min, avg;
 	dmin = _ComputeStats( _accepted_flits, &avg, &min );
 	cur_accepted = avg;
 	
@@ -1264,8 +1262,9 @@ bool TrafficManager::_SingleSim( )
       
       cout << _sim_state << endl;
       *_stats_out << "%=================================" << endl;
-      int dmin;
       cur_latency = _latency_stats[0]->Average( );
+      int dmin;
+      double min, avg;
       dmin = _ComputeStats( _accepted_flits, &avg, &min );
       cur_accepted = avg;
       cout << "Average latency = " << cur_latency << endl;
@@ -1415,7 +1414,6 @@ bool TrafficManager::_SingleSim( )
 
 bool TrafficManager::Run( )
 {
-  double min, avg;
   int total_packets = 0;
   _FirstStep( );
   
@@ -1433,6 +1431,7 @@ bool TrafficManager::Run( )
       _overall_max_latency[c]->AddSample( _latency_stats[c]->Max( ) );
     }
     
+    double min, avg;
     _ComputeStats( _accepted_flits, &avg, &min );
     _overall_accepted->AddSample( avg );
     _overall_accepted_min->AddSample( min );
