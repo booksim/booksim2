@@ -414,7 +414,6 @@ Flit *TrafficManager::_NewFlit( )
 
 void TrafficManager::_RetireFlit( Flit *f, int dest )
 {
-  static int sample_num = 0;
   deadlock_counter = 1;
 
   map<int, Flit *>::iterator match = _total_in_flight_flits.find(f->id);
@@ -500,7 +499,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	_latency_stats[0]->AddSample( _time - f->time);
 	break;
       }
-      ++sample_num;
    
       _pair_latency[f->src*_dests+dest]->AddSample( _time - f->time );
       
