@@ -167,10 +167,10 @@ bool AllocatorSim( const Configuration& config )
     name << "network_" << i;
     if ( topo == "torus" ) {
       KNCube::RegisterRoutingFunctions() ;
-      net[i] = new KNCube( config, name.str(), true );
+      net[i] = new KNCube( config, name.str(), false );
     } else if ( topo == "mesh" ) {
       KNCube::RegisterRoutingFunctions() ;
-      net[i] = new KNCube( config, name.str(), false );
+      net[i] = new KNCube( config, name.str(), true );
     } else if ( topo == "cmesh" ) {
       CMesh::RegisterRoutingFunctions() ;
       net[i] = new CMesh( config, name.str() );

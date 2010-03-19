@@ -113,7 +113,7 @@ void KNCube::_BuildNet( const Configuration &config )
       //
 
       // torus channel is longer due to wrap around
-      int latency = ( _mesh == false) ? 1 : 2 ;
+      int latency = _mesh ? 1 : 2 ;
 
       //get the input channel number
       right_input = _LeftChannel( right_node, dim );
@@ -317,11 +317,7 @@ void KNCube::InsertRandomFaults( const Configuration &config )
 
 double KNCube::Capacity( ) const
 {
-  if ( _mesh ) {
-    return (double)_k / 4.0;
-  } else {
-    return (double)_k / 8.0;
-  }
+  return (double)_k / ( _mesh ? 8.0 : 4.0 );
 }
 
 /*used for subnetworks*/

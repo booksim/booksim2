@@ -52,8 +52,8 @@ IsolatedMesh::IsolatedMesh( const Configuration &config, const string & name )
 : Network( config, name ) 
 {
 
-  _subMesh[0] = new KNCube( config, name, false );
-  _subMesh[1] = new KNCube( config, name, false );
+  _subMesh[0] = new KNCube( config, name, true );
+  _subMesh[1] = new KNCube( config, name, true );
 
   int k = config.GetInt( "k");
   int n = config.GetInt( "n");
