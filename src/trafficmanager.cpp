@@ -704,7 +704,8 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     switch( _pri_type ) {
     case class_based:
       f->pri = cl; break;
-    case age_based://fall through
+    case age_based:
+      f->pri = time; break;
     case none:
       f->pri = 0; break;
     }
