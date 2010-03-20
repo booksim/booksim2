@@ -357,8 +357,7 @@ TrafficManager::~TrafficManager( )
 int TrafficManager::DivisionAlgorithm (int packet_type) {
 
   if(packet_type == Flit::ANY_TYPE) {
-    static unsigned short counter = 0;
-    return (counter++)%duplicate_networks; // Even distribution.
+    return RandomInt(duplicate_networks-1); // Even distribution.
   } else {
     switch(duplicate_networks) {
     case 1:
