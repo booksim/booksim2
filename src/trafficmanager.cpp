@@ -1411,7 +1411,6 @@ bool TrafficManager::_SingleSim( )
 
 bool TrafficManager::Run( )
 {
-  int total_packets = 0;
   _FirstStep( );
   
   for ( int sim = 0; sim < _total_sims; ++sim ) {
