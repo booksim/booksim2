@@ -132,6 +132,9 @@ protected:
 
   enum eSimMode { latency, throughput, batch };
   eSimMode _sim_mode;
+  
+  //batched time-mode, know what you are doing
+  bool _timed_mode;
 
   int   _limit; //any higher clients do not generate packets
 

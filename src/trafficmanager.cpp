@@ -36,9 +36,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "random_utils.hpp" 
 #include "vc.hpp"
 
-//batched time-mode, know what you are doing
-bool timed_mode = false;
-
 TrafficManager::TrafficManager( const Configuration &config, Network **net )
   : Module( 0, "traffic_manager" )
 {
@@ -259,12 +256,14 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     _sim_mode = batch;
   }  else if (sim_type == "timed_batch"){
     _sim_mode = batch;
-    timed_mode = true;
+    _timed_mode = true;
   }
   else {
     // FIXME: This adds two pointers, not two strings!
     Error( "Unknown sim_type " + sim_type );
   }
+
+  _timed_mode = false;
 
   _sample_period = config.GetInt( "sample_period" );
   _max_samples    = config.GetInt( "max_samples" );
@@ -533,7 +532,7 @@ int TrafficManager::_IssuePacket( int source, int cl ) const
 	result = _repliesPending[source].front();
 	_repliesPending[source].pop_front();
 	
-      } else if ((_packets_sent[source] >= _batch_size && !timed_mode) || 
+      } else if ((_packets_sent[source] >= _batch_size && !_timed_mode) || 
 		 (_requestsOutstanding[source] >= _maxOutstanding)) {
 	result = 0;
       } else {
@@ -549,7 +548,7 @@ int TrafficManager::_IssuePacket( int source, int cl ) const
 	_requestsOutstanding[source]++;
       } 
     } else { //normal
-      if ((_packets_sent[source] >= _batch_size && !timed_mode) || 
+      if ((_packets_sent[source] >= _batch_size && !_timed_mode) || 
 		 (_requestsOutstanding[source] >= _maxOutstanding)) {
 	result = 0;
       } else {
@@ -1182,7 +1181,7 @@ bool TrafficManager::_SingleSim( )
   _ClearStats( );
   clear_last    = false;
 
-  if (_sim_mode == batch && timed_mode){
+  if (_sim_mode == batch && _timed_mode){
     while(_time<_sample_period){
       _Step();
       if ( _time % 10000 == 0 ) {
@@ -1203,7 +1202,7 @@ bool TrafficManager::_SingleSim( )
     cout << "Total inflight " << _total_in_flight_packets.size() << endl;
     converged = 1;
 
-  } else if(_sim_mode == batch && !timed_mode){//batch mode   
+  } else if(_sim_mode == batch && !_timed_mode){//batch mode   
     while(_packets_sent[0] < _batch_size){
       _Step();
       if ( _time % 1000 == 0 ) {
