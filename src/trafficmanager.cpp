@@ -1196,7 +1196,6 @@ bool TrafficManager::_SingleSim( )
 	int dmin;
 	double min, avg;
 	dmin = _ComputeStats( _accepted_flits, &avg, &min );
-	cur_accepted = avg;
 	
 	cout << "Average latency = " << cur_latency << endl;
 	cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
@@ -1218,7 +1217,6 @@ bool TrafficManager::_SingleSim( )
 	int dmin;
 	double min, avg;
 	dmin = _ComputeStats( _accepted_flits, &avg, &min );
-	cur_accepted = avg;
 	
 	cout << "Average latency = " << cur_latency << endl;
 	cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
