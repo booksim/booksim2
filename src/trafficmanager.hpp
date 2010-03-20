@@ -157,6 +157,9 @@ protected:
   int   _include_queuing;
 
   double _latency_thres;
+  double _stopping_threshold;
+  double _acc_stopping_threshold;
+  double _warmup_threshold;
 
   float _internal_speedup;
   float *_partial_internal_cycles;

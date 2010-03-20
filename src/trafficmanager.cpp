@@ -270,6 +270,9 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _max_samples    = config.GetInt( "max_samples" );
   _warmup_periods = config.GetInt( "warmup_periods" );
   _latency_thres = config.GetFloat( "latency_thres" );
+  _warmup_threshold = config.GetFloat( "warmup_thres" );
+  _stopping_threshold = config.GetFloat( "stopping_thres" );
+  _acc_stopping_threshold = config.GetFloat( "acc_stopping_thres" );
   _include_queuing = config.GetInt( "include_queuing" );
 
   _print_csv_results = config.GetInt( "print_csv_results" );
@@ -1142,10 +1145,6 @@ bool TrafficManager::_SingleSim( )
   double cur_accepted;
   double prev_accepted;
 
-  double warmup_threshold;
-  double stopping_threshold;
-  double acc_stopping_threshold;
-
   bool   clear_last;
 
   _time = 0;
@@ -1167,9 +1166,6 @@ bool TrafficManager::_SingleSim( )
     }
   }
 
-  stopping_threshold     = 0.05;
-  acc_stopping_threshold = 0.05;
-  warmup_threshold       = 0.05;
   iter            = 0;
   converged       = 0;
   total_phases    = 0;
@@ -1301,14 +1297,14 @@ bool TrafficManager::_SingleSim( )
       if ( _sim_state == warming_up ) {
 	if ( _warmup_periods == 0 ) {
 	  if ( _sim_mode == latency ) {
-	    if ( ( fabs( ( cur_latency - prev_latency ) / cur_latency ) < warmup_threshold ) &&
-		 ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < warmup_threshold ) ) {
+	    if ( ( fabs( ( cur_latency - prev_latency ) / cur_latency ) < _warmup_threshold ) &&
+		 ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < _warmup_threshold ) ) {
 	      cout << "Warmed up ..." <<  "Time used is " << _time << " cycles" <<endl;
 	      clear_last = true;
 	      _sim_state = running;
 	    }
 	  } else {
-	    if ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < warmup_threshold ) {
+	    if ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < _warmup_threshold ) {
 	      cout << "Warmed up ..." << "Time used is " << _time << " cycles" << endl;
 	      clear_last = true;
 	      _sim_state = running;
@@ -1323,14 +1319,14 @@ bool TrafficManager::_SingleSim( )
 	}
       } else if ( _sim_state == running ) {
 	if ( _sim_mode == latency ) {
-	  if ( ( fabs( ( cur_latency - prev_latency ) / cur_latency ) < stopping_threshold ) &&
-	       ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < acc_stopping_threshold ) ) {
+	  if ( ( fabs( ( cur_latency - prev_latency ) / cur_latency ) < _stopping_threshold ) &&
+	       ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < _acc_stopping_threshold ) ) {
 	    ++converged;
 	  } else {
 	    converged = 0;
 	  }
 	} else {
-	  if ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < acc_stopping_threshold ) {
+	  if ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < _acc_stopping_threshold ) {
 	    ++converged;
 	  } else {
 	    converged = 0;
