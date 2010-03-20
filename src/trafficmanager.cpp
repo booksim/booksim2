@@ -37,15 +37,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vc.hpp"
 
 TrafficManager::TrafficManager( const Configuration &config, Network **net )
-  : Module( 0, "traffic_manager" )
+  : Module( 0, "traffic_manager" ), _net(net), _cur_id(0), _cur_pid(0),
+   _time(0), _warmup_time(-1), _drain_time(-1), _empty_network(false),
+   _deadlock_counter(1), _sub_network(0)
 {
   int s;
   ostringstream tmp_name;
   string sim_type, priority;
-  
-  _net    = net;
-  _cur_id = 0;
-  _cur_pid = 0;
   
   _sources = _net[0]->NumSources( );
   _dests   = _net[0]->NumDests( );
@@ -93,11 +91,6 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
 
 
   // ============ Injection queues ============ 
-
-  _time               = 0;
-  _warmup_time        = -1;
-  _drain_time         = -1;
-  _empty_network      = false;
 
   _qtime              = new int * [_sources];
   _qdrained           = new bool * [_sources];
@@ -218,8 +211,6 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _stats["vc_grant_nonspec"] = _vc_grant_nonspec;
   _vc_grant_spec = new Stats(this, "vc_grant_spec", 1.0, num_vcs+1);
   _stats["vc_grant_spec"] = _vc_grant_spec;
-  
-  _deadlock_counter = 1;
   
   // ============ Simulation parameters ============ 
 
