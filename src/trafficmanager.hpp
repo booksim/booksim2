@@ -87,8 +87,8 @@ protected:
 
   // ============ sub-networks and deadlock ==========
 
-  short duplicate_networks;
-  unsigned char deadlock_counter;
+  short _duplicate_networks;
+  unsigned char _deadlock_counter;
 
   // ============ batch mode ==========================
   int *_packets_sent;
@@ -154,8 +154,8 @@ protected:
   int   _sample_period;
   int   _max_samples;
   int   _warmup_periods;
-  short ** class_array;
-  short sub_network;
+  short ** _class_array;
+  short _sub_network;
 
   int   _include_queuing;
 
@@ -178,8 +178,8 @@ protected:
   tRoutingFunction  _routing_function;
   tInjectionProcess _injection_process;
 
-  map<int, Flit *> flits_to_watch;
-  map<int, Flit *> packets_to_watch;
+  map<int, Flit *> _flits_to_watch;
+  map<int, Flit *> _packets_to_watch;
 
   bool _print_csv_results;
   bool _print_vc_stats;
