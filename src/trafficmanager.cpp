@@ -512,7 +512,7 @@ int TrafficManager::_IssuePacket( int source, int cl ) const
 	result = _repliesPending[source].front();
 	pending_time = _repliesDetails.find(result)->second->time;
       }
-      if (pending_time<=_qtime[source][0]) {
+      if (pending_time<=_qtime[source][cl]) {
 	result = _repliesPending[source].front();
 	_repliesPending[source].pop_front();
 	
@@ -551,7 +551,7 @@ int TrafficManager::_IssuePacket( int source, int cl ) const
 	result = _repliesPending[source].front();
 	pending_time = _repliesDetails.find(result)->second->time;
       }
-      if (pending_time<=_qtime[source][0]) {
+      if (pending_time<=_qtime[source][cl]) {
 	result = _repliesPending[source].front();
 	_repliesPending[source].pop_front();
       } else {
