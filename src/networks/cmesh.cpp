@@ -353,13 +353,6 @@ void CMesh::_BuildNet( const Configuration& config ) {
 }
 
 
-void CMesh::SetChannelCookie( int cookie ) {
-
-  for (int i = 0; i < _channels; i++) {
-    _chan[i]._cookie = cookie;
-  }
-}
-
 // ----------------------------------------------------------------------
 //
 //  Routing Helper Functions

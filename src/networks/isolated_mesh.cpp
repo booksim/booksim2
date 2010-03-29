@@ -90,19 +90,6 @@ IsolatedMesh::IsolatedMesh( const Configuration &config, const string & name )
   assert( _subNetAssignment[Flit::WRITE_REPLY] == 0 ||
 	  _subNetAssignment[Flit::WRITE_REPLY] == 1 );
 
-  int cookie_0 = 0;
-  int cookie_1 = 0;
-  if ( _subNetAssignment[Flit::WRITE_REQUEST] == 0 ||
-       _subNetAssignment[Flit::READ_REPLY]    == 0 )
-    cookie_0 = 1;
-  
-  if ( _subNetAssignment[Flit::WRITE_REQUEST] == 1 ||
-       _subNetAssignment[Flit::READ_REPLY]    == 1 )
-    cookie_1 = 1;
-  assert( cookie_0 == 1 || cookie_1 == 1 );
-  _subMesh[0]->SetChannelCookie(cookie_0);
-  _subMesh[1]->SetChannelCookie(cookie_1);
-
 }
 
 IsolatedMesh::~IsolatedMesh( )

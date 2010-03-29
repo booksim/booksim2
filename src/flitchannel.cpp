@@ -49,7 +49,6 @@ FlitChannel::FlitChannel() {
   for ( int i = 0; i < Flit::NUM_FLIT_TYPES; i++)
     _active[i] = 0;
   _idle   = 0;
-  _cookie = 0;
   _delay = 1; 
 }
 

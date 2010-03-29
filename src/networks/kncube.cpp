@@ -319,27 +319,3 @@ double KNCube::Capacity( ) const
 {
   return (double)_k / ( _mesh ? 8.0 : 4.0 );
 }
-
-/*used for subnetworks*/
-void KNCube::SetChannelCookie( int cookie ) {
-
-  for (int i = 0; i < _channels; i++) {
-    _chan[i]._cookie = cookie;
-  }
-  
-  // if (0 == cookie) {
-  //   for (int r = 0; r < _size; r++) {
-  //     ((IQRouter**)_routers)[r]->_switch_width = SHORT_FLIT_WIDTH;
-  //   }
-  // } else {
-  //   for (int r = 0; r < _size; r++) {
-  //     ((IQRouter**)_routers)[r]->_switch_width = LONG_FLIT_WIDTH;
-  //   }
-  // }
-  // 
-  // for (int r = 0; r < _size; r++) {
-  //   ((IQRouter**)_routers)[r]->_switch_has_latch = false;
-  // }
-
-
-}

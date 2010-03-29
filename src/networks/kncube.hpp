@@ -60,8 +60,6 @@ public:
 
   void InsertRandomFaults( const Configuration &config );
 
-  void SetChannelCookie( int cookie );
-
 };
 
 #endif

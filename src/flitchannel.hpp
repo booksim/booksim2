@@ -96,8 +96,6 @@ private:
   int          _active[Flit::NUM_FLIT_TYPES];
   int          _idle; 
 
-public:
-  int          _cookie;
 };
 
 #endif

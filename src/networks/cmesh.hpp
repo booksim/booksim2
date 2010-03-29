@@ -52,7 +52,6 @@ public:
   CMesh( const Configuration &config, const string & name );
   int GetN() const;
   int GetK() const;
-  void SetChannelCookie( int cookie );
 
   static int NodeToRouter( int address ) ;
   static int NodeToPort( int address ) ;
