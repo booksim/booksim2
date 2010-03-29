@@ -28,16 +28,18 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <string>
+#include "iq_router_base.hpp"
+
 #include <sstream>
-#include <iostream>
 #include <iomanip>
-#include <stdlib.h>
-#include <assert.h>
+#include <cstdlib>
+#include <cassert>
 
 #include "globals.hpp"
 #include "random_utils.hpp"
-#include "iq_router_base.hpp"
+#include "vc.hpp"
+#include "outputset.hpp"
+#include "buffer_state.hpp"
 
 IQRouterBase::IQRouterBase( const Configuration& config,
 		    Module *parent, const string & name, int id,

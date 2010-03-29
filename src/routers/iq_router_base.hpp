@@ -33,14 +33,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 #include <queue>
+#include <iostream>
 
-#include "module.hpp"
 #include "router.hpp"
-#include "vc.hpp"
 #include "routefunc.hpp"
-#include "outputset.hpp"
-#include "buffer_state.hpp"
 #include "pipefifo.hpp"
+
+using namespace std;
+
+class VC;
+class Flit;
+class Credit;
+class BufferState;
 
 class SwitchMonitor {
   int  _cycles ;
