@@ -54,6 +54,12 @@ FlitChannel::FlitChannel() {
 
 FlitChannel::~FlitChannel() {
 
+  // FIXME: The following assumes that there are exactly 4 flit types, and that 
+  // short packets use types 0 and 3, and long packets use types 1 and 2. This 
+  // should be rewritten in a more generic way. Also, the destructor hardly 
+  // seems like the appropriate place to print out the statistics, so this 
+  // should probably all be moved into a separate member function.
+
   // Total Number of Cycles
   const double NC = _active[0] + _active[1] + _active[2] + _active[3] + _active[4]+ _idle;
   
