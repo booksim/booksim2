@@ -48,25 +48,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //  $Id$
 // ----------------------------------------------------------------------
 FlitChannel::FlitChannel( int cycles ) : Channel<Flit>(cycles), _idle(0) {
-  for ( int i = 0; i < Flit::NUM_FLIT_TYPES; i++)
+  for ( int i = 0; i < Flit::NUM_FLIT_TYPES; ++i)
     _active[i] = 0;
 }
 
 FlitChannel::~FlitChannel() {
 
-  // FIXME: The following assumes that there are exactly 4 flit types, and that 
-  // short packets use types 0 and 3, and long packets use types 1 and 2. This 
-  // should be rewritten in a more generic way. Also, the destructor hardly 
-  // seems like the appropriate place to print out the statistics, so this 
-  // should probably all be moved into a separate member function.
+  // FIXME: The destructor hardly seems like the appropriate place to print out 
+  // these statistics, so this should probably all be moved into a separate 
+  // member function.
 
-  // Total Number of Cycles
-  const double NC = _active[0] + _active[1] + _active[2] + _active[3] + _active[4]+ _idle;
-  
-  // Activity Factor 
-  const double AFs = double(_active[0] + _active[3]) / NC;
-  const double AFl = double(_active[1] + _active[2]) / NC;
-  
   if(_print_activity){
     cout << "FlitChannel: " 
 	 << "[" 
@@ -75,9 +66,13 @@ FlitChannel::~FlitChannel() {
 	 << _routerSink
 	 << "] " 
 	 << "[Latency: " << _delay << "] "
-	 << "(" << _active[0] << "," << _active[1] << "," << _active[2] 
-	 << "," << _active[3] << "," << _active[4] << ") (I#" << _idle << ")" << endl ;
+	 << "(" << _active[0];
+    for(int i = 1; i < Flit::NUM_FLIT_TYPES; ++i) {
+      cout << "," << _active[i];
+    }
+    cout << ") (I#" << _idle << ")" << endl ;
   }
+  
 }
 
 void FlitChannel::SetSource( Router* router ) {
