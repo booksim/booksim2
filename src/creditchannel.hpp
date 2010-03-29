@@ -64,17 +64,6 @@ private:
   int            _delay;
   queue<Credit*> _queue;
 
-  ////////////////////////////////////////
-  //
-  // Power Models
-  //
-  ////////////////////////////////////////
-
-
-  // Statistics for Activity Factors
-  int    _active;
-  int    _idle;
-
 };
 
 #endif
