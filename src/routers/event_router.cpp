@@ -245,7 +245,7 @@ void EventRouter::_ReceiveFlits( )
   Flit *f;
 
   for ( int input = 0; input < _inputs; ++input ) { 
-    f = (*_input_channels)[input]->ReceiveFlit();
+    f = (*_input_channels)[input]->Receive();
 
     if ( f ) {
       _input_buffer[input].push( f );
@@ -258,7 +258,7 @@ void EventRouter::_ReceiveCredits( )
   Credit *c;
 
   for ( int output = 0; output < _outputs; ++output ) {  
-    c = (*_output_credits)[output]->ReceiveCredit();
+    c = (*_output_credits)[output]->Receive();
 
     if ( c ) {
       _out_cred_buffer[output].push( c );
@@ -755,7 +755,7 @@ void EventRouter::_SendFlits( )
       f = 0;
     }
 	
-    (*_output_channels)[output]->SendFlit( f );
+    (*_output_channels)[output]->Send( f );
   }
 }
 
@@ -771,7 +771,7 @@ void EventRouter::_SendCredits( )
       c = 0;
     }
 
-    (*_input_credits)[input]->SendCredit( c );
+    (*_input_credits)[input]->Send( c );
   }
 }
 

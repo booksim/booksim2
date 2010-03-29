@@ -154,13 +154,13 @@ void Network::WriteOutputs( )
 void Network::WriteFlit( Flit *f, int source )
 {
   assert( ( source >= 0 ) && ( source < _sources ) );
-  _inject[source].SendFlit(f);
+  _inject[source].Send(f);
 }
 
 Flit *Network::ReadFlit( int dest )
 {
   assert( ( dest >= 0 ) && ( dest < _dests ) );
-  return _eject[dest].ReceiveFlit();
+  return _eject[dest].Receive();
 }
 
 /* new functions added for NOC
@@ -168,19 +168,19 @@ Flit *Network::ReadFlit( int dest )
 Flit* Network::PeekFlit( int dest ) 
 {
   assert( ( dest >= 0 ) && ( dest < _dests ) );
-  return _eject[dest].PeekFlit( );
+  return _eject[dest].Peek( );
 }
 
 void Network::WriteCredit( Credit *c, int dest )
 {
   assert( ( dest >= 0 ) && ( dest < _dests ) );
-  _eject_cred[dest].SendCredit(c);
+  _eject_cred[dest].Send(c);
 }
 
 Credit *Network::ReadCredit( int source )
 {
   assert( ( source >= 0 ) && ( source < _sources ) );
-  return _inject_cred[source].ReceiveCredit();
+  return _inject_cred[source].Receive();
 }
 
 /* new functions added for NOC
@@ -188,7 +188,7 @@ Credit *Network::ReadCredit( int source )
 Credit *Network::PeekCredit( int source ) 
 {
   assert( ( source >= 0 ) && ( source < _sources ) );
-  return _inject_cred[source].PeekCredit( );
+  return _inject_cred[source].Peek( );
 }
 
 void Network::InsertRandomFaults( const Configuration &config )

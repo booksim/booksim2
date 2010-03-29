@@ -49,7 +49,7 @@ void MECSCreditForwarder::AddOutChannel( CreditChannel* backchannel){
 
 
 void MECSCreditForwarder::ReadInputs(){
-  Credit *c = cred_in->ReceiveCredit();
+  Credit *c = cred_in->Receive();
   if(c){
     assert(c->dest_router>=0);
     if(c->dest_router ==location){
@@ -65,7 +65,7 @@ void MECSCreditForwarder::ReadInputs(){
 void MECSCreditForwarder::WriteOutputs(){
   //always send, if the channels exists 
   if(cred_out){
-    cred_out->SendCredit(cc);
+    cred_out->Send(cc);
     cc = 0; 
   }
 }

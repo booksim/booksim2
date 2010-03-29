@@ -59,7 +59,7 @@ void MECSForwarder::AddOutChannel(FlitChannel* channel){
 int mecs_transformation(int dest);
 
 void MECSForwarder::ReadInputs(){
-  Flit *f = chan_in->ReceiveFlit();
+  Flit *f = chan_in->Receive();
   if(f){
     if(f->watch){
       *_watch_out << GetSimTime() << " | " << FullName() << " | "
@@ -87,7 +87,7 @@ void MECSForwarder::ReadInputs(){
 void MECSForwarder::WriteOutputs(){
   //always send, if the channels exists 
   if(chan_out){
-    chan_out->SendFlit(ff);
+    chan_out->Send(ff);
     ff = 0;
   }
 

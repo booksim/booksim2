@@ -84,6 +84,6 @@ void MECSCombiner::ReadInputs(){
   }
 
   // always send even if 0
-  chan_out->SendFlit(f);
+  chan_out->Send(f);
 
 }

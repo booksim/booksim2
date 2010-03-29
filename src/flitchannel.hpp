@@ -46,13 +46,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //  $Id$
 // ----------------------------------------------------------------------
 
+#include "channel.hpp"
 #include "flit.hpp"
-#include "globals.hpp"
-#include <queue>
+
 using namespace std;
+
 class Router ;
 
-class FlitChannel {
+class FlitChannel : public Channel<Flit> {
 public:
   FlitChannel();
   ~FlitChannel();
@@ -61,26 +62,16 @@ public:
   int GetSource();
   void SetSink( Router* router ) ;
   int GetSink();
-  // Phsyical Parameters
-  void SetLatency( int cycles ) ;
-  int GetLatency() { return _delay ; }
+
   int* GetActivity(){return _active;}
 
   // Check for flit on input. Used for tracking channel use
   bool InUse();
 
   // Send flit 
-  void SendFlit( Flit* flit );
-
-  // Receive Flit
-  Flit* ReceiveFlit( ); 
-
-  // Peek at Flit
-  Flit* PeekFlit( );
+  virtual void Send( Flit* flit );
 
 private:
-  int          _delay;
-  queue<Flit*> _queue;
   
   ////////////////////////////////////////
   //
@@ -94,7 +85,7 @@ private:
 
   // Statistics for Activity Factors
   int          _active[Flit::NUM_FLIT_TYPES];
-  int          _idle; 
+  int          _idle;
 
 };
 

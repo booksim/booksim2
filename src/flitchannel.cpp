@@ -34,22 +34,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //  Author: James Balfour, Rebecca Schultz
 //
 // ----------------------------------------------------------------------
+
+#include "flitchannel.hpp"
+
 #include <iostream>
 #include <iomanip>
 #include "router.hpp"
-#include "flitchannel.hpp"
+#include "globals.hpp"
 
 // ----------------------------------------------------------------------
 //  $Author: jbalfour $
 //  $Date: 2007/06/27 23:10:17 $
 //  $Id$
 // ----------------------------------------------------------------------
-FlitChannel::FlitChannel() {
-  _delay  = 0;
+FlitChannel::FlitChannel() : Channel<Flit>(), _idle(0) {
   for ( int i = 0; i < Flit::NUM_FLIT_TYPES; i++)
     _active[i] = 0;
-  _idle   = 0;
-  _delay = 1; 
 }
 
 FlitChannel::~FlitChannel() {
@@ -96,48 +96,18 @@ int FlitChannel::GetSink(){
   return _routerSink;
 }
 
-
-void FlitChannel::SetLatency( int cycles ) {
-
-  _delay = cycles; 
-  while ( !_queue.empty() )
-    _queue.pop();  
-  for (int i = 1; i < _delay ; i++)
-    _queue.push(0);
-}
-
 bool FlitChannel::InUse() {
   if ( _queue.empty() )
     return false;
   return ( _queue.back() != 0 );
 }
 
-void FlitChannel::SendFlit( Flit* flit ) {
+void FlitChannel::Send( Flit* flit ) {
 
   if ( flit )
     ++_active[flit->type];
   else 
     ++_idle;
 
-  while ( (_queue.size() > (unsigned int)_delay) && (_queue.front() == 0) )
-    _queue.pop( );
-
-  _queue.push(flit);
-}
-
-Flit* FlitChannel::ReceiveFlit() {
-  if ( _queue.empty() )
-    return 0;
-
-  Flit* f = _queue.front();
-  _queue.pop();
-  return f;
-}
-
-Flit* FlitChannel::PeekFlit( )
-{
-  if ( _queue.empty() )
-    return 0;
-
-  return _queue.front();
+  Channel<Flit>::Send(flit);
 }

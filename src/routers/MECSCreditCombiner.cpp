@@ -59,7 +59,7 @@ void MECSCreditCombiner::ReadInputs(){
       c = inputs.at(round_robin)->ReceiveCredit();  
     }
     
-    cred_out->SendCredit(c);
+    cred_out->Send(c);
     round_robin++;
     if(round_robin>=inputs.size()){
       round_robin = 0;
