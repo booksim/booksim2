@@ -49,7 +49,7 @@ class Credit;
 
 class CreditChannel : public Channel<Credit> {
 public:
-  CreditChannel();
+  CreditChannel( int cycles = 1 );
 
 };
 

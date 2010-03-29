@@ -36,6 +36,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////
 #include "creditchannel.hpp"
 
-CreditChannel::CreditChannel() : Channel<Credit>() {
+CreditChannel::CreditChannel( int cycles ) : Channel<Credit>(cycles) {
 
 }

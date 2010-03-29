@@ -47,7 +47,7 @@ using namespace std;
 template<class T>
 class Channel {
 public:
-  Channel();
+  Channel( int cycles = 1 );
 
   // Physical Parameters
   void SetLatency( int cycles );
@@ -69,7 +69,8 @@ protected:
 };
 
 template<class T>
-Channel<T>::Channel() : _delay(1) {
+Channel<T>::Channel( int cycles ) {
+  SetLatency(cycles);
 }
 
 template<class T>
@@ -78,7 +79,7 @@ void Channel<T>::SetLatency( int cycles ) {
   _delay = cycles ;
   while ( !_queue.empty() )
     _queue.pop( );
-  for (int i = 1; i < _delay; i++)
+  for (int i = 0; i < _delay; i++)
     _queue.push(0);
 }
 

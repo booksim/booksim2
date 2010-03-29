@@ -47,7 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //  $Date: 2007/06/27 23:10:17 $
 //  $Id$
 // ----------------------------------------------------------------------
-FlitChannel::FlitChannel() : Channel<Flit>(), _idle(0) {
+FlitChannel::FlitChannel( int cycles ) : Channel<Flit>(cycles), _idle(0) {
   for ( int i = 0; i < Flit::NUM_FLIT_TYPES; i++)
     _active[i] = 0;
 }
