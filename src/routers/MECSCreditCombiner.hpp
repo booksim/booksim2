@@ -32,7 +32,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _MECSCREDITCOMBINER_HPP_
 
 #include "MECSCreditForwarder.hpp"
-#include "creditchannel.hpp"
+#include "channel.hpp"
+#include "credit.hpp"
+
+typedef Channel<Credit> CreditChannel;
+
 
 class MECSCreditCombiner :public Module{
 

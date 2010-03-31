@@ -38,8 +38,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "flit.hpp"
 #include "credit.hpp"
 #include "flitchannel.hpp"
-#include "creditchannel.hpp"
+#include "channel.hpp"
 #include "config_utils.hpp"
+
+typedef Channel<Credit> CreditChannel;
 
 class Router : public Module {
 

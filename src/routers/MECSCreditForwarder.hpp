@@ -34,10 +34,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "network.hpp"
 #include "module.hpp"
 #include "credit.hpp"
-#include "creditchannel.hpp"
+#include "channel.hpp"
 #include "config_utils.hpp"
 #include <queue>
 #include <assert.h>
+
+typedef Channel<Credit> CreditChannel;
 
 
 class MECSCreditForwarder : public Module {

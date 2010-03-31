@@ -31,8 +31,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MECSCREDITCHANNELS_HPP_
 #define _MECSCREDITCHANNELS_HPP_
 
-#include "MECSCreditForwarder.hpp"
 #include <assert.h>
+
+#include "MECSCreditForwarder.hpp"
+#include "channel.hpp"
+#include "credit.hpp"
+
+typedef Channel<Credit> CreditChannel;
+
 
 class MECSCreditChannels: public Module{
 

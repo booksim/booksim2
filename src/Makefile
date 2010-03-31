@@ -50,7 +50,6 @@ CPP_SRCS = main.cpp \
    routefunc.cpp \
    traffic.cpp \
    flitchannel.cpp \
-   creditchannel.cpp \
    trafficmanager.cpp \
    buffer_state.cpp \
    stats.cpp \

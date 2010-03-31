@@ -39,10 +39,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "router.hpp"
 #include "module.hpp"
 #include "flitchannel.hpp"
-#include "creditchannel.hpp"
+#include "channel.hpp"
 #include "config_utils.hpp"
 #include "globals.hpp"
 
+typedef Channel<Credit> CreditChannel;
 
 
 class Network : public Module {
