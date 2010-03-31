@@ -40,6 +40,9 @@ class Stats;
 class Allocator;
 
 class IQRouterBaseline : public IQRouterBase {
+
+private:
+
   int  _speculative ;
   int  _filter_spec_grants ;
   
@@ -49,11 +52,14 @@ class IQRouterBaseline : public IQRouterBase {
   
   int *_sw_rr_offset;
   
+protected:
+
   void _VCAlloc( );
   void _SWAlloc( );
   virtual void _Alloc( );
   
 public:
+
   IQRouterBaseline( const Configuration& config,
 	    Module *parent, const string & name, int id,
 	    int inputs, int outputs );

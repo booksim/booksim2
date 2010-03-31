@@ -44,6 +44,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class IQRouterSplit : public IQRouterBase {
   
+private:
+
   Allocator *_sw_allocator;
   
   int *_vc_rr_offset;
@@ -52,6 +54,7 @@ class IQRouterSplit : public IQRouterBase {
   bool * _use_fast_path;
   
 protected:
+
   virtual void _Alloc( );
 
 public:

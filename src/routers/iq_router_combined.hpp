@@ -44,14 +44,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class IQRouterCombined : public IQRouterBase {
   
+private:
+
   Allocator *_sw_allocator;
   
   int *_vc_rr_offset;
   int *_sw_rr_offset;
   
+protected:
+
   virtual void _Alloc( );
   
 public:
+
   IQRouterCombined( const Configuration& config,
 	    Module *parent, const string & name, int id,
 	    int inputs, int outputs );
