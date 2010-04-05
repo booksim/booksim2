@@ -1133,6 +1133,7 @@ bool TrafficManager::_SingleSim( )
   int converged = 0;
 
   if (_sim_mode == batch && _timed_mode){
+    _sim_state = running;
     while(_time<_sample_period){
       _Step();
       if ( _time % 10000 == 0 ) {
@@ -1153,6 +1154,7 @@ bool TrafficManager::_SingleSim( )
     converged = 1;
 
   } else if(_sim_mode == batch && !_timed_mode){//batch mode   
+    _sim_state = running;
     while(_packets_sent[0] < _batch_size){
       _Step();
       if ( _time % 1000 == 0 ) {
@@ -1170,7 +1172,9 @@ bool TrafficManager::_SingleSim( )
       }
     }
     cout << "batch size of "<<_batch_size  <<  " sent. Time used is " << _time << " cycles" <<endl;
-    cout<< "Draining the Network...................\n";
+    cout << "Draining the Network...................\n";
+    _sim_state = draining;
+    _drain_time = _time;
     int empty_steps = 0;
     while( (_drain_measured_only ? _measured_in_flight_packets.size() : _total_in_flight_packets.size()) > 0 ) { 
       _Step( ); 
