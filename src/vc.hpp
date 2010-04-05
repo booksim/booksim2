@@ -72,7 +72,6 @@ private:
   
   int _pri;
 
-
   bool _watched;
 
 public:
@@ -102,6 +101,7 @@ public:
   int  GetOutputPort( ) const;
   int  GetOutputVC( ) const;
 
+  void UpdatePriority();
   int  GetPriority( ) const;
 
   void Route( tRoutingFunction rf, const Router* router, const Flit* f, int in_channel );

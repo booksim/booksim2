@@ -98,40 +98,25 @@ void VC::_Init( const Configuration& config, int outputs )
 
 bool VC::AddFlit( Flit *f )
 {
-  bool success = false;
-
-  if ( (int)_buffer.size( ) != _size ) {
-    _buffer.push( f );
-    success = true;
-  } 
-
-  return success;
+  if((int)_buffer.size() >= _size) return false;
+  _buffer.push(f);
+  UpdatePriority();
+  return true;
 }
 
 Flit *VC::FrontFlit( )
 {
-  Flit *f;
-
-  if ( !_buffer.empty( ) ) {
-    f = _buffer.front( );
-  } else {
-    f = 0;
-  }
-
-  return f;
+  return _buffer.empty() ? NULL : _buffer.front();
 }
 
 Flit *VC::RemoveFlit( )
 {
-  Flit *f;
-
+  Flit *f = NULL;
   if ( !_buffer.empty( ) ) {
     f = _buffer.front( );
     _buffer.pop( );
-  } else {
-    f = 0;
+    UpdatePriority();
   }
-
   return f;
 }
 
@@ -178,15 +163,6 @@ void VC::SetState( eVCState s )
     _state_time = 0;
   }
   
-  if((_state == idle) && (s != idle)) {
-    if(f) {
-      if(f->watch)
-	*_watch_out << GetSimTime() << " | " << FullName() << " | "
-		    << "Setting priority to " << f->pri << "." << endl;
-      _pri = f->pri;
-    }
-  }
-
   _state = s;
 }
 
@@ -209,6 +185,16 @@ int VC::GetOutputPort( ) const
 int VC::GetOutputVC( ) const
 {
   return _out_vc;
+}
+
+void VC::UpdatePriority()
+{
+  if(_buffer.empty()) return;
+  Flit * f = _buffer.front();
+  if(f->watch)
+    *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		<< "Setting priority to " << f->pri << "." << endl;
+  _pri = f->pri;
 }
 
 int VC::GetPriority( ) const
