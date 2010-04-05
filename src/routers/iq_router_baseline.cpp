@@ -394,8 +394,7 @@ void IQRouterBaseline::_SWAlloc( )
 		  int vc_prio;
 		  int out_vc = route_set->GetVC(output, vc_index, &vc_prio);
 		  if(!do_request && 
-		     ((_speculative < 3) || dest_vc->IsAvailableFor(out_vc)) &&
-		     ((_speculative < 4) || !dest_vc->IsFullFor(out_vc))) {
+		     ((_speculative < 3) || dest_vc->IsAvailableFor(out_vc))) {
 		    do_request = true;
 		    break;
 		  }

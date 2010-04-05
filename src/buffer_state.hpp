@@ -39,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class BufferState : public Module {
 
   int  _wait_for_tail_credit;
+  int  _vc_busy_when_full;
   int  _buf_size;
   int  _vcs;
 

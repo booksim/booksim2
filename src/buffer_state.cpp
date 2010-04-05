@@ -61,6 +61,7 @@ void BufferState::_Init( const Configuration& config )
   _vcs          = config.GetInt( "num_vcs" );
   
   _wait_for_tail_credit = config.GetInt( "wait_for_tail_credit" );
+  _vc_busy_when_full = config.GetInt( "vc_busy_when_full" );
 
   _in_use       = new bool [_vcs];
   _tail_sent    = new bool [_vcs];
@@ -184,7 +185,7 @@ bool BufferState::IsAvailableFor( int vc ) const
 {
  
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
-  return !_in_use[vc];
+  return !_in_use[vc] && (!_vc_busy_when_full || !IsFullFor(vc));
 }
 
 int BufferState::FindAvailable( Flit::FlitType type )
