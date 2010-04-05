@@ -82,8 +82,6 @@ void VC::_Init( const Configuration& config, int outputs )
 
   _route_set = new OutputSet( outputs );
 
-  _occupied_cnt = 0;
-
   _total_cycles    = 0;
   _vc_alloc_cycles = 0;
   _active_cycles   = 0;
@@ -187,7 +185,6 @@ void VC::SetState( eVCState s )
 		    << "Setting priority to " << f->pri << "." << endl;
       _pri = f->pri;
     }
-    _occupied_cnt++;
   }
 
   _state = s;

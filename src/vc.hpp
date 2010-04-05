@@ -60,8 +60,6 @@ private:
   OutputSet *_route_set;
   int _out_port, _out_vc;
 
-  int _occupied_cnt;
-
   int _total_cycles;
   int _vc_alloc_cycles;
   int _active_cycles;
