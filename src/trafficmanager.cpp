@@ -798,7 +798,7 @@ void TrafficManager::_BatchInject(){
         f = _partial_packets[input][highest_class][i].front( );
         if ( f->head && f->vc == -1) { // Find first available VC
 
-	  f->vc = _buf_states[input][i]->FindAvailable( );
+	  f->vc = _buf_states[input][i]->FindAvailable( f->type );
 	  if ( f->vc != -1 ) {
 	    _buf_states[input][i]->TakeBuffer( f->vc );
 	  }
@@ -902,7 +902,7 @@ void TrafficManager::_NormalInject(){
 	      f->vc = f->dest;
   	    }
 	  } else {
-	    f->vc = _buf_states[input][i]->FindAvailable( );
+	    f->vc = _buf_states[input][i]->FindAvailable( f->type );
 	  }
 	  
 	  if ( f->vc != -1 ) {

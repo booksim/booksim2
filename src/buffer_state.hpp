@@ -42,14 +42,13 @@ class BufferState : public Module {
   int  _buf_size;
   int  _vcs;
 
-  int  _last_avail;
-
   bool *_in_use;
   bool *_tail_sent;
   int  *_cur_occupied;
 
   int  _vc_range_begin[Flit::NUM_FLIT_TYPES];
-  int  _vc_range_end[Flit::NUM_FLIT_TYPES];
+  int  _vc_range_size[Flit::NUM_FLIT_TYPES];
+  int  _vc_sel_last[Flit::NUM_FLIT_TYPES];
 
 public:
   BufferState( ) { };
@@ -68,8 +67,7 @@ public:
   bool IsFullFor( int vc = 0 ) const;
   bool IsAvailableFor( int vc = 0 ) const;
 
-  int FindAvailable( );
-  int FindAvailable( Flit::FlitType type );
+  int FindAvailable( Flit::FlitType type = Flit::ANY_TYPE );
   int Size (int vc = 0) const;
   void Display( ) const;
 };

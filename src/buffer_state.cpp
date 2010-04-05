@@ -66,8 +66,6 @@ void BufferState::_Init( const Configuration& config )
   _tail_sent    = new bool [_vcs];
   _cur_occupied = new int  [_vcs];
 
-  _last_avail   = 0;
-
   for ( int v = 0; v < _vcs; ++v ) {
     _in_use[v]       = false;
     _tail_sent[v]    = false;
@@ -79,27 +77,35 @@ void BufferState::_Init( const Configuration& config )
    */
   _vc_range_begin[Flit::READ_REQUEST] 
     = config.GetInt( "read_request_begin_vc" );
-  _vc_range_end[Flit::READ_REQUEST] 
+  _vc_sel_last[Flit::READ_REQUEST]
     = config.GetInt( "read_request_end_vc" );
-  
+  _vc_range_size[Flit::READ_REQUEST] 
+    = _vc_sel_last[Flit::READ_REQUEST] - _vc_range_begin[Flit::READ_REQUEST] + 1;
+
   _vc_range_begin[Flit::WRITE_REQUEST] 
     = config.GetInt( "write_request_begin_vc" );
-  _vc_range_end[Flit::WRITE_REQUEST] 
+  _vc_sel_last[Flit::WRITE_REQUEST]
     = config.GetInt( "write_request_end_vc" );
-  
+  _vc_range_size[Flit::WRITE_REQUEST] 
+    = _vc_sel_last[Flit::WRITE_REQUEST] - _vc_range_begin[Flit::WRITE_REQUEST] + 1;
+
   _vc_range_begin[Flit::READ_REPLY] 
     = config.GetInt( "read_reply_begin_vc" );
-  _vc_range_end[Flit::READ_REPLY] 
+  _vc_sel_last[Flit::READ_REPLY]
     = config.GetInt( "read_reply_end_vc" );
-  
+  _vc_range_size[Flit::READ_REPLY] 
+    = _vc_sel_last[Flit::READ_REPLY] - _vc_range_begin[Flit::READ_REPLY] + 1;
+
   _vc_range_begin[Flit::WRITE_REPLY] 
     = config.GetInt( "write_reply_begin_vc" );
-  _vc_range_end[Flit::WRITE_REPLY] 
+  _vc_sel_last[Flit::WRITE_REPLY]
     = config.GetInt( "write_reply_end_vc" );
-  
+  _vc_range_size[Flit::WRITE_REPLY] 
+    = _vc_sel_last[Flit::WRITE_REPLY] - _vc_range_begin[Flit::WRITE_REPLY] + 1;
+
   _vc_range_begin[Flit::ANY_TYPE] = 0 ;
-  _vc_range_end[Flit::ANY_TYPE]   = _vcs - 1 ;
-  
+  _vc_range_size[Flit::ANY_TYPE]   = _vcs ;
+  _vc_sel_last[Flit::ANY_TYPE] = _vcs - 1 ;
 }
 
 BufferState::~BufferState( )
@@ -171,7 +177,7 @@ void BufferState::TakeBuffer( int vc )
 bool BufferState::IsFullFor( int vc  ) const
 {
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
-  return ( _cur_occupied[vc] == _buf_size ) ? true : false;
+  return _cur_occupied[vc] == _buf_size;
 }
 
 bool BufferState::IsAvailableFor( int vc ) const
@@ -181,39 +187,17 @@ bool BufferState::IsAvailableFor( int vc ) const
   return !_in_use[vc];
 }
 
-int BufferState::FindAvailable( )
-{
-  int available_vc = -1;
-  int vc;
-
-  _last_avail = RandomInt( _vcs - 1 );
-
-  for ( int v = 0; v < _vcs; ++v ) {
-    vc = ( v + _last_avail + 1 ) % _vcs; // Round-robin
-
-    if ( IsAvailableFor( vc ) ) {
-      available_vc = vc;
-      _last_avail  = vc;
-      break;
-    }
-  }
-
-  return available_vc;
-}
-
 int BufferState::FindAvailable( Flit::FlitType type )
 {
-  int available_vc = -1;
-  int vc = -1;
-
-  for (vc = _vc_range_begin[type]; vc <= _vc_range_end[type]; vc++) {
-    if ( IsAvailableFor(vc) ){
-      available_vc = vc;
-      break;
+  for (int v = 1; v <= _vc_range_size[type]; ++v) {
+    int vc = _vc_range_begin[type] + (_vc_sel_last[type] + v) % _vc_range_size[type];
+    if ( IsAvailableFor(vc) ) {
+      _vc_sel_last[type] = vc;
+      return vc;
     }
   }
 
-  return available_vc;
+  return -1;
 }
 
 int BufferState::Size(int vc) const{
@@ -234,6 +218,6 @@ void BufferState::Display( ) const
 
   for ( int f = 0; f < Flit::NUM_FLIT_TYPES; ++f) {
     cout << "vc_range[" << f << "] = [" << _vc_range_begin[f] 
-	 << "," <<  _vc_range_end[f] << "]" << endl;
+	 << "," <<  _vc_range_begin[f] + _vc_range_size[f] - 1 << "]" << endl;
   }
 }
