@@ -1155,7 +1155,8 @@ bool TrafficManager::_SingleSim( )
 
   } else if(_sim_mode == batch && !_timed_mode){//batch mode   
     _sim_state = running;
-    while(_packets_sent[0] < _batch_size){
+    int min_packets_sent = 0;
+    while(min_packets_sent < _batch_size){
       _Step();
       if ( _time % 1000 == 0 ) {
 	cout << _sim_state << endl;
@@ -1170,6 +1171,10 @@ bool TrafficManager::_SingleSim( )
 	*_stats_out << "lat_hist(" << total_phases + 1 << ",:) = "
 		    << (string)*_latency_stats[0] << ";" << endl;
       }
+      min_packets_sent = _packets_sent[0];
+      for(int i = 1; i < _sources; ++i)
+	if(_packets_sent[i] < min_packets_sent)
+	  min_packets_sent = _packets_sent[i]; 
     }
     cout << "batch size of "<<_batch_size  <<  " sent. Time used is " << _time << " cycles" <<endl;
     cout << "Draining the Network...................\n";
