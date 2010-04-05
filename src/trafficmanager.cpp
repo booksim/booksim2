@@ -1212,7 +1212,12 @@ bool TrafficManager::_SingleSim( )
       }
     }
     *_stats_out << "];" << endl;
-    *_stats_out << "thru(" << total_phases + 1 << ",:) = [ ";
+    *_stats_out << "sent(" << total_phases + 1 << ",:) = [ ";
+    for ( int d = 0; d < _dests; ++d ) {
+      *_stats_out << _sent_flits[d]->Average( ) << " ";
+    }
+    *_stats_out << "];" << endl;
+    *_stats_out << "accepted(" << total_phases + 1 << ",:) = [ ";
     for ( int d = 0; d < _dests; ++d ) {
       *_stats_out << _accepted_flits[d]->Average( ) << " ";
     }
@@ -1261,7 +1266,12 @@ bool TrafficManager::_SingleSim( )
 	}
       }
       *_stats_out << "];" << endl;
-      *_stats_out << "thru(" << total_phases + 1 << ",:) = [ ";
+      *_stats_out << "sent(" << total_phases + 1 << ",:) = [ ";
+      for ( int d = 0; d < _dests; ++d ) {
+	*_stats_out << _sent_flits[d]->Average( ) << " ";
+      }
+      *_stats_out << "];" << endl;
+      *_stats_out << "accepted(" << total_phases + 1 << ",:) = [ ";
       for ( int d = 0; d < _dests; ++d ) {
 	*_stats_out << _accepted_flits[d]->Average( ) << " ";
       }
