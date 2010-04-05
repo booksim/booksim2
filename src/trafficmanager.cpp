@@ -1183,6 +1183,36 @@ bool TrafficManager::_SingleSim( )
     }
     cout << endl;
     cout << "batch size of "<<_batch_size  <<  " received. Time used is " << _time << " cycles" <<endl;
+    cout << _sim_state << endl;
+    *_stats_out << "%=================================" << endl;
+    double cur_latency = _latency_stats[0]->Average( );
+    double min, avg;
+    int dmin = _ComputeStats( _accepted_flits, &avg, &min );
+    
+    cout << "Average latency = " << cur_latency << endl;
+    cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
+    *_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl;
+    *_stats_out << "lat_hist(" << total_phases + 1 << ",:) = "
+		<< (string)*_latency_stats[0] << ";" << endl;
+    *_stats_out << "pair_sent(" << total_phases + 1 << ",:) = [ ";
+    for(int i = 0; i < _sources; ++i) {
+      for(int j = 0; j < _dests; ++j) {
+	*_stats_out << _pair_latency[i*_dests+j]->NumSamples( ) << " ";
+      }
+    }
+    *_stats_out << "];" << endl;
+    *_stats_out << "pair_lat(" << total_phases + 1 << ",:) = [ ";
+    for(int i = 0; i < _sources; ++i) {
+      for(int j = 0; j < _dests; ++j) {
+	*_stats_out << _pair_latency[i*_dests+j]->Average( ) << " ";
+      }
+    }
+    *_stats_out << "];" << endl;
+    *_stats_out << "thru(" << total_phases + 1 << ",:) = [ ";
+    for ( int d = 0; d < _dests; ++d ) {
+      *_stats_out << _accepted_flits[d]->Average( ) << " ";
+    }
+    *_stats_out << "];" << endl;
     converged = 1;
   } else { 
     //once warmed up, we require 3 converging runs
