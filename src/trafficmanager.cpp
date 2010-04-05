@@ -212,6 +212,8 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _vc_grant_spec = new Stats(this, "vc_grant_spec", 1.0, num_vcs+1);
   _stats["vc_grant_spec"] = _vc_grant_spec;
   
+  _slowest_flit = new int [_classes];
+
   // ============ Simulation parameters ============ 
 
   if(config.GetInt( "injection_rate_uses_flits" )) {
@@ -333,6 +335,8 @@ TrafficManager::~TrafficManager( )
   delete [] _sent_flits;
   delete [] _accepted_flits;
   delete [] _pair_latency;
+  delete [] _slowest_flit;
+
   delete [] _partial_internal_cycles;
 
   delete _vc_ready_nonspec;
@@ -475,10 +479,16 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
       switch( _pri_type ) {
       case class_based:
+	if((_slowest_flit[f->pri] < 0) ||
+	   (_latency_stats[f->pri]->Max() < (_time - f->time)))
+	  _slowest_flit[f->pri] = f->id;
 	_latency_stats[f->pri]->AddSample( _time - f->time );
 	break;
       case age_based: // fall through
       case none:
+	if((_slowest_flit[0] < 0) ||
+	   (_latency_stats[0]->Max() < (_time - f->time)))
+	   _slowest_flit[0] = f->id;
 	_latency_stats[0]->AddSample( _time - f->time);
 	break;
       }
@@ -1025,6 +1035,7 @@ void TrafficManager::_ClearStats( )
 {
   for ( int c = 0; c < _classes; ++c ) {
     _latency_stats[c]->Clear( );
+    _slowest_flit[c] = -1;
   }
   
   for ( int i = 0; i < _sources; ++i ) {
@@ -1479,6 +1490,7 @@ void TrafficManager::DisplayStats() {
     cout << "Overall min accepted rate = " << _overall_accepted_min->Average( )
 	 << " (" << _overall_accepted_min->NumSamples( ) << " samples)" << endl;
     
+    cout << "Slowest flit = " << _slowest_flit[c] << endl;
   }
 
   cout << "Average hops = " << _hop_stats->Average( )
