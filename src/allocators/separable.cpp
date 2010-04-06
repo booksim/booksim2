@@ -165,9 +165,10 @@ void SeparableAllocator::PrintRequests( ostream * os ) const {
     *os << input << " -> [ ";
     while ( it != end ) {
       const sRequest& req = *it ;
-      *os << "(l:" << req.label
-	   << ",o:" << req.port
-	   << ",p:" << req.in_pri
+      *os << "(lbl:" << req.label
+	   << ",out:" << req.port
+	   << ",ipr:" << req.in_pri
+	   << ",opr:" << req.out_pri
 	   << ") ";
       it++ ;
     }
