@@ -518,7 +518,6 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   int dest  = flatfly_transformation(f->dest);
 
   int rID =  r->GetID();
-  int _radix = gK;
   int _concentration = gC;
   int out_port;
   int found;
@@ -720,8 +719,6 @@ int find_distance (int src, int dest) {
 // UGAL : find random node for load balancing
 //=============================================================^M
 int find_ran_intm (int src, int dest) {
-  int _radix = gK;
-  int _concentration = gC;
   int _dim   = gN;
   int _dim_size;
   int _ran_dest = 0;

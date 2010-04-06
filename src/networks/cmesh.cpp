@@ -361,7 +361,6 @@ void CMesh::_BuildNet( const Configuration& config ) {
 
 int CMesh::NodeToRouter( int address ) {
 
-  const int mask   =  gK - 1 ;
   int y  = (address /  (_cX*gK))/_cY ;
   int x  = (address %  (_cX*gK))/_cY ;
   int router = y*gK + x ;
@@ -502,7 +501,6 @@ int cmesh_yx( int cur, int dest ) {
 void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel, 
 		  OutputSet *outputs, bool inject )
 {
-  int vc_max = gNumVCS;
 
   // Destination Router, Destination Port
   int dest_router = CMesh::NodeToRouter( f->dest ) ;  
@@ -664,7 +662,6 @@ int cmesh_yx_no_express( int cur, int dest ) {
 void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel, 
 			     OutputSet *outputs, bool inject )
 {
-  int vc_max = gNumVCS;
 
   // Destination Router, Destination Port
   int dest_router = CMesh::NodeToRouter( f->dest );  
@@ -816,7 +813,6 @@ int cmesh_next( int cur, int dest ) {
 void dor_cmesh( const Router *r, const Flit *f, int in_channel, 
 		OutputSet *outputs, bool inject )
 {
-  int vc_max = gNumVCS;
 
   // Destination Router, Destination Port
   int dest_router = CMesh::NodeToRouter( f->dest ) ;  
@@ -885,7 +881,6 @@ void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
 			   OutputSet *outputs, bool inject )
 {
  
-  int vc_max = gNumVCS;
   // Destination Router, Destination Port
   int dest_router = CMesh::NodeToRouter( f->dest ) ;  
   int dest_port   = CMesh::NodeToPort( f->dest );

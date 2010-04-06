@@ -107,10 +107,6 @@ void CMO::_BuildNet( const Configuration &config )
   int cross_output;
   int slice_output;
 
-
-  int  _wire_delay1 =1;
-  int  _wire_delay2 =2;
-  int  _wire_delay3 =2;
   int  _wire_delay4 =4;
 
   ostringstream router_name;

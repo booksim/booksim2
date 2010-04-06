@@ -53,16 +53,6 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   _vcs         = config.GetInt( "num_vcs" );
   _vc_size     = config.GetInt( "vc_buf_size" );
 
-  int partition_vcs = config.GetInt("partition_vcs") ;
-  int rqb_vc = config.GetInt("read_request_begin_vc");
-  int rqe_vc = config.GetInt("read_request_end_vc");    
-  int rrb_vc = config.GetInt("read_reply_begin_vc");    
-  int rre_vc = config.GetInt("read_reply_end_vc");      
-  int wqb_vc = config.GetInt("write_request_begin_vc"); 
-  int wqe_vc = config.GetInt("write_request_end_vc");   
-  int wrb_vc = config.GetInt("write_reply_begin_vc");   
-  int wre_vc = config.GetInt("write_reply_end_vc");     
-  
   _routing_delay    = config.GetInt( "routing_delay" );
   _vc_alloc_delay   = config.GetInt( "vc_alloc_delay" );
   _sw_alloc_delay   = config.GetInt( "sw_alloc_delay" );
@@ -394,7 +384,6 @@ int IQRouterBase::GetCredit(int out, int vc_begin, int vc_end ) const
 
   BufferState *dest_vc;
   int    tmpsum = 0;
-  int    vc_cnt = vc_end - vc_begin + 1;
   int cnt = 0;
   
   if (out >= _outputs ) {

@@ -206,15 +206,6 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
 void DragonFlyNew::_BuildNet( const Configuration &config )
 {
 
-  int left_node;
-  int right_node;
-
-  int right_input;
-  int left_input;
-
-  int right_output;
-  int left_output;
-
   int _output;
   int _input;
   int c;
@@ -381,12 +372,9 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
 
 
     // add INPUT channels -- "optical" channels connecting the groups
-    int dim = _n-1;
-    int grp_size_nodes;
     int grp_size_routers;
     int grp_output;
     int grp_ID2;
-    int offset;
 
     for ( int cnt = 0; cnt < _p; ++cnt ) {
       //	   _dim_ID

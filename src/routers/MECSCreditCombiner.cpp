@@ -46,8 +46,6 @@ MECSCreditCombiner::MECSCreditCombiner(Module* parent, string name, int dir, int
 }
 
 void MECSCreditCombiner::ReadInputs(){
-  int time = -1;
-  int location = -1;
   Credit *c = 0;
 
   //prevent circle around

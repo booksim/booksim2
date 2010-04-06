@@ -159,7 +159,6 @@ void Tree4::_BuildNet( const Configuration& config )
 
       pp = pos;
       pc = _k * ( pos / 2 ) + port;
-      int L = _WireLatency( 1, pp, 2, pc );
       
       // cout << "connecting (1,"<<pp<<") <-> (2,"<<pc<<")"<<endl;
 
@@ -192,8 +191,6 @@ void Tree4::_BuildNet( const Configuration& config )
     for ( int port = 0; port < 2 * _k; ++port ) {
       pp = pos;
       pc = port;
-
-      int L = _WireLatency( 0, pp, 1, pc );
 
       // cout << "connecting (0,"<<pp<<") <-> (1,"<<pc<<")"<<endl;
 

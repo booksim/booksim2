@@ -180,7 +180,7 @@ void FatTree::_BuildNet( const Configuration& config )
   }
 
 
-  int c= 0, childPos;
+  int c = 0;
   fatness_factor = _k; // Because we do not start from the very bottom level.
   for (short depth = _n - 2; depth >= 0; --depth) // Connections between levels. The bottom level has their injection/ejection channels taken care of.
   {

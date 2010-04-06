@@ -70,7 +70,6 @@ void KNFly::_BuildNet( const Configuration &config )
 
   int node = 0;
   int c;
-  int channelDelay = 0;
 
   for ( int stage = 0; stage < _n; ++stage ) {
     for ( int addr = 0; addr < per_stage; ++addr ) {

@@ -139,7 +139,6 @@ void MECS::_BuildNet( const Configuration &config ) {
     //assume inject, eject latency of 1
     for (int y = 0; y < yrouter ; y++) {
       for (int x = 0; x < xrouter ; x++) {
-	int ileng = 1;
 	//adopted from the CMESH, the first node has 0,1,8,9 (as an example)
 	int link = (xcount * xrouter) * (yrouter * y_index + y) + (xrouter * x_index + x) ;
 	//	_inject[link].SetLatency(ileng);
@@ -193,7 +192,6 @@ void MECS::_BuildNet( const Configuration &config ) {
     cout<<"==============Router "<<node<<"===================\n";
 #endif
     int link = -1;
-    int latency = 2; //all links has the same latency
     int x_location = -1; //where the router is ... 0,0 is northwest
     int y_location = -1;
     x_location = node%gK;

@@ -388,15 +388,9 @@ double Power_Module::powerCrossbarCtrl(double width, double inputs, double outpu
 
   // wires
   double CwIn  = Wxbar * Cw ;
-  double CwOut = Hxbar * Cw ;
-
-  // cross-points
-  double Cxi = (5.0/16.0) * CwOut ;
-  double Cxo = Cxi * (Co_delay/Ci_delay) ;
 
   // drivers
   double Cti  = (5.0/16.0) * CwIn ;
-  double Cto  = Cti * (Co_delay/Ci_delay) ;
 
   // need some estimate of how many control wires are required
   double Cctrl  = width * Cti + (Wxbar + Hxbar) * Cw  ; 

@@ -1327,8 +1327,6 @@ void valiant_ni_torus( const Router *r, const Flit *f, int in_channel,
 {
   int out_port;
   int vc_min, vc_max;
-  int vcs_per_dest  = gNumVCS / (gNodes);
-  int vcs_per_dest2 = gNumVCS / (2*gNodes);
 
   outputs->Clear( );
 
