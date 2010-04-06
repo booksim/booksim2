@@ -89,6 +89,7 @@ void VC::_Init( const Configuration& config, int outputs )
   _routing_cycles     = 0;
 
   _pri = 0;
+  _priority_donation = config.GetInt("vc_priority_donation");
 
   _out_port = 0 ;
   _out_vc = 0 ;
@@ -99,7 +100,7 @@ void VC::_Init( const Configuration& config, int outputs )
 bool VC::AddFlit( Flit *f )
 {
   if((int)_buffer.size() >= _size) return false;
-  _buffer.push(f);
+  _buffer.push_back(f);
   UpdatePriority();
   return true;
 }
@@ -114,7 +115,7 @@ Flit *VC::RemoveFlit( )
   Flit *f = NULL;
   if ( !_buffer.empty( ) ) {
     f = _buffer.front( );
-    _buffer.pop( );
+    _buffer.pop_front( );
     UpdatePriority();
   }
   return f;
@@ -191,9 +192,25 @@ void VC::UpdatePriority()
 {
   if(_buffer.empty()) return;
   Flit * f = _buffer.front();
+  if(_priority_donation) {
+    Flit * df = f;
+    for(int i = 1; i < _buffer.size(); ++i) {
+      Flit * bf = _buffer[i];
+      if(bf->pri > df->pri) df = bf;
+    }
+    if((df != f) && (df->watch || f->watch)) {
+      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+		  << "Flit " << df->id
+		  << " donates priority to flit " << f->id
+		  << "." << endl;
+    }
+    f = df;
+  }
   if(f->watch)
     *_watch_out << GetSimTime() << " | " << FullName() << " | "
-		<< "Setting priority to " << f->pri << "." << endl;
+		<< "Flit " << f->id
+		<< " sets priority to " << f->pri
+		<< "." << endl;
   _pri = f->pri;
 }
 

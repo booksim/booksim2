@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _VC_HPP_
 #define _VC_HPP_
 
-#include <queue>
+#include <deque>
 
 #include "flit.hpp"
 #include "outputset.hpp"
@@ -52,7 +52,7 @@ public:
 private:
   int _size;
 
-  queue<Flit *> _buffer;
+  deque<Flit *> _buffer;
   
   eVCState _state;
   int      _state_time;
@@ -71,6 +71,8 @@ private:
   static int occupancy;
   
   int _pri;
+
+  int _priority_donation;
 
   bool _watched;
 
