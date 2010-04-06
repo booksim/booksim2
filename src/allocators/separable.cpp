@@ -107,23 +107,21 @@ bool SeparableAllocator::ReadRequest( sRequest &req, int in, int out ) const {
   assert( ( in >= 0 ) && ( in < _inputs ) &&
 	  ( out >= 0 ) && ( out < _outputs ) );
 
-  // Only those requests with non-negative priorities should be
-  // returned to supress failing speculative allocations. This is
-  // a bit of a hack, but is necessary because the router pipeline
-  // queuries the results of the allocation through the requests
-  int max_pri = -1 ;
+  const sRequest * sreq = NULL;
 
   list<sRequest>::const_iterator match = _requests[in].begin() ;
-
   while ( match != _requests[in].end() ) {
-    if ( match->port == out && match->in_pri > max_pri ) {
-      req = *match ;
-      max_pri = req.in_pri ;
+    if ( ( match->port == out ) && ( !sreq || ( match->in_pri > sreq->in_pri ) ) ) {
+      sreq = &(*match) ;
     }
     match++ ;
   }
 
-  return ( max_pri > -1 ) ;
+  if(sreq) {
+    req = *sreq;
+    return true;
+  }
+  return false ;
 
 }
 
