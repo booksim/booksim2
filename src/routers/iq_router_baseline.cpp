@@ -486,6 +486,7 @@ void IQRouterBaseline::_SWAlloc( )
 	assert(_switch_hold_in[expanded_input] >= 0);
 	expanded_output = _switch_hold_in[expanded_input];
 	vc = _switch_hold_vc[expanded_input];
+	assert(vc >= 0);
 	cur_vc = &_vc[input][vc];
 	
 	if ( cur_vc->Empty( ) ) { // Cancel held match if VC is empty
@@ -496,6 +497,8 @@ void IQRouterBaseline::_SWAlloc( )
 	if ( ( _speculative >= 2 ) && ( expanded_output < 0 ) ) {
 	  expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
 	  if ( expanded_output >= 0 ) {
+	    assert(_spec_sw_allocator->InputAssigned(expanded_output) >= 0);
+	    assert(_spec_sw_allocator->ReadRequest(expanded_input, expanded_output) >= 0);
 	    switch ( _filter_spec_grants ) {
 	    case 0:
 	      if ( any_nonspec_reqs )
@@ -522,11 +525,16 @@ void IQRouterBaseline::_SWAlloc( )
 
 	if ( _switch_hold_in[expanded_input] == -1 ) {
 	  if(use_spec_grant) {
+	    assert(_spec_sw_allocator->OutputAssigned(expanded_input) >= 0);
+	    assert(_spec_sw_allocator->InputAssigned(expanded_output) >= 0);
 	    vc = _spec_sw_allocator->ReadRequest(expanded_input, 
 						 expanded_output);
 	  } else {
+	    assert(_sw_allocator->OutputAssigned(expanded_input) >= 0);
+	    assert(_sw_allocator->InputAssigned(expanded_output) >= 0);
 	    vc = _sw_allocator->ReadRequest(expanded_input, expanded_output);
 	  }
+	  assert(vc >= 0);
 	  cur_vc = &_vc[input][vc];
 	}
 
