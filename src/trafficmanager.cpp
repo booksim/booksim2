@@ -714,7 +714,8 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       *_watch_out << GetSimTime() << " | "
 		  << "node" << source << " | "
 		  << "Enqueuing flit " << f->id
-		  << " at time " << time
+		  << " (packet " << f->pid
+		  << ") at time " << time
 		  << "." << endl;
     }
 
