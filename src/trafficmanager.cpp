@@ -1052,6 +1052,8 @@ void TrafficManager::_ClearStats( )
     _accepted_flits[i]->Clear( );
   }
   
+  _hop_stats->Clear();
+
   _vc_ready_nonspec->Clear();
   _vc_ready_spec->Clear();
   _vc_grant_nonspec->Clear();
