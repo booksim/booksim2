@@ -276,10 +276,18 @@ int main( int argc, char **argv )
     cout << "END Configuration File" << endl;
   }
   
+  string sim_type;
+  config.GetStr("sim_type", sim_type);
   if(argc > 2) {
-    double inj_rate = atof(argv[2]);
-    cout << "% Overriding injection rate: " << inj_rate << endl;
-    config.Assign("injection_rate", inj_rate);
+    if(sim_type == "latency") {
+      double inj_rate = atof(argv[2]);
+      cout << "Overriding injection rate: " << inj_rate << endl;
+      config.Assign("injection_rate", inj_rate);
+    } else if(sim_type == "batch") {
+      unsigned int batch_size = atoi(argv[2]);
+      cout << "Overriding batch size: " << batch_size << endl;
+      config.Assign("batch_size", batch_size);
+    }
   }
   
   /*initialize routing, traffic, injection functions
