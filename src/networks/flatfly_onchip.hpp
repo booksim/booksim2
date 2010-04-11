@@ -72,9 +72,14 @@ public:
   static short half_vcs;
 };
 
-
+void xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
+		  OutputSet *outputs, bool inject );
 void min_flatfly( const Router *r, const Flit *f, int in_channel, 
 		  OutputSet *outputs, bool inject );
+void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
+			  OutputSet *outputs, bool inject );
+void ugal_dqdt_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
+			  OutputSet *outputs, bool inject );
 void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 			  OutputSet *outputs, bool inject );
 void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
@@ -84,5 +89,5 @@ int find_ran_intm (int src, int dest);
 int flatfly_outport(int dest, int rID);
 int find_phy_distance(int src, int dest);
 int flatfly_transformation(int dest);
-
+int flatfly_outport_yx(int dest, int rID);
 #endif
