@@ -28,8 +28,8 @@
 
 
 
-FatTree::FatTree( const Configuration& config )
-  : Network( config )
+FatTree::FatTree( const Configuration& config,const string & name )
+  : Network( config ,name)
 {
   
 
