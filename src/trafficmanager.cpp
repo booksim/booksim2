@@ -74,6 +74,8 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     Error( "" );
   }
 
+  _replies_inherit_priority = config.GetInt("replies_inherit_priority");
+
   ostringstream tmp_name;
   
   // ============ Injection VC states  ============ 
@@ -737,7 +739,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     case class_based:
       f->pri = cl; break;
     case age_based:
-      f->pri = -time; break;
+      f->pri = _replies_inherit_priority ? -ttime : -time; break;
     case none:
       f->pri = 0; break;
     }

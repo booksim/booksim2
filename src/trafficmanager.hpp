@@ -99,6 +99,7 @@ protected:
   map<int,Packet_Reply*> _repliesDetails;
   int * _requestsOutstanding;
   int _maxOutstanding;
+  bool _replies_inherit_priority;
 
   // ============voq mode =============================
   list<Flit*> ** _voq;
