@@ -50,6 +50,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 struct Packet_Reply {
   int source;
   int time;
+  int ttime;
   Flit::FlitType type;
 };
 
@@ -110,7 +111,13 @@ protected:
   Stats **_overall_avg_latency;  
   Stats **_overall_max_latency;  
 
+  Stats **_tlat_stats;     
+  Stats **_overall_min_tlat;  
+  Stats **_overall_avg_tlat;  
+  Stats **_overall_max_tlat;  
+
   Stats **_pair_latency;
+  Stats **_pair_tlat;
   Stats *_hop_stats;
 
   Stats **_sent_flits;

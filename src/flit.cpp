@@ -46,8 +46,8 @@ ostream& operator<<( ostream& os, const Flit& f )
      << " Packet ID: " << f.pid
      << " Type: " << f.type 
      << " Head: " << f.head << " Tail: " << f.tail << endl;
-  os << "  Source : " << f.src << "  Dest : " << f.dest << " Intm: "<<f.intm<<endl;
-  os << "  Injection time : " << f.time <<" Phase: "<<f.ph<< endl;
+  os << "  Source: " << f.src << "  Dest: " << f.dest << " Intm: "<<f.intm<<endl;
+  os << "  Injection time: " << f.time << " Transaction start: " << f.ttime << " Phase: "<<f.ph<< endl;
   os << "  From router "<<f.from_router<< " VC: " << f.vc << endl;
   return os;
 }

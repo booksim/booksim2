@@ -148,6 +148,11 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _overall_avg_latency = new Stats * [_classes];
   _overall_max_latency = new Stats * [_classes];
 
+  _tlat_stats   = new Stats * [_classes];
+  _overall_min_tlat = new Stats * [_classes];
+  _overall_avg_tlat = new Stats * [_classes];
+  _overall_max_tlat = new Stats * [_classes];
+
   for ( int c = 0; c < _classes; ++c ) {
     tmp_name << "latency_stat_" << c;
     _latency_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
@@ -166,6 +171,24 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     _overall_max_latency[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _overall_max_latency[c];
     tmp_name.seekp( 0, ios::beg );  
+
+    tmp_name << "tlat_stat_" << c;
+    _tlat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _tlat_stats[c];
+    tmp_name.seekp( 0, ios::beg );
+
+    tmp_name << "overall_min_tlat_stat_" << c;
+    _overall_min_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _overall_min_tlat[c];
+    tmp_name.seekp( 0, ios::beg );  
+    tmp_name << "overall_avg_tlat_stat_" << c;
+    _overall_avg_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _overall_avg_tlat[c];
+    tmp_name.seekp( 0, ios::beg );  
+    tmp_name << "overall_max_tlat_stat_" << c;
+    _overall_max_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _overall_max_tlat[c];
+    tmp_name.seekp( 0, ios::beg );  
   }
 
   _hop_stats    = new Stats( this, "hop_stats", 1.0, 20 );
@@ -178,6 +201,7 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _stats["overall_min_acceptance"] = _overall_accepted_min;
   
   _pair_latency = new Stats * [_sources*_dests];
+  _pair_tlat = new Stats * [_sources*_dests];
   _sent_flits = new Stats * [_sources];
   _accepted_flits = new Stats * [_dests];
   
@@ -188,9 +212,14 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     tmp_name.seekp( 0, ios::beg );    
 
     for ( int j = 0; j < _dests; ++j ) {
-      tmp_name << "pair_stat_" << i << "_" << j;
+      tmp_name << "pair_latency_stat_" << i << "_" << j;
       _pair_latency[i*_dests+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
       _stats[tmp_name.str()] = _pair_latency[i*_dests+j];
+      tmp_name.seekp( 0, ios::beg );
+
+      tmp_name << "pair_tlat_stat_" << i << "_" << j;
+      _pair_tlat[i*_dests+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+      _stats[tmp_name.str()] = _pair_tlat[i*_dests+j];
       tmp_name.seekp( 0, ios::beg );
     }
   }
@@ -295,6 +324,11 @@ TrafficManager::~TrafficManager( )
     delete _overall_min_latency[c];
     delete _overall_avg_latency[c];
     delete _overall_max_latency[c];
+
+    delete _tlat_stats[c];
+    delete _overall_min_tlat[c];
+    delete _overall_avg_tlat[c];
+    delete _overall_max_tlat[c];
   }
   for (int i = 0; i < _duplicate_networks; ++i) {
     delete [] _class_array[i];
@@ -306,6 +340,11 @@ TrafficManager::~TrafficManager( )
   delete [] _overall_avg_latency;
   delete [] _overall_max_latency;
 
+  delete [] _tlat_stats;
+  delete [] _overall_min_tlat;
+  delete [] _overall_avg_tlat;
+  delete [] _overall_max_tlat;
+
   delete _hop_stats;
   delete _overall_accepted;
   delete _overall_accepted_min;
@@ -315,6 +354,7 @@ TrafficManager::~TrafficManager( )
 
     for ( int j = 0; j < _dests; ++j ) {
       delete _pair_latency[i*_dests+j];
+      delete _pair_tlat[i*_dests+j];
     }
   }
 
@@ -325,6 +365,7 @@ TrafficManager::~TrafficManager( )
   delete [] _sent_flits;
   delete [] _accepted_flits;
   delete [] _pair_latency;
+  delete [] _pair_tlat;
   delete [] _slowest_flit;
 
   delete [] _partial_internal_cycles;
@@ -420,6 +461,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 		<< "Retiring flit " << f->id 
 		<< " (packet " << f->pid
 		<< ", lat = " << _time - f->time
+		<< ", tlat = " << _time - f->ttime
 		<< ", src = " << f->src 
 		<< ", dest = " << f->dest
 		<< ")." << endl;
@@ -444,6 +486,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       Packet_Reply* temp = new Packet_Reply;
       temp->source = f->src;
       temp->time = _time;
+      temp->ttime = f->ttime;
       temp->type = f->type;
       _repliesDetails[f->id] = temp;
       _repliesPending[dest].push_back(f->id);
@@ -468,6 +511,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	   (_latency_stats[f->pri]->Max() < (_time - f->time)))
 	  _slowest_flit[f->pri] = f->id;
 	_latency_stats[f->pri]->AddSample( _time - f->time );
+	if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
+	  _tlat_stats[f->pri]->AddSample( _time - f->ttime );
 	break;
       case age_based: // fall through
       case none:
@@ -475,10 +520,16 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	   (_latency_stats[0]->Max() < (_time - f->time)))
 	   _slowest_flit[0] = f->id;
 	_latency_stats[0]->AddSample( _time - f->time);
+	if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
+	  _tlat_stats[0]->AddSample( _time - f->ttime );
 	break;
       }
    
       _pair_latency[f->src*_dests+dest]->AddSample( _time - f->time );
+      if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY)
+	_pair_tlat[dest*_dests+f->src]->AddSample( _time - f->ttime );
+      else if(f->type == Flit::ANY_TYPE)
+	_pair_tlat[f->src*_dests+dest]->AddSample( _time - f->ttime );
       
       if ( f->record ) {
 	map<int, Flit *>::iterator iter = _measured_in_flight_packets.find(f->pid);
@@ -578,6 +629,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 
   Flit::FlitType packet_type = Flit::ANY_TYPE;
   int size = gConstPacketSize; //input size 
+  int ttime = time;
   int packet_destination;
   if(_use_read_write){
     if(stype < 0) {
@@ -608,7 +660,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       }
       packet_destination = temp->source;
       time = temp->time;
-
+      ttime = temp->ttime;
       _repliesDetails.erase(iter);
       delete temp;
     }
@@ -652,6 +704,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     f->subnetwork = _sub_network;
     f->src    = source;
     f->time   = time;
+    f->ttime  = ttime;
     f->record = record;
     
     if(record) {
@@ -1023,6 +1076,7 @@ void TrafficManager::_ClearStats( )
 {
   for ( int c = 0; c < _classes; ++c ) {
     _latency_stats[c]->Clear( );
+    _tlat_stats[c]->Clear( );
     _slowest_flit[c] = -1;
   }
   
@@ -1031,6 +1085,7 @@ void TrafficManager::_ClearStats( )
 
     for ( int j = 0; j < _dests; ++j ) {
       _pair_latency[i*_dests+j]->Clear( );
+      _pair_tlat[i*_dests+j]->Clear( );
     }
   }
 
@@ -1213,6 +1268,13 @@ bool TrafficManager::_SingleSim( )
       }
     }
     *_stats_out << "];" << endl;
+    *_stats_out << "pair_tlat(" << total_phases + 1 << ",:) = [ ";
+    for(int i = 0; i < _sources; ++i) {
+      for(int j = 0; j < _dests; ++j) {
+	*_stats_out << _pair_tlat[i*_dests+j]->Average( ) << " ";
+      }
+    }
+    *_stats_out << "];" << endl;
     *_stats_out << "sent(" << total_phases + 1 << ",:) = [ ";
     for ( int d = 0; d < _dests; ++d ) {
       *_stats_out << _sent_flits[d]->Average( ) << " ";
@@ -1264,6 +1326,13 @@ bool TrafficManager::_SingleSim( )
       for(int i = 0; i < _sources; ++i) {
 	for(int j = 0; j < _dests; ++j) {
 	  *_stats_out << _pair_latency[i*_dests+j]->Average( ) << " ";
+	}
+      }
+      *_stats_out << "];" << endl;
+      *_stats_out << "pair_lat(" << total_phases + 1 << ",:) = [ ";
+      for(int i = 0; i < _sources; ++i) {
+	for(int j = 0; j < _dests; ++j) {
+	  *_stats_out << _pair_tlat[i*_dests+j]->Average( ) << " ";
 	}
       }
       *_stats_out << "];" << endl;
@@ -1414,6 +1483,9 @@ bool TrafficManager::Run( )
       _overall_min_latency[c]->AddSample( _latency_stats[c]->Min( ) );
       _overall_avg_latency[c]->AddSample( _latency_stats[c]->Average( ) );
       _overall_max_latency[c]->AddSample( _latency_stats[c]->Max( ) );
+      _overall_min_tlat[c]->AddSample( _tlat_stats[c]->Min( ) );
+      _overall_avg_tlat[c]->AddSample( _tlat_stats[c]->Average( ) );
+      _overall_max_tlat[c]->AddSample( _tlat_stats[c]->Max( ) );
     }
     
     double min, avg;
@@ -1450,6 +1522,9 @@ void TrafficManager::DisplayStats() {
 	   << "," << _overall_min_latency[c]->Average( )
 	   << "," << _overall_avg_latency[c]->Average( )
 	   << "," << _overall_max_latency[c]->Average( )
+	   << "," << _overall_min_tlat[c]->Average( )
+	   << "," << _overall_avg_tlat[c]->Average( )
+	   << "," << _overall_max_tlat[c]->Average( )
 	   << "," << _overall_accepted->Average( )
 	   << "," << _overall_accepted_min->Average( )
 	   << "," << _hop_stats->Average( )
@@ -1464,6 +1539,12 @@ void TrafficManager::DisplayStats() {
 	 << " (" << _overall_avg_latency[c]->NumSamples( ) << " samples)" << endl;
     cout << "Overall maximum latency = " << _overall_max_latency[c]->Average( )
 	 << " (" << _overall_max_latency[c]->NumSamples( ) << " samples)" << endl;
+    cout << "Overall minimum transaction latency = " << _overall_min_tlat[c]->Average( )
+	 << " (" << _overall_min_tlat[c]->NumSamples( ) << " samples)" << endl;
+    cout << "Overall average transaction latency = " << _overall_avg_tlat[c]->Average( )
+	 << " (" << _overall_avg_tlat[c]->NumSamples( ) << " samples)" << endl;
+    cout << "Overall maximum transaction latency = " << _overall_max_tlat[c]->Average( )
+	 << " (" << _overall_max_tlat[c]->NumSamples( ) << " samples)" << endl;
     
     cout << "Overall average accepted rate = " << _overall_accepted->Average( )
 	 << " (" << _overall_accepted->NumSamples( ) << " samples)" << endl;

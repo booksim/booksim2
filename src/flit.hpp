@@ -51,6 +51,7 @@ struct Flit {
   bool true_tail;
   
   int  time;
+  int  ttime;
 
   int  sn;
   int  rob_time;
