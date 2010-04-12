@@ -117,6 +117,11 @@ IQRouterBaseline::IQRouterBaseline( const Configuration& config,
     _sw_rr_offset[i] = 0;
   }
   
+  _vc_ready_nonspec_stats = GetStats("vc_ready_nonspec");
+  _vc_ready_spec_stats = GetStats("vc_ready_spec");
+  _vc_grant_nonspec_stats = GetStats("vc_grant_nonspec");
+  _vc_grant_spec_stats = GetStats("vc_grant_spec");
+
 }
 
 IQRouterBaseline::~IQRouterBaseline( )
@@ -443,8 +448,8 @@ void IQRouterBaseline::_SWAlloc( )
 	vc = ( vc + 1 ) % _vcs;
       }
     }
-    GetStats("vc_ready_nonspec")->AddSample(vc_ready_nonspec);
-    GetStats("vc_ready_spec")->AddSample(vc_ready_spec);
+    _vc_ready_nonspec_stats->AddSample(vc_ready_nonspec);
+    _vc_ready_spec_stats->AddSample(vc_ready_spec);
   }
   
   if(watched) {
@@ -653,7 +658,7 @@ void IQRouterBaseline::_SWAlloc( )
     }
     
     _credit_pipe->Write( c, input );
-    GetStats("vc_grant_nonspec")->AddSample(vc_grant_nonspec);
-    GetStats("vc_grant_spec")->AddSample(vc_grant_spec);
+    _vc_grant_nonspec_stats->AddSample(vc_grant_nonspec);
+    _vc_grant_spec_stats->AddSample(vc_grant_spec);
   }
 }

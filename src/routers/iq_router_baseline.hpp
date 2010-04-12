@@ -51,7 +51,12 @@ private:
   Allocator *_spec_sw_allocator;
   
   int *_sw_rr_offset;
-  
+
+  Stats * _vc_ready_nonspec_stats;
+  Stats * _vc_ready_spec_stats;
+  Stats * _vc_grant_nonspec_stats;
+  Stats * _vc_grant_spec_stats;
+
 protected:
 
   void _VCAlloc( );
