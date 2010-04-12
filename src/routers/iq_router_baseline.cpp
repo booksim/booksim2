@@ -37,7 +37,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "globals.hpp"
 #include "random_utils.hpp"
-#include "stats.hpp"
 #include "vc.hpp"
 #include "routefunc.hpp"
 #include "outputset.hpp"
@@ -117,11 +116,6 @@ IQRouterBaseline::IQRouterBaseline( const Configuration& config,
     _sw_rr_offset[i] = 0;
   }
   
-  _vc_ready_nonspec_stats = GetStats("vc_ready_nonspec");
-  _vc_ready_spec_stats = GetStats("vc_ready_spec");
-  _vc_grant_nonspec_stats = GetStats("vc_grant_nonspec");
-  _vc_grant_spec_stats = GetStats("vc_grant_spec");
-
 }
 
 IQRouterBaseline::~IQRouterBaseline( )
@@ -448,8 +442,6 @@ void IQRouterBaseline::_SWAlloc( )
 	vc = ( vc + 1 ) % _vcs;
       }
     }
-    _vc_ready_nonspec_stats->AddSample(vc_ready_nonspec);
-    _vc_ready_spec_stats->AddSample(vc_ready_spec);
   }
   
   if(watched) {
@@ -658,7 +650,5 @@ void IQRouterBaseline::_SWAlloc( )
     }
     
     _credit_pipe->Write( c, input );
-    _vc_grant_nonspec_stats->AddSample(vc_grant_nonspec);
-    _vc_grant_spec_stats->AddSample(vc_grant_spec);
   }
 }

@@ -118,11 +118,6 @@ protected:
   Stats *_overall_accepted;
   Stats *_overall_accepted_min;
   
-  Stats * _vc_ready_nonspec;
-  Stats * _vc_ready_spec;
-  Stats * _vc_grant_nonspec;
-  Stats * _vc_grant_spec;
-
   int * _slowest_flit;
 
   map<string, Stats *> _stats;

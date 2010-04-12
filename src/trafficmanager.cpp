@@ -203,14 +203,6 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   }
   
   int num_vcs = config.GetInt("num_vcs");
-  _vc_ready_nonspec = new Stats(this, "vc_ready_nonspec", 1.0, num_vcs+1);
-  _stats["vc_ready_nonspec"] = _vc_ready_nonspec;
-  _vc_ready_spec = new Stats(this, "vc_ready_spec", 1.0, num_vcs+1);
-  _stats["vc_ready_spec"] = _vc_ready_spec;
-  _vc_grant_nonspec = new Stats(this, "vc_grant_nonspec", 1.0, num_vcs+1);
-  _stats["vc_grant_nonspec"] = _vc_grant_nonspec;
-  _vc_grant_spec = new Stats(this, "vc_grant_spec", 1.0, num_vcs+1);
-  _stats["vc_grant_spec"] = _vc_grant_spec;
   
   _slowest_flit = new int [_classes];
 
@@ -338,11 +330,6 @@ TrafficManager::~TrafficManager( )
   delete [] _slowest_flit;
 
   delete [] _partial_internal_cycles;
-
-  delete _vc_ready_nonspec;
-  delete _vc_ready_spec;
-  delete _vc_grant_nonspec;
-  delete _vc_grant_spec;
 
 }
 
@@ -1055,11 +1042,6 @@ void TrafficManager::_ClearStats( )
   
   _hop_stats->Clear();
 
-  _vc_ready_nonspec->Clear();
-  _vc_ready_spec->Clear();
-  _vc_grant_nonspec->Clear();
-  _vc_grant_spec->Clear();
-  
 }
 
 int TrafficManager::_ComputeStats( Stats ** stats, double *avg, double *min ) const 
@@ -1473,10 +1455,6 @@ void TrafficManager::DisplayStats() {
 	   << "," << _overall_accepted->Average( )
 	   << "," << _overall_accepted_min->Average( )
 	   << "," << _hop_stats->Average( )
-	   << "," << _vc_ready_nonspec->Average()
-	   << "," << _vc_ready_spec->Average()
-	   << "," << _vc_grant_nonspec->Average()
-	   << "," << _vc_grant_spec->Average()
 	   << endl;
     }
 
@@ -1501,16 +1479,6 @@ void TrafficManager::DisplayStats() {
   cout << "Average hops = " << _hop_stats->Average( )
        << " (" << _hop_stats->NumSamples( ) << " samples)" << endl;
 
-  if(_print_vc_stats) {
-    cout << "VC ready (nonspec) = " << _vc_ready_nonspec->Average( )
-	 << " (" << _vc_ready_nonspec->NumSamples( ) << " samples)" << endl;
-    cout << "VC ready (spec) = " << _vc_ready_spec->Average( )
-	 << " (" << _vc_ready_spec->NumSamples( ) << " samples)" << endl;
-    cout << "VC grant (nonspec) = " << _vc_grant_nonspec->Average( )
-	 << " (" << _vc_grant_nonspec->NumSamples( ) << " samples)" << endl;
-    cout << "VC grant (spec) = " << _vc_grant_spec->Average( )
-	 << " (" << _vc_grant_spec->NumSamples( ) << " samples)" << endl;
-  }
 }
 
 //read the watchlist
