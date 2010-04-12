@@ -202,8 +202,6 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     tmp_name.seekp( 0, ios::beg );    
   }
   
-  int num_vcs = config.GetInt("num_vcs");
-  
   _slowest_flit = new int [_classes];
 
   // ============ Simulation parameters ============ 
