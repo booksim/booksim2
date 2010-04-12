@@ -75,9 +75,6 @@ struct Flit {
   mutable int intm;
   mutable int ph;
 
-  //reservation
-  mutable int delay;
-
   mutable int dr;
   mutable int minimal; // == 1 minimal routing, == 0, nonminimal routing
 
