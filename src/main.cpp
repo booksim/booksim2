@@ -258,36 +258,8 @@ int main( int argc, char **argv )
   BookSimConfig config;
 
   if ( !ParseArgs( &config, argc, argv ) ) {
-    cerr << "Usage: " << argv[0] << " configfile" << endl;
+    cerr << "Usage: " << argv[0] << " configfile... [param=value...]" << endl;
     return 0;
-  }
-  
-  /*print the configuration file at the begining of the reprot
-   */
-  if(config.GetInt("print_config_file")) {
-    ifstream in(argv[1]);
-    char c;
-    cout << "BEGIN Configuration File" << endl;
-    cout << "Name: " << argv[1] << endl;
-    while (!in.eof()) {
-      in.get(c);
-      cout << c ;
-    }
-    cout << "END Configuration File" << endl;
-  }
-  
-  string sim_type;
-  config.GetStr("sim_type", sim_type);
-  if(argc > 2) {
-    if(sim_type == "latency") {
-      double inj_rate = atof(argv[2]);
-      cout << "Overriding injection rate: " << inj_rate << endl;
-      config.Assign("injection_rate", inj_rate);
-    } else if(sim_type == "batch") {
-      unsigned int batch_size = atoi(argv[2]);
-      cout << "Overriding batch size: " << batch_size << endl;
-      config.Assign("batch_size", batch_size);
-    }
   }
   
   /*initialize routing, traffic, injection functions

@@ -226,7 +226,6 @@ BookSimConfig::BookSimConfig( )
   _int_map["print_activity"] = 0;
 
   _int_map["print_csv_results"] = 0;
-  _int_map["print_config_file"] = 1;
   _int_map["print_vc_stats"] = 0;
 
   _int_map["drain_measured_only"] = 0;

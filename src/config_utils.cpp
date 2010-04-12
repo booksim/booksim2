@@ -36,8 +36,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "booksim.hpp"
 #include <iostream>
-#include <stdlib.h>
 #include <cstring>
+#include <sstream>
+#include <fstream>
+#include <cstdlib>
 
 #include "config_utils.hpp"
 
@@ -189,9 +191,58 @@ bool ParseArgs( Configuration *cf, int argc, char **argv )
 {
   bool rc = false;
 
-  if ( argc > 1 ) {
-    cf->Parse( argv[1] );
-    rc = true;
+  for(int i = 1; i < argc; ++i) {
+    string arg(argv[i]);
+    size_t pos = arg.find('=');
+    if(pos == string::npos) {
+      // parse config file
+      ifstream in(argv[i]);
+      char c;
+      cout << "BEGIN Configuration File: " << argv[i] << endl;
+      while (!in.eof()) {
+	in.get(c);
+	cout << c ;
+      }
+      cout << "END Configuration File: " << argv[i] << endl;
+      cf->Parse( argv[i] );
+      rc = true;
+    } else {
+      // override individual parameter
+      string param(arg.substr(0, pos));
+      
+      // determine type
+      bool isint = true;
+      bool isfloat = true;
+      for(char * c = argv[i] + pos + 1; *c != '\0'; ++c) {
+	if(isalpha(*c) || (*c == '_')) {
+	  isint = false;
+	  isfloat = false;
+	} else if(*c == '.') {
+	  if(isfloat && !isint) {
+	    isfloat = false;
+	  }
+	  isint = false;
+	} else if(!isdigit(*c)) {
+	  cerr << "Parse error: " << arg << endl;
+	  exit(-1);
+	}
+      }
+      string value(arg.substr(pos + 1));
+      cout << "OVERRIDE Parameter: " << param << " = " << value << endl;
+      if(isint) {
+	istringstream ss(value);
+	unsigned int v;
+	ss >> v;
+	cf->Assign(param, v);
+      } else if(isfloat) {
+	istringstream ss(value);
+	double v;
+	ss >> v;
+	cf->Assign(param, v);
+      } else {
+	cf->Assign(param, value);
+      }
+    }
   }
 
   return rc;
