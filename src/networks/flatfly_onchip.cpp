@@ -337,11 +337,6 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
   outputs->Clear( );
   int dest  = flatfly_transformation(f->dest);
   int targetr= (int)(dest/gC);
-  int xdest = ((int)(dest/gC)) % gK;
-  int xcurr = ((r->GetID())) % gK;
-
-  int ydest = ((int)(dest/gC)) / gK;
-  int ycurr = ((r->GetID())) / gK;
   int out_port = -1;
 
 
@@ -619,7 +614,6 @@ void ugal_dqdt_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   int dest  = flatfly_transformation(f->dest);
 
   int rID =  r->GetID();
-  int _radix = gK;
   int _concentration = gC;
   int out_port;
   int found;
@@ -813,7 +807,6 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   int dest  = flatfly_transformation(f->dest);
 
   int rID =  r->GetID();
-  int _radix = gK;
   int _concentration = gC;
   int out_port;
   int found;
