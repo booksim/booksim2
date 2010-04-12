@@ -487,6 +487,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       temp->source = f->src;
       temp->time = _time;
       temp->ttime = f->ttime;
+      temp->record = f->record;
       temp->type = f->type;
       _repliesDetails[f->id] = temp;
       _repliesPending[dest].push_back(f->id);
@@ -631,6 +632,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   int size = gConstPacketSize; //input size 
   int ttime = time;
   int packet_destination;
+  bool record = false;
   if(_use_read_write){
     if(stype < 0) {
       if (stype ==-1) {
@@ -661,6 +663,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       packet_destination = temp->source;
       time = temp->time;
       ttime = temp->ttime;
+      record = temp->record;
       _repliesDetails.erase(iter);
       delete temp;
     }
@@ -678,7 +681,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     Error( "" );
   }
 
-  bool record = false;
   if ( ( _sim_state == running ) ||
        ( ( _sim_state == draining ) && ( time < _drain_time ) ) ) {
     record = true;

@@ -51,6 +51,7 @@ struct Packet_Reply {
   int source;
   int time;
   int ttime;
+  bool record;
   Flit::FlitType type;
 };
 
