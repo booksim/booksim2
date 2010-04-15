@@ -81,19 +81,16 @@ OBJS :=  $(LEX_OBJS) $(YACC_OBJS)\
  $(ROUTERS:routers/%.cpp=${OBJDIR}/%.o)
 
 .PHONY: clean
-.PRECIOUS: %_tab.cpp %_tab.hpp %lex.cpp
+
+$(PROG): $(OBJS)
+	 $(CPP) $(LFLAGS) $^ -o $@
 
 # rules to compile simulator
-${OBJDIR}/%lex.o: %lex.cpp %_tab.hpp
+${LEX_OBJS}: configlex.cpp config_tab.hpp
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
 ${OBJDIR}/%.o: %.cpp 
 	$(CPP) $(CPPFLAGS) -c $< -o $@
-
-${OBJDIR}/%.o: %.c
-
-$(PROG): $(OBJS)
-	 $(CPP) $(LFLAGS) $(OBJS) -o $(PROG)
 
 # rules to compile networks
 ${OBJDIR}/%.o: networks/%.cpp 
@@ -112,7 +109,6 @@ ${OBJDIR}/%.o: routers/%.cpp
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
 
-
 clean:
 	rm -f $(OBJS) 
 	rm -f $(PROG)
@@ -123,6 +119,8 @@ clean:
 	rm -f runfiles/*~
 	rm -f routers/*~
 	rm -f examples/*~
+	rm -f *_tab.cpp *_tab.hpp *.tab.c *.tab.h *lex.cpp
+
 
 #purify: $(OBJS)
 #	$(PURIFY) -always-use-cache-dir $(CPP) $(OBJS) -o $(PROG) -L/usr/pubsw/lib
@@ -130,17 +128,14 @@ clean:
 #quantify: $(OBJS)
 #	$(QUANT) -always-use-cache-dir $(CPP) $(OBJS) -o $(PROG) -L/usr/pubsw/lib
 
-#	$(CPP) $(CPPFLAGS) $(VCSFLAGS) -c $< -o $@
+config.tab.c config.tab.h: config.y
+	$(YACC) -bconfig -pconfig $<
 
-%_tab.cpp: %.y
-	$(YACC) -b$* -p$* $<
-	cp -f $*.tab.c $*_tab.cpp
+configlex.cpp: config.l
+	$(LEX) -Pconfig -o$@ $<
 
-%_tab.hpp: %_tab.cpp
-	cp -f $*.tab.h $*_tab.hpp
+config_tab.cpp: config.tab.c
+	cp -f $< $@
 
-%lex.cpp: %.l
-	$(LEX) -P$* -o$@ $<
-
-# *_tab.cpp *_tab.hpp #*.tab.c *.tab.h *lex.cpp
-
+config_tab.hpp: config.tab.h
+	cp -f $< $@

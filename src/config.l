@@ -15,8 +15,6 @@ extern int config_input(char *, int);
 #undef YY_INPUT
 #define YY_INPUT(b, r, ms) (r = config_input(b, ms))
 
-unsigned int configlineno = 1;
-
 %}
 
 Digit [0-9]
@@ -34,7 +32,7 @@ DblConst ({Digit}+(\.{Digit}*)?)({Exponent})?
 
    /* Commands */
 
-[A-Za-z_][A-Za-z0-9_]* { configlval.name = strdup( yytext ); return STR; }
+[A-Za-z_][A-Za-z0-9_\.]* { configlval.name = strdup( yytext ); return STR; }
 
 [0-9]+     { configlval.num = strtoul( yytext, 0, 10 ); return NUM; }
 
