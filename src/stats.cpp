@@ -86,6 +86,11 @@ double Stats::Max( ) const
   return _max;
 }
 
+double Stats::Sum( ) const
+{
+  return _sample_sum;
+}
+
 int Stats::NumSamples( ) const
 {
   return _num_samples;

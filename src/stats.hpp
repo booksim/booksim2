@@ -56,6 +56,7 @@ public:
   double Average( ) const;
   double Max( ) const;
   double Min( ) const;
+  double Sum( ) const;
   int    NumSamples( ) const;
 
   void AddSample( double val );
