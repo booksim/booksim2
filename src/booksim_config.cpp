@@ -185,6 +185,7 @@ BookSimConfig::BookSimConfig( )
   AddStrField( "priority", "none" );  // message priorities
 
   _int_map["batch_size"] = 1000;
+  _int_map["batch_count"] = 1;
   _int_map["max_outstanding_requests"] = 4;
 
   _int_map["read_request_size"]  = 1; //flit per packet

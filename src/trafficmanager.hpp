@@ -95,6 +95,7 @@ protected:
   // ============ batch mode ==========================
   int *_packets_sent;
   int _batch_size;
+  int _batch_count;
   list<int>* _repliesPending;
   map<int,Packet_Reply*> _repliesDetails;
   int * _requestsOutstanding;
@@ -127,10 +128,13 @@ protected:
   Stats *_overall_accepted;
   Stats *_overall_accepted_min;
   
+  Stats *_batch_time;
+  Stats *_overall_batch_time;
+
   int * _slowest_flit;
 
   map<string, Stats *> _stats;
-  
+
   // ============ Simulation parameters ============ 
 
   enum eSimState { warming_up, running, draining, done };
