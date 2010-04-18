@@ -57,6 +57,14 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   _vc_alloc_delay   = config.GetInt( "vc_alloc_delay" );
   _sw_alloc_delay   = config.GetInt( "sw_alloc_delay" );
   
+  string priority;
+  config.GetStr( "priority", priority );
+  if ( priority == "local_age" ) {
+    _pri_type = local_age_based;
+  } else {
+    _pri_type = other;
+  }
+
   // Routing
   _rf = GetRoutingFunction( config );
 
@@ -246,7 +254,12 @@ void IQRouterBase::_InputQueuing( )
 	}
 	*_watch_out << ")." << endl;
       }
-      
+
+      // update flit priority before adding to VC buffer
+      if(_pri_type == local_age_based) {
+	f->pri = -GetSimTime();
+      }
+
       if ( !cur_vc->AddFlit( f ) ) {
 	Error( "VC buffer overflow" );
       }

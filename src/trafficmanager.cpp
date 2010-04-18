@@ -67,6 +67,8 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     _pri_type = class_based;
   } else if ( priority == "age" ) {
     _pri_type = age_based;
+  } else if ( priority == "local_age" ) {
+    _pri_type = local_age_based;
   } else if ( priority == "none" ) {
     _pri_type = none;
   } else {
@@ -525,6 +527,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	  _tlat_stats[f->pri]->AddSample( _time - f->ttime );
 	break;
       case age_based: // fall through
+      case local_age_based:
       case none:
 	if((_slowest_flit[0] < 0) ||
 	   (_latency_stats[0]->Max() < (_time - f->time)))
@@ -747,6 +750,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       f->pri = cl; break;
     case age_based:
       f->pri = _replies_inherit_priority ? -ttime : -time; break;
+    case local_age_based:
     case none:
       f->pri = 0; break;
     }
