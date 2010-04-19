@@ -981,7 +981,7 @@ void TrafficManager::_NormalInject(){
         }
       }
       _net[i]->WriteFlit( write_flit ? f : 0, input );
-      if( _sim_state == running )
+      if( ( _sim_state == warming_up ) || ( _sim_state == running ) )
 	_sent_flits[input]->AddSample(write_flit);
       if (write_flit && f->tail) // If a tail flit, reduce the number of packets of this class.
 	_class_array[i][highest_class]--;
@@ -1046,11 +1046,11 @@ void TrafficManager::_Step( )
         _net[i]->WriteCredit( cred, output );
         _RetireFlit( f, output );
       
-        if( _sim_state == running )
+        if( ( _sim_state == warming_up ) || ( _sim_state == running ) )
 	  _accepted_flits[output]->AddSample( 1 );
       } else {
         _net[i]->WriteCredit( 0, output );
-        if( _sim_state == running )
+        if( ( _sim_state == warming_up ) || ( _sim_state == running ) )
 	  _accepted_flits[output]->AddSample( 0 );
       }
     }
