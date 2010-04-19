@@ -69,6 +69,8 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     _pri_type = age_based;
   } else if ( priority == "local_age" ) {
     _pri_type = local_age_based;
+  } else if ( priority == "queue_length" ) {
+    _pri_type = queue_length_based;
   } else if ( priority == "none" ) {
     _pri_type = none;
   } else {
@@ -526,16 +528,13 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
 	  _tlat_stats[f->pri]->AddSample( _time - f->ttime );
 	break;
-      case age_based: // fall through
-      case local_age_based:
-      case none:
+      default: // fall through
 	if((_slowest_flit[0] < 0) ||
 	   (_latency_stats[0]->Max() < (_time - f->time)))
 	   _slowest_flit[0] = f->id;
 	_latency_stats[0]->AddSample( _time - f->time);
 	if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
 	  _tlat_stats[0]->AddSample( _time - f->ttime );
-	break;
       }
    
       _pair_latency[f->src*_dests+dest]->AddSample( _time - f->time );
@@ -747,12 +746,13 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     }
     switch( _pri_type ) {
     case class_based:
-      f->pri = cl; break;
+      f->pri = cl;
+      break;
     case age_based:
-      f->pri = _replies_inherit_priority ? -ttime : -time; break;
-    case local_age_based:
-    case none:
-      f->pri = 0; break;
+      f->pri = _replies_inherit_priority ? -ttime : -time;
+      break;
+    default:
+      f->pri = 0;
     }
 
     if ( i == ( size - 1 ) ) { // Tail flit

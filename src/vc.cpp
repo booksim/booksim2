@@ -88,6 +88,16 @@ void VC::_Init( const Configuration& config, int outputs )
   _idle_cycles     = 0;
   _routing_cycles     = 0;
 
+  string priority;
+  config.GetStr( "priority", priority );
+  if ( priority == "local_age" ) {
+    _pri_type = local_age_based;
+  } else if ( priority == "queue_length" ) {
+    _pri_type = queue_length_based;
+  } else {
+    _pri_type = other;
+  }
+
   _pri = 0;
   _priority_donation = config.GetInt("vc_priority_donation");
 
@@ -99,7 +109,15 @@ void VC::_Init( const Configuration& config, int outputs )
 
 bool VC::AddFlit( Flit *f )
 {
+  assert(f);
+
   if((int)_buffer.size() >= _size) return false;
+
+  // update flit priority before adding to VC buffer
+  if(_pri_type == local_age_based) {
+    f->pri = -GetSimTime();
+  }
+
   _buffer.push_back(f);
   UpdatePriority();
   return true;
@@ -191,27 +209,31 @@ int VC::GetOutputVC( ) const
 void VC::UpdatePriority()
 {
   if(_buffer.empty()) return;
-  Flit * f = _buffer.front();
-  if(_priority_donation) {
-    Flit * df = f;
-    for(int i = 1; i < _buffer.size(); ++i) {
-      Flit * bf = _buffer[i];
-      if(bf->pri > df->pri) df = bf;
+  if(_pri_type == queue_length_based) {
+    _pri = _buffer.size();
+  } else {
+    Flit * f = _buffer.front();
+    if(_priority_donation) {
+      Flit * df = f;
+      for(int i = 1; i < _buffer.size(); ++i) {
+	Flit * bf = _buffer[i];
+	if(bf->pri > df->pri) df = bf;
+      }
+      if((df != f) && (df->watch || f->watch)) {
+	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+		    << "Flit " << df->id
+		    << " donates priority to flit " << f->id
+		    << "." << endl;
+      }
+      f = df;
     }
-    if((df != f) && (df->watch || f->watch)) {
+    if(f->watch)
       *_watch_out << GetSimTime() << " | " << FullName() << " | "
-		  << "Flit " << df->id
-		  << " donates priority to flit " << f->id
+		  << "Flit " << f->id
+		  << " sets priority to " << f->pri
 		  << "." << endl;
-    }
-    f = df;
+    _pri = f->pri;
   }
-  if(f->watch)
-    *_watch_out << GetSimTime() << " | " << FullName() << " | "
-		<< "Flit " << f->id
-		<< " sets priority to " << f->pri
-		<< "." << endl;
-  _pri = f->pri;
 }
 
 int VC::GetPriority( ) const

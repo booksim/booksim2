@@ -110,10 +110,6 @@ protected:
   int *_switch_hold_out;
   int *_switch_hold_vc;
 
-  enum ePrioType { local_age_based, other };
-
-  ePrioType _pri_type;
-
   void _ReceiveFlits( );
   void _ReceiveCredits( );
 
