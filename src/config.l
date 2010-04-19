@@ -8,6 +8,8 @@
 #include "config_tab.hpp"
 #include "config_utils.hpp"
 
+static int configlineno=0;
+
 void configerror(string msg);
 extern "C" int configwrap() { return 1; }
 
