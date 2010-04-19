@@ -8,7 +8,7 @@
 #include "config_tab.hpp"
 #include "config_utils.hpp"
 
-static int configlineno=0;
+static unsigned int lineno = 1;
 
 void configerror(string msg);
 extern "C" int configwrap() { return 1; }
@@ -30,7 +30,7 @@ DblConst ({Digit}+(\.{Digit}*)?)({Exponent})?
 \/\/[^\n]* ;
 [ \t\r]*   ;
 
-\n         { configlineno++; }
+\n         { lineno++; }
 
    /* Commands */
 
@@ -48,7 +48,7 @@ DblConst ({Digit}+(\.{Digit}*)?)({Exponent})?
 
 void configerror( string msg )
 {
-  Configuration::GetTheConfig( )->ParseError( msg, configlineno );
+  Configuration::GetTheConfig( )->ParseError( msg, lineno );
 }
 
 
