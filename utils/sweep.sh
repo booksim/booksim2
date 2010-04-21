@@ -52,7 +52,7 @@ inj_rate="0"`echo "scale=4; ${zero_load_inj} / 10000" | bc`
 
 echo "SWEEP: Determining zero-load latency..."
 ${sim} $* print_csv_results=1 injection_rate=${inj_rate} | tee ${sim}.${$}.log
-lat=`grep "results:" ${sim}.${$}.log | cut -d , -f 7`
+lat=`grep "results:" ${sim}.${$}.log | cut -d , -f 8`
 rm ${sim}.${$}.log
 if [ "${lat}" = "" ]
 then
@@ -84,7 +84,7 @@ do
     else
 	echo "SWEEP: Simulating for injection rate ${inj_rate}..."
 	${sim} $* print_csv_results=1 injection_rate=${inj_rate} | tee ${sim}.${$}.log
-	lat=`grep "results:" ${sim}.${$}.log | cut -d , -f 7`
+	lat=`grep "results:" ${sim}.${$}.log | cut -d , -f 8`
 	rm ${sim}.${$}.log
     fi
     if [ "${lat}" = "" ]
