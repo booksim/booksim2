@@ -68,7 +68,7 @@ old_inj=${zero_load_inj}
 old_lat=${lat}
 ref_delta="unset"
 inj=${step}
-last_fail=0
+last_fail=10000
 
 step_size="0"`echo "scale=4; ${step} / 10000" | bc`
 echo "SWEEP: Sweeping with initial step size ${step_size}"
@@ -76,7 +76,7 @@ echo "SWEEP: Sweeping with initial step size ${step_size}"
 while true
 do
     inj_rate="0"`echo "scale=4; ${inj} / 10000" | bc`
-    if [ ${inj} -eq ${last_fail} ]
+    if [ ${inj} -ge ${last_fail} ]
     then
 	echo "SWEEP: Already failed for injection rate ${inj_rate} before."
 	echo "SWEEP: Simulation run skipped."
@@ -116,7 +116,7 @@ do
 	steps=`printf "%1.0f" ${ratio}`
 	if [ ${steps} -gt 1 ]
 	then
-	    echo "SWEEP: Adding $[${steps}-1] intermediate steps..."
+	    echo "SWEEP: Adding ${steps} intermediate steps..."
 	    ref_step=$[${step} / ${steps}]
 	    if [ ${ref_step} -gt 0 ]
 	    then
@@ -132,13 +132,16 @@ do
 		    inj_rate="0"`echo "scale=4; ${ref_inj} / 10000" | bc`
 		    echo "SWEEP: Simulating for injection rate ${inj_rate}..."
 		    ref_inj=$[${ref_inj} + ${ref_step}]
-		    ${sim} $* print_csv_results=1 injection_rate=${inj_rate}
+		    ${sim} $* print_csv_results=1 injection_rate=${inj_rate} | tee ${sim}.${$}.log
+		    intm_lat=`grep "results:" ${sim}.${$}.log | cut -d , -f 8`
+		    rm ${sim}.${$}.log
 		    if [ ${?} -eq 0 ]
 		    then
 			echo "SWEEP: Simulation failed unexpectedly."
 			continue
 		    fi
 		    echo "SWEEP: Simulation run succeeded."
+		    echo "SWEEP: Latency is ${intm_lat}."
 		done
 	    else
 		echo "SWEEP: Refinement step too small."
