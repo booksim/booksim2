@@ -237,7 +237,8 @@ BookSimConfig::BookSimConfig( )
   AddStrField("watch_file", "");
   AddStrField("watch_out", "-");
 
-  AddStrField("stats_out", "-");
+  AddStrField("stats_out", "");
+  AddStrField("flow_out", "");
   
   //==================Power model params=====================
   _int_map["sim_power"] = 0;

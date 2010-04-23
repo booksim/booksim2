@@ -131,6 +131,9 @@ protected:
   Stats *_batch_time;
   Stats *_overall_batch_time;
 
+  unsigned int * _in_flow;
+  unsigned int * _out_flow;
+
   int * _slowest_flit;
 
   map<string, Stats *> _stats;

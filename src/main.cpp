@@ -145,6 +145,7 @@ int *gNodeStates = 0;
 string _watch_file;
 ostream * _watch_out = &cout;
 ostream * _stats_out = &cout;
+ostream * _flow_out = &cout;
 
 //latency type, noc or conventional network
 bool _use_noc_latency;
@@ -283,8 +284,18 @@ int main( int argc, char **argv )
   
   string stats_out_file;
   config.GetStr( "stats_out", stats_out_file );
-  if(stats_out_file != "-") {
+  if(stats_out_file == "") {
+    _stats_out = NULL;
+  } else if(stats_out_file != "-") {
     _stats_out = new ofstream(stats_out_file.c_str());
+  }
+  
+  string flow_out_file;
+  config.GetStr( "flow_out", flow_out_file );
+  if(flow_out_file == "") {
+    _flow_out = NULL;
+  } else if(flow_out_file != "-") {
+    _flow_out = new ofstream(flow_out_file.c_str());
   }
   
   _use_noc_latency = (config.GetInt("use_noc_latency")==1);
