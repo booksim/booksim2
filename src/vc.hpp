@@ -70,7 +70,7 @@ private:
   static state_info_t state_info[];
   static int occupancy;
   
-  enum ePrioType { local_age_based, queue_length_based, other };
+  enum ePrioType { local_age_based, queue_length_based, hop_count_based, none, other };
 
   ePrioType _pri_type;
 

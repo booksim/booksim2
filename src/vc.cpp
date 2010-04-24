@@ -94,6 +94,10 @@ void VC::_Init( const Configuration& config, int outputs )
     _pri_type = local_age_based;
   } else if ( priority == "queue_length" ) {
     _pri_type = queue_length_based;
+  } else if ( priority == "hop_count" ) {
+    _pri_type = hop_count_based;
+  } else if ( priority == "none" ) {
+    _pri_type = none;
   } else {
     _pri_type = other;
   }
@@ -116,6 +120,8 @@ bool VC::AddFlit( Flit *f )
   // update flit priority before adding to VC buffer
   if(_pri_type == local_age_based) {
     f->pri = -GetSimTime();
+  } else if(_pri_type == hop_count_based) {
+    f->pri = f->hops;
   }
 
   _buffer.push_back(f);
@@ -211,9 +217,9 @@ void VC::UpdatePriority()
   if(_buffer.empty()) return;
   if(_pri_type == queue_length_based) {
     _pri = _buffer.size();
-  } else {
+  } else if(_pri_type != none) {
     Flit * f = _buffer.front();
-    if(_priority_donation) {
+    if((_pri_type != local_age_based) && _priority_donation) {
       Flit * df = f;
       for(int i = 1; i < _buffer.size(); ++i) {
 	Flit * bf = _buffer[i];

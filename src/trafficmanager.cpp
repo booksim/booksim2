@@ -67,10 +67,16 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     _pri_type = class_based;
   } else if ( priority == "age" ) {
     _pri_type = age_based;
+  } else if ( priority == "network_age" ) {
+    _pri_type = network_age_based;
   } else if ( priority == "local_age" ) {
     _pri_type = local_age_based;
   } else if ( priority == "queue_length" ) {
     _pri_type = queue_length_based;
+  } else if ( priority == "hop_count" ) {
+    _pri_type = hop_count_based;
+  } else if ( priority == "sequence" ) {
+    _pri_type = sequence_based;
   } else if ( priority == "none" ) {
     _pri_type = none;
   } else {
@@ -760,6 +766,9 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     case age_based:
       f->pri = _replies_inherit_priority ? -ttime : -time;
       break;
+    case sequence_based:
+      f->pri = _packets_sent[source];
+      break;
     default:
       f->pri = 0;
     }
@@ -876,6 +885,10 @@ void TrafficManager::_BatchInject(){
 	  _buf_states[input][i]->SendingFlit( f );
 	  write_flit = true;
 
+	  if(_pri_type == network_age_based) {
+	    f->pri = -_time;
+	  }
+
 	  // Pass VC "back"
 	  if ( !_partial_packets[input][highest_class][i].empty( ) && !f->tail ) {
 	    Flit * nf = _partial_packets[input][highest_class][i].front( );
@@ -983,6 +996,10 @@ void TrafficManager::_NormalInject(){
 	  _partial_packets[input][highest_class][i].pop_front( );
 	  _buf_states[input][i]->SendingFlit( f );
 	  write_flit = true;
+
+	  if(_pri_type == network_age_based) {
+	    f->pri = -_time;
+	  }
 
 	  // Pass VC "back"
 	  if ( !_partial_packets[input][highest_class][i].empty( ) && !f->tail ) {
