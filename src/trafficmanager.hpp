@@ -102,6 +102,9 @@ protected:
   int _maxOutstanding;
   bool _replies_inherit_priority;
 
+  int _last_id;
+  int _last_pid;
+
   // ============voq mode =============================
   list<Flit*> ** _voq;
   list<int>* _active_list;

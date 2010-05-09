@@ -39,7 +39,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 TrafficManager::TrafficManager( const Configuration &config, Network **net )
   : Module( 0, "traffic_manager" ), _net(net), _cur_id(0), _cur_pid(0),
    _time(0), _warmup_time(-1), _drain_time(-1), _empty_network(false),
-   _deadlock_counter(1), _sub_network(0), _timed_mode(false)
+   _deadlock_counter(1), _sub_network(0), _timed_mode(false), _last_id(-1), 
+   _last_pid(-1)
 {
   _sources = _net[0]->NumSources( );
   _dests   = _net[0]->NumDests( );
@@ -495,6 +496,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 		<< ")." << endl;
   }
 
+  _last_id = f->id;
+  _last_pid = f->pid;
+
   if ( f->head && ( f->dest != dest ) ) {
     cerr << "Flit " << f->id << " arrived at incorrect output " << dest << endl
 	 << *f;
@@ -767,7 +771,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       f->pri = _replies_inherit_priority ? -ttime : -time;
       break;
     case sequence_based:
-      f->pri = _packets_sent[source];
+      f->pri = -_packets_sent[source];
       break;
     default:
       f->pri = 0;
@@ -889,6 +893,15 @@ void TrafficManager::_BatchInject(){
 	    f->pri = -_time;
 	  }
 
+	  if(f->watch) {
+	    *_watch_out << GetSimTime() << " | "
+			<< "node" << input << " | "
+			<< "Injecting flit " << f->id
+			<< " at time " << _time
+			<< " with priority " << f->pri
+			<< "." << endl;
+	  }
+	  
 	  // Pass VC "back"
 	  if ( !_partial_packets[input][highest_class][i].empty( ) && !f->tail ) {
 	    Flit * nf = _partial_packets[input][highest_class][i].front( );
@@ -1001,6 +1014,15 @@ void TrafficManager::_NormalInject(){
 	    f->pri = -_time;
 	  }
 
+	  if(f->watch) {
+	    *_watch_out << GetSimTime() << " | "
+			<< "node" << input << " | "
+			<< "Injecting flit " << f->id
+			<< " at time " << _time
+			<< " with priority " << f->pri
+			<< "." << endl;
+	  }
+	  
 	  // Pass VC "back"
 	  if ( !_partial_packets[input][highest_class][i].empty( ) && !f->tail ) {
 	    Flit * nf = _partial_packets[input][highest_class][i].front( );
@@ -1255,6 +1277,8 @@ bool TrafficManager::_SingleSim( )
     while(total_phases < _batch_count) {
       for (int i = 0; i < _sources; i++)
 	_packets_sent[i] = 0;
+      _last_id = -1;
+      _last_pid = -1;
       _sim_state = running;
       int start_time = _time;
       int min_packets_sent = 0;
@@ -1288,7 +1312,7 @@ bool TrafficManager::_SingleSim( )
 	  *_flow_out << "];" << endl;
 	}
       }
-      cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) sent. Time used is " << _time - start_time << " cycles" <<endl;
+      cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) sent. Time used is " << _time - start_time << " cycles." << endl;
       cout << "Draining the Network...................\n";
       _sim_state = draining;
       _drain_time = _time;
@@ -1320,7 +1344,7 @@ bool TrafficManager::_SingleSim( )
 	}
       }
       cout << endl;
-      cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) received. Time used is " << _time - _drain_time << " cycles" <<endl;
+      cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) received. Time used is " << _time - _drain_time << " cycles. Last packet was " << _last_pid << ", last flit was " << _last_id << "." <<endl;
       _batch_time->AddSample(_time - start_time);
       cout << _sim_state << endl;
       if(_stats_out)
