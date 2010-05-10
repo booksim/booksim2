@@ -47,16 +47,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Stats::Stats( Module *parent, const string &name,
 	      double bin_size, int num_bins ) :
   Module( parent, name ),
-  _num_bins( num_bins ), _bin_size( bin_size )
+   _num_bins( num_bins ), _bin_size( bin_size ), _hist(_num_bins, 0), _num_samples(0), _sample_sum(0.0)
 {
-  _hist = new int [_num_bins];
 
-  Clear( );
-}
-
-Stats::~Stats( )
-{
-  delete [] _hist;
 }
 
 void Stats::Clear( )

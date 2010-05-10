@@ -93,12 +93,12 @@ protected:
   unsigned char _deadlock_counter;
 
   // ============ batch mode ==========================
-  int *_packets_sent;
+  vector<int> _packets_sent;
   int _batch_size;
   int _batch_count;
   list<int>* _repliesPending;
   map<int,Packet_Reply*> _repliesDetails;
-  int * _requestsOutstanding;
+  vector<int> _requestsOutstanding;
   int _maxOutstanding;
   bool _replies_inherit_priority;
 
@@ -134,10 +134,10 @@ protected:
   Stats *_batch_time;
   Stats *_overall_batch_time;
 
-  unsigned int * _in_flow;
-  unsigned int * _out_flow;
+  vector<unsigned int> _in_flow;
+  vector<unsigned int> _out_flow;
 
-  int * _slowest_flit;
+  vector<int> _slowest_flit;
 
   map<string, Stats *> _stats;
 
@@ -181,7 +181,7 @@ protected:
   double _warmup_threshold;
 
   float _internal_speedup;
-  float *_partial_internal_cycles;
+  vector<float> _partial_internal_cycles;
 
   int _cur_id;
   int _cur_pid;
@@ -214,7 +214,7 @@ protected:
 
   bool _PacketsOutstanding( ) const;
   
-  virtual int  _IssuePacket( int source, int cl ) const;
+  virtual int  _IssuePacket( int source, int cl );
   virtual void _GeneratePacket( int source, int size, int cl, int time );
 
   void _ClearStats( );

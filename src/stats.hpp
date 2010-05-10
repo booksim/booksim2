@@ -44,12 +44,11 @@ class Stats : public Module {
   int    _num_bins;
   double _bin_size;
 
-  int *_hist;
+  vector<int> _hist;
 
 public:
   Stats( Module *parent, const string &name,
 	 double bin_size = 1.0, int num_bins = 10 );
-  ~Stats( );
 
   void Clear( );
 

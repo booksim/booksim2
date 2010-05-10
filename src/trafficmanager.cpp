@@ -135,11 +135,11 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   else
     _packet_size = config.GetInt( "const_flits_per_packet" );
 
-  _packets_sent = new int [_sources];
+  _packets_sent.resize(_sources);
   _batch_size = config.GetInt( "batch_size" );
   _batch_count = config.GetInt( "batch_count" );
   _repliesPending = new list<int> [_sources];
-  _requestsOutstanding = new int [_sources];
+  _requestsOutstanding.resize(_sources);
   _maxOutstanding = config.GetInt ("max_outstanding_requests");  
 
   if ( _voqing ) {
@@ -222,10 +222,9 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _sent_flits = new Stats * [_sources];
   _accepted_flits = new Stats * [_dests];
   
-  _in_flow = new unsigned int [_sources];
+  _in_flow.resize(_sources, 0);
 
   for ( int i = 0; i < _sources; ++i ) {
-    _in_flow[i] = 0;
     tmp_name << "sent_stat_" << i;
     _sent_flits[i] = new Stats( this, tmp_name.str( ) );
     _stats[tmp_name.str()] = _sent_flits[i];
@@ -244,17 +243,16 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     }
   }
 
-  _out_flow = new unsigned int [_dests];
+  _out_flow.resize(_dests, 0);
 
   for ( int i = 0; i < _dests; ++i ) {
-    _out_flow[i] = 0;
     tmp_name << "accepted_stat_" << i;
     _accepted_flits[i] = new Stats( this, tmp_name.str( ) );
     _stats[tmp_name.str()] = _accepted_flits[i];
     tmp_name.seekp( 0, ios::beg );    
   }
   
-  _slowest_flit = new int [_classes];
+  _slowest_flit.resize(_classes);
 
   // ============ Simulation parameters ============ 
 
@@ -269,10 +267,9 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _total_sims = config.GetInt( "sim_count" );
 
   _internal_speedup = config.GetFloat( "internal_speedup" );
-  _partial_internal_cycles = new float[_duplicate_networks];
+  _partial_internal_cycles.resize(_duplicate_networks, 0.0);
   _class_array = new short* [_duplicate_networks];
   for (int i=0; i < _duplicate_networks; ++i) {
-    _partial_internal_cycles[i] = 0.0;
     _class_array[i] = new short [_classes];
     memset(_class_array[i], 0, sizeof(short)*_classes);
   }
@@ -392,12 +389,6 @@ TrafficManager::~TrafficManager( )
   delete [] _accepted_flits;
   delete [] _pair_latency;
   delete [] _pair_tlat;
-  delete [] _slowest_flit;
-
-  delete [] _in_flow;
-  delete [] _out_flow;
-
-  delete [] _partial_internal_cycles;
 
 }
 
@@ -575,7 +566,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   delete f;
 }
 
-int TrafficManager::_IssuePacket( int source, int cl ) const
+int TrafficManager::_IssuePacket( int source, int cl )
 {
   int result;
   if(_sim_mode == batch){ //batch mode
