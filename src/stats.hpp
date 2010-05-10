@@ -64,8 +64,20 @@ public:
 
   void Display( ) const;
 
-  operator const string() const;
+  friend ostream & operator<<(ostream & os, const Stats & s);
 
 };
+
+template<class T>
+ostream & operator<<(ostream & os, const vector<T> & v) {
+  os << "[ ";
+  for(int i = 0; i < v.size(); ++i) {
+    os << v[i] << " ";
+  }
+  os << "]";
+  return os;
+}
+
+ostream & operator<<(ostream & os, const Stats & s);
 
 #endif

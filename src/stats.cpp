@@ -120,19 +120,10 @@ void Stats::AddSample( int val )
 
 void Stats::Display( ) const
 {
-  cout << (string)*this << endl;
+  cout << *this << endl;
 }
 
-Stats::operator const string() const {
-  int b;
-  
-  ostringstream os;
-  
-  os << "[ ";
-  for ( b = 0; b < _num_bins; ++b ) {
-    os << _hist[b] << " ";
-  }
-  os << "]";
-  
-  return os.str();
+ostream & operator<<(ostream & os, const Stats & s) {
+  os << s._hist;
+  return os;
 }

@@ -1258,7 +1258,7 @@ bool TrafficManager::_SingleSim( )
 	if(_stats_out)
 	  *_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
 		      << "lat_hist(" << total_phases + 1 << ",:) = "
-		      << (string)*_latency_stats[0] << ";" << endl;
+		      << *_latency_stats[0] << ";" << endl;
       } 
     }
     cout << "Total inflight " << _total_in_flight_packets.size() << endl;
@@ -1353,7 +1353,7 @@ bool TrafficManager::_SingleSim( )
 	*_stats_out << "batch_time(" << total_phases + 1 << ") = " << _time << ";" << endl
 		    << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
 		    << "lat_hist(" << total_phases + 1 << ",:) = "
-		    << (string)*_latency_stats[0] << ";" << endl
+		    << *_latency_stats[0] << ";" << endl
 		    << "pair_sent(" << total_phases + 1 << ",:) = [ ";
 	for(int i = 0; i < _sources; ++i) {
 	  for(int j = 0; j < _dests; ++j) {
@@ -1438,7 +1438,7 @@ bool TrafficManager::_SingleSim( )
       if(_stats_out) {
 	*_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
 		    << "lat_hist(" << total_phases + 1 << ",:) = "
-		    << (string)*_latency_stats[0] << ";" << endl
+		    << *_latency_stats[0] << ";" << endl
 		    << "pair_sent(" << total_phases + 1 << ",:) = [ ";
 	for(int i = 0; i < _sources; ++i) {
 	  for(int j = 0; j < _dests; ++j) {
