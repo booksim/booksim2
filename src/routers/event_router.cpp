@@ -952,11 +952,3 @@ void EventNextVCState::SetInputVC( int vc, int in_vc )
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
   _inputVC[vc] = in_vc;
 }
-
-
-int EventRouter::GetCredit(int out, int vc_begin, int vc_end ) const{
-  return 0;
-}
-int EventRouter::GetBuffer( int i) const{
-  return 0;
-}
