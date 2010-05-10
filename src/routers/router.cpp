@@ -51,6 +51,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "iq_router_combined.hpp"
 #include "iq_router_split.hpp"
 #include "event_router.hpp"
+#include "chaos_router.hpp"
 #include "MECSRouter.hpp"
 ///////////////////////////////////////////////////////
 
@@ -161,6 +162,8 @@ Router *Router::NewRouter( const Configuration& config,
     r = new IQRouterSplit( config, parent, name, id, inputs, outputs );
   } else if ( type == "event" ) {
     r = new EventRouter( config, parent, name, id, inputs, outputs );
+  } else if ( type == "chaos" ) {
+    r = new ChaosRouter( config, parent, name, id, inputs, outputs );
   } else {
     cout << "Unknown router type " << type << endl;
   }
