@@ -124,48 +124,48 @@ void KNCube::_BuildNet( const Configuration &config )
       left_input  = _RightChannel( left_node, dim );
 
       //add the input channel
-      _routers[node]->AddInputChannel( &_chan[right_input], &_chan_cred[right_input] );
-      _routers[node]->AddInputChannel( &_chan[left_input], &_chan_cred[left_input] );
+      _routers[node]->AddInputChannel( _chan[right_input], _chan_cred[right_input] );
+      _routers[node]->AddInputChannel( _chan[left_input], _chan_cred[left_input] );
 
       //set input channel latency
       if(use_noc_latency){
-	_chan[right_input].SetLatency( latency );
-	_chan[left_input].SetLatency( latency );
-	_chan_cred[right_input].SetLatency( latency );
-	_chan_cred[left_input].SetLatency( latency );
+	_chan[right_input]->SetLatency( latency );
+	_chan[left_input]->SetLatency( latency );
+	_chan_cred[right_input]->SetLatency( latency );
+	_chan_cred[left_input]->SetLatency( latency );
       } else {
-	_chan[left_input].SetLatency( 1 );
-	_chan_cred[right_input].SetLatency( 1 );
-	_chan_cred[left_input].SetLatency( 1);
-	_chan[right_input].SetLatency( 1 );
+	_chan[left_input]->SetLatency( 1 );
+	_chan_cred[right_input]->SetLatency( 1 );
+	_chan_cred[left_input]->SetLatency( 1);
+	_chan[right_input]->SetLatency( 1 );
       }
       //get the output channel number
       right_output = _RightChannel( node, dim );
       left_output  = _LeftChannel( node, dim );
       
       //add the output channel
-      _routers[node]->AddOutputChannel( &_chan[right_output], &_chan_cred[right_output] );
-      _routers[node]->AddOutputChannel( &_chan[left_output], &_chan_cred[left_output] );
+      _routers[node]->AddOutputChannel( _chan[right_output], _chan_cred[right_output] );
+      _routers[node]->AddOutputChannel( _chan[left_output], _chan_cred[left_output] );
 
       //set output channel latency
       if(use_noc_latency){
-	_chan[right_output].SetLatency( latency );
-	_chan[left_output].SetLatency( latency );
-	_chan_cred[right_output].SetLatency( latency );
-	_chan_cred[left_output].SetLatency( latency );
+	_chan[right_output]->SetLatency( latency );
+	_chan[left_output]->SetLatency( latency );
+	_chan_cred[right_output]->SetLatency( latency );
+	_chan_cred[left_output]->SetLatency( latency );
       } else {
-	_chan[right_output].SetLatency(1);
-	_chan[left_output].SetLatency(1 );
-	_chan_cred[right_output].SetLatency(1 );
-	_chan_cred[left_output].SetLatency( 1);
+	_chan[right_output]->SetLatency(1);
+	_chan[left_output]->SetLatency(1 );
+	_chan_cred[right_output]->SetLatency(1 );
+	_chan_cred[left_output]->SetLatency( 1);
 
       }
     }
     //injection and ejection channel, always 1 latency
-    _routers[node]->AddInputChannel( &_inject[node], &_inject_cred[node] );
-    _routers[node]->AddOutputChannel( &_eject[node], &_eject_cred[node] );
-    _inject[node].SetLatency( 1 );
-    _eject[node].SetLatency( 1 );
+    _routers[node]->AddInputChannel( _inject[node], _inject_cred[node] );
+    _routers[node]->AddOutputChannel( _eject[node], _eject_cred[node] );
+    _inject[node]->SetLatency( 1 );
+    _eject[node]->SetLatency( 1 );
   }
 }
 

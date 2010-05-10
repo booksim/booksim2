@@ -133,8 +133,8 @@ void AnyNet::_BuildNet( const Configuration &config ){
       (*(niter->second))[link] = outport[node];
       outport[node]++;
       cout<<"\t connected to node "<<link<<" at outport "<<nniter->second<<endl;
-      _routers[node]->AddInputChannel( &_inject[link], &_inject_cred[link] );
-      _routers[node]->AddOutputChannel( &_eject[link], &_eject_cred[link] );
+      _routers[node]->AddInputChannel( _inject[link], _inject_cred[link] );
+      _routers[node]->AddOutputChannel( _eject[link], _eject_cred[link] );
     }
 
   }
@@ -156,8 +156,8 @@ void AnyNet::_BuildNet( const Configuration &config ){
       (*(riter->second))[other_node] = outport[node];
       outport[node]++;
       cout<<"\t connected to router "<<other_node<<" using link "<<link<<" at outport "<<rriter->second<<endl;
-      _routers[node]->AddOutputChannel( &_chan[link], &_chan_cred[link] );
-      _routers[other_node]->AddInputChannel( &_chan[link], &_chan_cred[link]);
+      _routers[node]->AddOutputChannel( _chan[link], _chan_cred[link] );
+      _routers[other_node]->AddInputChannel( _chan[link], _chan_cred[link]);
       channel_count++;
     }
   }

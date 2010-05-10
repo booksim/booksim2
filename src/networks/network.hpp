@@ -54,18 +54,18 @@ protected:
   int _dests;
   int _channels;
 
-  Router **_routers;
+  vector<Router *> _routers;
 
-  FlitChannel   *_inject;
-  CreditChannel *_inject_cred;
+  vector<FlitChannel *> _inject;
+  vector<CreditChannel *> _inject_cred;
 
-  FlitChannel   *_eject;
-  CreditChannel *_eject_cred;
+  vector<FlitChannel *> _eject;
+  vector<CreditChannel *> _eject_cred;
 
-  FlitChannel   *_chan;
-  CreditChannel *_chan_cred;
+  vector<FlitChannel *> _chan;
+  vector<CreditChannel *> _chan_cred;
 
-  int *_chan_use;
+  vector<int> _chan_use;
   int _chan_use_cycles;
 
   virtual void _ComputeSize( const Configuration &config ) = 0;
@@ -100,10 +100,10 @@ public:
   void Display( ) const;
 
   int NumChannels(){return _channels;}
-  FlitChannel* GetInject(){return _inject;}
-  FlitChannel* GetEject(){return _eject;}
-  FlitChannel* GetChannels(){return _chan;}
-  Router ** GetRouters(){return _routers;}
+  const vector<FlitChannel *> & GetInject(){return _inject;}
+  const vector<FlitChannel *> & GetEject(){return _eject;}
+  const vector<FlitChannel *> & GetChannels(){return _chan;}
+  const vector<Router *> & GetRouters(){return _routers;}
   int NumRouters(){return _size;}
 };
 

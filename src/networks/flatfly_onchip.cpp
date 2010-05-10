@@ -190,23 +190,23 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 	int link = (xcount * xrouter) * (yrouter * y_index + y) + (xrouter * x_index + x) ;
 
 	if(use_noc_latency){
-	  _inject[link].SetLatency(ileng);
-	  _inject_cred[link].SetLatency(ileng);
-	  _eject[link] .SetLatency(ileng);
-	  _eject_cred[link].SetLatency(ileng);
+	  _inject[link]->SetLatency(ileng);
+	  _inject_cred[link]->SetLatency(ileng);
+	  _eject[link] ->SetLatency(ileng);
+	  _eject_cred[link]->SetLatency(ileng);
 	} else {
-	  _inject[link].SetLatency(1);
-	  _inject_cred[link].SetLatency(1);
-	  _eject[link] .SetLatency(1);
-	  _eject_cred[link].SetLatency(1);
+	  _inject[link]->SetLatency(1);
+	  _inject_cred[link]->SetLatency(1);
+	  _eject[link] ->SetLatency(1);
+	  _eject_cred[link]->SetLatency(1);
 	}
-	_routers[node]->AddInputChannel( &_inject[link], &_inject_cred[link] );
+	_routers[node]->AddInputChannel( _inject[link], _inject_cred[link] );
 	
 #ifdef DEBUG_FATFLY
 	cout << "  Adding injection channel " << link << endl;
 #endif
 	
-	_routers[node]->AddOutputChannel( &_eject[link], &_eject_cred[link] );
+	_routers[node]->AddOutputChannel( _eject[link], _eject_cred[link] );
 #ifdef DEBUG_FATFLY
 	cout << "  Adding ejection channel " << link << endl;
 #endif
@@ -276,15 +276,15 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 	cout << "Adding channel : " << _output << " to node " << node <<" and "<<other<<" with length "<<length<<endl;
 #endif
 	if(use_noc_latency){
-	  _chan[_output].SetLatency(length);
-	  _chan_cred[_output].SetLatency(length);
+	  _chan[_output]->SetLatency(length);
+	  _chan_cred[_output]->SetLatency(length);
 	} else {
-	  _chan[_output].SetLatency(1);
-	  _chan_cred[_output].SetLatency(1);
+	  _chan[_output]->SetLatency(1);
+	  _chan_cred[_output]->SetLatency(1);
 	}
-	_routers[node]->AddOutputChannel( &_chan[_output], &_chan_cred[_output] );
+	_routers[node]->AddOutputChannel( _chan[_output], _chan_cred[_output] );
 	
-	_routers[other]->AddInputChannel( &_chan[_output], &_chan_cred[_output]);
+	_routers[other]->AddInputChannel( _chan[_output], _chan_cred[_output]);
 	
 	if(gTrace){
 	  cout<<"Link "<<_output<<" "<<node<<" "<<other<<" "<<length<<endl;

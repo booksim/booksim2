@@ -111,11 +111,11 @@ void QTree::_BuildNet( const Configuration& config )
     r = _RouterIndex( _n-1, pos );
     for ( port = 0 ; port < _k ; port++ ) {
 
-      _routers[r]->AddInputChannel( &_inject[_k*pos+port],
-				    &_inject_cred[_k*pos+port]);
+      _routers[r]->AddInputChannel( _inject[_k*pos+port],
+				    _inject_cred[_k*pos+port]);
 
-      _routers[r]->AddOutputChannel( &_eject[_k*pos+port],
-				     &_eject_cred[_k*pos+port]);
+      _routers[r]->AddOutputChannel( _eject[_k*pos+port],
+				     _eject_cred[_k*pos+port]);
     }
   }
 
@@ -129,24 +129,24 @@ void QTree::_BuildNet( const Configuration& config )
 	if ( h < _n-1 ) {
 	  // Channels to Children Nodes
 	  c = _InputIndex( h , pos, port );
-	  _routers[r]->AddInputChannel( &_chan[c], 
-					&_chan_cred[c] );
+	  _routers[r]->AddInputChannel( _chan[c], 
+					_chan_cred[c] );
 
 	  c = _OutputIndex( h, pos, port );
-	  _routers[r]->AddOutputChannel( &_chan[c], 
-					 &_chan_cred[c] );
+	  _routers[r]->AddOutputChannel( _chan[c], 
+					 _chan_cred[c] );
 
 	}
       }
       if ( h > 0 ) {
 	// Channels to Parent Nodes
 	c = _OutputIndex( h - 1, pos / _k, pos % _k );
-	_routers[r]->AddInputChannel( &_chan[c],
-				      &_chan_cred[c] );
+	_routers[r]->AddInputChannel( _chan[c],
+				      _chan_cred[c] );
 
 	c = _InputIndex( h - 1, pos / _k, pos % _k );
-	_routers[r]->AddOutputChannel( &_chan[c],
-				       &_chan_cred[c]);
+	_routers[r]->AddOutputChannel( _chan[c],
+				       _chan_cred[c]);
       }
     }
   }

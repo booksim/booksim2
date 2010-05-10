@@ -156,19 +156,19 @@ void FatTree::_BuildNet( const Configuration& config )
 	
 	int link = (_k * _cX) * (_cY * y_index + y) + (_cX * x_index + x) ;
 
-	_Router( _n-1, pos)->AddInputChannel( &_inject[link],
-					      &_inject_cred[link]);
+	_Router( _n-1, pos)->AddInputChannel( _inject[link],
+					      _inject_cred[link]);
 	if (0 == pos % 2)
-	  _inject[link].SetLatency( 1 );
+	  _inject[link]->SetLatency( 1 );
 	else
-	  _inject[link].SetLatency( 1 );
+	  _inject[link]->SetLatency( 1 );
       
-	_Router( _n-1, pos)->AddOutputChannel( &_eject[link],
-					       &_eject_cred[link]);
+	_Router( _n-1, pos)->AddOutputChannel( _eject[link],
+					       _eject_cred[link]);
 	if (0 == pos % 2)
-	  _eject[link].SetLatency( 1 );
+	  _eject[link]->SetLatency( 1 );
 	else 
-	  _eject[link].SetLatency( 1 );
+	  _eject[link]->SetLatency( 1 );
       }
     }
   }
@@ -304,8 +304,8 @@ void FatTree::_FinalizeConnections( )
   }
   for ( int c = 0; c < _channels; ++c ) {
     assert( _latencyMap[c] >= 0.0 );
-    _chan[c].SetLatency( _latencyMap[c] );
-    _chan_cred[c].SetLatency( _latencyMap[c] );
+    _chan[c]->SetLatency( _latencyMap[c] );
+    _chan_cred[c]->SetLatency( _latencyMap[c] );
   }
 
   for ( int depth = 0; depth < _n; ++depth ) {
@@ -315,17 +315,17 @@ void FatTree::_FinalizeConnections( )
 	int ic = _inputChannelMap[ _PortIndex( depth, pos, port ) ];
 
 	if ( ic != -1 )
-	  _Router( depth, pos)->AddInputChannel( &_chan[ic],
-						 &_chan_cred[ic] );
+	  _Router( depth, pos)->AddInputChannel( _chan[ic],
+						 _chan_cred[ic] );
 
 	int oc = _outputChannelMap[ _PortIndex( depth, pos, port ) ];
 
 	if ( oc != -1 )
-	  _Router( depth, pos)->AddOutputChannel( &_chan[oc],
-						  &_chan_cred[oc] );
+	  _Router( depth, pos)->AddOutputChannel( _chan[oc],
+						  _chan_cred[oc] );
 
 	if ( port > _k ) {
-	  _parentDistance[depth][pos][port-_k] = int( _chan[ic].GetLatency() );
+	  _parentDistance[depth][pos][port-_k] = int( _chan[ic]->GetLatency() );
 	}
       }
       

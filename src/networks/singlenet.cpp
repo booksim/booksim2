@@ -67,11 +67,11 @@ void SingleNet::_BuildNet( const Configuration &config )
 				   _sources, _dests );
 
   for ( i = 0; i < _sources; ++i ) {
-    _routers[0]->AddInputChannel( &_inject[i], &_inject_cred[i] );
+    _routers[0]->AddInputChannel( _inject[i], _inject_cred[i] );
   }
 
   for ( i = 0; i < _dests; ++i ) {
-    _routers[0]->AddOutputChannel( &_eject[i], &_eject_cred[i] );
+    _routers[0]->AddOutputChannel( _eject[i], _eject_cred[i] );
   }
 }
 

@@ -247,7 +247,7 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
 
     for ( int cnt = 0; cnt < _p; ++cnt ) {
       c = _p * node +  cnt;
-      _routers[node]->AddInputChannel( &_inject[c], &_inject_cred[c] );
+      _routers[node]->AddInputChannel( _inject[c], _inject_cred[c] );
 #ifdef DEBUG_DRAGONFLYNEW
       cout << "  Adding injection channel " << c << endl;
 #endif
@@ -255,7 +255,7 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
 
     for ( int cnt = 0; cnt < _p; ++cnt ) {
       c = _p * node +  cnt;
-      _routers[node]->AddOutputChannel( &_eject[c], &_eject_cred[c] );
+      _routers[node]->AddOutputChannel( _eject[c], _eject_cred[c] );
 #ifdef DEBUG_DRAGONFLYNEW
       cout << "  Adding ejection channel " << c << endl;
 #endif
@@ -281,11 +281,11 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
 #ifdef DEBUG_DRAGONFLYNEW
 	cout << "     Adding intra-group output channel : " << _output << " to node " << node << endl;
 #endif
-	_routers[node]->AddOutputChannel( &_chan[_output], &_chan_cred[_output] );
+	_routers[node]->AddOutputChannel( _chan[_output], _chan_cred[_output] );
 
 #ifdef DRAGON_LATENCY
-	_chan[_output].SetLatency(10);
-	_chan_cred[_output].SetLatency(10);
+	_chan[_output]->SetLatency(10);
+	_chan_cred[_output]->SetLatency(10);
 #endif
       }
     }
@@ -298,10 +298,10 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
       cout << "     Adding inter-group output channel : " << _output << " to node " << node << endl;
       #endif
       //      _chan[_output].global = true;
-      _routers[node]->AddOutputChannel( &_chan[_output], &_chan_cred[_output] );
+      _routers[node]->AddOutputChannel( _chan[_output], _chan_cred[_output] );
 #ifdef DRAGON_LATENCY
-	_chan[_output].SetLatency(100);
-	_chan_cred[_output].SetLatency(100);
+	_chan[_output]->SetLatency(100);
+	_chan_cred[_output]->SetLatency(100);
 #endif
     }
 
@@ -363,10 +363,10 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
 	}
 
 #ifdef DEBUG_DRAGONFLYNEW
-	cout << "     Adding input channel : " << _input << " to node " << node << " "<<_chan[_input].GetLatency()<<endl;
+	cout << "     Adding input channel : " << _input << " to node " << node << " "<<_chan[_input]->GetLatency()<<endl;
 #endif
 
-	_routers[node]->AddInputChannel( &_chan[_input], &_chan_cred[_input] );
+	_routers[node]->AddInputChannel( _chan[_input], _chan_cred[_input] );
       }
     }
 
@@ -409,7 +409,7 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
       cout << "     Adding inter-grp input channel : " << _input << " to node " << node << endl;
 #endif
 
-      _routers[node]->AddInputChannel( &_chan[_input], &_chan_cred[_input] );
+      _routers[node]->AddInputChannel( _chan[_input], _chan_cred[_input] );
     }
 
   }

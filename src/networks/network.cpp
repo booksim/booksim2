@@ -48,35 +48,25 @@ Network::Network( const Configuration &config, const string & name ) :
   _sources  = -1; 
   _dests    = -1;
   _channels = -1;
-
-  _routers = 0;
-  _inject = 0;
-  _eject = 0;
-  _chan = 0;
-  _chan_use = 0;
-  _inject_cred = 0;
-  _eject_cred = 0;
-  _chan_cred = 0;
-
 }
 
 Network::~Network( )
 {
-  if ( _routers ) {
-    for ( int r = 0; r < _size; ++r )
-      if ( _routers[r] ) delete _routers[r];
-    delete [] _routers;
+  for ( int r = 0; r < _size; ++r ) {
+    if ( _routers[r] ) delete _routers[r];
   }
-  
-  if ( _inject ) delete [] _inject;
-  if ( _eject )  delete [] _eject;
-  if ( _chan )   delete [] _chan;
-
-  if ( _chan_use ) delete [] _chan_use;
-
-  if ( _inject_cred ) delete [] _inject_cred;
-  if ( _eject_cred )  delete [] _eject_cred;
-  if ( _chan_cred )   delete [] _chan_cred;
+  for ( int s = 0; s < _sources; ++s ) {
+    if ( _inject[s] ) delete _inject[s];
+    if ( _inject_cred[s] ) delete _inject_cred[s];
+  }
+  for ( int d = 0; d < _dests; ++d ) {
+    if ( _eject[d] ) delete _eject[d];
+    if ( _eject_cred[d] ) delete _eject_cred[d];
+  }
+  for ( int c = 0; c < _channels; ++c ) {
+    if ( _chan[c] ) delete _chan[c];
+    if ( _chan_cred[c] ) delete _chan_cred[c];
+  }
 }
 
 void Network::_Alloc( )
@@ -86,31 +76,37 @@ void Network::_Alloc( )
 	  ( _dests != -1 ) && 
 	  ( _channels != -1 ) );
 
-  _routers = new Router * [_size];
+  _routers.resize(_size);
   gNodes = _sources;
 
   /*booksim used arrays of flits as the channels which makes have capacity of
    *one. To simulate channel latency, flitchannel class has been added
    *which are fifos with depth = channel latency and each cycle the channel
    *shifts by one
+   *credit channels are the necessary counter part
    */
-  _inject = new FlitChannel[_sources];
-  _eject  = new FlitChannel[_dests];
-  _chan   = new FlitChannel[_channels];
-
-  _chan_use = new int [_channels];
-
-  for ( int i = 0; i < _channels; ++i ) {
-    _chan_use[i] = 0;
+  _inject.resize(_sources);
+  _inject_cred.resize(_sources);
+  for ( int s = 0; s < _sources; ++s ) {
+    _inject[s] = new FlitChannel;
+    _inject_cred[s] = new CreditChannel;
+  }
+  _eject.resize(_dests);
+  _eject_cred.resize(_dests);
+  for ( int d = 0; d < _dests; ++d ) {
+    _eject[d] = new FlitChannel;
+    _eject_cred[d] = new CreditChannel;
+  }
+  _chan.resize(_channels);
+  _chan_cred.resize(_channels);
+  for ( int c = 0; c < _channels; ++c ) {
+    _chan[c] = new FlitChannel;
+    _chan_cred[c] = new CreditChannel;
   }
 
-  _chan_use_cycles = 0;
+  _chan_use.resize(_channels, 0);
 
-  /*same as flit channel, credit channels are the necessary counter part
-   */
-  _inject_cred = new CreditChannel[_sources];
-  _eject_cred  = new CreditChannel[_dests];
-  _chan_cred   = new CreditChannel[_channels];
+  _chan_use_cycles = 0;
 }
 
 int Network::NumSources( ) const
@@ -144,7 +140,7 @@ void Network::WriteOutputs( )
   }
 
   for ( int c = 0; c < _channels; ++c ) {
-    if ( _chan[c].InUse() ) {
+    if ( _chan[c]->InUse() ) {
       _chan_use[c]++;
     }
   }
@@ -154,13 +150,13 @@ void Network::WriteOutputs( )
 void Network::WriteFlit( Flit *f, int source )
 {
   assert( ( source >= 0 ) && ( source < _sources ) );
-  _inject[source].Send(f);
+  _inject[source]->Send(f);
 }
 
 Flit *Network::ReadFlit( int dest )
 {
   assert( ( dest >= 0 ) && ( dest < _dests ) );
-  return _eject[dest].Receive();
+  return _eject[dest]->Receive();
 }
 
 /* new functions added for NOC
@@ -168,19 +164,19 @@ Flit *Network::ReadFlit( int dest )
 Flit* Network::PeekFlit( int dest ) 
 {
   assert( ( dest >= 0 ) && ( dest < _dests ) );
-  return _eject[dest].Peek( );
+  return _eject[dest]->Peek( );
 }
 
 void Network::WriteCredit( Credit *c, int dest )
 {
   assert( ( dest >= 0 ) && ( dest < _dests ) );
-  _eject_cred[dest].Send(c);
+  _eject_cred[dest]->Send(c);
 }
 
 Credit *Network::ReadCredit( int source )
 {
   assert( ( source >= 0 ) && ( source < _sources ) );
-  return _inject_cred[source].Receive();
+  return _inject_cred[source]->Receive();
 }
 
 /* new functions added for NOC
@@ -188,7 +184,7 @@ Credit *Network::ReadCredit( int source )
 Credit *Network::PeekCredit( int source ) 
 {
   assert( ( source >= 0 ) && ( source < _sources ) );
-  return _inject_cred[source].Peek( );
+  return _inject_cred[source]->Peek( );
 }
 
 void Network::InsertRandomFaults( const Configuration &config )

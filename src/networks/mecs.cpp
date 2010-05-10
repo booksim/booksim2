@@ -141,21 +141,21 @@ void MECS::_BuildNet( const Configuration &config ) {
       for (int x = 0; x < xrouter ; x++) {
 	//adopted from the CMESH, the first node has 0,1,8,9 (as an example)
 	int link = (xcount * xrouter) * (yrouter * y_index + y) + (xrouter * x_index + x) ;
-	//	_inject[link].SetLatency(ileng);
-	//_inject_cred[link].SetLatency(ileng);
-	//_eject[link] .SetLatency(ileng);
-	//_eject_cred[link].SetLatency(ileng);
-	_inject[link].SetLatency(0);
-	_inject_cred[link].SetLatency(0);
-	_eject[link] .SetLatency(0);
-	_eject_cred[link].SetLatency(0);
-	cur->AddInputChannel( &_inject[link], &_inject_cred[link] );
+	//	_inject[link]->SetLatency(ileng);
+	//_inject_cred[link]->SetLatency(ileng);
+	//_eject[link] ->SetLatency(ileng);
+	//_eject_cred[link]->SetLatency(ileng);
+	_inject[link]->SetLatency(0);
+	_inject_cred[link]->SetLatency(0);
+	_eject[link] ->SetLatency(0);
+	_eject_cred[link]->SetLatency(0);
+	cur->AddInputChannel( _inject[link], _inject_cred[link] );
 	
 #ifdef DEBUG_MECS
 	cout << "  Adding injection channel " << link << " with latency "<<ileng<<endl;
 #endif
 	
-	cur->AddOutputChannel( &_eject[link], &_eject_cred[link] );
+	cur->AddOutputChannel( _eject[link], _eject_cred[link] );
 #ifdef DEBUG_MECS
 	cout << "  Adding ejection channel " << link << " with latency "<<ileng<<endl;
 #endif
@@ -175,8 +175,8 @@ void MECS::_BuildNet( const Configuration &config ) {
     for(int i = 0; i<4; i++){
       link = node * _channels_per_router + i;
       //inputs channels is the wire from combiner to the router crossbar
-      _chan[link].SetLatency(0);
-      cur->AddInputChannel( &_chan[link], &_chan_cred[link] , i);
+      _chan[link]->SetLatency(0);
+      cur->AddInputChannel( _chan[link], _chan_cred[link] , i);
 #ifdef DEBUG_MECS
       cout<<"    input channel "<<link<<" to router "<<node<<" latency "<<0<<endl;
 #endif
@@ -238,18 +238,18 @@ void MECS::_BuildNet( const Configuration &config ) {
 	  //calculate which channel
 	  link = link = node * _channels_per_router + 4 + output_added;
 	  output_added++;
-	  //_chan[link].SetLatency(latency);
-	  _chan[link].SetLatency(0);
+	  //_chan[link]->SetLatency(latency);
+	  _chan[link]->SetLatency(0);
 	  //the first output channel gets added to the routers
 	  if(j ==0){
-	    cur->AddOutputChannel(&_chan[link], &_chan_cred[link]);
+	    cur->AddOutputChannel(_chan[link], _chan_cred[link]);
 #ifdef DEBUG_MECS
 	    cout<<"    output channel "<<link<<" to router "<<node<<" latency "<<latency<<endl;
 #endif
 	  }
 	  //add the channel to the MECS Channels
-	  cur_channel->AddChannel(&_chan[link],  j);
-	  cur_credit->AddChannel(&_chan_cred[link], j);
+	  cur_channel->AddChannel(_chan[link],  j);
+	  cur_credit->AddChannel(_chan_cred[link], j);
 	  //add a dropoff point the router
 	  MECSForwarder * forwarder = cur_channel->GetForwarder(j);
 	  MECSCreditForwarder * creditforwarder = cur_credit->GetForwarder(j);

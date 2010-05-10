@@ -478,23 +478,23 @@ void Power_Module::run(){
   maxInputPort = 0;
   maxOutputPort = 0;
 
-  FlitChannel* inject = net->GetInject();
-  FlitChannel* eject = net->GetEject();
-  FlitChannel* chan = net->GetChannels();
+  vector<FlitChannel *> inject = net->GetInject();
+  vector<FlitChannel *> eject = net->GetEject();
+  vector<FlitChannel *> chan = net->GetChannels();
   
   for(int i = 0; i<net->NumSources(); i++){
-    calcChannel(&(inject[i]));
+    calcChannel(inject[i]);
   }
 
   for(int i = 0; i<net->NumDests(); i++){
-    calcChannel(&(eject[i]));
+    calcChannel(eject[i]);
   }
   for(int i = 0; i<net->NumChannels();i++){
-    calcChannel(&(chan[i]));
+    calcChannel(chan[i]);
   }
 
-  Router** routers =net->GetRouters();
-  for(int i = 0; i<net->NumRouters();i++){
+  vector<Router*> routers = net->GetRouters();
+  for(int i = 0; i < routers.size(); i++){
     IQRouterBase* temp = dynamic_cast<IQRouterBase*>(routers[i]);
     BufferMonitor * bm = temp->GetBufferMonitor();
     calcBuffer(bm);
