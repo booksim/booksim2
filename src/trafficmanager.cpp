@@ -1268,28 +1268,13 @@ bool TrafficManager::_SingleSim( )
 	  if(_packets_sent[i] < min_packets_sent)
 	    min_packets_sent = _packets_sent[i];
 	}
-	if(_flow_out)
-	  *_flow_out << "in_flow(" << _time << ",:) = [";
-	for(int i = 0; i < _sources; ++i) {
-	  if(_flow_out)
-	    *_flow_out << _in_flow[i] << " ";
-	  _in_flow[i] = 0;
-	}
-	if(_flow_out)
-	  *_flow_out << "];" << endl
-		     << "out_flow(" << _time << ",:) = [";
-	for(int j = 0; j < _dests; ++j) {
-	  if(_flow_out)
-	    *_flow_out << _out_flow[j] << " ";
-	  _out_flow[j] = 0;
-	}
 	if(_flow_out) {
-	  *_flow_out << "];" << endl
-		     << "packets_sent(" << _time << ",:) = [";
-	  for(int i = 0; i < _sources; ++i)
-	    *_flow_out << _packets_sent[i] << " ";
-	  *_flow_out << "];" << endl;
+	  *_flow_out << "in_flow(" << _time << ",:) = " << _in_flow << ";";
+	  *_flow_out << "out_flow(" << _time << ",:) = " << _out_flow << ";";
+	  *_flow_out << "packets_sent(" << _time << ",:) = " << _packets_sent << ";";
 	}
+	_in_flow.assign(_sources, 0);
+	_out_flow.assign(_dests, 0);
       }
       cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) sent. Time used is " << _time - start_time << " cycles." << endl;
       cout << "Draining the Network...................\n";
@@ -1298,23 +1283,12 @@ bool TrafficManager::_SingleSim( )
       int empty_steps = 0;
       while( (_drain_measured_only ? _measured_in_flight_packets.size() : _total_in_flight_packets.size()) > 0 ) { 
 	_Step( ); 
-	if(_flow_out)
-	  *_flow_out << "in_flow(" << _time << ",:) = [";
-	for(int i = 0; i < _sources; ++i) {
-	  if(_flow_out)
-	    *_flow_out << _in_flow[i] << " ";
-	  _in_flow[i] = 0;
+	if(_flow_out) {
+	  *_flow_out << "in_flow(" << _time << ",:) = " << _in_flow << ";";
+	  *_flow_out << "out_flow(" << _time << ",:) = " << _out_flow << ";";
 	}
-	if(_flow_out)
-	  *_flow_out << "];" << endl
-		     << "out_flow(" << _time << ",:) = [";
-	for(int j = 0; j < _dests; ++j) {
-	  if(_flow_out)
-	    *_flow_out << _out_flow[j] << " ";
-	  _out_flow[j] = 0;
-	}
-	if(_flow_out)
-	  *_flow_out << "];" << endl;
+	_in_flow.assign(_sources, 0);
+	_out_flow.assign(_dests, 0);
 	++empty_steps;
 	
 	if ( empty_steps % 1000 == 0 ) {
@@ -1394,23 +1368,12 @@ bool TrafficManager::_SingleSim( )
       
       for ( int iter = 0; iter < _sample_period; ++iter ) {
 	_Step( );
-	if(_flow_out)
-	  *_flow_out << "in_flow(" << _time << ",:) = [";
-	for(int i = 0; i < _sources; ++i) {
-	  if(_flow_out)
-	    *_flow_out << _in_flow[i] << " ";
-	  _in_flow[i] = 0;
+	if(_flow_out) {
+	  *_flow_out << "in_flow(" << _time << ",:) = " << _in_flow << ";";
+	  *_flow_out << "out_flow(" << _time << ",:) = " << _out_flow << ";";
 	}
-	if(_flow_out)
-	  *_flow_out << "];" << endl
-		     << "out_flow(" << _time << ",:) = [";
-	for(int j = 0; j < _dests; ++j) {
-	  if(_flow_out)
-	    *_flow_out << _out_flow[j] << " ";
-	  _out_flow[j] = 0;
-	}
-	if(_flow_out)
-	  *_flow_out << "];" << endl;
+	_in_flow.assign(_sources, 0);
+	_out_flow.assign(_dests, 0);
       } 
       
       cout << _sim_state << endl;
@@ -1525,23 +1488,12 @@ bool TrafficManager::_SingleSim( )
 	int empty_steps = 0;
 	while( _PacketsOutstanding( ) ) { 
 	  _Step( ); 
-	  if(_flow_out)
-	    *_flow_out << "in_flow(" << _time << ",:) = [";
-	  for(int i = 0; i < _sources; ++i) {
-	    if(_flow_out)
-	      *_flow_out << _in_flow[i] << " ";
-	    _in_flow[i] = 0;
+	  if(_flow_out) {
+	    *_flow_out << "in_flow(" << _time << ",:) = " << _in_flow << ";";
+	    *_flow_out << "out_flow(" << _time << ",:) = " << _out_flow << ";";
 	  }
-	  if(_flow_out)
-	    *_flow_out << "];" << endl
-		       << "out_flow(" << _time << ",:) = [";
-	  for(int j = 0; j < _dests; ++j) {
-	    if(_flow_out)
-	      *_flow_out << _out_flow[j] << " ";
-	    _out_flow[j] = 0;
-	  }
-	  if(_flow_out)
-	    *_flow_out << "];" << endl;
+	  _in_flow.assign(_sources, 0);
+	  _out_flow.assign(_dests, 0);
 	  ++empty_steps;
 	
 	  if ( empty_steps % 1000 == 0 ) {
@@ -1585,23 +1537,12 @@ bool TrafficManager::_SingleSim( )
     int empty_steps = 0;
     while( (_drain_measured_only ? _measured_in_flight_packets.size() : _total_in_flight_packets.size()) > 0 ) { 
       _Step( ); 
-      if(_flow_out)
-	*_flow_out << "in_flow(" << _time << ",:) = [";
-      for(int i = 0; i < _sources; ++i) {
-	if(_flow_out)
-	  *_flow_out << _in_flow[i] << " ";
-	_in_flow[i] = 0;
+      if(_flow_out) {
+	*_flow_out << "in_flow(" << _time << ",:) = " << _in_flow << ";";
+	*_flow_out << "out_flow(" << _time << ",:) = " << _out_flow << ";";
       }
-      if(_flow_out)
-	*_flow_out << "];" << endl
-		   << "out_flow(" << _time << ",:) = [";
-      for(int j = 0; j < _dests; ++j) {
-	if(_flow_out)
-	  *_flow_out << _out_flow[j] << " ";
-	_out_flow[j] = 0;
-      }
-      if(_flow_out)
-	*_flow_out << "];" << endl;
+      _in_flow.assign(_sources, 0);
+      _out_flow.assign(_dests, 0);
       ++empty_steps;
 
       if ( empty_steps % 1000 == 0 ) {
