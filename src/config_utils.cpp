@@ -217,6 +217,11 @@ bool ParseArgs( Configuration *cf, int argc, char **argv )
 	if(isalpha(*c) || (*c == '_')) {
 	  isint = false;
 	  isfloat = false;
+	} else if(*c == '-') {
+	  if(c > argv[i] + pos + 1) {
+	    isint = false;
+	    isfloat = false;
+	  }
 	} else if(*c == '.') {
 	  if(isfloat && !isint) {
 	    isfloat = false;
