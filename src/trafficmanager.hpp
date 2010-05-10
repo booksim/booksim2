@@ -61,6 +61,7 @@ protected:
   int _dests;
 
   vector<Network *> _net;
+  vector<vector<Router *> > _routers;
 
   // ============ Message priorities ============ 
 

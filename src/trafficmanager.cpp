@@ -267,8 +267,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _internal_speedup = config.GetFloat( "internal_speedup" );
   _partial_internal_cycles.resize(_duplicate_networks, 0.0);
+  _routers.resize(_duplicate_networks);
   _class_array.resize(_duplicate_networks);
   for (int i=0; i < _duplicate_networks; ++i) {
+    _routers[i] = _net[i]->GetRouters();
     _class_array[i].resize(_classes, 0);
   }
 
