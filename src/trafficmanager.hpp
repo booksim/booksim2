@@ -60,7 +60,7 @@ protected:
   int _sources;
   int _dests;
 
-  Network **_net;
+  vector<Network *> _net;
 
   // ============ Message priorities ============ 
 
@@ -71,14 +71,14 @@ protected:
 
   // ============ Injection VC states  ============ 
 
-  BufferState ***_buf_states;
+  vector<vector<BufferState *> > _buf_states;
 
   // ============ Injection queues ============ 
 
   int          _voqing;
-  int          **_qtime;
-  bool         **_qdrained;
-  list<Flit *> ***_partial_packets;
+  vector<vector<int> > _qtime;
+  vector<vector<bool> > _qdrained;
+  vector<vector<vector<list<Flit *> > > > _partial_packets;
 
   map<int, Flit *> _measured_in_flight_flits;
   map<int, Flit *> _measured_in_flight_packets;
@@ -96,8 +96,8 @@ protected:
   vector<int> _packets_sent;
   int _batch_size;
   int _batch_count;
-  list<int>* _repliesPending;
-  map<int,Packet_Reply*> _repliesDetails;
+  vector<list<int> > _repliesPending;
+  map<int, Packet_Reply*> _repliesDetails;
   vector<int> _requestsOutstanding;
   int _maxOutstanding;
   bool _replies_inherit_priority;
@@ -106,33 +106,33 @@ protected:
   int _last_pid;
 
   // ============voq mode =============================
-  list<Flit*> ** _voq;
-  list<int>* _active_list;
-  bool** _active_vc;
+  vector<vector<list<Flit*> > > _voq;
+  vector<list<int> > _active_list;
+  vector<vector<bool> > _active_vc;
   
   // ============ Statistics ============
 
-  Stats **_latency_stats;     
-  Stats **_overall_min_latency;  
-  Stats **_overall_avg_latency;  
-  Stats **_overall_max_latency;  
+  vector<Stats *> _latency_stats;     
+  vector<Stats *> _overall_min_latency;  
+  vector<Stats *> _overall_avg_latency;  
+  vector<Stats *> _overall_max_latency;  
 
-  Stats **_tlat_stats;     
-  Stats **_overall_min_tlat;  
-  Stats **_overall_avg_tlat;  
-  Stats **_overall_max_tlat;  
+  vector<Stats *> _tlat_stats;     
+  vector<Stats *> _overall_min_tlat;  
+  vector<Stats *> _overall_avg_tlat;  
+  vector<Stats *> _overall_max_tlat;  
 
-  Stats **_pair_latency;
-  Stats **_pair_tlat;
-  Stats *_hop_stats;
+  vector<Stats *> _pair_latency;
+  vector<Stats *> _pair_tlat;
+  Stats * _hop_stats;
 
-  Stats **_sent_flits;
-  Stats **_accepted_flits;
-  Stats *_overall_accepted;
-  Stats *_overall_accepted_min;
+  vector<Stats *> _sent_flits;
+  vector<Stats *> _accepted_flits;
+  Stats * _overall_accepted;
+  Stats * _overall_accepted_min;
   
-  Stats *_batch_time;
-  Stats *_overall_batch_time;
+  Stats * _batch_time;
+  Stats * _overall_batch_time;
 
   vector<unsigned int> _in_flow;
   vector<unsigned int> _out_flow;
@@ -161,6 +161,18 @@ protected:
   float _flit_rate;
 
   int   _packet_size;
+
+  /*false means all packet types are the same length "gConstantsize"
+   *All packets uses all VCS
+   *packet types are generated randomly, essentially making it only 1 type
+   *of packet in the network
+   *
+   *True means only request packets are generated and replies are generated
+   *as a response to the requests, packets are now difference length, correspond
+   *to "read_request_size" etc. 
+   */
+  bool _use_read_write;
+
   int _read_request_size;
   int _read_reply_size;
   int _write_request_size;
@@ -170,7 +182,7 @@ protected:
   int   _sample_period;
   int   _max_samples;
   int   _warmup_periods;
-  short ** _class_array;
+  vector<vector<short> > _class_array;
   short _sub_network;
 
   int   _include_queuing;
@@ -202,6 +214,10 @@ protected:
   string _traffic;
   bool _drain_measured_only;
 
+  //flits to watch
+  ostream * _stats_out;
+  ostream * _flow_out;
+
   // ============ Internal methods ============ 
 protected:
   virtual Flit *_NewFlit( );
@@ -219,7 +235,7 @@ protected:
 
   void _ClearStats( );
 
-  int  _ComputeStats( Stats ** stats, double *avg, double *min ) const;
+  int  _ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const;
 
   virtual bool _SingleSim( );
 
@@ -227,10 +243,10 @@ protected:
 
   void _DisplayRemaining( ) const;
   
-  void _LoadWatchList();
+  void _LoadWatchList(const string & filename);
 
 public:
-  TrafficManager( const Configuration &config, Network **net );
+  TrafficManager( const Configuration &config, const vector<Network *> & net );
   ~TrafficManager( );
 
   bool Run( );

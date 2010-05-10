@@ -479,7 +479,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
     f->ph  = 0;  
 
   if (debug)
-    *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		<< " FLIT ID: " << f->id << " Router: " << rID << " routing  from src : " << f->src <<  " to dest : " << f->dest << " f->ph: " << f->ph << " in_channel: " << in_channel << " gK: " << gK << endl;
   
   if (dest >= grp_ID*grp_size_nodes && dest < (grp_ID+1)*grp_size_nodes) {
@@ -513,7 +513,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
   _dim_found = 0;
   if (f->ph == 0 && grp_output_RID == rID) {
     if (debug)
-      *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+      *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		  << " routing directly... " << endl;
     out_port = gK + (2*gK-1) + grp_output %(gK);
     _dim_found = 1;
@@ -521,7 +521,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
     f->ph = 2;
   } else if (dest >= rID*_radix && dest < (rID+1)*_radix) {
     if (debug)
-      *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+      *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		  << " selfrouting directly... " << endl;
 
     out_port = flatfly_selfrouting(dest);
@@ -532,7 +532,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
     int dest_rID = (int) (dest / gK);
     //out_vc = 0;
     if (debug)
-    *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		<< " rID: " << rID << " dest_rID: " << dest_rID << " dest: " << dest << endl;
     if (rID < dest_rID)
       out_port = (dest_rID % grp_size_routers) - 1 + gK;
@@ -541,7 +541,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
   }
 
   if (debug) {
-    *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		<< " grp_size_routers: " << grp_size_routers << endl
 		<< " grp_ID: " << grp_ID
 		<< " dest_grp_ID: " << dest_grp_ID << endl
@@ -553,7 +553,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
   if (out_port == -1) { cout << " ERROR: no out_port found ! " << endl; exit(-1); }
   if (debug)
-    *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		<< "	through output port : " << out_port << " out vc: " << out_vc << endl;
 
   outputs->AddRange( out_port, out_vc, out_vc );

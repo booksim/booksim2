@@ -84,6 +84,10 @@ void KNCube::_BuildNet( const Configuration &config )
 
   ostringstream router_name;
 
+  //latency type, noc or conventional network
+  bool use_noc_latency;
+  use_noc_latency = (config.GetInt("use_noc_latency")==1);
+  
   for ( int node = 0; node < _size; ++node ) {
 
     router_name << "router";
@@ -124,7 +128,7 @@ void KNCube::_BuildNet( const Configuration &config )
       _routers[node]->AddInputChannel( &_chan[left_input], &_chan_cred[left_input] );
 
       //set input channel latency
-      if(_use_noc_latency){
+      if(use_noc_latency){
 	_chan[right_input].SetLatency( latency );
 	_chan[left_input].SetLatency( latency );
 	_chan_cred[right_input].SetLatency( latency );
@@ -144,7 +148,7 @@ void KNCube::_BuildNet( const Configuration &config )
       _routers[node]->AddOutputChannel( &_chan[left_output], &_chan_cred[left_output] );
 
       //set output channel latency
-      if(_use_noc_latency){
+      if(use_noc_latency){
 	_chan[right_output].SetLatency( latency );
 	_chan[left_output].SetLatency( latency );
 	_chan_cred[right_output].SetLatency( latency );

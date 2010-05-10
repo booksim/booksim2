@@ -162,7 +162,7 @@ void IQRouterCombined::_Alloc( )
 	      if(do_request) {
 		
 		if(f->watch) {
-		  *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+		  *gWatchOut << GetSimTime() << " | " << FullName() << " | " 
 			      << "VC " << vc << " at input "
 			      << input << " requests output " << output 
 			      << " (flit: " << f->id
@@ -198,8 +198,8 @@ void IQRouterCombined::_Alloc( )
   }
   
   if(watched) {
-    *_watch_out << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
-    _sw_allocator->PrintRequests( _watch_out );
+    *gWatchOut << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
+    _sw_allocator->PrintRequests( gWatchOut );
   }
   
   _sw_allocator->Allocate();
@@ -280,7 +280,7 @@ void IQRouterCombined::_Alloc( )
 	    _vc_rr_offset[expanded_input*_vcs+vc] = (output + 1) % _outputs;
 	    
 	    if(f->watch)
-	      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 			  << "VC " << sel_vc << " at output " << output
 			  << " granted to VC " << vc << " at input " << input
 			  << " (flit: " << f->id << ")." << endl;
@@ -307,7 +307,7 @@ void IQRouterCombined::_Alloc( )
 	  f = cur_vc->RemoveFlit();
 	  
 	  if(f->watch)
-	    *_watch_out << GetSimTime() << " | " << FullName() << " | " 
+	    *gWatchOut << GetSimTime() << " | " << FullName() << " | " 
 			<< "Output " << output
 			<< " granted to VC " << vc << " at input " << input
 			<< " (flit: " << f->id
@@ -324,7 +324,7 @@ void IQRouterCombined::_Alloc( )
 	  bufferMonitor.read(input, f);
 	  
 	  if(f->watch)
-	    *_watch_out << GetSimTime() << " | " << FullName() << " | "
+	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 			<< "Forwarding flit " << f->id << " through crossbar "
 			<< "(exp. input: " << expanded_input
 			<< ", exp. output: " << expanded_output

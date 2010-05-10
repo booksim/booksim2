@@ -422,7 +422,7 @@ void dim_order_cmo( const Router *r, const Flit *f, int in_channel,
   }
 
   if ( f->watch ) {
-      *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+      *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		  << "Adding VC range [" 
 		  << vc_min << "," 
 		  << vc_max << "]"

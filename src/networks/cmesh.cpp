@@ -114,10 +114,14 @@ void CMesh::_BuildNet( const Configuration& config ) {
   int y_index ;
 
   //standard trace configuration 
-  if(_trace){
+  if(gTrace){
     cout<<"Setup Finished Router"<<endl;
   }
 
+  //latency type, noc or conventional network
+  bool use_noc_latency;
+  use_noc_latency = (config.GetInt("use_noc_latency")==1);
+  
   ostringstream name;
   // The following vector is used to check that every
   //  processor in the system is connected to the network
@@ -243,7 +247,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
 
     // Port 0: +x channel
     if (x == _k-1) {
-      if(_use_noc_latency){
+      if(use_noc_latency){
 	_chan[px_out].SetLatency( longLatency  );
 	_chan_cred[px_out].SetLatency( longLatency  );
       } else {
@@ -252,7 +256,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
       }
     }
     else {
-      if(_use_noc_latency){
+      if(use_noc_latency){
 	_chan[px_out].SetLatency( shortLatency  );
 	_chan_cred[px_out].SetLatency( shortLatency  );
       } else {
@@ -263,12 +267,12 @@ void CMesh::_BuildNet( const Configuration& config ) {
     _routers[node]->AddOutputChannel( &_chan[px_out], &_chan_cred[px_out] );
     _routers[node]->AddInputChannel( &_chan[px_in], &_chan_cred[px_in] );
     
-    if(_trace){
+    if(gTrace){
       cout<<"Link "<<" "<<px_out<<" "<<px_in<<" "<<node<<" "<<_chan[px_out].GetLatency()<<endl;
     }
     // Port 1: -x channel
     if (x == 0) {
-      if(_use_noc_latency){
+      if(use_noc_latency){
 	_chan[nx_out].SetLatency( longLatency  );
 	_chan_cred[nx_out].SetLatency( longLatency  );
       } else {
@@ -277,7 +281,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
       }
     }
     else {
-      if(_use_noc_latency){
+      if(use_noc_latency){
 	_chan[nx_out].SetLatency( shortLatency  );
 	_chan_cred[nx_out].SetLatency( shortLatency  );
       } else {
@@ -287,12 +291,12 @@ void CMesh::_BuildNet( const Configuration& config ) {
     }
     _routers[node]->AddOutputChannel( &_chan[nx_out], &_chan_cred[nx_out] );
     _routers[node]->AddInputChannel( &_chan[nx_in], &_chan_cred[nx_in] );
-    if(_trace){
+    if(gTrace){
       cout<<"Link "<<" "<<nx_out<<" "<<nx_in<<" "<<node<<" "<<_chan[nx_out].GetLatency()<<endl;
     }
     // Port 2: +y channel
     if (y == _k-1) {
-      if(_use_noc_latency){
+      if(use_noc_latency){
 	_chan[py_out].SetLatency( longLatency  );
 	_chan_cred[py_out].SetLatency( longLatency  );
       } else {
@@ -301,7 +305,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
       }
     }
     else {
-      if(_use_noc_latency){
+      if(use_noc_latency){
 	_chan[py_out].SetLatency( shortLatency  );
 	_chan_cred[py_out].SetLatency( shortLatency  );
       } else {
@@ -312,12 +316,12 @@ void CMesh::_BuildNet( const Configuration& config ) {
     _routers[node]->AddOutputChannel( &_chan[py_out], &_chan_cred[py_out] );
     _routers[node]->AddInputChannel( &_chan[py_in], &_chan_cred[py_in] );
     
-    if(_trace){
+    if(gTrace){
       cout<<"Link "<<" "<<py_out<<" "<<py_in<<" "<<node<<" "<<_chan[py_out].GetLatency()<<endl;
     }
     // Port 3: -y channel
     if (y == 0) {
-      if(_use_noc_latency){
+      if(use_noc_latency){
 	_chan[ny_out].SetLatency( longLatency  );
 	_chan_cred[ny_out].SetLatency( longLatency  );
       } else {
@@ -326,7 +330,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
       }
     }
     else {
-      if(_use_noc_latency){
+      if(use_noc_latency){
       _chan[ny_out].SetLatency(shortLatency  );
       _chan_cred[ny_out].SetLatency(shortLatency  );
       } else {
@@ -337,7 +341,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
     _routers[node]->AddOutputChannel( &_chan[ny_out], &_chan_cred[ny_out] );
     _routers[node]->AddInputChannel( &_chan[ny_in], &_chan_cred[ny_in] );    
 
-    if(_trace){
+    if(gTrace){
       cout<<"Link "<<" "<<ny_out<<" "<<ny_in<<" "<<node<<" "<<_chan[ny_out].GetLatency()<<endl;
     }
     
@@ -347,7 +351,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
   for ( int i = 0 ; i < _sources ; i++ ) 
     assert( channel_vector[i] == true ) ;
   
-  if(_trace){
+  if(gTrace){
     cout<<"Setup Finished Link"<<endl;
   }
 }

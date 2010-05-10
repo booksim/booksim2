@@ -187,7 +187,7 @@ void IQRouterBase::WriteOutputs( )
 {
   _SendFlits( );
   _SendCredits( );
-  if(_trace){
+  if(gTrace){
     int load = 0;
     cout<<"Router "<<this->GetID()<<endl;
     //need to modify router to report the buffere dept
@@ -208,7 +208,7 @@ void IQRouterBase::_ReceiveFlits( )
       _input_buffer[input].push( f );
       ++_received_flits[input];
       if(f->watch) {
-	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		    << "Received flit " << f->id
 		    << " from channel at input " << input
 		    << "." << endl;
@@ -242,18 +242,18 @@ void IQRouterBase::_InputQueuing( )
       VC * cur_vc = &_vc[input][f->vc];
       
       if(f->watch) {
-	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		    << "Adding flit " << f->id
 		    << " to VC " << f->vc
 		    << " at input " << input
 		    << " (state: " << VC::VCSTATE[cur_vc->GetState()];
 	if(cur_vc->Empty()) {
-	  *_watch_out << ", empty";
+	  *gWatchOut << ", empty";
 	} else {
 	  assert(cur_vc->FrontFlit());
-	  *_watch_out << ", front: " << cur_vc->FrontFlit()->id;
+	  *gWatchOut << ", front: " << cur_vc->FrontFlit()->id;
 	}
-	*_watch_out << ")." << endl;
+	*gWatchOut << ")." << endl;
       }
 
       if ( !cur_vc->AddFlit( f ) ) {
@@ -323,7 +323,7 @@ void IQRouterBase::_OutputQueuing( )
       if ( f ) {
 	_output_buffer[output].push( f );
 	if(f->watch)
-	  *_watch_out << GetSimTime() << " | " << FullName() << " | "
+	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		      << "Buffering flit " << f->id
 		      << " at output " << output
 		      << "." << endl;
@@ -351,14 +351,14 @@ void IQRouterBase::_SendFlits( )
       _output_buffer[output].pop( );
       ++_sent_flits[output];
       if(f->watch)
-	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		    << "Sending flit " << f->id
 		    << " to channel at output " << output
 		    << "." << endl;
     } else {
       f = 0;
     }
-    if(_trace && f){cout<<"Outport "<<output<<endl;cout<<"Stop Mark"<<endl;}
+    if(gTrace && f){cout<<"Outport "<<output<<endl;cout<<"Stop Mark"<<endl;}
     (*_output_channels)[output]->Send( f );
   }
 }

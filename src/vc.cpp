@@ -170,7 +170,7 @@ void VC::SetState( eVCState s )
   Flit * f = FrontFlit();
   
   if(f && f->watch)
-    *_watch_out << GetSimTime() << " | " << FullName() << " | "
+    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		<< "Changing state from " << VC::VCSTATE[_state]
 		<< " to " << VC::VCSTATE[s] << "." << endl;
   
@@ -179,11 +179,11 @@ void VC::SetState( eVCState s )
      ((_state == vc_spec) && (s == vc_spec_grant))) {
     assert(f);
     if(f->watch)
-      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		  << "Keeping state time at " << _state_time << "." << endl;
   } else {
     if(f && f->watch)
-      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		  << "Resetting state time." << endl;
     _state_time = 0;
   }
@@ -226,7 +226,7 @@ void VC::UpdatePriority()
 	if(bf->pri > df->pri) df = bf;
       }
       if((df != f) && (df->watch || f->watch)) {
-	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		    << "Flit " << df->id
 		    << " donates priority to flit " << f->id
 		    << "." << endl;
@@ -234,7 +234,7 @@ void VC::UpdatePriority()
       f = df;
     }
     if(f->watch)
-      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		  << "Flit " << f->id
 		  << " sets priority to " << f->pri
 		  << "." << endl;

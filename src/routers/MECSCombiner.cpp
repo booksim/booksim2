@@ -67,7 +67,7 @@ void MECSCombiner::ReadInputs(){
     f = inputs.at(location)->ReceiveFlit();
     assert(f);
     if(f->watch){
-      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		  <<f->id<<" load into router "<<router<<endl;
     }
   }

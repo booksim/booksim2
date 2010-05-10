@@ -116,13 +116,16 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
   ostringstream router_name;
 
   
-  if(_trace){
+  if(gTrace){
 
     cout<<"Setup Finished Router"<<endl;
     
   }
 
-
+  //latency type, noc or conventional network
+  bool use_noc_latency;
+  use_noc_latency = (config.GetInt("use_noc_latency")==1);
+  
   cout << " Flat Bufferfly " << endl;
   cout << " k = " << _k << " n = " << _n << " c = "<<_c<< endl;
   cout << " each switch - total radix =  "<< _r << endl;
@@ -186,7 +189,7 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 	//adopted from the CMESH, the first node has 0,1,8,9 (as an example)
 	int link = (xcount * xrouter) * (yrouter * y_index + y) + (xrouter * x_index + x) ;
 
-	if(_use_noc_latency){
+	if(use_noc_latency){
 	  _inject[link].SetLatency(ileng);
 	  _inject_cred[link].SetLatency(ileng);
 	  _eject[link] .SetLatency(ileng);
@@ -272,7 +275,7 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 #ifdef DEBUG_FATFLY
 	cout << "Adding channel : " << _output << " to node " << node <<" and "<<other<<" with length "<<length<<endl;
 #endif
-	if(_use_noc_latency){
+	if(use_noc_latency){
 	  _chan[_output].SetLatency(length);
 	  _chan_cred[_output].SetLatency(length);
 	} else {
@@ -283,14 +286,14 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 	
 	_routers[other]->AddInputChannel( &_chan[_output], &_chan_cred[_output]);
 	
-	if(_trace){
+	if(gTrace){
 	  cout<<"Link "<<_output<<" "<<node<<" "<<other<<" "<<length<<endl;
 	}
 	
       }
     }
   }
-  if(_trace){
+  if(gTrace){
     cout<<"Setup Finished Link"<<endl;
   }
 }
@@ -624,7 +627,7 @@ void ugal_dqdt_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   int threshold = 2;
 
   if ( in_channel < gC ){
-    if(_trace){
+    if(gTrace){
       cout<<"New Flit "<<f->src<<endl;
     }
     f->ph   = 0;
@@ -635,7 +638,7 @@ void ugal_dqdt_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     }
   }
 
-  if(_trace){
+  if(gTrace){
     int load = 0;
     cout<<"Router "<<rID<<endl;
     cout<<"Input Channel "<<in_channel<<endl;
@@ -791,7 +794,7 @@ assert(false);
   }
   
   if (debug) cout << "        through output port : " << out_port << endl;
-  if(_trace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
+  if(gTrace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
 
   outputs->AddRange( out_port , vcBegin, vcEnd );
 }
@@ -817,7 +820,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   int threshold = 2;
 
   if ( in_channel < gC ){
-    if(_trace){
+    if(gTrace){
       cout<<"New Flit "<<f->src<<endl;
     }
     f->ph   = 0;
@@ -828,7 +831,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     }
   }
 
-  if(_trace){
+  if(gTrace){
     int load = 0;
     cout<<"Router "<<rID<<endl;
     cout<<"Input Channel "<<in_channel<<endl;
@@ -984,7 +987,7 @@ assert(false);
   }
   
   if (debug) cout << "        through output port : " << out_port << endl;
-  if(_trace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
+  if(gTrace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
 
   outputs->AddRange( out_port , vcBegin, vcEnd );
 }
@@ -1009,13 +1012,13 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   int threshold = 2;
 
   if ( in_channel < gC ){
-    if(_trace){
+    if(gTrace){
       cout<<"New Flit "<<f->src<<endl;
     }
     f->ph   = 0;
   }
 
-  if(_trace){
+  if(gTrace){
     int load = 0;
     cout<<"Router "<<rID<<endl;
     cout<<"Input Channel "<<in_channel<<endl;
@@ -1081,7 +1084,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
      _ran_intm = find_ran_intm(flatfly_transformation(f->src), dest);
      tmp_out_port =  flatfly_outport(dest, rID);
      if (f->watch){
-       *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+       *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		   << " MIN tmp_out_port: " << tmp_out_port;
      }
 
@@ -1092,7 +1095,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
      tmp_out_port =  flatfly_outport(_ran_intm, rID);
      
      if (f->watch){
-       *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+       *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		   << " NONMIN tmp_out_port: " << tmp_out_port << endl;
      }
      if (_ran_intm >= rID*_concentration && _ran_intm < (rID+1)*_concentration) {
@@ -1163,7 +1166,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   }
   
   if (debug) cout << "        through output port : " << out_port << endl;
-  if(_trace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
+  if(gTrace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
 
   outputs->AddRange( out_port , vcBegin, vcEnd );
 }

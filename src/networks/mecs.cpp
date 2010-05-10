@@ -309,7 +309,7 @@ void dor_MECS( const Router *r, const Flit *f, int in_channel,
     out_port = dest%gK; 
     if(debug)
       {
-	*_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+	*gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		    <<f->id<<" Routing to final destination outport "<<out_port<<endl;}
     goto dor_done;
   }
@@ -319,13 +319,13 @@ void dor_MECS( const Router *r, const Flit *f, int in_channel,
     f->ph = 0;
     if(debug)
       {
-	*_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+	*gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		    <<f->id<<" Injected "<<endl;}
     //already in the same X
     if(r_x_location == dest_x_location){
       if(debug)
 	{
-	  *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+	  *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		      <<f->id<<" Switching to Y"<<endl;}
       f->intm = -1;
       f->ph = 1;
@@ -341,7 +341,7 @@ void dor_MECS( const Router *r, const Flit *f, int in_channel,
     if(rID == intm_router){
       if(debug)
 	{
-	  *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+	  *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		      <<f->id<<" Switching to Y"<<endl;}
       f->intm = -1;
       f->ph = 1;
@@ -354,7 +354,7 @@ void dor_MECS( const Router *r, const Flit *f, int in_channel,
       }
       if(debug)
 	{
-	  *_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+	  *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		      <<f->id<<" Routing in X direction"<<out_port<<endl;}
       goto dor_done;
     }
@@ -368,7 +368,7 @@ void dor_MECS( const Router *r, const Flit *f, int in_channel,
     }
     if(debug)
       {
-	*_watch_out << GetSimTime() << " | " << r->FullName() << " | "
+	*gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		    <<f->id<<" Routing in Y direction"<<out_port<<endl;}
     goto dor_done;
   }

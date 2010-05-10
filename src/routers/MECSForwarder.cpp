@@ -62,7 +62,7 @@ void MECSForwarder::ReadInputs(){
   Flit *f = chan_in->Receive();
   if(f){
     if(f->watch){
-      *_watch_out << GetSimTime() << " | " << FullName() << " | "
+      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		  <<f->id<<" at Forwarder "<<location<<endl;
     }
     //shoudl the flit be dropped off here?
@@ -71,13 +71,13 @@ void MECSForwarder::ReadInputs(){
       assert(flit_queue.size()<100); //if this trips, soemthign is wrong
       ff = 0; //terminate if reached the destination
       if(f->watch){
-	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		    <<f->id<<" halted at Forwarder "<<location<<endl;
       }
     } else {
       ff = f;
       if(f->watch){
-	*_watch_out << GetSimTime() << " | " << FullName() << " | "
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		    <<f->id<<" moved at Forwarder "<<location<<endl;
       }
     }

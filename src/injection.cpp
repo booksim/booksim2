@@ -65,12 +65,8 @@ int on_off( int source, double rate )
 
   assert( ( source >= 0 ) && ( source < gNodes ) );
 
-  if ( !gNodeStates ) {
-    gNodeStates = new int [gNodes];
-
-    for ( int n = 0; n < gNodes; ++n ) {
-      gNodeStates[n] = 0;
-    }
+  if ( gNodeStates.size() != gNodes ) {
+    gNodeStates.resize(gNodes, 0);
   }
 
   // advance state

@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _GLOBALS_HPP_
 #define _GLOBALS_HPP_
 #include <string>
+#include <vector>
 #include <iostream>
 
 /*all declared in main.cpp*/
@@ -58,9 +59,7 @@ extern int yrouter;
 extern int xcount ;
 extern int ycount;
 
-extern bool _trace;
-
-extern bool _use_read_write;
+extern bool gTrace;
 
 extern double gBurstAlpha;
 extern double gBurstBeta;
@@ -68,12 +67,8 @@ extern double gBurstBeta;
 /*number of flits per packet, set by the configuration file*/
 extern int    gConstPacketSize;
 
-extern int *gNodeStates;
+extern std::vector<int> gNodeStates;
 
-extern std::string _watch_file;
-extern std::ostream * _watch_out;
-extern std::ostream * _stats_out;
-extern std::ostream * _flow_out;
+extern std::ostream * gWatchOut;
 
-extern bool _use_noc_latency;
 #endif

@@ -114,18 +114,7 @@ int xcount  = 0;
 int ycount  = 0;
 
 //generate nocviewer trace
-bool _trace = false;
-
-/*false means all packet types are the same length "gConstantsize"
- *All packets uses all VCS
- *packet types are generated randomly, essentially making it only 1 type
- *of packet in the network
- *
- *True means only request packets are generated and replies are generated
- *as a response to the requests, packets are now difference length, correspond
- *to "read_request_size" etc. 
- */
-bool _use_read_write = false;
+bool gTrace = false;
 
 //injection functions
 map<string, tInjectionProcess> gInjectionProcessMap;
@@ -135,26 +124,18 @@ double gBurstAlpha;
 double gBurstBeta;
 
 /*number of flits per packet, when _use_read_write is false*/
-
 int    gConstPacketSize;
 
 //for on_off injections
-int *gNodeStates = 0;
+vector<int> gNodeStates;
 
-//flits to watch
-string _watch_file;
-ostream * _watch_out = &cout;
-ostream * _stats_out = &cout;
-ostream * _flow_out = &cout;
-
-//latency type, noc or conventional network
-bool _use_noc_latency;
+ostream * gWatchOut;
 
 /////////////////////////////////////////////////////////////////////////////
 
 bool AllocatorSim( const Configuration& config )
 {
-  Network **net;
+  vector<Network *> net;
   string topo;
 
   config.GetStr( "topology", topo );
@@ -162,7 +143,7 @@ bool AllocatorSim( const Configuration& config )
   /*To include a new network, must register the network here
    *add an else if statement with the name of the network
    */
-  net = new Network*[networks];
+  net.resize(networks);
   for (int i = 0; i < networks; ++i) {
     ostringstream name;
     name << "network_" << i;
@@ -247,7 +228,6 @@ bool AllocatorSim( const Configuration& config )
   delete trafficManager ;
   for (int i=0; i<networks; ++i)
     delete net[i];
-  delete [] net;
 
   return result;
 }
@@ -270,35 +250,18 @@ int main( int argc, char **argv )
   InitializeInjectionMap( );
 
   _print_activity = (config.GetInt("print_activity")==1);
-  _trace = (config.GetInt("viewer trace")==1);
-  
-  _use_read_write = (config.GetInt("use_read_write")==1);
-  
-  config.GetStr( "watch_file", _watch_file );
+  gTrace = (config.GetInt("viewer trace")==1);
   
   string watch_out_file;
   config.GetStr( "watch_out", watch_out_file );
-  if(watch_out_file != "-") {
-    _watch_out = new ofstream(watch_out_file.c_str());
+  if(watch_out_file == "") {
+    gWatchOut = NULL;
+  } else if(watch_out_file == "-") {
+    gWatchOut = &cout;
+  } else {
+    gWatchOut = new ofstream(watch_out_file.c_str());
   }
   
-  string stats_out_file;
-  config.GetStr( "stats_out", stats_out_file );
-  if(stats_out_file == "") {
-    _stats_out = NULL;
-  } else if(stats_out_file != "-") {
-    _stats_out = new ofstream(stats_out_file.c_str());
-  }
-  
-  string flow_out_file;
-  config.GetStr( "flow_out", flow_out_file );
-  if(flow_out_file == "") {
-    _flow_out = NULL;
-  } else if(flow_out_file != "-") {
-    _flow_out = new ofstream(flow_out_file.c_str());
-  }
-  
-  _use_noc_latency = (config.GetInt("use_noc_latency")==1);
 
   /*configure and run the simulator
    */

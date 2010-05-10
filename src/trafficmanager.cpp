@@ -36,7 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "random_utils.hpp" 
 #include "vc.hpp"
 
-TrafficManager::TrafficManager( const Configuration &config, Network **net )
+TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
   : Module( 0, "traffic_manager" ), _net(net), _cur_id(0), _cur_pid(0),
    _time(0), _warmup_time(-1), _drain_time(-1), _empty_network(false),
    _deadlock_counter(1), _sub_network(0), _timed_mode(false), _last_id(-1), 
@@ -91,11 +91,11 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   
   // ============ Injection VC states  ============ 
 
-  _buf_states = new BufferState ** [_sources];
+  _buf_states.resize(_sources);
 
   for ( int s = 0; s < _sources; ++s ) {
     tmp_name << "terminal_buf_state_" << s;
-    _buf_states[s] = new BufferState * [_duplicate_networks];
+    _buf_states[s].resize(_duplicate_networks);
     for (int a = 0; a < _duplicate_networks; ++a) {
       _buf_states[s][a] = new BufferState( config, this, tmp_name.str( ) );
     }
@@ -105,16 +105,16 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
 
   // ============ Injection queues ============ 
 
-  _qtime              = new int * [_sources];
-  _qdrained           = new bool * [_sources];
-  _partial_packets    = new list<Flit *> ** [_sources];
+  _qtime.resize(_sources);
+  _qdrained.resize(_sources);
+  _partial_packets.resize(_sources);
 
   for ( int s = 0; s < _sources; ++s ) {
-    _qtime[s]           = new int [_classes];
-    _qdrained[s]        = new bool [_classes];
-    _partial_packets[s] = new list<Flit *> * [_classes];
+    _qtime[s].resize(_classes);
+    _qdrained[s].resize(_classes);
+    _partial_packets[s].resize(_classes);
     for (int a = 0; a < _classes; ++a)
-      _partial_packets[s][a] = new list<Flit *> [_duplicate_networks];
+      _partial_packets[s][a].resize(_duplicate_networks);
   }
 
   _voqing = config.GetInt( "voq" );
@@ -124,6 +124,7 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
     _use_lagging = true;
   }
 
+  _use_read_write = (config.GetInt("use_read_write")==1);
   _read_request_size = config.GetInt("read_request_size");
   _read_reply_size = config.GetInt("read_reply_size");
   _write_request_size = config.GetInt("write_request_size");
@@ -138,34 +139,32 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _packets_sent.resize(_sources);
   _batch_size = config.GetInt( "batch_size" );
   _batch_count = config.GetInt( "batch_count" );
-  _repliesPending = new list<int> [_sources];
+  _repliesPending.resize(_sources);
   _requestsOutstanding.resize(_sources);
   _maxOutstanding = config.GetInt ("max_outstanding_requests");  
 
   if ( _voqing ) {
-    _voq         = new list<Flit *> * [_sources];
-    _active_list = new list<int> [_sources];
-    _active_vc   = new bool * [_sources];
-  }
+    _voq.resize(_sources);
+    _active_list.resize(_sources);
+    _active_vc.resize(_sources);
 
-  for ( int s = 0; s < _sources; ++s ) {
-    if ( _voqing ) {
-      _voq[s]       = new list<Flit *> [_dests];
-      _active_vc[s] = new bool [_dests];
+    for ( int s = 0; s < _sources; ++s ) {
+      _voq[s].resize(_dests);
+      _active_vc[s].resize(_dests);
     }
   }
 
   // ============ Statistics ============ 
 
-  _latency_stats   = new Stats * [_classes];
-  _overall_min_latency = new Stats * [_classes];
-  _overall_avg_latency = new Stats * [_classes];
-  _overall_max_latency = new Stats * [_classes];
+  _latency_stats.resize(_classes);
+  _overall_min_latency.resize(_classes);
+  _overall_avg_latency.resize(_classes);
+  _overall_max_latency.resize(_classes);
 
-  _tlat_stats   = new Stats * [_classes];
-  _overall_min_tlat = new Stats * [_classes];
-  _overall_avg_tlat = new Stats * [_classes];
-  _overall_max_tlat = new Stats * [_classes];
+  _tlat_stats.resize(_classes);
+  _overall_min_tlat.resize(_classes);
+  _overall_avg_tlat.resize(_classes);
+  _overall_max_tlat.resize(_classes);
 
   for ( int c = 0; c < _classes; ++c ) {
     tmp_name << "latency_stat_" << c;
@@ -217,10 +216,10 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _batch_time = new Stats( this, "batch_time" );
   _overall_batch_time = new Stats( this, "overall_batch_time" );
 
-  _pair_latency = new Stats * [_sources*_dests];
-  _pair_tlat = new Stats * [_sources*_dests];
-  _sent_flits = new Stats * [_sources];
-  _accepted_flits = new Stats * [_dests];
+  _pair_latency.resize(_sources*_dests);
+  _pair_tlat.resize(_sources*_dests);
+  _sent_flits.resize(_sources);
+  _accepted_flits.resize(_dests);
   
   _in_flow.resize(_sources, 0);
 
@@ -268,10 +267,9 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
 
   _internal_speedup = config.GetFloat( "internal_speedup" );
   _partial_internal_cycles.resize(_duplicate_networks, 0.0);
-  _class_array = new short* [_duplicate_networks];
+  _class_array.resize(_duplicate_networks);
   for (int i=0; i < _duplicate_networks; ++i) {
-    _class_array[i] = new short [_classes];
-    memset(_class_array[i], 0, sizeof(short)*_classes);
+    _class_array[i].resize(_classes, 0);
   }
 
   _traffic_function  = GetTrafficFunction( config );
@@ -309,35 +307,39 @@ TrafficManager::TrafficManager( const Configuration &config, Network **net )
   _print_vc_stats = config.GetInt( "print_vc_stats" );
   config.GetStr( "traffic", _traffic ) ;
   _drain_measured_only = config.GetInt( "drain_measured_only" );
-  _LoadWatchList();
+
+  string watch_file;
+  config.GetStr( "watch_file", watch_file );
+  _LoadWatchList(watch_file);
+
+  string stats_out_file;
+  config.GetStr( "stats_out", stats_out_file );
+  if(stats_out_file == "") {
+    _stats_out = NULL;
+  } else if(stats_out_file == "-") {
+    _stats_out = &cout;
+  } else {
+    _stats_out = new ofstream(stats_out_file.c_str());
+  }
+  
+  string flow_out_file;
+  config.GetStr( "flow_out", flow_out_file );
+  if(flow_out_file == "") {
+    _flow_out = NULL;
+  } else if(flow_out_file == "-") {
+    _flow_out = &cout;
+  } else {
+    _flow_out = new ofstream(flow_out_file.c_str());
+  }
 }
 
 TrafficManager::~TrafficManager( )
 {
   for ( int s = 0; s < _sources; ++s ) {
-    delete [] _qtime[s];
-    delete [] _qdrained[s];
     for (int a = 0; a < _duplicate_networks; ++a) {
       delete _buf_states[s][a];
     }
-    if ( _voqing ) {
-      delete [] _voq[s];
-      delete [] _active_vc[s];
-    }
-    for (int a = 0; a < _classes; ++a) {
-      delete [] _partial_packets[s][a];
-    }
-    delete [] _partial_packets[s];
-    delete [] _buf_states[s];
   }
-  if ( _voqing ) {
-    delete [] _voq;
-    delete [] _active_vc;
-  }
-  delete [] _buf_states;
-  delete [] _qtime;
-  delete [] _qdrained;
-  delete [] _partial_packets;
 
   for ( int c = 0; c < _classes; ++c ) {
     delete _latency_stats[c];
@@ -350,20 +352,6 @@ TrafficManager::~TrafficManager( )
     delete _overall_avg_tlat[c];
     delete _overall_max_tlat[c];
   }
-  for (int i = 0; i < _duplicate_networks; ++i) {
-    delete [] _class_array[i];
-  }
-  delete[] _class_array;
-
-  delete [] _latency_stats;
-  delete [] _overall_min_latency;
-  delete [] _overall_avg_latency;
-  delete [] _overall_max_latency;
-
-  delete [] _tlat_stats;
-  delete [] _overall_min_tlat;
-  delete [] _overall_avg_tlat;
-  delete [] _overall_max_tlat;
 
   delete _hop_stats;
   delete _overall_accepted;
@@ -385,11 +373,9 @@ TrafficManager::~TrafficManager( )
     delete _accepted_flits[i];
   }
 
-  delete [] _sent_flits;
-  delete [] _accepted_flits;
-  delete [] _pair_latency;
-  delete [] _pair_tlat;
-
+  if(gWatchOut && (gWatchOut != &cout)) delete gWatchOut;
+  if(_stats_out && (_stats_out != &cout)) delete _stats_out;
+  if(_flow_out && (_flow_out != &cout)) delete _flow_out;
 }
 
 
@@ -476,7 +462,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   }
 
   if ( f->watch ) { 
-    *_watch_out << GetSimTime() << " | "
+    *gWatchOut << GetSimTime() << " | "
 		<< "node" << dest << " | "
 		<< "Retiring flit " << f->id 
 		<< " (packet " << f->pid
@@ -713,7 +699,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   bool watch  = (iter != _packets_to_watch.end());
   
   if ( watch ) { 
-    *_watch_out << GetSimTime() << " | "
+    *gWatchOut << GetSimTime() << " | "
 		<< "node" << source << " | "
 		<< "Enqueuing packet " << _cur_pid
 		<< " at time " << time
@@ -734,7 +720,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       _measured_in_flight_flits[f->id] = f;
     }
     
-    if(_trace){
+    if(gTrace){
       cout<<"New Flit "<<f->src<<endl;
     }
     f->type = packet_type;
@@ -777,7 +763,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     f->vc  = -1;
 
     if ( f->watch ) { 
-      *_watch_out << GetSimTime() << " | "
+      *gWatchOut << GetSimTime() << " | "
 		  << "node" << source << " | "
 		  << "Enqueuing flit " << f->id
 		  << " (packet " << f->pid
@@ -885,7 +871,7 @@ void TrafficManager::_BatchInject(){
 	  }
 
 	  if(f->watch) {
-	    *_watch_out << GetSimTime() << " | "
+	    *gWatchOut << GetSimTime() << " | "
 			<< "node" << input << " | "
 			<< "Injecting flit " << f->id
 			<< " at time " << _time
@@ -1006,7 +992,7 @@ void TrafficManager::_NormalInject(){
 	  }
 
 	  if(f->watch) {
-	    *_watch_out << GetSimTime() << " | "
+	    *gWatchOut << GetSimTime() << " | "
 			<< "node" << input << " | "
 			<< "Injecting flit " << f->id
 			<< " at time " << _time
@@ -1059,7 +1045,7 @@ void TrafficManager::_Step( )
   }
   
   ++_time;
-  if(_trace){
+  if(gTrace){
     cout<<"TIME "<<_time<<endl;
   }
 
@@ -1072,13 +1058,13 @@ void TrafficManager::_Step( )
       if ( f ) {
 	++_out_flow[output];
         if ( f->watch ) {
-	  *_watch_out << GetSimTime() << " | "
+	  *gWatchOut << GetSimTime() << " | "
 		      << "node" << output << " | "
 		      << "Ejecting flit " << f->id
 		      << " (packet " << f->pid << ")"
 		      << " from VC " << f->vc
 		      << "." << endl;
-	  *_watch_out << GetSimTime() << " | "
+	  *gWatchOut << GetSimTime() << " | "
 		      << "node" << output << " | "
 		      << "Injecting credit for VC " << f->vc << "." << endl;
         }
@@ -1156,7 +1142,7 @@ void TrafficManager::_ClearStats( )
 
 }
 
-int TrafficManager::_ComputeStats( Stats ** stats, double *avg, double *min ) const 
+int TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const 
 {
   int dmin;
 
@@ -1727,9 +1713,9 @@ void TrafficManager::DisplayStats() {
 }
 
 //read the watchlist
-void TrafficManager::_LoadWatchList(){
+void TrafficManager::_LoadWatchList(const string & filename){
   ifstream watch_list;
-  watch_list.open(_watch_file.c_str());
+  watch_list.open(filename.c_str());
   
   string line;
   if(watch_list.is_open()) {
