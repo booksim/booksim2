@@ -116,6 +116,10 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   for ( int i = 0; i < _outputs*_output_speedup; ++i ) {
     _switch_hold_out[i] = -1;
   }
+
+  _received_flits = new int[_inputs];
+  _sent_flits = new int[_outputs];
+  ResetFlitStats();
 }
 
 IQRouterBase::~IQRouterBase( )
@@ -149,6 +153,10 @@ IQRouterBase::~IQRouterBase( )
   delete [] _switch_hold_in;
   delete [] _switch_hold_vc;
   delete [] _switch_hold_out;
+
+  delete [] _received_flits;
+  delete [] _sent_flits;
+
 }
   
 void IQRouterBase::ReadInputs( )
@@ -198,6 +206,7 @@ void IQRouterBase::_ReceiveFlits( )
 
     if ( f ) {
       _input_buffer[input].push( f );
+      ++_received_flits[input];
       if(f->watch) {
 	*_watch_out << GetSimTime() << " | " << FullName() << " | "
 		    << "Received flit " << f->id
@@ -340,6 +349,7 @@ void IQRouterBase::_SendFlits( )
       f = _output_buffer[output].front( );
       f->from_router = this->GetID();
       _output_buffer[output].pop( );
+      ++_sent_flits[output];
       if(f->watch)
 	*_watch_out << GetSimTime() << " | " << FullName() << " | "
 		    << "Sending flit " << f->id
@@ -411,14 +421,41 @@ int IQRouterBase::GetCredit(int out, int vc_begin, int vc_end ) const
   return -5;
 }
 
-int IQRouterBase::GetBuffer(int i) const{
+int IQRouterBase::GetBuffer(int i) const {
   int size = 0;
-  VC *cur_vc;
-  for(int j=0; j<_vcs; j++){
-    cur_vc = &_vc[i][j];
-    size += cur_vc->GetSize();
+  int i_start = (i >= 0) ? i : 0;
+  int i_end = (i >= 0) ? i : (_inputs - 1);
+  for(int input = i_start; input <= i_end; ++input) {
+    for(int vc = 0; vc < _vcs; ++vc) {
+      size += _vc[input][vc].GetSize();
+    }
   }
   return size;
+}
+
+int IQRouterBase::GetReceivedFlits(int i) const {
+  int count = 0;
+  int i_start = (i >= 0) ? i : 0;
+  int i_end = (i >= 0) ? i : (_inputs - 1);
+  for(int input = i_start; input <= i_end; ++input)
+    count += _received_flits[input];
+  return count;
+}
+
+int IQRouterBase::GetSentFlits(int o) const {
+  int count = 0;
+  int o_start = (o >= 0) ? o : 0;
+  int o_end = (o >= 0) ? o : (_outputs - 1);
+  for(int output = o_start; output <= o_end; ++output)
+    count += _sent_flits[o];
+  return count;
+}
+
+void IQRouterBase::ResetFlitStats() {
+  for(int i = 0; i < _inputs; ++i)
+    _received_flits[i] = 0;
+  for(int o = 0; o < _outputs; ++o)
+    _sent_flits[o] = 0;
 }
 
 

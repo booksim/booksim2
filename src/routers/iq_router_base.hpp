@@ -110,6 +110,9 @@ protected:
   int *_switch_hold_out;
   int *_switch_hold_vc;
 
+  int *_received_flits;
+  int *_sent_flits;
+
   void _ReceiveFlits( );
   void _ReceiveCredits( );
 
@@ -120,7 +123,6 @@ protected:
 
   void _SendFlits( );
   void _SendCredits( );
-  
   
   // ----------------------------------------
   //
@@ -144,8 +146,11 @@ public:
   
   void Display( ) const;
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const;
-  virtual int GetBuffer(int i) const;
-  
+  virtual int GetBuffer(int i = -1) const;
+  virtual int GetReceivedFlits(int i = -1) const;
+  virtual int GetSentFlits(int o = -1) const;
+  virtual void ResetFlitStats();
+
   SwitchMonitor* GetSwitchMonitor(){return &switchMonitor;}
   BufferMonitor* GetBufferMonitor(){return &bufferMonitor;}
 };

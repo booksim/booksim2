@@ -89,7 +89,11 @@ public:
   virtual void Finalize ();
 
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const {return -1;}
-  virtual int GetBuffer(int i) const {return -1;}
+  virtual int GetBuffer(int i = -1) const {return sub_router->GetBuffer(i);}
+  virtual int GetReceivedFlits(int i = -1) const {return sub_router->GetReceivedFlits(i);}
+  virtual int GetSentFlits(int i = -1) const {return sub_router->GetSentFlits(i);}
+  virtual void ResetFlitStats() {sub_router->ResetFlitStats();}
+  
 };
 
 #endif

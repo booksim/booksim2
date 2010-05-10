@@ -95,7 +95,10 @@ public:
 
 
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const = 0;
-  virtual int GetBuffer(int i) const = 0;
+  virtual int GetBuffer(int i = -1) const = 0;
+  virtual int GetReceivedFlits(int i = -1) const = 0;
+  virtual int GetSentFlits(int i = -1) const = 0;
+  virtual void ResetFlitStats() = 0;
 
   int NumOutputs(){return _outputs;}
 };
