@@ -57,11 +57,12 @@ struct Packet_Reply {
 
 class TrafficManager : public Module {
 protected:
-  int _sources;
-  int _dests;
+  unsigned int _sources;
+  unsigned int _dests;
+  unsigned int _routers;
 
   vector<Network *> _net;
-  vector<vector<Router *> > _routers;
+  vector<vector<Router *> > _router_map;
 
   // ============ Message priorities ============ 
 
@@ -135,8 +136,10 @@ protected:
   Stats * _batch_time;
   Stats * _overall_batch_time;
 
-  vector<unsigned int> _in_flow;
-  vector<unsigned int> _out_flow;
+  vector<unsigned int> _injected_flow;
+  vector<unsigned int> _ejected_flow;
+  vector<unsigned int> _received_flow;
+  vector<unsigned int> _sent_flow;
 
   vector<int> _slowest_flit;
 

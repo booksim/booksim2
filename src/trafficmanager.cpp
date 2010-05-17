@@ -44,7 +44,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 {
   _sources = _net[0]->NumSources( );
   _dests   = _net[0]->NumDests( );
-  
+  _routers = _net[0]->NumRouters( );
+
   //nodes higher than limit do not produce or receive packets
   //for default limit = sources
 
@@ -221,7 +222,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _sent_flits.resize(_sources);
   _accepted_flits.resize(_dests);
   
-  _in_flow.resize(_sources, 0);
+  _injected_flow.resize(_sources, 0);
 
   for ( int i = 0; i < _sources; ++i ) {
     tmp_name << "sent_stat_" << i;
@@ -242,7 +243,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     }
   }
 
-  _out_flow.resize(_dests, 0);
+  _ejected_flow.resize(_dests, 0);
 
   for ( int i = 0; i < _dests; ++i ) {
     tmp_name << "accepted_stat_" << i;
@@ -251,6 +252,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     tmp_name.seekp( 0, ios::beg );    
   }
   
+  _received_flow.resize(_duplicate_networks*_routers, 0);
+  _sent_flow.resize(_duplicate_networks*_routers, 0);
+
   _slowest_flit.resize(_classes);
 
   // ============ Simulation parameters ============ 
@@ -267,10 +271,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _internal_speedup = config.GetFloat( "internal_speedup" );
   _partial_internal_cycles.resize(_duplicate_networks, 0.0);
-  _routers.resize(_duplicate_networks);
+  _router_map.resize(_duplicate_networks);
   _class_array.resize(_duplicate_networks);
   for (int i=0; i < _duplicate_networks; ++i) {
-    _routers[i] = _net[i]->GetRouters();
+    _router_map[i] = _net[i]->GetRouters();
     _class_array[i].resize(_classes, 0);
   }
 
@@ -468,8 +472,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 		<< "node" << dest << " | "
 		<< "Retiring flit " << f->id 
 		<< " (packet " << f->pid
-		<< ", lat = " << _time - f->time
-		<< ", tlat = " << _time - f->ttime
+		<< ", lat = " << f->atime - f->time
 		<< ", src = " << f->src 
 		<< ", dest = " << f->dest
 		<< ")." << endl;
@@ -490,24 +493,51 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       cerr << "Unmatched packet: " << f->pid << "!" << endl;
       Error( "" );
     }
+    Flit * head = iter->second;
+    assert(f->pid == head->pid);
+    if ( f->watch ) { 
+      *gWatchOut << GetSimTime() << " | "
+		 << "node" << dest << " | "
+		 << "Retiring packet " << f->pid 
+		 << " (lat = " << f->atime - head->time
+		 << ", frag = " << (f->atime - head->atime) - (f->id - head->id) // NB: In the spirit of solving problems using ugly hacks, we compute the packet length by taking advantage of the fact that the IDs of flits within a packet are contiguous.
+		 << ", src = " << head->src 
+		 << ", dest = " << head->dest
+		 << ")." << endl;
+    }
     _total_in_flight_packets.erase(iter);
-    
+
+    // for measured packets, defer deletion until later (see below)
+    if(!f->record) delete head;
+
     //code the source of request, look carefully, its tricky ;)
     if (f->type == Flit::READ_REQUEST || f->type == Flit::WRITE_REQUEST) {
       Packet_Reply* temp = new Packet_Reply;
       temp->source = f->src;
-      temp->time = _time;
+      temp->time = f->atime;
       temp->ttime = f->ttime;
       temp->record = f->record;
       temp->type = f->type;
       _repliesDetails[f->id] = temp;
       _repliesPending[dest].push_back(f->id);
-    } else if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY  ){
-      //received a reply
-      _requestsOutstanding[dest]--;
-    } else if(f->type == Flit::ANY_TYPE && _sim_mode == batch  ){
-      //received a reply
-      _requestsOutstanding[f->src]--;
+    } else {
+      if ( f->watch ) { 
+	*gWatchOut << GetSimTime() << " | "
+		   << "node" << dest << " | "
+		   << "Retiring transation " //<< (transation id) 
+		   << " (lat = " << f->atime - head->ttime
+		   << ", src = " << head->src 
+		   << ", dest = " << head->dest
+		   << ")." << endl;
+      }
+      if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY  ){
+	//received a reply
+	_requestsOutstanding[dest]--;
+      } else if(f->type == Flit::ANY_TYPE && _sim_mode == batch) {
+	//received a reply
+	_requestsOutstanding[f->src]--;
+      }
+      
     }
 
 
@@ -520,26 +550,26 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       switch( _pri_type ) {
       case class_based:
 	if((_slowest_flit[f->pri] < 0) ||
-	   (_latency_stats[f->pri]->Max() < (_time - f->time)))
+	   (_latency_stats[f->pri]->Max() < (f->atime - f->time)))
 	  _slowest_flit[f->pri] = f->id;
-	_latency_stats[f->pri]->AddSample( _time - f->time );
+	_latency_stats[f->pri]->AddSample( f->atime - f->time );
 	if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
-	  _tlat_stats[f->pri]->AddSample( _time - f->ttime );
+	  _tlat_stats[f->pri]->AddSample( f->atime - f->ttime );
 	break;
       default: // fall through
 	if((_slowest_flit[0] < 0) ||
-	   (_latency_stats[0]->Max() < (_time - f->time)))
+	   (_latency_stats[0]->Max() < (f->atime - f->time)))
 	   _slowest_flit[0] = f->id;
-	_latency_stats[0]->AddSample( _time - f->time);
+	_latency_stats[0]->AddSample( f->atime - f->time);
 	if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
-	  _tlat_stats[0]->AddSample( _time - f->ttime );
+	  _tlat_stats[0]->AddSample( f->atime - f->ttime );
       }
    
-      _pair_latency[f->src*_dests+dest]->AddSample( _time - f->time );
+      _pair_latency[f->src*_dests+dest]->AddSample( f->atime - f->time );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY)
-	_pair_tlat[dest*_dests+f->src]->AddSample( _time - f->ttime );
+	_pair_tlat[dest*_dests+f->src]->AddSample( f->atime - f->ttime );
       else if(f->type == Flit::ANY_TYPE)
-	_pair_tlat[f->src*_dests+dest]->AddSample( _time - f->ttime );
+	_pair_tlat[f->src*_dests+dest]->AddSample( f->atime - f->ttime );
       
       if ( f->record ) {
 	map<int, Flit *>::iterator iter = _measured_in_flight_packets.find(f->pid);
@@ -547,11 +577,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	  cerr << "Unmatched measured packet: " << f->pid << "!" << endl;
 	  Error( "" );
 	}
+	delete iter->second;
 	_measured_in_flight_packets.erase(iter);
       }
     }
   }
-  delete f;
+  if(!f->head) delete f; // head flits are not freed until packet is complete!
 }
 
 int TrafficManager::_IssuePacket( int source, int cl )
@@ -683,7 +714,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 
 
 
-  if ((packet_destination <0) || (packet_destination >= _net[0]->NumDests())) {
+  if ((packet_destination <0) || (packet_destination >= _dests)) {
     cerr << "Incorrect packet destination " << packet_destination
 	 << " for stype " << packet_type
 	 << "!" << endl;
@@ -797,7 +828,7 @@ void TrafficManager::_FirstStep( )
 void TrafficManager::_BatchInject(){
   
   // Receive credits and inject new traffic
-  for ( int input = 0; input < _net[0]->NumSources( ); ++input ) {
+  for ( int input = 0; input < _sources; ++input ) {
     for (int i = 0; i < _duplicate_networks; ++i) {
       Credit * cred = _net[i]->ReadCredit( input );
       if ( cred ) {
@@ -887,7 +918,7 @@ void TrafficManager::_BatchInject(){
 	    nf->vc = f->vc;
 	  }
 
-	  ++_in_flow[input];
+	  ++_injected_flow[input];
         }
       }
       _net[i]->WriteFlit( write_flit ? f : 0, input );
@@ -903,7 +934,7 @@ void TrafficManager::_BatchInject(){
 void TrafficManager::_NormalInject(){
 
   // Receive credits and inject new traffic
-  for ( int input = 0; input < _net[0]->NumSources( ); ++input ) {
+  for ( int input = 0; input < _sources; ++input ) {
     for (int i = 0; i < _duplicate_networks; ++i) {
       Credit * cred = _net[i]->ReadCredit( input );
       if ( cred ) {
@@ -1008,7 +1039,7 @@ void TrafficManager::_NormalInject(){
 	    nf->vc = f->vc;
 	  }
 
-	  ++_in_flow[input];
+	  ++_injected_flow[input];
         }
       }
       _net[i]->WriteFlit( write_flit ? f : 0, input );
@@ -1054,11 +1085,12 @@ void TrafficManager::_Step( )
 
   for (int i = 0; i < _duplicate_networks; ++i) {
     // Eject traffic and send credits
-    for ( int output = 0; output < _net[0]->NumDests( ); ++output ) {
+    for ( int output = 0; output < _dests; ++output ) {
       Flit * f = _net[i]->ReadFlit( output );
 
       if ( f ) {
-	++_out_flow[output];
+	++_ejected_flow[output];
+	f->atime = _time;
         if ( f->watch ) {
 	  *gWatchOut << GetSimTime() << " | "
 		      << "node" << output << " | "
@@ -1085,6 +1117,12 @@ void TrafficManager::_Step( )
         if( ( _sim_state == warming_up ) || ( _sim_state == running ) )
 	  _accepted_flits[output]->AddSample( 0 );
       }
+    }
+
+    for(int j = 0; j < _routers; ++j) {
+      _received_flow[i*_routers+j] += _router_map[i][j]->GetReceivedFlits();
+      _sent_flow[i*_routers+j] += _router_map[i][j]->GetSentFlits();
+      _router_map[i][j]->ResetFlitStats();
     }
   }
 }
@@ -1269,12 +1307,16 @@ bool TrafficManager::_SingleSim( )
 	    min_packets_sent = _packets_sent[i];
 	}
 	if(_flow_out) {
-	  *_flow_out << "in_flow(" << _time << ",:) = " << _in_flow << ";";
-	  *_flow_out << "out_flow(" << _time << ",:) = " << _out_flow << ";";
-	  *_flow_out << "packets_sent(" << _time << ",:) = " << _packets_sent << ";";
+	  *_flow_out << "injected_flow(" << _time << ",:) = " << _injected_flow << ";" << endl;
+	  *_flow_out << "ejected_flow(" << _time << ",:) = " << _ejected_flow << ";" << endl;
+	  *_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
+	  *_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
+	  *_flow_out << "packets_sent(" << _time << ",:) = " << _packets_sent << ";" << endl;
 	}
-	_in_flow.assign(_sources, 0);
-	_out_flow.assign(_dests, 0);
+	_injected_flow.assign(_sources, 0);
+	_ejected_flow.assign(_dests, 0);
+	_received_flow.assign(_duplicate_networks*_routers, 0);
+	_sent_flow.assign(_duplicate_networks*_routers, 0);
       }
       cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) sent. Time used is " << _time - start_time << " cycles." << endl;
       cout << "Draining the Network...................\n";
@@ -1284,11 +1326,15 @@ bool TrafficManager::_SingleSim( )
       while( (_drain_measured_only ? _measured_in_flight_packets.size() : _total_in_flight_packets.size()) > 0 ) { 
 	_Step( ); 
 	if(_flow_out) {
-	  *_flow_out << "in_flow(" << _time << ",:) = " << _in_flow << ";";
-	  *_flow_out << "out_flow(" << _time << ",:) = " << _out_flow << ";";
+	  *_flow_out << "injected_flow(" << _time << ",:) = " << _injected_flow << ";" << endl;
+	  *_flow_out << "ejected_flow(" << _time << ",:) = " << _ejected_flow << ";" << endl;
+	  *_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
+	  *_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
 	}
-	_in_flow.assign(_sources, 0);
-	_out_flow.assign(_dests, 0);
+	_injected_flow.assign(_sources, 0);
+	_ejected_flow.assign(_dests, 0);
+	_received_flow.assign(_duplicate_networks*_routers, 0);
+	_sent_flow.assign(_duplicate_networks*_routers, 0);
 	++empty_steps;
 	
 	if ( empty_steps % 1000 == 0 ) {
@@ -1369,11 +1415,15 @@ bool TrafficManager::_SingleSim( )
       for ( int iter = 0; iter < _sample_period; ++iter ) {
 	_Step( );
 	if(_flow_out) {
-	  *_flow_out << "in_flow(" << _time << ",:) = " << _in_flow << ";";
-	  *_flow_out << "out_flow(" << _time << ",:) = " << _out_flow << ";";
+	  *_flow_out << "injected_flow(" << _time << ",:) = " << _injected_flow << ";" << endl;
+	  *_flow_out << "ejected_flow(" << _time << ",:) = " << _ejected_flow << ";" << endl;
+	  *_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
+	  *_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
 	}
-	_in_flow.assign(_sources, 0);
-	_out_flow.assign(_dests, 0);
+	_injected_flow.assign(_sources, 0);
+	_ejected_flow.assign(_dests, 0);
+	_received_flow.assign(_duplicate_networks*_routers, 0);
+	_sent_flow.assign(_duplicate_networks*_routers, 0);
       } 
       
       cout << _sim_state << endl;
@@ -1489,11 +1539,15 @@ bool TrafficManager::_SingleSim( )
 	while( _PacketsOutstanding( ) ) { 
 	  _Step( ); 
 	  if(_flow_out) {
-	    *_flow_out << "in_flow(" << _time << ",:) = " << _in_flow << ";";
-	    *_flow_out << "out_flow(" << _time << ",:) = " << _out_flow << ";";
+	    *_flow_out << "injected_flow(" << _time << ",:) = " << _injected_flow << ";" << endl;
+	    *_flow_out << "ejected_flow(" << _time << ",:) = " << _ejected_flow << ";" << endl;
+	    *_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
+	    *_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
 	  }
-	  _in_flow.assign(_sources, 0);
-	  _out_flow.assign(_dests, 0);
+	  _injected_flow.assign(_sources, 0);
+	  _ejected_flow.assign(_dests, 0);
+	  _received_flow.assign(_duplicate_networks*_routers, 0);
+	  _sent_flow.assign(_duplicate_networks*_routers, 0);
 	  ++empty_steps;
 	
 	  if ( empty_steps % 1000 == 0 ) {
@@ -1538,11 +1592,15 @@ bool TrafficManager::_SingleSim( )
     while( (_drain_measured_only ? _measured_in_flight_packets.size() : _total_in_flight_packets.size()) > 0 ) { 
       _Step( ); 
       if(_flow_out) {
-	*_flow_out << "in_flow(" << _time << ",:) = " << _in_flow << ";";
-	*_flow_out << "out_flow(" << _time << ",:) = " << _out_flow << ";";
+	*_flow_out << "injected_flow(" << _time << ",:) = " << _injected_flow << ";" << endl;
+	*_flow_out << "ejected_flow(" << _time << ",:) = " << _ejected_flow << ";" << endl;
+	*_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
+	*_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
       }
-      _in_flow.assign(_sources, 0);
-      _out_flow.assign(_dests, 0);
+      _injected_flow.assign(_sources, 0);
+      _ejected_flow.assign(_dests, 0);
+      _received_flow.assign(_duplicate_networks*_routers, 0);
+      _sent_flow.assign(_duplicate_networks*_routers, 0);
       ++empty_steps;
 
       if ( empty_steps % 1000 == 0 ) {
