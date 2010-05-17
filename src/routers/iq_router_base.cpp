@@ -447,7 +447,7 @@ int IQRouterBase::GetSentFlits(int o) const {
   int o_start = (o >= 0) ? o : 0;
   int o_end = (o >= 0) ? o : (_outputs - 1);
   for(int output = o_start; output <= o_end; ++output)
-    count += _sent_flits[o];
+    count += _sent_flits[output];
   return count;
 }
 
