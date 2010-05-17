@@ -52,6 +52,7 @@ struct Flit {
   
   int  time;
   int  ttime;
+  int  atime;
 
   int  sn;
   int  rob_time;

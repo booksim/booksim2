@@ -20,8 +20,8 @@ extern int config_input(char *, int);
 %}
 
 Digit [0-9]
-Exponent [eE]([+-]?){Digit}+
-DblConst ({Digit}+(\.{Digit}*)?)({Exponent})?
+Exponent [eE][+-]?{Digit}+
+DblConst ({Digit}*\.)?{Digit}+{Exponent}?
 
 %%
 
@@ -40,7 +40,7 @@ DblConst ({Digit}+(\.{Digit}*)?)({Exponent})?
 
 -?[0-9]*\.[0-9]+ { configlval.fnum = strtod( yytext, 0 ); return FNUM; }
 
-{DblConst}  { configlval.fnum = strtod(yytext, 0); return FNUM;}
+-?{DblConst}  { configlval.fnum = strtod(yytext, 0); return FNUM;}
 
 .          { return yytext[0]; }
 

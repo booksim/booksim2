@@ -47,7 +47,7 @@ ostream& operator<<( ostream& os, const Flit& f )
      << " Type: " << f.type 
      << " Head: " << f.head << " Tail: " << f.tail << endl;
   os << "  Source: " << f.src << "  Dest: " << f.dest << " Intm: "<<f.intm<<endl;
-  os << "  Injection time: " << f.time << " Transaction start: " << f.ttime << " Phase: "<<f.ph<< endl;
+  os << "  Injection time: " << f.time << " Transaction start: " << f.ttime << "Arrival time: " << f.atime << " Phase: "<<f.ph<< endl;
   os << "  From router "<<f.from_router<< " VC: " << f.vc << endl;
   return os;
 }
@@ -60,6 +60,8 @@ Flit::Flit()
   tail      = false ;
   true_tail = false ;
   time      = -1 ;
+  ttime     = -1 ;
+  atime     = -1 ;
   sn        = 0 ;
   rob_time  = 0 ;
   id        = -1 ;

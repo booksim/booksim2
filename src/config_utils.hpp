@@ -40,6 +40,7 @@ extern int configparse( );
 class Configuration {
   static Configuration *theConfig;
   FILE *_config_file;
+  string _config_string;
 
 protected:
   map<string,char *>       _str_map;
@@ -59,7 +60,8 @@ public:
   unsigned int GetInt( const string &field, unsigned int def = 0 ) const;
   double GetFloat( const string &field, double def = 0.0 ) const;
 
-  void Parse( const string& filename );
+  void ParseFile( const string& filename );
+  void ParseString( const string& str );
   int  Input( char *line, int max_size );
   void ParseError( const string &msg, unsigned int lineno ) const;
 

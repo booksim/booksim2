@@ -140,7 +140,7 @@ double Configuration::GetFloat( const string &field, double def ) const
   return r;
 }
 
-void Configuration::Parse( const string& filename )
+void Configuration::ParseFile( const string& filename )
 {
   if ( ( _config_file = fopen( filename.c_str( ), "r" ) ) == 0 ) {
     cerr << "Could not open configuration file " << filename << endl;
@@ -153,12 +153,23 @@ void Configuration::Parse( const string& filename )
   _config_file = 0;
 }
 
+void Configuration::ParseString( const string& str )
+{
+  _config_string = str + ';';
+  configparse( );
+  _config_string = "";
+}
+
 int Configuration::Input( char *line, int max_size )
 {
   int length = 0;
 
   if ( _config_file ) {
     length = fread( line, 1, max_size, _config_file );
+  } else {
+    length = _config_string.length();
+    _config_string.copy(line, max_size);
+    _config_string.clear();
   }
 
   return length;
@@ -196,7 +207,7 @@ bool ParseArgs( Configuration *cf, int argc, char **argv )
     size_t pos = arg.find('=');
     if(pos == string::npos) {
       // parse config file
-      cf->Parse( argv[i] );
+      cf->ParseFile( argv[i] );
       ifstream in(argv[i]);
       cout << "BEGIN Configuration File: " << argv[i] << endl;
       while (!in.eof()) {
@@ -208,45 +219,8 @@ bool ParseArgs( Configuration *cf, int argc, char **argv )
       rc = true;
     } else {
       // override individual parameter
-      string param(arg.substr(0, pos));
-      
-      // determine type
-      bool isint = true;
-      bool isfloat = true;
-      for(char * c = argv[i] + pos + 1; *c != '\0'; ++c) {
-	if(isalpha(*c) || (*c == '_')) {
-	  isint = false;
-	  isfloat = false;
-	} else if(*c == '-') {
-	  if(c > argv[i] + pos + 1) {
-	    isint = false;
-	    isfloat = false;
-	  }
-	} else if(*c == '.') {
-	  if(isfloat && !isint) {
-	    isfloat = false;
-	  }
-	  isint = false;
-	} else if(!isdigit(*c)) {
-	  cerr << "Parse error: " << arg << endl;
-	  exit(-1);
-	}
-      }
-      string value(arg.substr(pos + 1));
-      cout << "OVERRIDE Parameter: " << param << " = " << value << endl;
-      if(isint) {
-	istringstream ss(value);
-	unsigned int v;
-	ss >> v;
-	cf->Assign(param, v);
-      } else if(isfloat) {
-	istringstream ss(value);
-	double v;
-	ss >> v;
-	cf->Assign(param, v);
-      } else {
-	cf->Assign(param, value);
-      }
+      cout << "OVERRIDE Parameter: " << arg << endl;
+      cf->ParseString(argv[i]);
     }
   }
 
