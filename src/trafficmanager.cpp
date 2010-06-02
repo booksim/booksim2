@@ -435,11 +435,7 @@ Flit *TrafficManager::_NewFlit( )
   Flit * f = new Flit();
   f->id    = _cur_id;
   _total_in_flight_flits[_cur_id] = f;
-  map<int, Flit *>::iterator iter = _flits_to_watch.find(_cur_id);
-  if(iter != _flits_to_watch.end()){
-    f->watch = true;
-    iter->second = f;
-  }
+  f->watch = gWatchOut && (_flits_to_watch.count(_cur_id) > 0);
   ++_cur_id;
   return f;
 }
@@ -448,23 +444,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 {
   _deadlock_counter = 1;
 
-  map<int, Flit *>::iterator match = _total_in_flight_flits.find(f->id);
-
-  if ( match != _total_in_flight_flits.end( ) ) {
-    _total_in_flight_flits.erase( match );
-  } else {
-    cerr << "Unmatched flit: " << f->id << "!" << endl;
-    Error( "" );
-  }
+  assert(_total_in_flight_flits.count(f->id) > 0);
+  _total_in_flight_flits.erase(f->id);
   
   if(f->record) {
-    match = _measured_in_flight_flits.find(f->id);
-    if(match != _measured_in_flight_flits.end()) {
-      _measured_in_flight_flits.erase(match);
-    } else {
-      cerr << "Unmatched measured flit: " << f->id << "!" << endl;
-      Error( "" );
-    }
+    assert(_measured_in_flight_flits.count(f->id) > 0);
+    _measured_in_flight_flits.erase(f->id);
   }
 
   if ( f->watch ) { 
@@ -488,12 +473,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   }
 
   if ( f->tail ) {
-    map<int, Flit *>::iterator iter = _total_in_flight_packets.find(f->pid);
-    if ( iter == _total_in_flight_packets.end() ) {
-      cerr << "Unmatched packet: " << f->pid << "!" << endl;
-      Error( "" );
-    }
-    Flit * head = iter->second;
+    assert(_total_in_flight_packets.count(f->pid) > 0);
+    Flit * head = _total_in_flight_packets.lower_bound(f->pid)->second;
+    assert(head->head);
     assert(f->pid == head->pid);
     if ( f->watch ) { 
       *gWatchOut << GetSimTime() << " | "
@@ -505,10 +487,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 		 << ", dest = " << head->dest
 		 << ")." << endl;
     }
-    _total_in_flight_packets.erase(iter);
-
-    // for measured packets, defer deletion until later (see below)
-    if(!f->record) delete head;
 
     //code the source of request, look carefully, its tricky ;)
     if (f->type == Flit::READ_REQUEST || f->type == Flit::WRITE_REQUEST) {
@@ -540,9 +518,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       
     }
 
-
     // Only record statistics once per packet (at tail)
-    // and based on the simulation state1
+    // and based on the simulation state
     if ( ( _sim_state == warming_up ) || f->record ) {
       
       _hop_stats->AddSample( f->hops );
@@ -572,17 +549,20 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	_pair_tlat[f->src*_dests+dest]->AddSample( f->atime - f->ttime );
       
       if ( f->record ) {
-	map<int, Flit *>::iterator iter = _measured_in_flight_packets.find(f->pid);
-	if ( iter == _measured_in_flight_packets.end() ){ 
-	  cerr << "Unmatched measured packet: " << f->pid << "!" << endl;
-	  Error( "" );
-	}
-	delete iter->second;
-	_measured_in_flight_packets.erase(iter);
+	assert(_measured_in_flight_packets.count(f->pid) > 0);
+	_measured_in_flight_packets.erase(f->pid);
       }
     }
+
+    // free all flits associated with the current packet
+    pair<multimap<int, Flit *>::iterator, multimap<int, Flit *>::iterator> res = _total_in_flight_packets.equal_range(f->pid);
+    for(multimap<int, Flit *>::iterator iter = res.first; iter != res.second; ++iter) {
+      assert(iter->second->pid == f->pid);
+      delete iter->second;
+    }
+    _total_in_flight_packets.erase(f->pid);
+
   }
-  if(!f->head) delete f; // head flits are not freed until packet is complete!
 }
 
 int TrafficManager::_IssuePacket( int source, int cl )
@@ -728,8 +708,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 
   _sub_network = DivisionAlgorithm(packet_type);
   
-  map<int, Flit *>::iterator iter = _packets_to_watch.find(_cur_pid);
-  bool watch  = (iter != _packets_to_watch.end());
+  bool watch  = gWatchOut && (_packets_to_watch.count(_cur_pid) > 0);
   
   if ( watch ) { 
     *gWatchOut << GetSimTime() << " | "
@@ -762,12 +741,9 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       f->head = true;
       //packets are only generated to nodes smaller or equal to limit
       f->dest = packet_destination;
-      _total_in_flight_packets[f->pid] = f;
-      if(watch) {
-	iter->second = f;
-      }
+      _total_in_flight_packets.insert(pair<int, Flit *>(f->pid, f));
       if(record) {
-	_measured_in_flight_packets[f->pid] = f;
+	_measured_in_flight_packets.insert(pair<int, Flit *>(f->pid, f));
       }
     } else {
       f->head = false;
@@ -1724,9 +1700,9 @@ void TrafficManager::_LoadWatchList(const string & filename){
       getline(watch_list, line);
       if(line != "") {
 	if(line[0] == 'p') {
-	  _packets_to_watch[atoi(line.c_str()+1)] = NULL;
+	  _packets_to_watch.insert(atoi(line.c_str()+1));
 	} else {
-	  _flits_to_watch[atoi(line.c_str())] = NULL;
+	  _flits_to_watch.insert(atoi(line.c_str()));
 	}
       }
     }

@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <list>
 #include <map>
+#include <set>
 
 #include "module.hpp"
 #include "config_utils.hpp"
@@ -83,9 +84,9 @@ protected:
   vector<vector<vector<list<Flit *> > > > _partial_packets;
 
   map<int, Flit *> _measured_in_flight_flits;
-  map<int, Flit *> _measured_in_flight_packets;
+  multimap<int, Flit *> _measured_in_flight_packets;
   map<int, Flit *> _total_in_flight_flits;
-  map<int, Flit *> _total_in_flight_packets;
+  multimap<int, Flit *> _total_in_flight_packets;
   bool                _empty_network;
   bool _use_lagging;
 
@@ -210,8 +211,8 @@ protected:
   tRoutingFunction  _routing_function;
   tInjectionProcess _injection_process;
 
-  map<int, Flit *> _flits_to_watch;
-  map<int, Flit *> _packets_to_watch;
+  set<int> _flits_to_watch;
+  set<int> _packets_to_watch;
 
   bool _print_csv_results;
   bool _print_vc_stats;
