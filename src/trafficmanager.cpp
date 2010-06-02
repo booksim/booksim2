@@ -167,6 +167,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_avg_tlat.resize(_classes);
   _overall_max_tlat.resize(_classes);
 
+  _frag_stats.resize(_classes);
+  _overall_min_frag.resize(_classes);
+  _overall_avg_frag.resize(_classes);
+  _overall_max_frag.resize(_classes);
+
   for ( int c = 0; c < _classes; ++c ) {
     tmp_name << "latency_stat_" << c;
     _latency_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
@@ -203,6 +208,23 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _overall_max_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _overall_max_tlat[c];
     tmp_name.seekp( 0, ios::beg );  
+
+    tmp_name << "frag_stat_" << c;
+    _frag_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
+    _stats[tmp_name.str()] = _frag_stats[c];
+    tmp_name.seekp( 0, ios::beg );
+    tmp_name << "overall_min_frag_stat_" << c;
+    _overall_min_frag[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
+    _stats[tmp_name.str()] = _overall_min_frag[c];
+    tmp_name.seekp( 0, ios::beg );
+    tmp_name << "overall_avg_frag_stat_" << c;
+    _overall_avg_frag[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
+    _stats[tmp_name.str()] = _overall_avg_frag[c];
+    tmp_name.seekp( 0, ios::beg );
+    tmp_name << "overall_max_frag_stat_" << c;
+    _overall_max_frag[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
+    _stats[tmp_name.str()] = _overall_max_frag[c];
+    tmp_name.seekp( 0, ios::beg );
   }
 
   _hop_stats    = new Stats( this, "hop_stats", 1.0, 20 );
@@ -357,6 +379,11 @@ TrafficManager::~TrafficManager( )
     delete _overall_min_tlat[c];
     delete _overall_avg_tlat[c];
     delete _overall_max_tlat[c];
+
+    delete _frag_stats[c];
+    delete _overall_min_frag[c];
+    delete _overall_avg_frag[c];
+    delete _overall_max_frag[c];
   }
 
   delete _hop_stats;
@@ -530,6 +557,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	   (_latency_stats[f->pri]->Max() < (f->atime - f->time)))
 	  _slowest_flit[f->pri] = f->id;
 	_latency_stats[f->pri]->AddSample( f->atime - f->time );
+	_frag_stats[f->pri]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
 	if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
 	  _tlat_stats[f->pri]->AddSample( f->atime - f->ttime );
 	break;
@@ -538,6 +566,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	   (_latency_stats[0]->Max() < (f->atime - f->time)))
 	   _slowest_flit[0] = f->id;
 	_latency_stats[0]->AddSample( f->atime - f->time);
+	_frag_stats[0]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
 	if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
 	  _tlat_stats[0]->AddSample( f->atime - f->ttime );
       }
@@ -1138,6 +1167,7 @@ void TrafficManager::_ClearStats( )
   for ( int c = 0; c < _classes; ++c ) {
     _latency_stats[c]->Clear( );
     _tlat_stats[c]->Clear( );
+    _frag_stats[c]->Clear( );
     _slowest_flit[c] = -1;
   }
   
@@ -1255,12 +1285,17 @@ bool TrafficManager::_SingleSim( )
 	double min, avg;
 	int dmin = _ComputeStats( _accepted_flits, &avg, &min );
 	
+	cout << "Minimum latency = " << _latency_stats[0]->Min( ) << endl;
 	cout << "Average latency = " << cur_latency << endl;
+	cout << "Maximum latency = " << _latency_stats[0]->Max( ) << endl;
+	cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
 	cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 	if(_stats_out)
 	  *_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
 		      << "lat_hist(" << total_phases + 1 << ",:) = "
-		      << *_latency_stats[0] << ";" << endl;
+		      << *_latency_stats[0] << ";" << endl
+		      << "frag_hist(" << total_phases + 1 << ",:) = "
+		      << *_frag_stats[0] << ";" << endl;
       } 
     }
     cout << "Total inflight " << _total_in_flight_packets.size() << endl;
@@ -1332,12 +1367,15 @@ bool TrafficManager::_SingleSim( )
       cout << "Minimum latency = " << _latency_stats[0]->Min( ) << endl;
       cout << "Average latency = " << cur_latency << endl;
       cout << "Maximum latency = " << _latency_stats[0]->Max( ) << endl;
+      cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
       cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
       if(_stats_out) {
 	*_stats_out << "batch_time(" << total_phases + 1 << ") = " << _time << ";" << endl
 		    << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
 		    << "lat_hist(" << total_phases + 1 << ",:) = "
 		    << *_latency_stats[0] << ";" << endl
+		    << "frag_hist(" << total_phases + 1 << ",:) = "
+		    << *_frag_stats[0] << ";" << endl
 		    << "pair_sent(" << total_phases + 1 << ",:) = [ ";
 	for(int i = 0; i < _sources; ++i) {
 	  for(int j = 0; j < _dests; ++j) {
@@ -1410,12 +1448,17 @@ bool TrafficManager::_SingleSim( )
       double min, avg;
       dmin = _ComputeStats( _accepted_flits, &avg, &min );
       double cur_accepted = avg;
+      cout << "Minimum latency = " << _latency_stats[0]->Min( ) << endl;
       cout << "Average latency = " << cur_latency << endl;
+      cout << "Maximum latency = " << _latency_stats[0]->Max( ) << endl;
+      cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
       cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
       if(_stats_out) {
 	*_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
 		    << "lat_hist(" << total_phases + 1 << ",:) = "
 		    << *_latency_stats[0] << ";" << endl
+		    << "frag_hist(" << total_phases + 1 << ",:) = "
+		    << *_frag_stats[0] << ";" << endl
 		    << "pair_sent(" << total_phases + 1 << ",:) = [ ";
 	for(int i = 0; i < _sources; ++i) {
 	  for(int j = 0; j < _dests; ++j) {
@@ -1608,6 +1651,9 @@ bool TrafficManager::Run( )
       _overall_min_tlat[c]->AddSample( _tlat_stats[c]->Min( ) );
       _overall_avg_tlat[c]->AddSample( _tlat_stats[c]->Average( ) );
       _overall_max_tlat[c]->AddSample( _tlat_stats[c]->Max( ) );
+      _overall_min_frag[c]->AddSample( _frag_stats[c]->Min( ) );
+      _overall_avg_frag[c]->AddSample( _frag_stats[c]->Average( ) );
+      _overall_max_frag[c]->AddSample( _frag_stats[c]->Max( ) );
     }
     
     double min, avg;
@@ -1650,6 +1696,9 @@ void TrafficManager::DisplayStats() {
 	   << "," << _overall_min_tlat[c]->Average( )
 	   << "," << _overall_avg_tlat[c]->Average( )
 	   << "," << _overall_max_tlat[c]->Average( )
+	   << "," << _overall_min_frag[c]->Average( )
+	   << "," << _overall_avg_frag[c]->Average( )
+	   << "," << _overall_max_frag[c]->Average( )
 	   << "," << _overall_accepted->Average( )
 	   << "," << _overall_accepted_min->Average( )
 	   << "," << _hop_stats->Average( )
@@ -1671,6 +1720,12 @@ void TrafficManager::DisplayStats() {
     cout << "Overall maximum transaction latency = " << _overall_max_tlat[c]->Average( )
 	 << " (" << _overall_max_tlat[c]->NumSamples( ) << " samples)" << endl;
     
+    cout << "Overall minimum fragmentation = " << _overall_min_frag[c]->Average( )
+	 << " (" << _overall_min_frag[c]->NumSamples( ) << " samples)" << endl;
+    cout << "Overall average fragmentation = " << _overall_avg_frag[c]->Average( )
+	 << " (" << _overall_avg_frag[c]->NumSamples( ) << " samples)" << endl;
+    cout << "Overall maximum fragmentation = " << _overall_max_frag[c]->Average( )
+	 << " (" << _overall_max_frag[c]->NumSamples( ) << " samples)" << endl;
     cout << "Overall average accepted rate = " << _overall_accepted->Average( )
 	 << " (" << _overall_accepted->NumSamples( ) << " samples)" << endl;
     
