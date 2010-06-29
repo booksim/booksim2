@@ -41,6 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 #include <sstream>
 #include <stdio.h>
+#include <limits.h>
 
 #include "stats.hpp"
 
@@ -60,8 +61,11 @@ void Stats::Clear( )
   for ( int b = 0; b < _num_bins; ++b ) {
     _hist[b] = 0;
   }
-
-  _reset = true;
+  //this could be trouble
+  _min=double(LONG_MAX);
+  _max=double(LONG_MIN);
+  
+  //  _reset = true;
 }
 
 double Stats::Average( ) const
@@ -96,19 +100,13 @@ void Stats::AddSample( double val )
   _num_samples++;
   _sample_sum += val;
 
-  if ( _reset ) {
-    _reset = false;
-    _max = val;
-    _min = val;
-  } else {
-    if ( val > _max ) { _max = val; }
-    if ( val < _min ) { _min = val; }
-  }
+  _max= (val > _max )?val:_max;
+  _min= (val < _min )?val:_min;
 
   b = (int)floor( val / _bin_size );
 
-  if ( b < 0 ) { b = 0; }
-  else if ( b >= _num_bins ) { b = _num_bins - 1; }
+  //double clamp between 0 and num_bins
+  b = (b < 0 )?0:((b>=_num_bins)?_num_bins - 1:b);
 
   _hist[b]++;
 }

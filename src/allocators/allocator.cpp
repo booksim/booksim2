@@ -54,6 +54,7 @@ Allocator::Allocator( Module *parent, const string& name,
 		      int inputs, int outputs ) :
   Module( parent, name ), _inputs( inputs ), _outputs( outputs )
 {
+ 
   _inmatch  = new int [_inputs];   
   _outmatch = new int [_outputs];
   _outmask  = new int [_outputs];

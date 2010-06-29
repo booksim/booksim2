@@ -51,12 +51,14 @@ protected:
   
   entry_t* _request ;
   int  _input_size ;
-  int  _num_reqs ;
+
   int  _last_req ;
   int  _selected ;
+  int _highest_pri;
+  int _best_input;
 
 public:
-
+  int  _num_reqs ;
   // Constructors
   Arbiter( Module *parent, const string &name, int size ) ;
   virtual ~Arbiter() ;
@@ -65,7 +67,7 @@ public:
   virtual void PrintState() const = 0 ;
   
   // Register request with arbiter
-  void AddRequest( int input, int id, int pri ) ;
+  virtual void AddRequest( int input, int id, int pri ) ;
 
   // Update priority matrix based on last aribtration result
   virtual void UpdateState() = 0 ; 

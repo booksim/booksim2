@@ -54,10 +54,35 @@ void RoundRobinArbiter::UpdateState() {
     _pointer = _selected ;
 }
 
+void RoundRobinArbiter::AddRequest( int input, int id, int pri )
+{
+  assert( 0 <= input && input < _input_size ) ;
+  if(!_request[input].valid || (_request[input].pri < pri)) {
+    _last_req = input ;
+    if(!_request[input].valid) {
+      _num_reqs++ ;
+      _request[input].valid = true ;
+    }
+    _request[input].id = id ;
+    _request[input].pri = pri ;
+    if(_highest_pri<pri){
+      _highest_pri = pri;
+      _best_input = input;
+    } else if(_highest_pri==pri){
+      int a = input<_pointer?input+_input_size-_pointer:input-_pointer;
+      int b = _best_input<_pointer?_best_input+_input_size-_pointer:_best_input-_pointer;
+      _best_input = (a<b)?input:_best_input; 
+    }
+  }
+}
+
 int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
   
   // avoid running arbiter if it has not recevied at least two requests
   // (in this case, requests and grants are identical)
+  _selected = _best_input;
+  
+  /*
   if ( _num_reqs < 2 ) {
     
     _selected = _last_req ;
@@ -71,11 +96,15 @@ int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
       int input = (_pointer + offset) % _input_size;
       if ( _request[input].valid ) {
 	if ( ( _selected < 0 ) ||
-	     ( _request[_selected].pri < _request[input].pri ) )
+	     ( _request[_selected].pri < _request[input].pri ) ){
 	  _selected = input ;
+	  //if(_request[_selected].pri==_highest_pri)
+	  //  break;
+	}
       }
     }
   }
+  */
   
   if ( _selected > -1 ) {
     if ( id ) 
@@ -88,6 +117,8 @@ int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
       _request[i].valid = false ;
     _num_reqs = 0 ;
     _last_req = -1 ;
+    _highest_pri = -2147483000;
+    _best_input = -1;
   } else {
     assert(_num_reqs == 0);
     assert(_last_req == -1);

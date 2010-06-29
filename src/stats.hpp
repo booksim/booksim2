@@ -37,7 +37,7 @@ class Stats : public Module {
   int    _num_samples;
   double _sample_sum;
 
-  bool _reset;
+  //bool _reset;
   double _min;
   double _max;
 

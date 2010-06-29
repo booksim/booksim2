@@ -94,22 +94,51 @@ public:
   Flit *FrontFlit( );
   Flit *RemoveFlit( );
   
-  bool Empty( ) const;
-  bool Full( ) const;
   
-  eVCState GetState( ) const;
-  int      GetStateTime( ) const;
+  inline bool Empty( ) const
+  {
+    return _buffer.empty( );
+  }
+
+  inline bool Full( ) const
+  {
+    return (int)_buffer.size( ) == _size;
+  }
+
+  inline VC::eVCState GetState( ) const
+  {
+    return _state;
+  }
+
+  inline int GetStateTime( ) const
+  {
+    return _state_time;
+  }
+
+
   void     SetState( eVCState s );
 
   const OutputSet *GetRouteSet( ) const;
 
   void SetOutput( int port, int vc );
-  int  GetOutputPort( ) const;
-  int  GetOutputVC( ) const;
+
+  inline int GetOutputPort( ) const
+  {
+    return _out_port;
+  }
+
+
+  inline int GetOutputVC( ) const
+  {
+    return _out_vc;
+  }
 
   void UpdatePriority();
-  int  GetPriority( ) const;
-
+ 
+  inline int GetPriority( ) const
+  {
+    return _pri;
+  }
   void Route( tRoutingFunction rf, const Router* router, const Flit* f, int in_channel );
 
   void AdvanceTime( );

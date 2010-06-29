@@ -59,6 +59,7 @@ public:
   // updates pointers to metadata when valid pointers are passed
   virtual int Arbitrate( int* id = 0, int* pri = 0) ;
 
+  virtual void AddRequest( int input, int id, int pri ) ;
 } ;
 
 #endif

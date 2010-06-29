@@ -71,11 +71,13 @@ void SeparableInputFirstAllocator::Allocate() {
 
     // Execute the input arbiters and propagate the grants to the
     // output arbiters.
-    int out = _input_arb[input]->Arbitrate( NULL, NULL ) ;
+    int out = -1;
+    if(_requests[input].size()!=0)
+      out=_input_arb[input]->Arbitrate( NULL, NULL );
     
+
     if ( out > -1 ) {
-      list<sRequest>::const_iterator it  = _requests[input].begin() ;
-      list<sRequest>::const_iterator end = _requests[input].end() ;
+      it  = _requests[input].begin() ;
       while ( it != end ) {
 	const sRequest& req = *it ;
 	if ( ( req.label > -1 ) && ( req.port == out ) ) {
@@ -90,7 +92,9 @@ void SeparableInputFirstAllocator::Allocate() {
   for ( int output = 0 ; output < _outputs ; output++ ) {
 
     int label, pri ;
-    int input      = _output_arb[output]->Arbitrate( &label, &pri ) ;
+    int input = -1;
+    if(_output_arb[output]->_num_reqs!=0)
+      input = _output_arb[output]->Arbitrate( &label, &pri ) ;
   
     if ( input > -1 ) {
       assert( _inmatch[input] == -1 && _outmatch[output] == -1 ) ;

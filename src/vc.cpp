@@ -145,25 +145,7 @@ Flit *VC::RemoveFlit( )
   return f;
 }
 
-bool VC::Empty( ) const
-{
-  return _buffer.empty( );
-}
 
-bool VC::Full( ) const
-{
-  return (int)_buffer.size( ) == _size;
-}
-
-VC::eVCState VC::GetState( ) const
-{
-  return _state;
-}
-
-int VC::GetStateTime( ) const
-{
-  return _state_time;
-}
 
 void VC::SetState( eVCState s )
 {
@@ -202,16 +184,6 @@ void VC::SetOutput( int port, int vc )
   _out_vc   = vc;
 }
 
-int VC::GetOutputPort( ) const
-{
-  return _out_port;
-}
-
-int VC::GetOutputVC( ) const
-{
-  return _out_vc;
-}
-
 void VC::UpdatePriority()
 {
   if(_buffer.empty()) return;
@@ -242,10 +214,6 @@ void VC::UpdatePriority()
   }
 }
 
-int VC::GetPriority( ) const
-{
-  return _pri;
-}
 
 int VC::GetSize() const
 {

@@ -455,7 +455,7 @@ void IQRouterBaseline::_SWAlloc( )
   
   _sw_allocator->Allocate();
   if(_speculative >= 2)
-    _spec_sw_allocator->Allocate();
+      _spec_sw_allocator->Allocate();
   
   // Winning flits cross the switch
 
