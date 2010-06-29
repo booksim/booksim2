@@ -58,10 +58,8 @@ void Stats::Clear( )
   _num_samples = 0;
   _sample_sum  = 0.0;
 
-  for ( int b = 0; b < _num_bins; ++b ) {
-    _hist[b] = 0;
-  }
-  //this could be trouble
+  _hist.assign(_num_bins, 0);
+
   _min = numeric_limits<double>::max();
   _max = numeric_limits<double>::min();
   
