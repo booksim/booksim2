@@ -38,13 +38,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "roundrobin_arb.hpp"
 #include "matrix_arb.hpp"
 
-#include <assert.h>
+#include <limits>
+#include <cassert>
 
 using namespace std ;
 
 Arbiter::Arbiter( Module *parent, const string &name, int size )
   : Module( parent, name ),
-    _input_size(size), _request(0), _num_reqs(0), _last_req(-1), _best_input(-1), _highest_pri(-2147483000)
+    _input_size(size), _request(0), _num_reqs(0), _last_req(-1), _best_input(-1), _highest_pri(numeric_limits<int>::min())
 {
   _request = new entry_t[size];
   for ( int i = 0 ; i < size ; i++ ) 

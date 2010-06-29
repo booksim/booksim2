@@ -37,11 +37,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "booksim.hpp"
-#include <math.h>
 #include <iostream>
 #include <sstream>
-#include <stdio.h>
-#include <limits.h>
+#include <limits>
+#include <cmath>
+#include <cstdio>
 
 #include "stats.hpp"
 
@@ -62,8 +62,8 @@ void Stats::Clear( )
     _hist[b] = 0;
   }
   //this could be trouble
-  _min=double(LONG_MAX);
-  _max=double(LONG_MIN);
+  _min = numeric_limits<double>::max();
+  _max = numeric_limits<double>::min();
   
   //  _reset = true;
 }

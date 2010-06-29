@@ -36,6 +36,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "roundrobin_arb.hpp"
 #include <iostream>
+#include <limits>
+
 using namespace std ;
 
 RoundRobinArbiter::RoundRobinArbiter( Module *parent, const string &name,
@@ -117,7 +119,7 @@ int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
       _request[i].valid = false ;
     _num_reqs = 0 ;
     _last_req = -1 ;
-    _highest_pri = -2147483000;
+    _highest_pri = numeric_limits<int>::min();
     _best_input = -1;
   } else {
     assert(_num_reqs == 0);
