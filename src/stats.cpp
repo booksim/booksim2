@@ -98,13 +98,12 @@ void Stats::AddSample( double val )
   _num_samples++;
   _sample_sum += val;
 
-  _max= (val > _max )?val:_max;
-  _min= (val < _min )?val:_min;
+  _max = fmax(val, _max);
+  _min = fmin(val, _min);
 
-  b = (int)floor( val / _bin_size );
-
-  //double clamp between 0 and num_bins
-  b = (b < 0 )?0:((b>=_num_bins)?_num_bins - 1:b);
+  //double clamp between 0 and num_bins-1
+  b = (int)fmax(floor( val / _bin_size ), 0.0);
+  b = (b >= _num_bins) ? (_num_bins - 1) : b;
 
   _hist[b]++;
 }
