@@ -205,6 +205,7 @@ void IQRouterBase::_ReceiveFlits( )
 	    Error( "Received non-head flit at idle VC" );
 	  }
 	  cur_vc->SetState( VC::routing );
+	  _routing_vcs.push((input<<16)+f->vc);
       }
 
       if(f->watch) {
@@ -270,23 +271,25 @@ void IQRouterBase::_InputQueuing( )
   */ 
 }
 
+//this function relies on the fact that _routing delay is constant for all packets
+//if the packet at the head of the queue is <routing_delay, then all other vc in the queue
+//will be <routing delay
 void IQRouterBase::_Route( )
 {
-  for ( int input = 0; input < _inputs; ++input ) {
-    for ( int vc = 0; vc < _vcs; ++vc ) {
-
-      VC * cur_vc = &_vc[input][vc];
-
-      if ( ( cur_vc->GetState( ) == VC::routing ) &&
-	   ( cur_vc->GetStateTime( ) >= _routing_delay ) ) {
-	
-	Flit * f = cur_vc->FrontFlit( );
-	cur_vc->Route( _rf, this, f, input );
-	cur_vc->SetState( VC::vc_alloc ) ;
-	
-      }
+  int size = _routing_vcs.size();
+  for(int i = 0; i<size; i++){
+    int vc_encode = _routing_vcs.front();
+    VC * cur_vc = &_vc[vc_encode>>16][vc_encode&0x0000FFFF];
+    if(cur_vc->GetStateTime( ) >= _routing_delay){
+      Flit * f = cur_vc->FrontFlit( );
+      cur_vc->Route( _rf, this, f,  vc_encode>>16);
+      cur_vc->SetState( VC::vc_alloc ) ;
+      _routing_vcs.pop();
+    } else {
+      break;
     }
   }
+
 }
 
 void IQRouterBase::_OutputQueuing( )

@@ -347,6 +347,7 @@ void IQRouterCombined::_Alloc( )
 	      cur_vc->SetState(VC::idle);
 	    } else if(_routing_delay > 0) {
 	      cur_vc->SetState(VC::routing);
+	      _routing_vcs.push((input<<16)+vc);
 	    } else {
 	      cur_vc->Route(_rf, this, cur_vc->FrontFlit(), input);
 	      cur_vc->SetState(VC::vc_alloc);
@@ -363,6 +364,7 @@ void IQRouterCombined::_Alloc( )
 	} 
       }
     }
+
     _credit_pipe->Write(c, input);
   }
 }
