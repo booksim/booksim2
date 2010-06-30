@@ -167,7 +167,7 @@ void IQRouterBase::ReadInputs( )
 
 void IQRouterBase::InternalStep( )
 {
-  _InputQueuing( );
+  //  _InputQueuing( );
   _Route( );
   _Alloc( );
   
@@ -180,7 +180,7 @@ void IQRouterBase::InternalStep( )
   _crossbar_pipe->Advance( );
   _credit_pipe->Advance( );
 
-  //merged with sendflits and send credits
+
     _OutputQueuing( );
 }
 
@@ -199,6 +199,14 @@ void IQRouterBase::_ReceiveFlits( )
     if ( f ) {
       ++_received_flits[input];
       VC * cur_vc = &_vc[input][f->vc];
+
+      if ( cur_vc->GetState( ) == VC::idle ) {
+	  if ( !f->head ) {
+	    Error( "Received non-head flit at idle VC" );
+	  }
+	  cur_vc->SetState( VC::routing );
+      }
+
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "Adding flit " << f->id
@@ -240,6 +248,7 @@ void IQRouterBase::_ReceiveCredits( )
 
 void IQRouterBase::_InputQueuing( )
 {
+  /*
   for ( int input = 0; input < _inputs; ++input ) {
     for ( int vc = 0; vc < _vcs; ++vc ) {
 
@@ -257,7 +266,8 @@ void IQRouterBase::_InputQueuing( )
 	}
       }
     }
-  }  
+  } 
+  */ 
 }
 
 void IQRouterBase::_Route( )
