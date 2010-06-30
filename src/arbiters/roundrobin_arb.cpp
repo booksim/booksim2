@@ -71,8 +71,8 @@ void RoundRobinArbiter::AddRequest( int input, int id, int pri )
       _highest_pri = pri;
       _best_input = input;
     } else if(_highest_pri==pri){
-      int a = input<_pointer?input+_input_size-_pointer:input-_pointer;
-      int b = _best_input<_pointer?_best_input+_input_size-_pointer:_best_input-_pointer;
+      int a = input<=_pointer?input+_input_size-_pointer:input-_pointer;
+      int b = _best_input<=_pointer?_best_input+_input_size-_pointer:_best_input-_pointer;
       _best_input = (a<b)?input:_best_input; 
     }
   }

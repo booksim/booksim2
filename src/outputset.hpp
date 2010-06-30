@@ -43,6 +43,7 @@ class OutputSet {
     int pri;
   };
 
+  int *_outputs_num_vcs;
   list<sSetElement> *_outputs;
 
 public:
@@ -56,6 +57,8 @@ public:
   int Size( ) const;
   bool OutputEmpty( int output_port ) const;
   int NumVCs( int output_port ) const;
+  
+
 
   int  GetVC( int output_port,  int vc_index, int *pri = 0 ) const;
   bool GetPortVC( int *out_port, int *out_vc ) const;

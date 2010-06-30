@@ -44,18 +44,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OutputSet::OutputSet( int num_outputs )
 {
   _num_outputs = num_outputs;
-
+  _outputs_num_vcs = new int [_num_outputs];
+  for(int i = 0; i<_num_outputs; i++){
+    _outputs_num_vcs[i]++;
+  }
   _outputs = new list<sSetElement> [_num_outputs];
 }
 
 OutputSet::~OutputSet( )
 {
   delete [] _outputs;
+  delete [] _outputs_num_vcs;
 }
 
 void OutputSet::Clear( )
 {
   for ( int i = 0; i < _num_outputs; ++i ) {
+    _outputs_num_vcs[i] = 0;
     _outputs[i].clear( );
   }
 }
@@ -76,8 +81,16 @@ void OutputSet::AddRange( int output_port, int vc_start, int vc_end, int pri )
   s.vc_start = vc_start;
   s.vc_end   = vc_end;
   s.pri      = pri;
-
+  _outputs_num_vcs[output_port]+= (vc_end - vc_start + 1);
   _outputs[output_port].push_back( s );
+}
+
+
+int OutputSet::NumVCs( int output_port ) const
+{
+  assert( ( output_port >= 0 ) && 
+	  ( output_port < _num_outputs ) );
+  return _outputs_num_vcs[output_port];
 }
 
 int OutputSet::Size( ) const
@@ -93,20 +106,6 @@ bool OutputSet::OutputEmpty( int output_port ) const
   return _outputs[output_port].empty( );
 }
 
-int OutputSet::NumVCs( int output_port ) const
-{
-  assert( ( output_port >= 0 ) && 
-	  ( output_port < _num_outputs ) );
-
-  int total = 0;
-
-  for ( list<sSetElement>::const_iterator i = _outputs[output_port].begin( );
-	i != _outputs[output_port].end( ); i++ ) {
-    total += i->vc_end - i->vc_start + 1;
-  }
-
-  return total;
-}
 
 int OutputSet::GetVC( int output_port, int vc_index, int *pri ) const
 {
