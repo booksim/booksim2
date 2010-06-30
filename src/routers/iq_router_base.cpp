@@ -96,11 +96,11 @@ IQRouterBase::IQRouterBase( const Configuration& config,
 			      _credit_delay );
 
   // Input and output queues
-  _input_buffer  = new queue<Flit *> [_inputs]; 
+  //_input_buffer  = new queue<Flit *> [_inputs]; 
   _output_buffer = new queue<Flit *> [_outputs]; 
 
   _in_cred_buffer  = new queue<Credit *> [_inputs]; 
-  _out_cred_buffer = new queue<Credit *> [_outputs];
+  //_out_cred_buffer = new queue<Credit *> [_outputs];
 
   // Switch configuration (when held for multiple cycles)
   _hold_switch_for_packet = config.GetInt( "hold_switch_for_packet" );
@@ -144,11 +144,11 @@ IQRouterBase::~IQRouterBase( )
   delete _crossbar_pipe;
   delete _credit_pipe;
 
-  delete [] _input_buffer;
+  //delete [] _input_buffer;
   delete [] _output_buffer;
 
   delete [] _in_cred_buffer;
-  delete [] _out_cred_buffer;
+  //delete [] _out_cred_buffer;
 
   delete [] _switch_hold_in;
   delete [] _switch_hold_vc;
@@ -180,39 +180,47 @@ void IQRouterBase::InternalStep( )
   _crossbar_pipe->Advance( );
   _credit_pipe->Advance( );
 
-  _OutputQueuing( );
+  //merged with sendflits and send credits
+    _OutputQueuing( );
 }
 
 void IQRouterBase::WriteOutputs( )
 {
   _SendFlits( );
   _SendCredits( );
-  if(gTrace){
-    int load = 0;
-    cout<<"Router "<<this->GetID()<<endl;
-    //need to modify router to report the buffere dept
-    //cout<<"Input Channel "<<in_channel<<endl;
-    //load +=r->GetBuffer(in_channel);
-    cout<<"Rload "<<load<<endl;
-  }
 }
 
 void IQRouterBase::_ReceiveFlits( )
 {
   Flit *f;
-
+  bufferMonitor.cycle() ;
   for ( int input = 0; input < _inputs; ++input ) { 
     f = (*_input_channels)[input]->Receive();
-
     if ( f ) {
-      _input_buffer[input].push( f );
       ++_received_flits[input];
+      VC * cur_vc = &_vc[input][f->vc];
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		    << "Received flit " << f->id
-		    << " from channel at input " << input
-		    << "." << endl;
+		   << "Adding flit " << f->id
+		   << " to VC " << f->vc
+		   << " at input " << input
+		   << " (state: " << VC::VCSTATE[cur_vc->GetState()];
+	if(cur_vc->Empty()) {
+	  *gWatchOut << ", empty";
+	} else {
+	  assert(cur_vc->FrontFlit());
+	  *gWatchOut << ", front: " << cur_vc->FrontFlit()->id;
+	}
+	*gWatchOut << ")." << endl;
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		   << "Received flit " << f->id
+		   << " from channel at input " << input
+		   << "." << endl;
       }
+      if ( !cur_vc->AddFlit( f ) ) {
+	Error( "VC buffer overflow" );
+      }
+      bufferMonitor.write( input, f ) ;
     }
   }
 }
@@ -223,47 +231,15 @@ void IQRouterBase::_ReceiveCredits( )
 
   for ( int output = 0; output < _outputs; ++output ) {  
     c = (*_output_credits)[output]->Receive();
-
     if ( c ) {
-      _out_cred_buffer[output].push( c );
+      _next_vcs[output].ProcessCredit( c );
+      delete c;
     }
   }
 }
 
 void IQRouterBase::_InputQueuing( )
 {
-  bufferMonitor.cycle() ;
-
-  for ( int input = 0; input < _inputs; ++input ) {
-    if ( !_input_buffer[input].empty( ) ) {
-      Flit * f = _input_buffer[input].front( );
-      _input_buffer[input].pop( );
-      
-      VC * cur_vc = &_vc[input][f->vc];
-      
-      if(f->watch) {
-	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		    << "Adding flit " << f->id
-		    << " to VC " << f->vc
-		    << " at input " << input
-		    << " (state: " << VC::VCSTATE[cur_vc->GetState()];
-	if(cur_vc->Empty()) {
-	  *gWatchOut << ", empty";
-	} else {
-	  assert(cur_vc->FrontFlit());
-	  *gWatchOut << ", front: " << cur_vc->FrontFlit()->id;
-	}
-	*gWatchOut << ")." << endl;
-      }
-
-      if ( !cur_vc->AddFlit( f ) ) {
-	Error( "VC buffer overflow" );
-      }
-      bufferMonitor.write( input, f ) ;
-      
-    }
-  }
-  
   for ( int input = 0; input < _inputs; ++input ) {
     for ( int vc = 0; vc < _vcs; ++vc ) {
 
@@ -282,16 +258,6 @@ void IQRouterBase::_InputQueuing( )
       }
     }
   }  
-
-  for ( int output = 0; output < _outputs; ++output ) {
-    if ( !_out_cred_buffer[output].empty( ) ) {
-      Credit * c = _out_cred_buffer[output].front( );
-      _out_cred_buffer[output].pop( );
-   
-      _next_vcs[output].ProcessCredit( c );
-      delete c;
-    }
-  }
 }
 
 void IQRouterBase::_Route( )
@@ -315,6 +281,7 @@ void IQRouterBase::_Route( )
 
 void IQRouterBase::_OutputQueuing( )
 {
+
   for ( int output = 0; output < _outputs; ++output ) {
     for ( int t = 0; t < _output_speedup; ++t ) {
       int expanded_output = _outputs*t + output;
@@ -378,6 +345,8 @@ void IQRouterBase::_SendCredits( )
     (*_input_credits)[input]->Send( c );
   }
 }
+
+
 
 void IQRouterBase::Display( ) const
 {

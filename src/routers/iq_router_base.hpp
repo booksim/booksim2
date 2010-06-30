@@ -99,11 +99,11 @@ protected:
   int _vc_alloc_delay;
   int _sw_alloc_delay;
   
-  queue<Flit *> *_input_buffer;
+  //  queue<Flit *> *_input_buffer;
   queue<Flit *> *_output_buffer;
 
   queue<Credit *> *_in_cred_buffer;
-  queue<Credit *> *_out_cred_buffer;
+  //queue<Credit *> *_out_cred_buffer;
 
   int _hold_switch_for_packet;
   int *_switch_hold_in;

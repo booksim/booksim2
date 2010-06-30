@@ -231,7 +231,7 @@ void VC::AdvanceTime( )
     _state_time++;
   }
   
-  _total_cycles++; total_cycles++;
+  total_cycles++;
   switch( _state ) {
   case idle          : _idle_cycles++; break;
   case active        : _active_cycles++; break;
@@ -258,11 +258,6 @@ bool VC::IsWatched( ) const
 
 void VC::Display( ) const
 {
-//  cout << FullName() << " : "
-//       << "idle " << 100.0 * (double)_idle_cycles / (double)_total_cycles << "% "
-//       << "vc_alloc " << 100.0 * (double)_vc_alloc_cycles / (double)_total_cycles << "% "
-//       << "active " << 100.0 * (double)_active_cycles / (double)_total_cycles << "% "
-//       << endl;
   if ( _state != VC::idle ) {
     cout << FullName() << ": "
 	 << " state: " << VCSTATE[_state]
