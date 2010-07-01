@@ -52,28 +52,30 @@ SeparableInputFirstAllocator( Module* parent, const string& name, int inputs,
 void SeparableInputFirstAllocator::Allocate() {
   
   _ClearMatching() ;
-
-//  cout << "SeparableInputFirstAllocator::Allocate()" << endl ;
-//  PrintRequests() ;
-
+  
+  //  cout << "SeparableInputFirstAllocator::Allocate()" << endl ;
+  //  PrintRequests() ;
+  
   for ( int input = 0 ; input < _inputs ; input++ ) {
-   
+    
     // Add requests to the input arbiters.
     list<sRequest>::const_iterator it  = _requests[input].begin() ;
     list<sRequest>::const_iterator end = _requests[input].end() ;
-    while ( it != end ) {
+    
+      while ( it != end ) {
       const sRequest& req = *it ;
       if ( req.label > -1 ) {
-	_input_arb[input]->AddRequest( req.port, req.label, req.in_pri ) ;
+		_input_arb[input]->AddRequest( req.port, req.label, req.in_pri ) ;
       }
       it++ ;
     }
+    
 
     // Execute the input arbiters and propagate the grants to the
     // output arbiters.
-    int out = -1;
     if(_requests[input].size()!=0){
       int id;
+      int out = -1;
       out=_input_arb[input]->Arbitrate( &id, NULL );
       it  = _requests[input].begin() ;
       while ( it != end ) {

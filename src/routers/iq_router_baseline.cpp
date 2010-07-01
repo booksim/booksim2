@@ -171,15 +171,13 @@ void IQRouterBaseline::_VCAlloc( )
 	
 	const OutputSet *route_set    = cur_vc->GetRouteSet( );
 	int out_priority = cur_vc->GetPriority( );
-	
-	for ( int output = 0; output < _outputs; ++output ) {
-	  int vc_cnt = route_set->NumVCs( output );
-	  BufferState *dest_vc = &_next_vcs[output];
-	  
-	  for ( int vc_index = 0; vc_index < vc_cnt; ++vc_index ) {
-	    int in_priority;
-	    int out_vc = route_set->GetVC( output, vc_index, &in_priority );
-	    
+	const list<OutputSet::sSetElement>* setlist = route_set ->GetSetList();
+	//cout<<setlist->size()<<endl;
+	list<OutputSet::sSetElement>::const_iterator iset = setlist->begin( );
+	while(iset!=setlist->end( )){
+	  BufferState *dest_vc = &_next_vcs[iset->output_port];
+	  for ( int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc ) {
+	    int in_priority = iset->pri;
 	    // On the input input side, a VC might request several output 
 	    // VCs.  These VCs can be prioritized by the routing function
 	    // and this is reflected in "in_priority".  On the output,
@@ -187,27 +185,30 @@ void IQRouterBaseline::_VCAlloc( )
 	    // of VCs is based on the actual packet priorities, which is
 	    // reflected in "out_priority".
 	    
+	    //	    cout<<
 	    if(dest_vc->IsAvailableFor(out_vc)) {
-	      if(f->watch)
+	      if(f->watch){
 		*gWatchOut << GetSimTime() << " | " << FullName() << " | "
-			    << "Requesting VC " << out_vc
-			    << " at output " << output 
-			    << " with priorities " << in_priority
-			    << " and " << out_priority
-			    << "." << endl;
-	      _vc_allocator->AddRequest(input*_vcs + vc, output*_vcs + out_vc, 
+			   << "Requesting VC " << out_vc
+			   << " at output " << iset->output_port 
+			   << " with priorities " << in_priority
+			   << " and " << out_priority
+			   << "." << endl;
+	      }
+	      _vc_allocator->AddRequest(input*_vcs + vc, iset->output_port*_vcs + out_vc, 
 					out_vc, in_priority, out_priority);
 	    } else {
 	      if(f->watch)
 		*gWatchOut << GetSimTime() << " | " << FullName() << " | "
-			    << "VC " << out_vc << " at output " << output 
-			    << " is unavailable." << endl;
+			   << "VC " << out_vc << " at output " << iset->output_port 
+			   << " is unavailable." << endl;
 	    }
 	  }
+	  //go to the next item in the outputset
+	  iset++;
 	}
       }
     }
-    
   }
   //  watched = true;
   if ( watched ) {
@@ -380,18 +381,16 @@ void IQRouterBaseline::_SWAlloc( )
 	      assert( expanded_input == (vc%_input_speedup)*_inputs + input );
 	      
 	      const OutputSet * route_set = cur_vc->GetRouteSet( );
-	      
-	      for ( int output = 0; output < _outputs; ++output ) {
-		
-		BufferState * dest_vc = &_next_vcs[output];
-		
+	      const list<OutputSet::sSetElement>* setlist = route_set ->GetSetList();
+	      list<OutputSet::sSetElement>::const_iterator iset = setlist->begin( );
+	      while(iset!=setlist->end( )){
+		BufferState * dest_vc = &_next_vcs[iset->output_port];
 		bool do_request = false;
 		
 		// check if any suitable VCs are available
-		int vc_cnt = route_set->NumVCs(output);
-		for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
-		  int vc_prio;
-		  int out_vc = route_set->GetVC(output, vc_index, &vc_prio);
+	
+		for ( int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc ) {
+		  int vc_prio = iset->pri;
 		  if(!do_request && 
 		     ((_speculative < 3) || dest_vc->IsAvailableFor(out_vc))) {
 		    do_request = true;
@@ -399,10 +398,8 @@ void IQRouterBaseline::_SWAlloc( )
 		  }
 		}
 		
-		if(do_request) {
-		  
-		  expanded_output = (input%_output_speedup)*_outputs + output;
-		  
+		if(do_request) { 
+		  expanded_output = (input%_output_speedup)*_outputs + iset->output_port;
 		  if ( ( _switch_hold_in[expanded_input] == -1 ) && 
 		       ( _switch_hold_out[expanded_output] == -1 ) ) {
 		    
@@ -411,7 +408,7 @@ void IQRouterBaseline::_SWAlloc( )
 		    if(f->watch) {
 		      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 				  << "VC " << vc << " at input " << input 
-				  << " requested output " << output
+				 << " requested output " << iset->output_port
 				  << " (spec., exp. input: " << expanded_input
 				  << ", exp. output: " << expanded_output
 				  << ", flit: " << f->id
@@ -434,6 +431,7 @@ void IQRouterBaseline::_SWAlloc( )
 		    vc_ready_spec++;
 		  }
 		}
+		iset++;
 	      }
 	    }
 	    break;

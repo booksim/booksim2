@@ -88,7 +88,7 @@ SeparableAllocator::~SeparableAllocator() {
 }
 
 void SeparableAllocator::Clear() {
-  for ( int i = 0 ; i < _inputs ; i++ ) 
+  for ( int i = 0 ; i < _inputs ; i++ )
     _requests[i].clear() ;
 
 }
@@ -137,8 +137,13 @@ void SeparableAllocator::AddRequest( int in, int out, int label, int in_pri,
   req.out_pri = out_pri ;
   
   _requests[in].push_front( req ) ;
-  
+  /*  
+  if ( req.label > -1 ) {
+    _input_arb[in]->AddRequest( out, label, in_pri ) ;
+  }
+  */
 }
+
 
 void SeparableAllocator::RemoveRequest( int in, int out, int label ) {
   // Method not implemented yet

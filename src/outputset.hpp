@@ -35,18 +35,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <list>
 
 class OutputSet {
-  int _num_outputs;
 
+
+public:
   struct sSetElement {
     int vc_start;
     int vc_end;
     int pri;
+    int output_port;
   };
-
-  int *_outputs_num_vcs;
-  list<sSetElement> *_outputs;
-
-public:
   OutputSet( int num_outputs );
   ~OutputSet( );
 
@@ -58,10 +55,12 @@ public:
   bool OutputEmpty( int output_port ) const;
   int NumVCs( int output_port ) const;
   
-
+  const list<sSetElement>* GetSetList() const;
 
   int  GetVC( int output_port,  int vc_index, int *pri = 0 ) const;
   bool GetPortVC( int *out_port, int *out_vc ) const;
+private:
+  list<sSetElement> _outputs;
 };
 
 #endif

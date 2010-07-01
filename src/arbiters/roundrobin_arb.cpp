@@ -71,8 +71,8 @@ void RoundRobinArbiter::AddRequest( int input, int id, int pri )
       _highest_pri = pri;
       _best_input = input;
     } else if(_highest_pri==pri){
-      int a = input<=_pointer?input+_input_size-_pointer:input-_pointer;
-      int b = _best_input<=_pointer?_best_input+_input_size-_pointer:_best_input-_pointer;
+      int a = input<=_pointer?input+_input_size:input;
+      int b = _best_input<=_pointer?_best_input+_input_size:_best_input;
       _best_input = (a<b)?input:_best_input; 
     }
   }
@@ -83,30 +83,6 @@ int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
   // avoid running arbiter if it has not recevied at least two requests
   // (in this case, requests and grants are identical)
   _selected = _best_input;
-  
-  /*
-  if ( _num_reqs < 2 ) {
-    
-    _selected = _last_req ;
-    
-  } else {
-    
-    _selected = -1 ;
-    
-    // run the round-robin tournament
-    for (int offset = 1 ; offset <= _input_size ; offset++ ) {
-      int input = (_pointer + offset) % _input_size;
-      if ( _request[input].valid ) {
-	if ( ( _selected < 0 ) ||
-	     ( _request[_selected].pri < _request[input].pri ) ){
-	  _selected = input ;
-	  //if(_request[_selected].pri==_highest_pri)
-	  //  break;
-	}
-      }
-    }
-  }
-  */
   
   if ( _selected > -1 ) {
     if ( id ) 
