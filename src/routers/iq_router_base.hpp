@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 #include <queue>
+#include <set>
 #include <iostream>
 
 #include "router.hpp"
@@ -89,7 +90,8 @@ protected:
 
   //if a vc is in the vc::routing state, it is inserted here until routing_delay is up
   queue<int> _routing_vcs;
-  
+  set<int> _vcalloc_vcs;  
+
   VC          **_vc;
   BufferState *_next_vcs;
 

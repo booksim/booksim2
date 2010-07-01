@@ -284,6 +284,7 @@ void IQRouterBase::_Route( )
       Flit * f = cur_vc->FrontFlit( );
       cur_vc->Route( _rf, this, f,  vc_encode>>16);
       cur_vc->SetState( VC::vc_alloc ) ;
+      _vcalloc_vcs.insert(vc_encode);
       _routing_vcs.pop();
     } else {
       break;

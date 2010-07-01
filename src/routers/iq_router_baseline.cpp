@@ -1,31 +1,31 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
-All rights reserved.
+  Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+  All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
+  Redistribution and use in source and binary forms, with or without modification,
+  are permitted provided that the following conditions are met:
 
-Redistributions of source code must retain the above copyright notice, this list
-of conditions and the following disclaimer.
-Redistributions in binary form must reproduce the above copyright notice, this 
-list of conditions and the following disclaimer in the documentation and/or 
-other materials provided with the distribution.
-Neither the name of the Stanford University nor the names of its contributors 
-may be used to endorse or promote products derived from this software without 
-specific prior written permission.
+  Redistributions of source code must retain the above copyright notice, this list
+  of conditions and the following disclaimer.
+  Redistributions in binary form must reproduce the above copyright notice, this 
+  list of conditions and the following disclaimer in the documentation and/or 
+  other materials provided with the distribution.
+  Neither the name of the Stanford University nor the names of its contributors 
+  may be used to endorse or promote products derived from this software without 
+  specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR 
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR 
+  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
+  ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <string>
@@ -46,8 +46,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "iq_router_baseline.hpp"
 
 IQRouterBaseline::IQRouterBaseline( const Configuration& config,
-		    Module *parent, const string & name, int id,
-		    int inputs, int outputs )
+				    Module *parent, const string & name, int id,
+				    int inputs, int outputs )
   : IQRouterBase( config, parent, name, id, inputs, outputs )
 {
   string alloc_type;
@@ -148,67 +148,65 @@ void IQRouterBaseline::_VCAlloc( )
 
   _vc_allocator->Clear( );
 
-  for ( int input = 0; input < _inputs; ++input ) {
-    for ( int vc = 0; vc < _vcs; ++vc ) {
 
-      cur_vc = &_vc[input][vc];
+  for ( set<int>::iterator item = _vcalloc_vcs.begin(); item!=_vcalloc_vcs.end(); ++item ) {
+    int vc_encode = *item;
+    int input =  vc_encode>>16;
+    int vc =vc_encode&0x0000FFFF;
+    cur_vc = &_vc[input][vc];
+    if ( ( _speculative > 0 ) && ( cur_vc->GetState( ) == VC::vc_alloc )){
+      cur_vc->SetState( VC::vc_spec ) ;
+    }
+    if (  cur_vc->GetStateTime( ) >= _vc_alloc_delay  ) {
+      f = cur_vc->FrontFlit( );
+      if(f->watch) {
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | " 
+		   << "VC " << vc << " at input " << input
+		   << " is requesting VC allocation for flit " << f->id
+		   << "." << endl;
+	watched = true;
+      }
       
-      if ( ( _speculative > 0 ) && ( cur_vc->GetState( ) == VC::vc_alloc ) )
-	cur_vc->SetState( VC::vc_spec ) ;
-      
-      if ( ( ( cur_vc->GetState( ) == VC::vc_alloc ) ||
-	     ( cur_vc->GetState( ) == VC::vc_spec ) ) &&
-	   ( cur_vc->GetStateTime( ) >= _vc_alloc_delay ) ) {
-	
-  	f = cur_vc->FrontFlit( );
-	if(f->watch) {
-	  *gWatchOut << GetSimTime() << " | " << FullName() << " | " 
-		      << "VC " << vc << " at input " << input
-		      << " is requesting VC allocation for flit " << f->id
-		      << "." << endl;
-	  watched = true;
-	}
-	
-	const OutputSet *route_set    = cur_vc->GetRouteSet( );
-	int out_priority = cur_vc->GetPriority( );
-	const list<OutputSet::sSetElement>* setlist = route_set ->GetSetList();
-	//cout<<setlist->size()<<endl;
-	list<OutputSet::sSetElement>::const_iterator iset = setlist->begin( );
-	while(iset!=setlist->end( )){
-	  BufferState *dest_vc = &_next_vcs[iset->output_port];
-	  for ( int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc ) {
-	    int in_priority = iset->pri;
-	    // On the input input side, a VC might request several output 
-	    // VCs.  These VCs can be prioritized by the routing function
-	    // and this is reflected in "in_priority".  On the output,
-	    // if multiple VCs are requesting the same output VC, the priority
-	    // of VCs is based on the actual packet priorities, which is
-	    // reflected in "out_priority".
+      const OutputSet *route_set    = cur_vc->GetRouteSet( );
+      int out_priority = cur_vc->GetPriority( );
+      const list<OutputSet::sSetElement>* setlist = route_set ->GetSetList();
+      //cout<<setlist->size()<<endl;
+      list<OutputSet::sSetElement>::const_iterator iset = setlist->begin( );
+      while(iset!=setlist->end( )){
+	BufferState *dest_vc = &_next_vcs[iset->output_port];
+	for ( int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc ) {
+	  int in_priority = iset->pri;
+	  // On the input input side, a VC might request several output 
+	  // VCs.  These VCs can be prioritized by the routing function
+	  // and this is reflected in "in_priority".  On the output,
+	  // if multiple VCs are requesting the same output VC, the priority
+	  // of VCs is based on the actual packet priorities, which is
+	  // reflected in "out_priority".
 	    
-	    //	    cout<<
-	    if(dest_vc->IsAvailableFor(out_vc)) {
-	      if(f->watch){
-		*gWatchOut << GetSimTime() << " | " << FullName() << " | "
-			   << "Requesting VC " << out_vc
-			   << " at output " << iset->output_port 
-			   << " with priorities " << in_priority
-			   << " and " << out_priority
-			   << "." << endl;
-	      }
-	      _vc_allocator->AddRequest(input*_vcs + vc, iset->output_port*_vcs + out_vc, 
-					out_vc, in_priority, out_priority);
-	    } else {
-	      if(f->watch)
-		*gWatchOut << GetSimTime() << " | " << FullName() << " | "
-			   << "VC " << out_vc << " at output " << iset->output_port 
-			   << " is unavailable." << endl;
+	  //	    cout<<
+	  if(dest_vc->IsAvailableFor(out_vc)) {
+	    if(f->watch){
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Requesting VC " << out_vc
+			 << " at output " << iset->output_port 
+			 << " with priorities " << in_priority
+			 << " and " << out_priority
+			 << "." << endl;
 	    }
+	    _vc_allocator->AddRequest(input*_vcs + vc, iset->output_port*_vcs + out_vc, 
+				      out_vc, in_priority, out_priority);
+	  } else {
+	    if(f->watch)
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "VC " << out_vc << " at output " << iset->output_port 
+			 << " is unavailable." << endl;
 	  }
-	  //go to the next item in the outputset
-	  iset++;
 	}
+	//go to the next item in the outputset
+	iset++;
       }
     }
+    
   }
   //  watched = true;
   if ( watched ) {
@@ -236,7 +234,8 @@ void IQRouterBaseline::_VCAlloc( )
 	  cur_vc->SetState( VC::vc_spec_grant );
 	else
 	  cur_vc->SetState( VC::active );
-
+	_vcalloc_vcs.erase((match_input<<16)+match_vc);
+	
 	cur_vc->SetOutput( output, vc );
 	dest_vc->TakeBuffer( vc );
 
@@ -244,9 +243,9 @@ void IQRouterBaseline::_VCAlloc( )
 	
 	if(f->watch)
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		      << "Granted VC " << vc << " at output " << output
-		      << " to VC " << match_vc << " at input " << match_input
-		      << " (flit: " << f->id << ")." << endl;
+		     << "Granted VC " << vc << " at output " << output
+		     << " to VC " << match_vc << " at input " << match_input
+		     << " (flit: " << f->id << ")." << endl;
       }
     }
   }
@@ -337,13 +336,13 @@ void IQRouterBaseline::_SWAlloc( )
 		  assert(f);
 		  if(f->watch) {
 		    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-				<< "VC " << vc << " at input " << input 
-				<< " requested output " << output 
-				<< " (non-spec., exp. input: " << expanded_input
-				<< ", exp. output: " << expanded_output
-				<< ", flit: " << f->id
-				<< ", prio: " << cur_vc->GetPriority()
-				<< ")." << endl;
+			       << "VC " << vc << " at input " << input 
+			       << " requested output " << output 
+			       << " (non-spec., exp. input: " << expanded_input
+			       << ", exp. output: " << expanded_output
+			       << ", flit: " << f->id
+			       << ", prio: " << cur_vc->GetPriority()
+			       << ")." << endl;
 		    watched = true;
 		  }
 		  
@@ -407,13 +406,13 @@ void IQRouterBaseline::_SWAlloc( )
 		    assert(f);
 		    if(f->watch) {
 		      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-				  << "VC " << vc << " at input " << input 
+				 << "VC " << vc << " at input " << input 
 				 << " requested output " << iset->output_port
-				  << " (spec., exp. input: " << expanded_input
-				  << ", exp. output: " << expanded_output
-				  << ", flit: " << f->id
-				  << ", prio: " << cur_vc->GetPriority()
-				  << ")." << endl;
+				 << " (spec., exp. input: " << expanded_input
+				 << ", exp. output: " << expanded_output
+				 << ", flit: " << f->id
+				 << ", prio: " << cur_vc->GetPriority()
+				 << ")." << endl;
 		      watched = true;
 		    }
 		    
@@ -453,7 +452,7 @@ void IQRouterBaseline::_SWAlloc( )
   
   _sw_allocator->Allocate();
   if(_speculative >= 2)
-      _spec_sw_allocator->Allocate();
+    _spec_sw_allocator->Allocate();
   
   // Winning flits cross the switch
 
@@ -569,15 +568,15 @@ void IQRouterBaseline::_SWAlloc( )
 	  assert(f);
 	  if(f->watch) {
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-			<< "Output " << output
-			<< " granted to VC " << vc << " at input " << input;
+		       << "Output " << output
+		       << " granted to VC " << vc << " at input " << input;
 	    if(cur_vc->GetState() == VC::vc_spec_grant)
 	      *gWatchOut << " (spec";
 	    else
 	      *gWatchOut << " (non-spec";
 	    *gWatchOut << ", exp. input: " << expanded_input
-			<< ", exp. output: " << expanded_output
-			<< ", flit: " << f->id << ")." << endl;
+		       << ", exp. output: " << expanded_output
+		       << ", flit: " << f->id << ")." << endl;
 	  }
 	  
 	  f->hops++;
@@ -590,10 +589,10 @@ void IQRouterBaseline::_SWAlloc( )
 	  
 	  if(f->watch)
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-			<< "Forwarding flit " << f->id << " through crossbar "
-			<< "(exp. input: " << expanded_input
-			<< ", exp. output: " << expanded_output
-			<< ")." << endl;
+		       << "Forwarding flit " << f->id << " through crossbar "
+		       << "(exp. input: " << expanded_input
+		       << ", exp. output: " << expanded_output
+		       << ")." << endl;
 	  
 	  if ( !c ) {
 	    c = _NewCredit( _vcs );
@@ -616,6 +615,7 @@ void IQRouterBaseline::_SWAlloc( )
 	    } else {
 	      cur_vc->Route(_rf, this, cur_vc->FrontFlit(), input);
 	      cur_vc->SetState(VC::vc_alloc);
+	      _vcalloc_vcs.insert((input<<16)+vc);
 	    }
 	    _switch_hold_in[expanded_input]   = -1;
 	    _switch_hold_vc[expanded_input]   = -1;
@@ -632,10 +632,10 @@ void IQRouterBaseline::_SWAlloc( )
 	  assert(f);
 	  if(f->watch)
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-			<< "Speculation failed at output " << output
-			<< "(exp. input: " << expanded_input
-			<< ", exp. output: " << expanded_output
-			<< ", flit: " << f->id << ")." << endl;
+		       << "Speculation failed at output " << output
+		       << "(exp. input: " << expanded_input
+		       << ", exp. output: " << expanded_output
+		       << ", flit: " << f->id << ")." << endl;
 	} 
       }
     }

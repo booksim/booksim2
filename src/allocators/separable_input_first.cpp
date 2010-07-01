@@ -61,7 +61,7 @@ void SeparableInputFirstAllocator::Allocate() {
     // Add requests to the input arbiters.
     list<sRequest>::const_iterator it  = _requests[input].begin() ;
     list<sRequest>::const_iterator end = _requests[input].end() ;
-    
+    /*
       while ( it != end ) {
       const sRequest& req = *it ;
       if ( req.label > -1 ) {
@@ -69,7 +69,7 @@ void SeparableInputFirstAllocator::Allocate() {
       }
       it++ ;
     }
-    
+    */
 
     // Execute the input arbiters and propagate the grants to the
     // output arbiters.
