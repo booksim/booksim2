@@ -60,7 +60,6 @@ void RoundRobinArbiter::AddRequest( int input, int id, int pri )
 {
   assert( 0 <= input && input < _input_size ) ;
   if(!_request[input].valid || (_request[input].pri < pri)) {
-    _last_req = input ;
     if(!_request[input].valid) {
       _num_reqs++ ;
       _request[input].valid = true ;
@@ -94,12 +93,10 @@ int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
     for ( int i = 0; i < _input_size ; i++ )
       _request[i].valid = false ;
     _num_reqs = 0 ;
-    _last_req = -1 ;
     _highest_pri = numeric_limits<int>::min();
     _best_input = -1;
   } else {
     assert(_num_reqs == 0);
-    assert(_last_req == -1);
   }
   
   return _selected ;

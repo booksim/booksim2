@@ -51,7 +51,7 @@ SeparableAllocator::SeparableAllocator( Module* parent, const string& name,
   : Allocator( parent, name, inputs, outputs )
 {
   
-  _requests  = new list<sRequest> [inputs] ;
+  _requests  = new vector<sRequest> [inputs] ;
   
   _input_arb = new Arbiter*[inputs];
   _output_arb = new Arbiter*[outputs];
@@ -108,7 +108,7 @@ bool SeparableAllocator::ReadRequest( sRequest &req, int in, int out ) const {
 
   const sRequest * sreq = NULL;
 
-  list<sRequest>::const_iterator match = _requests[in].begin() ;
+  vector<sRequest>::const_iterator match = _requests[in].begin() ;
   while ( match != _requests[in].end() ) {
     if ( ( match->port == out ) && ( !sreq || ( match->in_pri > sreq->in_pri ) ) ) {
       sreq = &(*match) ;
@@ -136,11 +136,7 @@ void SeparableAllocator::AddRequest( int in, int out, int label, int in_pri,
   req.in_pri  = in_pri ;
   req.out_pri = out_pri ;
   
-  _requests[in].push_front( req ) ;
-    
-  if ( req.label > -1 ) {
-    _input_arb[in]->AddRequest( out, label, in_pri ) ;
-  }
+  _requests[in].push_back( req ) ;
   
 }
 
@@ -161,8 +157,8 @@ void SeparableAllocator::PrintRequests( ostream * os ) const {
     if ( _requests[input].empty() )
       continue ;
     
-    list<sRequest>::const_iterator it  = _requests[input].begin() ;
-    list<sRequest>::const_iterator end = _requests[input].end() ;
+    vector<sRequest>::const_iterator it  = _requests[input].begin() ;
+    vector<sRequest>::const_iterator end = _requests[input].end() ;
 
     *os << input << " -> [ ";
     while ( it != end ) {

@@ -59,8 +59,8 @@ void SeparableOutputFirstAllocator::Allocate() {
   for ( int input = 0 ; input < _inputs ; input++ ) {
     
     // Add requests to the output arbiters
-    list<sRequest>::const_iterator it  = _requests[input].begin() ;
-    list<sRequest>::const_iterator end = _requests[input].end() ;
+    vector<sRequest>::const_iterator it  = _requests[input].begin() ;
+    vector<sRequest>::const_iterator end = _requests[input].end() ;
     while ( it != end ) {
       const sRequest& req = *it ;
       if ( req.label > -1 ) {
@@ -78,8 +78,8 @@ void SeparableOutputFirstAllocator::Allocate() {
     int in = _output_arb[output]->Arbitrate( NULL, NULL ) ;
     
     if ( in > -1 ) {
-      list<sRequest>::const_iterator it  = _requests[in].begin() ;
-      list<sRequest>::const_iterator end = _requests[in].end() ;
+      vector<sRequest>::const_iterator it  = _requests[in].begin() ;
+      vector<sRequest>::const_iterator end = _requests[in].end() ;
       while ( it != end ) {
 	const sRequest& req = *it ;
 	if ( ( req.label > -1 ) && ( req.port == output ) ) {

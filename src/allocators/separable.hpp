@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "arbiter.hpp"
 #include <assert.h>
 
-#include <list>
+#include <vector>
 
 class SeparableAllocator : public Allocator {
   
@@ -52,7 +52,7 @@ protected:
   Arbiter** _input_arb ;
   Arbiter** _output_arb ;
 
-  list<sRequest>* _requests ;
+  vector<sRequest>* _requests ;
 
 public:
   

@@ -42,9 +42,15 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
    _deadlock_counter(1), _sub_network(0), _timed_mode(false), _last_id(-1), 
    _last_pid(-1)
 {
+
   _sources = _net[0]->NumSources( );
   _dests   = _net[0]->NumDests( );
   _routers = _net[0]->NumRouters( );
+
+  Flit* ftemp = new Flit[  _sources ];
+  for(int i = 0; i<  _sources ; i++){
+    _flit_pool.push_back(&ftemp[i]);
+  }
 
   //nodes higher than limit do not produce or receive packets
   //for default limit = sources
@@ -363,12 +369,14 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
 TrafficManager::~TrafficManager( )
 {
+  _flit_pool.clear();
+
   for ( int s = 0; s < _sources; ++s ) {
     for (int a = 0; a < _duplicate_networks; ++a) {
       delete _buf_states[s][a];
     }
   }
-
+  
   for ( int c = 0; c < _classes; ++c ) {
     delete _latency_stats[c];
     delete _overall_min_latency[c];
@@ -458,8 +466,15 @@ int TrafficManager::DivisionAlgorithm (int packet_type) {
 
 Flit *TrafficManager::_NewFlit( )
 {
+  if(_flit_pool.empty()){
+    Flit* ftemp = new Flit[  _sources ];
+    for(int i = 0; i<  _sources ; i++){
+      _flit_pool.push_back(&ftemp[i]);
+    }
+  }
   //the constructor should initialize everything
-  Flit * f = new Flit();
+  Flit * f = _flit_pool.back();
+  _flit_pool.pop_back();
   f->id    = _cur_id;
   _total_in_flight_flits[_cur_id] = f;
   f->watch = gWatchOut && (_flits_to_watch.count(_cur_id) > 0);
@@ -587,7 +602,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     pair<multimap<int, Flit *>::iterator, multimap<int, Flit *>::iterator> res = _total_in_flight_packets.equal_range(f->pid);
     for(multimap<int, Flit *>::iterator iter = res.first; iter != res.second; ++iter) {
       assert(iter->second->pid == f->pid);
-      delete iter->second;
+      //delete iter->second;
+      _flit_pool.push_back(iter->second);
     }
     _total_in_flight_packets.erase(f->pid);
 

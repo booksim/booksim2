@@ -49,6 +49,25 @@ SeparableInputFirstAllocator( Module* parent, const string& name, int inputs,
   : SeparableAllocator( parent, name, inputs, outputs, arb_type )
 {}
 
+void SeparableInputFirstAllocator::AddRequest( int in, int out, int label, int in_pri,
+				     int out_pri ) {
+
+  assert( ( in >= 0 ) && ( in < _inputs ) &&
+	  ( out >= 0 ) && ( out < _outputs ) );
+
+  sRequest req ;
+  req.port    = out ;
+  req.label   = label ;
+  req.in_pri  = in_pri ;
+  req.out_pri = out_pri ;
+  _requests[in].push_back( req ) ;
+  if ( req.label > -1 ) {
+    _input_arb[in]->AddRequest( out, _requests[in].size()-1, in_pri ) ;
+  }
+  
+}
+
+
 void SeparableInputFirstAllocator::Allocate() {
   
   _ClearMatching() ;
@@ -56,46 +75,25 @@ void SeparableInputFirstAllocator::Allocate() {
   //  cout << "SeparableInputFirstAllocator::Allocate()" << endl ;
   //  PrintRequests() ;
   
+  // Execute the input arbiters and propagate the grants to the
+  // output arbiters.
   for ( int input = 0 ; input < _inputs ; input++ ) {
-    
-    // Add requests to the input arbiters.
-    list<sRequest>::const_iterator it  = _requests[input].begin() ;
-    list<sRequest>::const_iterator end = _requests[input].end() ;
-    /*
-      while ( it != end ) {
-      const sRequest& req = *it ;
-      if ( req.label > -1 ) {
-		_input_arb[input]->AddRequest( req.port, req.label, req.in_pri ) ;
-      }
-      it++ ;
-    }
-    */
-
-    // Execute the input arbiters and propagate the grants to the
-    // output arbiters.
     if(_requests[input].size()!=0){
       int id;
-      int out = -1;
-      out=_input_arb[input]->Arbitrate( &id, NULL );
-      it  = _requests[input].begin() ;
-      while ( it != end ) {
-	const sRequest& req = *it ;
-	if ( ( req.label ==id ) && ( req.port == out )  ) {
-	  _output_arb[out]->AddRequest( input, req.label, req.out_pri );
-	  break;
-	}
-	it++ ;
-      }
+      int pri;
+      int out =_input_arb[input]->Arbitrate( &id, &pri );
+      const sRequest& req = (_requests[input][id]); 
+      assert(out == req.port && pri == req.in_pri);
+      _output_arb[out]->AddRequest( input, req.label, req.out_pri );
     }
   }
 
+
   // Execute the output arbiters.
   for ( int output = 0 ; output < _outputs ; output++ ) {
-
     int label, pri ;
-    int input = -1;
     if(_output_arb[output]->_num_reqs!=0){
-      input = _output_arb[output]->Arbitrate( &label, &pri ) ;
+      int  input = _output_arb[output]->Arbitrate( &label, &pri ) ;
       assert( _inmatch[input] == -1 && _outmatch[output] == -1 ) ;
       _inmatch[input]   = output ;
       _outmatch[output] = input ;
