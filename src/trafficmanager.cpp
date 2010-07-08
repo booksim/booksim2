@@ -599,14 +599,15 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     }
 
     // free all flits associated with the current packet
-    pair<multimap<int, Flit *>::iterator, multimap<int, Flit *>::iterator> res = _total_in_flight_packets.equal_range(f->pid);
+    int fpid = f->pid;
+    pair<multimap<int, Flit *>::iterator, multimap<int, Flit *>::iterator> res = _total_in_flight_packets.equal_range(fpid);
     for(multimap<int, Flit *>::iterator iter = res.first; iter != res.second; ++iter) {
-      assert(iter->second->pid == f->pid);
+      assert(iter->second->pid == fpid);
       //reset the flit and back to the poool
       iter->second->Reset();
       _flit_pool.push_back(iter->second);
     }
-    _total_in_flight_packets.erase(f->pid);
+    _total_in_flight_packets.erase(fpid);
 
   }
 }
@@ -1101,7 +1102,10 @@ void TrafficManager::_Step( )
     _net[a]->WriteOutputs( );
   }
   
-
+  ++_time;
+  if(gTrace){
+    cout<<"TIME "<<_time<<endl;
+  }
 
 
   for (int i = 0; i < _duplicate_networks; ++i) {
@@ -1146,10 +1150,7 @@ void TrafficManager::_Step( )
       _router_map[i][j]->ResetFlitStats();
     }
   }
-  ++_time;
-  if(gTrace){
-    cout<<"TIME "<<_time<<endl;
-  }
+
 }
   
 bool TrafficManager::_PacketsOutstanding( ) const
@@ -1630,6 +1631,7 @@ bool TrafficManager::_SingleSim( )
     int empty_steps = 0;
     while( (_drain_measured_only ? _measured_in_flight_packets.size() : _total_in_flight_packets.size()) > 0 ) { 
       _Step( ); 
+
       if(_flow_out) {
 	*_flow_out << "injected_flow(" << _time << ",:) = " << _injected_flow << ";" << endl;
 	*_flow_out << "ejected_flow(" << _time << ",:) = " << _ejected_flow << ";" << endl;
@@ -1654,7 +1656,7 @@ bool TrafficManager::_SingleSim( )
 
 bool TrafficManager::Run( )
 {
-  //  _FirstStep( );
+      _FirstStep( );
   
   for ( int sim = 0; sim < _total_sims; ++sim ) {
     if ( !_SingleSim( ) ) {
