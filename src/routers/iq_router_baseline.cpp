@@ -309,8 +309,9 @@ void IQRouterBaseline::_SWAlloc( )
 	    
 	  case VC::active:
 	    {
-	      
-	      dest_vc = &_next_vcs[cur_vc->GetOutputPort( )];
+	      output = cur_vc->GetOutputPort( );
+
+	      dest_vc = &_next_vcs[output];
 	      
 	      if ( !dest_vc->IsFullFor( cur_vc->GetOutputVC( ) ) ) {
 		
@@ -321,7 +322,7 @@ void IQRouterBaseline::_SWAlloc( )
 		
 		assert( expanded_input == (vc%_input_speedup)*_inputs + input );
 		expanded_output = 
-		  (input%_output_speedup)*_outputs + cur_vc->GetOutputPort( );
+		  (input%_output_speedup)*_outputs + output;
 		
 		if ( ( _switch_hold_in[expanded_input] == -1 ) && 
 		     ( _switch_hold_out[expanded_output] == -1 ) ) {
