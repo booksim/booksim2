@@ -1102,10 +1102,6 @@ void TrafficManager::_Step( )
     _net[a]->WriteOutputs( );
   }
   
-  ++_time;
-  if(gTrace){
-    cout<<"TIME "<<_time<<endl;
-  }
 
 
   for (int i = 0; i < _duplicate_networks; ++i) {
@@ -1149,6 +1145,10 @@ void TrafficManager::_Step( )
       _sent_flow[i*_routers+j] += _router_map[i][j]->GetSentFlits();
       _router_map[i][j]->ResetFlitStats();
     }
+  }
+  ++_time;
+  if(gTrace){
+    cout<<"TIME "<<_time<<endl;
   }
 
 }
@@ -1656,7 +1656,7 @@ bool TrafficManager::_SingleSim( )
 
 bool TrafficManager::Run( )
 {
-      _FirstStep( );
+  //      _FirstStep( );
   
   for ( int sim = 0; sim < _total_sims; ++sim ) {
     if ( !_SingleSim( ) ) {
