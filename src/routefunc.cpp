@@ -556,11 +556,10 @@ void xy_yx_mesh( const Router *r, const Flit *f,
       outputs->AddRange( out_port, gWriteReplyEndVC -1, gWriteReplyEndVC -1);
     break;
   case Flit::ANY_TYPE:
-    outputs->AddRange( out_port, 0, gNumVCS-1);
     if ( f->x_then_y )
-      outputs->AddRange( out_port, 0, gNumVCS-1);
+      outputs->AddRange( out_port, 0, (gNumVCS>>1) -1);
     else
-      outputs->AddRange( out_port,  0, gNumVCS-1);
+      outputs->AddRange( out_port,  (gNumVCS>>1) , gNumVCS-1);
   }
 
 }
