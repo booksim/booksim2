@@ -602,7 +602,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     pair<multimap<int, Flit *>::iterator, multimap<int, Flit *>::iterator> res = _total_in_flight_packets.equal_range(f->pid);
     for(multimap<int, Flit *>::iterator iter = res.first; iter != res.second; ++iter) {
       assert(iter->second->pid == f->pid);
-      //delete iter->second;
+      //reset the flit and back to the poool
+      iter->second->Reset();
       _flit_pool.push_back(iter->second);
     }
     _total_in_flight_packets.erase(f->pid);
@@ -836,6 +837,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 
 void TrafficManager::_FirstStep( )
 {  
+  
   // Ensure that all outputs are defined before starting simulation
   for (int i = 0; i < _duplicate_networks; ++i) { 
     _net[i]->WriteOutputs( );
@@ -844,6 +846,7 @@ void TrafficManager::_FirstStep( )
       _net[i]->WriteCredit( 0, output );
     }
   }
+  
 }
 
 void TrafficManager::_BatchInject(){
@@ -1098,10 +1101,7 @@ void TrafficManager::_Step( )
     _net[a]->WriteOutputs( );
   }
   
-  ++_time;
-  if(gTrace){
-    cout<<"TIME "<<_time<<endl;
-  }
+
 
 
   for (int i = 0; i < _duplicate_networks; ++i) {
@@ -1145,6 +1145,10 @@ void TrafficManager::_Step( )
       _sent_flow[i*_routers+j] += _router_map[i][j]->GetSentFlits();
       _router_map[i][j]->ResetFlitStats();
     }
+  }
+  ++_time;
+  if(gTrace){
+    cout<<"TIME "<<_time<<endl;
   }
 }
   
@@ -1650,7 +1654,7 @@ bool TrafficManager::_SingleSim( )
 
 bool TrafficManager::Run( )
 {
-  _FirstStep( );
+  //  _FirstStep( );
   
   for ( int sim = 0; sim < _total_sims; ++sim ) {
     if ( !_SingleSim( ) ) {

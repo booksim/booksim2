@@ -91,6 +91,7 @@ struct Flit {
 
   // Constructor
   Flit() ;
+  void Reset();
 };
 
 ostream& operator<<( ostream& os, const Flit& f );

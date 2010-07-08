@@ -69,4 +69,7 @@ const_flits_per_packet = 20;
 // Simulation
 
 sim_type       = latency;
-injection_rate = 0.01;
+injection_rate = 0.001;
+
+sample_period = 100000;
+
