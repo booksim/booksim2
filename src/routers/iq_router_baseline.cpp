@@ -598,7 +598,9 @@ void IQRouterBaseline::_SWAlloc( )
 	  if ( !c ) {
 	    c = _NewCredit( _vcs );
 	  }
-	  
+
+	  assert(vc == f->vc);
+
 	  c->vc[c->vc_cnt] = f->vc;
 	  c->vc_cnt++;
 	  c->dest_router = f->from_router;
@@ -626,7 +628,7 @@ void IQRouterBaseline::_SWAlloc( )
 	    cur_vc->SetState(VC::active);
 	  }
 	  
-	  _sw_rr_offset[expanded_input] = ( f->vc + 1 ) % _vcs;
+	  _sw_rr_offset[expanded_input] = ( vc + 1 ) % _vcs;
 	} else {
 	  assert(cur_vc->GetState() == VC::vc_spec);
 	  Flit * f = cur_vc->FrontFlit();
