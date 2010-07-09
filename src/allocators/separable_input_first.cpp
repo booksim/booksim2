@@ -61,6 +61,7 @@ void SeparableInputFirstAllocator::AddRequest( int in, int out, int label, int i
   req.in_pri  = in_pri ;
   req.out_pri = out_pri ;
   _requests[in].push_back( req ) ;
+  in_event.insert(in);
   if ( req.label > -1 ) {
     _input_arb[in]->AddRequest( out, _requests[in].size()-1, in_pri ) ;
   }
@@ -77,29 +78,31 @@ void SeparableInputFirstAllocator::Allocate() {
   
   // Execute the input arbiters and propagate the grants to the
   // output arbiters.
-  for ( int input = 0 ; input < _inputs ; input++ ) {
-    if(_requests[input].size()!=0){
-      int id;
-      int pri;
-      int out =_input_arb[input]->Arbitrate( &id, &pri );
-      const sRequest& req = (_requests[input][id]); 
-      assert(out == req.port && pri == req.in_pri);
-      _output_arb[out]->AddRequest( input, req.label, req.out_pri );
-    }
+  for(set<int>::iterator i = in_event.begin(); i!=in_event.end(); i++){
+    int input = *i;
+    int id;
+    int pri;
+    int out =_input_arb[input]->Arbitrate( &id, &pri );
+    const sRequest& req = (_requests[input][id]); 
+    assert(out == req.port && pri == req.in_pri);
+    _output_arb[out]->AddRequest( input, req.label, req.out_pri );
+    out_event.insert(out);
   }
 
 
   // Execute the output arbiters.
-  for ( int output = 0 ; output < _outputs ; output++ ) {
-    int label, pri ;
-    if(_output_arb[output]->_num_reqs!=0){
-      int  input = _output_arb[output]->Arbitrate( &label, &pri ) ;
-      assert( _inmatch[input] == -1 && _outmatch[output] == -1 ) ;
-      _inmatch[input]   = output ;
-      _outmatch[output] = input ;
-      _input_arb[input]->UpdateState() ;
-      _output_arb[output]->UpdateState() ;
+  for(set<int>::iterator i = out_event.begin(); i!=out_event.end(); i++){
 
-    }
+    int label, pri ;
+    int output = *i;
+    int  input = _output_arb[output]->Arbitrate( &label, &pri ) ;
+    assert( _inmatch[input] == -1 && _outmatch[output] == -1 ) ;
+    _inmatch[input]   = output ;
+    _outmatch[output] = input ;
+    _input_arb[input]->UpdateState() ;
+    _output_arb[output]->UpdateState() ;
+
   }
+  in_event.clear();
+  out_event.clear();
 }
