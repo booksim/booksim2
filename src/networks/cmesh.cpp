@@ -582,12 +582,10 @@ void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel,
       outputs->AddRange( out_port, gWriteReplyBeginVC+n+1, gWriteReplyEndVC );
   }
   else if (f->type ==  Flit::ANY_TYPE) {
- 
-    n = (gNumVCS-1) / 2 ;
     if ( f->x_then_y )
-      outputs->AddRange( out_port, 0,0 + n);
+      outputs->AddRange( out_port, 0, (gNumVCS>>1) -1);
     else
-      outputs->AddRange( out_port, 0+n+1,gNumVCS-1 );
+      outputs->AddRange( out_port,  (gNumVCS>>1) , gNumVCS-1);
   }
 }
 
@@ -744,13 +742,10 @@ void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
       outputs->AddRange( out_port, gWriteReplyEndVC -1, gWriteReplyEndVC -1);
   }
   else if (f->type ==  Flit::ANY_TYPE) {
-    if ( 0 + 1 > gNumVCS-1)
-      outputs->AddRange( out_port, 0, gNumVCS-1 -2);
-    if ( f->x_then_y )
-      outputs->AddRange( out_port, gNumVCS-1 -0, gNumVCS-1 -0);
+        if ( f->x_then_y )
+      outputs->AddRange( out_port, 0, (gNumVCS>>1) -1);
     else
-      outputs->AddRange( out_port, gNumVCS-1 -1, gNumVCS-1 -1);
-    
+      outputs->AddRange( out_port,  (gNumVCS>>1) , gNumVCS-1);
   }
 }
 //============================================================
