@@ -199,7 +199,6 @@ void min_anynet( const Router *r, const Flit *f, int in_channel,
   }
 
   outputs->AddRange( out_port , vcBegin, vcEnd );
-  // exit(-1);
 
 }
 

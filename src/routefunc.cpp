@@ -526,42 +526,34 @@ void xy_yx_mesh( const Router *r, const Flit *f,
   }
 
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
-  switch(f->type) {
-  case Flit::READ_REQUEST:
-    outputs->AddRange( out_port, gReadReqBeginVC + 2, gReadReqEndVC );
-    if ( f->x_then_y )
-      outputs->AddRange( out_port, gReadReqBeginVC+0, gReadReqBeginVC+0);
-    else
-      outputs->AddRange( out_port, gReadReqBeginVC+1, gReadReqBeginVC+1);
-    break;
-  case Flit::WRITE_REQUEST:
-    outputs->AddRange( out_port, gWriteReqBeginVC, gWriteReqEndVC - 2);
-    if ( f->x_then_y )
-      outputs->AddRange( out_port, gWriteReqEndVC -0, gWriteReqEndVC -0);
-    else
-      outputs->AddRange( out_port, gWriteReqEndVC -1, gWriteReqEndVC -1);
-    break;
-  case Flit::READ_REPLY:
-    outputs->AddRange( out_port, gReadReplyBeginVC +2, gReadReplyEndVC  );
-    if ( f->x_then_y )
-      outputs->AddRange( out_port, gReadReplyBeginVC +0, gReadReplyEndVC +0);
-    else
-      outputs->AddRange( out_port, gReadReplyBeginVC +1, gReadReplyEndVC +1);
-    break;
-  case Flit::WRITE_REPLY:
-    outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC -2);
-    if ( f->x_then_y )
-      outputs->AddRange( out_port, gWriteReplyEndVC -0, gWriteReplyEndVC -0);
-    else
-      outputs->AddRange( out_port, gWriteReplyEndVC -1, gWriteReplyEndVC -1);
-    break;
-  case Flit::ANY_TYPE:
-    if ( f->x_then_y )
-      outputs->AddRange( out_port, 0, (gNumVCS>>1) -1);
-    else
-      outputs->AddRange( out_port,  (gNumVCS>>1) , gNumVCS-1);
+  int vcBegin = 0, vcEnd = gNumVCS-1;
+  int available_vcs = 0;
+  //each class must have ast east 2 vcs assigned or else xy_yx will deadlock
+  if ( f->type == Flit::READ_REQUEST ) {
+    available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
+    vcBegin = gReadReqBeginVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    available_vcs = (gWriteReqEndVC-gWriteReqBeginVC)+1;
+    vcBegin = gWriteReqBeginVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    available_vcs = (gReadReplyEndVC-gReadReplyBeginVC)+1;
+    vcBegin = gReadReplyBeginVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
+    vcBegin = gWriteReplyBeginVC;
+  } else if ( f->type ==  Flit::ANY_TYPE ) {
+    available_vcs = gNumVCS;
+    vcBegin = 0;
   }
-
+  assert( available_vcs>=2);
+  if(f->x_then_y){
+    vcEnd   =vcBegin +(available_vcs>>1)-1;
+  }else{
+    vcEnd   = vcBegin+(available_vcs-1);
+    vcBegin = vcBegin+(available_vcs>>1);
+  } 
+  outputs->AddRange( out_port , vcBegin, vcEnd );
+  
 }
 
 int route_xy( int router_id, int dest_id ) {
@@ -821,14 +813,38 @@ void romm_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outpu
   
   if ( f->ph == 1 ) { // In phase 1
     out_port = dor_next_mesh( r->GetID( ), f->intm );
-    vc_min = 0;
-    vc_max = gNumVCS/2 - 1; 
   } else { // In phase 2
     out_port = dor_next_mesh( r->GetID( ), f->dest );
-    vc_min = gNumVCS/2;
-    vc_max = gNumVCS - 1;
   }
   
+
+    //each class must have ast east 2 vcs assigned or else valiant valiant will deadlock
+  int available_vcs = 0;
+  if ( f->type == Flit::READ_REQUEST ) {
+    available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
+    vc_min = gReadReqBeginVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+   available_vcs = (gWriteReqEndVC-gWriteReqBeginVC)+1;
+   vc_min = gWriteReqBeginVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+   available_vcs = (gReadReplyEndVC-gReadReplyBeginVC)+1;
+   vc_min = gReadReplyBeginVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+   available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
+   vc_min = gWriteReplyBeginVC;
+  } else if ( f->type ==  Flit::ANY_TYPE ) {
+    available_vcs = gNumVCS;
+    vc_min = 0;
+  }
+  assert( available_vcs>=2);
+  if(f->ph==1){
+    vc_max   =vc_min +(available_vcs>>1)-1;
+  }else{
+    vc_max   = vc_min+(available_vcs-1);
+    vc_min = vc_min+(available_vcs>>1);
+  } 
+
+
   outputs->AddRange( out_port, vc_min, vc_max );
 }
 
@@ -1262,14 +1278,35 @@ void valiant_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *ou
   
   if ( f->ph == 1 ) { // In phase 1
     out_port = dor_next_mesh( r->GetID( ), f->intm );
-    vc_min = 0;
-    vc_max = gNumVCS/2 - 1; 
   } else { // In phase 2
     out_port = dor_next_mesh( r->GetID( ), f->dest );
-    vc_min = gNumVCS/2;
-    vc_max = gNumVCS - 1;
   }
-    
+    //each class must have ast east 2 vcs assigned or else valiant valiant will deadlock
+  int available_vcs = 0;
+  if ( f->type == Flit::READ_REQUEST ) {
+    available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
+    vc_min = gReadReqBeginVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+   available_vcs = (gWriteReqEndVC-gWriteReqBeginVC)+1;
+   vc_min = gWriteReqBeginVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+   available_vcs = (gReadReplyEndVC-gReadReplyBeginVC)+1;
+   vc_min = gReadReplyBeginVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+   available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
+   vc_min = gWriteReplyBeginVC;
+  } else if ( f->type ==  Flit::ANY_TYPE ) {
+    available_vcs = gNumVCS;
+    vc_min = 0;
+  }
+  assert( available_vcs>=2);
+  if(f->ph==1){
+    vc_max   =vc_min +(available_vcs>>1)-1;
+  }else{
+    vc_max   = vc_min+(available_vcs-1);
+    vc_min = vc_min+(available_vcs>>1);
+  }     
+
   outputs->AddRange( out_port, vc_min, vc_max );
 }
 
@@ -1295,27 +1332,45 @@ void valiant_torus( const Router *r, const Flit *f, int in_channel, OutputSet *o
   if ( f->ph == 1 ) { // In phase 1
     dor_next_torus( r->GetID( ), f->intm, in_channel,
 		    &out_port, &f->ring_par, false );
-    
-    if ( f->ring_par == 0 ) {
-      vc_min = 0;
-      vc_max = gNumVCS/4 - 1;
-    } else {
-      vc_min = gNumVCS/4;
-      vc_max = gNumVCS/2 - 1;
-    }
   } else { // In phase 2
      dor_next_torus( r->GetID( ), f->dest, in_channel,
 		    &out_port, &f->ring_par, false );
-    
-    if ( f->ring_par == 0 ) {
-      vc_min = gNumVCS/2;
-      vc_max = (3*gNumVCS)/4 - 1;
-    } else {
-      vc_min = (3*gNumVCS)/4;
-      vc_max = gNumVCS - 1;
-    }
   }
-    
+
+  //each class must have ast east 4 vcs assigned or else xy_yx + min+ nonmin will deadlock
+  int begin_vcs = -1;
+  int available_vcs = 0;
+  if ( f->type == Flit::READ_REQUEST ) {
+    available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
+    begin_vcs = gReadReqBeginVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    available_vcs = (gWriteReqEndVC-gWriteReqBeginVC)+1;
+    begin_vcs = gWriteReqBeginVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    available_vcs = (gReadReplyEndVC-gReadReplyBeginVC)+1;
+    begin_vcs = gReadReplyBeginVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;
+    begin_vcs = gWriteReplyBeginVC;
+  } else if ( f->type ==  Flit::ANY_TYPE ) {
+    available_vcs = (gNumVCS);
+    begin_vcs = 0;
+  }
+
+  assert( available_vcs>=4);
+  int half_ava = available_vcs>>1;
+  int quarter_ava = available_vcs>>2;
+  if(f->ph ==1){
+    vc_min = begin_vcs;
+    vc_max =   begin_vcs+quarter_ava-1;
+  }else{
+    vc_min = begin_vcs+(quarter_ava);
+    vc_max   = begin_vcs+half_ava-1;
+  } 
+  if(f->ring_par == 0){
+    vc_min +=half_ava;
+    vc_max += half_ava;
+  }    
   outputs->AddRange( out_port, vc_min, vc_max );
 }
 

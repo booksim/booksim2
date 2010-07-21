@@ -433,6 +433,10 @@ void dim_order_cmo( const Router *r, const Flit *f, int in_channel,
 		  << "." << endl;
   }
 
+  if( f->type !=  Flit::ANY_TYPE ){
+    cout<<"CMO doesn't support segregating read/write traffic\n";
+    assert(false);
+  }
   outputs->AddRange( out_port, vc_min, vc_max );
 }
 
