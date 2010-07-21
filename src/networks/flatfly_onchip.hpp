@@ -78,8 +78,6 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
 		  OutputSet *outputs, bool inject );
 void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 			  OutputSet *outputs, bool inject );
-void ugal_dqdt_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
-			  OutputSet *outputs, bool inject );
 void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 			  OutputSet *outputs, bool inject );
 void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
