@@ -36,16 +36,18 @@ YACC   = /usr/bin/bison -d
 LEX    = /usr/bin/flex
 PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
-INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -I/usr/include/QtCore -I/usr/include/QtGui
-CPPFLAGS = -O3  -ggdb $(INCPATH) 
-LFLAGS =   -lQtGui -lQtCore -lpthread 
+DEFINE = 
+DEFINE_TEST = -DUSE_GUI
+INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks 
+CPPFLAGS = -O3  -ggdb $(INCPATH) $(DEFINE) 
+LFLAGS =  
+
 
 OBJDIR := obj
 PROG   := booksim
 
 # simulator source files
 CPP_SRCS = main.cpp \
-   bgui.cpp\
    config_utils.cpp \
    booksim_config.cpp \
    module.cpp \
@@ -64,8 +66,16 @@ CPP_SRCS = main.cpp \
    misc_utils.cpp\
    rng_wrapper.cpp\
    rng_double_wrapper.cpp\
-   power_module.cpp \
+   power_module.cpp 
+
+ifeq ($(DEFINE) , $(DEFINE_TEST))
+	CPP_SRCS := \
+	bgui.cpp\
    moc_bgui.cpp
+	LFLAGS :=  -lQtGui -lQtCore -lpthread 
+	INCPATH := -I/usr/include/QtCore -I/usr/include/QtGui
+else 
+endif
 
 LEX_OBJS  = ${OBJDIR}/configlex.o
 YACC_OBJS = ${OBJDIR}/config_tab.o
@@ -86,7 +96,7 @@ OBJS :=  $(LEX_OBJS) $(YACC_OBJS)\
 
 .PHONY: clean
 
-
+all:$(PROG)
 
 $(PROG): $(OBJS)
 	 $(CPP) $(LFLAGS) $^ -o $@

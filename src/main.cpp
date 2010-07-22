@@ -44,9 +44,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 #include <fstream>
 
-
+#ifdef USE_GUI
 #include <QApplication>
-
+#include "bgui.hpp"
+#endif
 
 #include <sstream>
 #include "booksim.hpp"
@@ -59,7 +60,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "injection.hpp"
 #include "power_module.hpp"
 
-#include "bgui.hpp"
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //include new network here//
@@ -139,6 +140,7 @@ vector<int> gNodeStates;
 ostream * gWatchOut;
 
 bool gGUIMode = false;
+
 /////////////////////////////////////////////////////////////////////////////
 
 bool AllocatorSim( const Configuration& config )
@@ -260,6 +262,7 @@ int main( int argc, char **argv )
 
   BookSimConfig config;
 
+#ifdef USE_GUI
   for(int i = 1; i < argc; ++i) {
     string arg(argv[i]);
     if(arg=="-g"){
@@ -267,6 +270,7 @@ int main( int argc, char **argv )
       break;
     }
   }
+#endif
   if ( !ParseArgs( &config, argc, argv ) ) {
     cerr << "Usage: " << argv[0] << " configfile... [param=value...]" << endl;
     return 0;
@@ -298,6 +302,7 @@ int main( int argc, char **argv )
   if(!gGUIMode){
    result = AllocatorSim( config );
   } else {
+#ifdef USE_GUI
     cout<<"GUI Mode\n";
     QApplication app(argc, argv);
     BooksimGUI * bs = new BooksimGUI();
@@ -305,6 +310,7 @@ int main( int argc, char **argv )
     bs->setGeometry(100, 100, 500, 355);
     bs->show();
     return app.exec();
+#endif
   }
 
   return result ? -1 : 0;
