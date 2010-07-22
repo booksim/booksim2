@@ -205,7 +205,8 @@ bool ParseArgs( Configuration *cf, int argc, char **argv )
   for(int i = 1; i < argc; ++i) {
     string arg(argv[i]);
     size_t pos = arg.find('=');
-    if(pos == string::npos) {
+    bool dash = (argv[i][0] =='-');
+    if(pos == string::npos && !dash) {
       // parse config file
       cf->ParseFile( argv[i] );
       ifstream in(argv[i]);
@@ -217,7 +218,7 @@ bool ParseArgs( Configuration *cf, int argc, char **argv )
       }
       cout << "END Configuration File: " << argv[i] << endl;
       rc = true;
-    } else {
+    } else if(pos != string::npos)  {
       // override individual parameter
       cout << "OVERRIDE Parameter: " << arg << endl;
       cf->ParseString(argv[i]);

@@ -30,19 +30,22 @@
 #
 # Makefile
 #
+MOC = /usr/lib/qt4/bin/moc
 CPP    = /usr/bin/g++
 YACC   = /usr/bin/bison -d
 LEX    = /usr/bin/flex
 PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
-CPPFLAGS = -O3 -I. -Iarbiters -Iallocators -Irouters -Inetworks -ggdb
-LFLAGS =
+INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -I/usr/include/QtCore -I/usr/include/QtGui
+CPPFLAGS = -O3  -ggdb $(INCPATH) 
+LFLAGS =   -lQtGui -lQtCore -lpthread 
 
 OBJDIR := obj
 PROG   := booksim
 
 # simulator source files
 CPP_SRCS = main.cpp \
+   bgui.cpp\
    config_utils.cpp \
    booksim_config.cpp \
    module.cpp \
@@ -61,7 +64,8 @@ CPP_SRCS = main.cpp \
    misc_utils.cpp\
    rng_wrapper.cpp\
    rng_double_wrapper.cpp\
-   power_module.cpp
+   power_module.cpp \
+   moc_bgui.cpp
 
 LEX_OBJS  = ${OBJDIR}/configlex.o
 YACC_OBJS = ${OBJDIR}/config_tab.o
@@ -82,10 +86,18 @@ OBJS :=  $(LEX_OBJS) $(YACC_OBJS)\
 
 .PHONY: clean
 
+
+
 $(PROG): $(OBJS)
 	 $(CPP) $(LFLAGS) $^ -o $@
 
 # rules to compile simulator
+
+moc_bgui.cpp: booksim_config.hpp \
+		config_utils.hpp \
+		bgui.hpp
+	$(MOC) $(INCPATH) bgui.hpp -o moc_bgui.cpp
+
 ${LEX_OBJS}: configlex.cpp config_tab.hpp
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
@@ -107,6 +119,7 @@ ${OBJDIR}/%.o: allocators/%.cpp
 # rules to compile routers
 ${OBJDIR}/%.o: routers/%.cpp 
 	$(CPP) $(CPPFLAGS) -c $< -o $@
+
 
 
 clean:

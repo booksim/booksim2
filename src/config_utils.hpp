@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef _CONFIG_UTILS_HPP_
 #define _CONFIG_UTILS_HPP_
-
+#include "booksim.hpp"
 #include<stdio.h>
 #include<string>
 #include<map>
