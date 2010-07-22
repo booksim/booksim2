@@ -69,11 +69,11 @@ CPP_SRCS = main.cpp \
    power_module.cpp 
 
 ifeq ($(DEFINE) , $(DEFINE_TEST))
-	CPP_SRCS := \
+	CPP_SRCS += \
 	bgui.cpp\
    moc_bgui.cpp
-	LFLAGS :=  -lQtGui -lQtCore -lpthread 
-	INCPATH := -I/usr/include/QtCore -I/usr/include/QtGui
+	LFLAGS +=  -lQtGui -lQtCore -lpthread 
+	INCPATH += -I/usr/include/QtCore -I/usr/include/QtGui
 else 
 endif
 
