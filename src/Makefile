@@ -36,7 +36,7 @@ YACC   = /usr/bin/bison -d
 LEX    = /usr/bin/flex
 PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
-DEFINE = 
+DEFINE = -DUSE_GUI
 DEFINE_TEST = -DUSE_GUI
 INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks 
 CPPFLAGS = -O3  -ggdb $(INCPATH) $(DEFINE) 
@@ -143,6 +143,7 @@ clean:
 	rm -f routers/*~
 	rm -f examples/*~
 	rm -f *_tab.cpp *_tab.hpp *.tab.c *.tab.h *lex.cpp
+	rm -f moc_bgui.cpp
 
 
 #purify: $(OBJS)

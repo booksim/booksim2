@@ -78,30 +78,28 @@ BookSimConfig::BookSimConfig( )
   // TCC Simulation Traffic Trace
   AddStrField( "trace_file", "trace-file.txt" ) ;
 
-  //==== Multi-node topology options =======================
-
+  //==== Topology options =======================
+  //important
   AddStrField( "topology", "torus" );
-
   _int_map["k"] = 8; //network radix
   _int_map["n"] = 2; //network dimension
   _int_map["c"] = 1; //concentration
+  AddStrField( "routing_function", "none" );
+  _int_map["use_noc_latency"] = 1;
+
+  //not critical
   _int_map["x"] = 8; //number of routers in X
   _int_map["y"] = 8; //number of routers in Y
   _int_map["xr"] = 1; //number of nodes per router in X only if c>1
   _int_map["yr"] = 1; //number of nodes per router in Y only if c>1
-
   _int_map["limit"] = 0; //how many of the nodes are actually used
 
-  AddStrField( "routing_function", "none" );
 
   _int_map["link_failures"] = 0; //legacy
   _int_map["fail_seed"]     = 0; //legacy
 
-  _int_map["use_noc_latency"] = 1;
-
   //==== Cmesh topology options =======================
   _int_map["express_channels"] = 0; //for Cmesh only, 0=no express channels
-
   //==== Single-node options ===============================
 
   _int_map["in_ports"]  = 5;
@@ -250,6 +248,62 @@ BookSimConfig::BookSimConfig( )
   //==================Network file===========================
   AddStrField("network_file","");
 }
+
+
+//A list of important simulator for the booksim gui, anything else not listed here is still included
+//but just not very organized
+vector< pair<string, vector< string> > > *BookSimConfig::GetImportantMap(){
+  //Vector of 5 categories, each category is a vector of potions. Maps don't work because it autosorts
+  vector< pair<string, vector< string> > > *important = new  vector< pair<string, vector< string> > >;
+  important->push_back( make_pair( "Topology", vector<string>() ));
+  (*important)[0].second.push_back("topology");
+  (*important)[0].second.push_back("k");
+  (*important)[0].second.push_back("n");
+  (*important)[0].second.push_back("c");
+  (*important)[0].second.push_back( "routing_function");
+  (*important)[0].second.push_back("use_noc_latency");
+
+  important->push_back(make_pair("Router", vector<string>()));
+  (*important)[1].second.push_back("router");
+  (*important)[1].second.push_back("num_vcs");
+  (*important)[1].second.push_back("vc_buf_size");
+  (*important)[1].second.push_back("routing_delay");
+  (*important)[1].second.push_back("vc_alloc_delay");
+  (*important)[1].second.push_back("sw_alloc_delay");
+  (*important)[1].second.push_back("st_prepare_delay");
+  (*important)[1].second.push_back("st_final_delay");
+
+  important->push_back(make_pair("Allocator", vector<string>()));
+  (*important)[2].second.push_back("vc_allocator");
+  (*important)[2].second.push_back("vc_alloc_arb_type");
+  (*important)[2].second.push_back("sw_allocator");
+  (*important)[2].second.push_back("sw_alloc_arb_type");
+  (*important)[2].second.push_back( "priority");
+  (*important)[2].second.push_back("speculative");
+
+  important->push_back(make_pair("Simulation", vector<string>()));
+ (*important)[3].second.push_back("traffic");
+ (*important)[3].second.push_back("injection_rate");
+ (*important)[3].second.push_back("injection_rate_uses_flits");
+ (*important)[3].second.push_back("sim_type");
+ (*important)[3].second.push_back("latency_thres");
+ (*important)[3].second.push_back("const_flits_per_packet");
+ (*important)[3].second.push_back("injection_process");
+ (*important)[3].second.push_back("sample_period");
+
+  important->push_back(make_pair("Statistics", vector<string>()));
+  (*important)[4].second.push_back("print_activity");
+  (*important)[4].second.push_back("print_csv_results");
+  (*important)[4].second.push_back("print_vc_stats");
+  (*important)[4].second.push_back("stats_out");
+  (*important)[4].second.push_back("sim_power");
+  (*important)[4].second.push_back("power_output_file");
+
+
+  return important;
+}
+
+
 
 PowerConfig::PowerConfig( )
 { 

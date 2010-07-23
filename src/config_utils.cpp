@@ -1,5 +1,4 @@
 // $Id$
-
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
 All rights reserved.
@@ -183,6 +182,7 @@ void Configuration::ParseError( const string &msg, unsigned int lineno ) const
     cerr << "Parse error : " << msg << endl;
   }
 
+
   exit( -1 );
 }
 
@@ -202,6 +202,7 @@ bool ParseArgs( Configuration *cf, int argc, char **argv )
 {
   bool rc = false;
 
+  //all dashed variables are ignored by the arg parser
   for(int i = 1; i < argc; ++i) {
     string arg(argv[i]);
     size_t pos = arg.find('=');
@@ -227,3 +228,41 @@ bool ParseArgs( Configuration *cf, int argc, char **argv )
 
   return rc;
 }
+
+
+//helpful for the GUI, write out nearly all variables contained in a config file.
+//However, it can't and won't write out  empty strings since the booksim yacc
+//parser won't be abled to parse bland strings
+void Configuration::WriteFile( const string& filename){
+  
+  ostream *config_out= new ofstream(filename.c_str());
+  
+  
+  for(map<string,char *>::const_iterator i = _str_map.begin(); 
+      i!=_str_map.end();
+      i++){
+    //the parser won't read blanks lolz
+    if(i->second[0]!='\0'){
+      *config_out<<i->first<<" = "<<i->second<<";"<<endl;
+    }
+  }
+  
+  for(map<string, unsigned int>::const_iterator i = _int_map.begin(); 
+      i!=_int_map.end();
+      i++){
+    *config_out<<i->first<<" = "<<i->second<<";"<<endl;
+
+  }
+
+  for(map<string, double>::const_iterator i = _float_map.begin(); 
+      i!=_float_map.end();
+      i++){
+    *config_out<<i->first<<" = "<<i->second<<";"<<endl;
+
+  }
+  config_out->flush();
+  delete config_out;
+ 
+}
+
+

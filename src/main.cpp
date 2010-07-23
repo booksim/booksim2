@@ -222,6 +222,9 @@ bool AllocatorSim( const Configuration& config )
   /*tcc and characterize are legacy
    *not sure how to use them 
    */
+  if(trafficManager){
+    delete trafficManager ;
+  }
   trafficManager = new TrafficManager( config, net ) ;
 
   /*Start the simulation run
@@ -249,7 +252,6 @@ double total_time; /* Amount of time we've run */
     delete pnet;
   }
 
-  delete trafficManager ;
   for (int i=0; i<networks; ++i)
     delete net[i];
 
@@ -272,9 +274,21 @@ int main( int argc, char **argv )
   }
 #endif
   if ( !ParseArgs( &config, argc, argv ) ) {
+#ifdef USE_GUI
+    if(gGUIMode){
+      cout<< "No config file found"<<endl;
+      cout<< "Usage: " << argv[0] << " configfile... [param=value...]" << endl;
+      cout<< "GUI is using default parameters instead"<<endl;
+    } else {
+#endif
     cerr << "Usage: " << argv[0] << " configfile... [param=value...]" << endl;
     return 0;
-  }
+ 
+#ifdef USE_GUI
+    }
+#endif
+ } 
+
   
   /*initialize routing, traffic, injection functions
    */
@@ -306,8 +320,9 @@ int main( int argc, char **argv )
     cout<<"GUI Mode\n";
     QApplication app(argc, argv);
     BooksimGUI * bs = new BooksimGUI();
+    //transfer all the contorl and data to the gui, go to bgui.cpp for the rest
     bs->RegisterAllocSim(&AllocatorSim,&config);
-    bs->setGeometry(100, 100, 500, 355);
+    bs->setGeometry(100, 100, 1200, 355);
     bs->show();
     return app.exec();
 #endif

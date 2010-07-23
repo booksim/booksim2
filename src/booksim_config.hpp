@@ -36,6 +36,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class BookSimConfig : public Configuration {
 public:
   BookSimConfig( );
+  //used for GUI
+  virtual vector< pair<string, vector< string> > > *GetImportantMap();
 };
 
 #endif
@@ -48,6 +50,8 @@ public:
 class PowerConfig : public Configuration {
 public:
   PowerConfig( );
+  //used for GUI
+  virtual vector< pair<string, vector< string> > > *GetImportantMap() {}
 };
 
 #endif

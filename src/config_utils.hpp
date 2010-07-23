@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include<stdio.h>
 #include<string>
 #include<map>
-
+#include<vector>
 extern int configparse( );
 
 class Configuration {
@@ -64,6 +64,22 @@ public:
   void ParseString( const string& str );
   int  Input( char *line, int max_size );
   void ParseError( const string &msg, unsigned int lineno ) const;
+  
+  void WriteFile( const string& filename);
+
+  //These Get functions are for the GUI to display all the options of booksim
+  //const something maybe?
+  map<string,char *> * GetStrMap(){
+    return &_str_map;
+  }
+  map<string,unsigned int>* GetIntMap(){
+    return &_int_map;
+  }
+  map<string,double>* GetFloatMap(){
+    return &_float_map;
+  }
+
+  virtual vector< pair<string, vector< string> > > *GetImportantMap() = 0; 
 
   static Configuration *GetTheConfig( );
 };
