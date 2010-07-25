@@ -243,7 +243,7 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
     cout <<"group_ "<<grp_ID<<endl;
 #endif
 
-    router_name.seekp( 0, ios::beg );
+    router_name.str("");
 
     for ( int cnt = 0; cnt < _p; ++cnt ) {
       c = _p * node +  cnt;

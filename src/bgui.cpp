@@ -3,12 +3,13 @@
 #include "globals.hpp"
 #include "booksim.hpp"
 #include "bgui.hpp"
+#include "stats.hpp"
 
 //pthread function
 void* launchbooksim(void* j){
   bsjob* job =(bsjob*)j;
   job->status=1; //lol this is definitley not atomic
-  job->bs(*(job->config)); 
+  job->return_status = job->bs(*(job->config)); 
   job->status=0;
 }
 
@@ -16,22 +17,30 @@ BooksimGUI::BooksimGUI(QWidget *parent)
   : QWidget(parent)
 {
 
+  simulationTimer = new QTimer(this);
+  connect(simulationTimer, SIGNAL(timeout()), this, SLOT(checksimulation()));
   arbeit.bs = 0;
   arbeit.config = 0;
   arbeit.status = 0;
- 
+  arbeit.return_status = false;
+
   //tab declaration
   mainLayout = new QGridLayout;
   QTabWidget *tabWidget = new QTabWidget; 
   mainLayout->addWidget(tabWidget,0,0);
   configtab = new configTab(this);
+  simulationtab = new simulationTab;
   tabWidget->addTab(configtab, tr("Configuration"));
-  tabWidget->addTab(new simulationTab, tr("Simulations"));
+  tabWidget->addTab(simulationtab, tr("Simulation"));
+  connect(this, SIGNAL(updatestats(bool)),simulationtab, SLOT(readystats(bool)));
+  connect(this, SIGNAL(simulationstatus(bool)), simulationtab, SLOT(readystats(bool)));
 
   //run button
   QPushButton *go_button = new QPushButton("Run Simulation");
   connect(go_button, SIGNAL(clicked()), this, SLOT(run()));
   mainLayout->addWidget(go_button, 1, 0);  
+  mainLayout->setRowStretch(1,0);
+  mainLayout->setRowStretch(0,1);
 
   setLayout(mainLayout); 
 }
@@ -46,11 +55,25 @@ void BooksimGUI::RegisterAllocSim(booksimfunc wut, Configuration * cf){
 //spawn A thread
 void BooksimGUI::run(){
   if(arbeit.status!=1){
+    emit simulationstatus(false);
     cout<<"Starting booksim run"<<endl;
     assert(arbeit.bs!=0 && arbeit.config!=0);
     pthread_create(&bsthread, NULL,launchbooksim,(void *)&arbeit);
+    simulationTimer->start(500);
   } else {
     cout<<"simulation already running\n";
+  }
+}
+
+//chekc booksim thread
+//definitely not atomic lol
+void BooksimGUI::checksimulation(){
+  //done
+  if(arbeit.status==0){
+    emit updatestats(true);
+    simulationTimer->stop();
+  } else { //not done
+
   }
 }
 
@@ -58,7 +81,6 @@ configTab::configTab(QWidget *parent)
   :QWidget(parent){
   configLayout = new QGridLayout;
   config = 0;
-  show_advanced = false;
   setLayout(configLayout); 
   
 }
@@ -153,13 +175,15 @@ void configTab::setup( Configuration* cf){
       not_advanced_list[(*important_map)[i].second[j]] = 1;
 
       assert(tlabel!=0 && tline !=0);
+      configLayout->setRowStretch(grid_vindex, 0);
       configLayout->addWidget(tlabel, grid_vindex,grid_hindex,Qt::AlignRight );
       configLayout->addWidget(tline, grid_vindex++,grid_hindex+1);
+
     }
     grid_hindex+=2;
     grid_vindex=0;
     if((*important_map)[i].second.size()>vmax){
-      vmax = (*important_map)[i].second.size();
+      vmax = (*important_map)[i].second.size()+1;
     }
   }
   hmax =   grid_hindex-1;
@@ -169,8 +193,8 @@ void configTab::setup( Configuration* cf){
   QFrame* divider_frame1  = new QFrame();
   divider_frame1->setFrameShape(QFrame::HLine);
   divider_frame1->setFrameShadow(QFrame::Sunken);
-  configLayout->addWidget(divider_frame1, vmax+1, 0, 1, hmax+1);
-
+  configLayout->addWidget(divider_frame1, vmax, 0, 1, hmax+1);
+  configLayout->setRowStretch(vmax, 10);
 
   
 
@@ -182,27 +206,24 @@ void configTab::setup( Configuration* cf){
   QPushButton *write_button = new QPushButton("Write Config to File: ");
   connect(write_button, SIGNAL(clicked()), this, SLOT(writeconfig()));
 
+  configLayout->addWidget(advanced_button, vmax+1, grid_hindex++);
+  configLayout->addWidget(save_button, vmax+1, grid_hindex++);
+  configLayout->addWidget(write_button, vmax+1, hmax-1);
+  configLayout->addWidget(write_edit, vmax+1, hmax);
+  configLayout->setRowStretch(vmax, 0);
 
   //can't think of any other way of adding a layoutmanager inside layout manager
   //so we add a frame to the configlayout and then add a layout to the frame
   advanced_frame  = new QFrame();
   advanced_frame->setFrameShadow(QFrame::Sunken);
   advanced_frame->hide();
-
-  QFrame* divider_frame2  = new QFrame();
-  divider_frame2->setFrameShape(QFrame::HLine);
-  divider_frame2->setFrameShadow(QFrame::Sunken);
-  configLayout->addWidget(divider_frame2, vmax+3, 0, 1, hmax+1);
-
-  configLayout->addWidget(advanced_button, vmax+4, grid_hindex++);
-  configLayout->addWidget(save_button, vmax+4, grid_hindex++);
-  configLayout->addWidget(write_button, vmax+4, hmax-1);
-  configLayout->addWidget(write_edit, vmax+4, hmax);
-
+  advanced_frame->setGeometry(200, 200, 1300, 600);
 
   QGridLayout* advancedLayout = new QGridLayout; 
   advanced_frame->setLayout(advancedLayout);
-
+  
+  int advanced_rows = 15;
+  
 
   //all the misc variables are added to the advanced frame/layoutmanager
   grid_vindex=0;
@@ -217,7 +238,7 @@ void configTab::setup( Configuration* cf){
       tline = str_map_obj.find(i->first)->second;
       advancedLayout->addWidget(tlabel, grid_vindex,grid_hindex,Qt::AlignRight );
       advancedLayout->addWidget(tline, grid_vindex++,grid_hindex+1);
-      if(grid_vindex>10){
+      if(grid_vindex>advanced_rows){
 	grid_vindex = 0;
 	grid_hindex +=2;
       }
@@ -234,7 +255,7 @@ void configTab::setup( Configuration* cf){
       tline = int_map_obj.find(i->first)->second;
       advancedLayout->addWidget(tlabel, grid_vindex,grid_hindex,Qt::AlignRight );
       advancedLayout->addWidget(tline, grid_vindex++,grid_hindex+1);
-      if(grid_vindex>10){
+      if(grid_vindex>advanced_rows){
 	grid_vindex = 0;
 	grid_hindex +=2;
       }
@@ -250,7 +271,7 @@ void configTab::setup( Configuration* cf){
       tline = float_map_obj.find(i->first)->second;
       advancedLayout->addWidget(tlabel, grid_vindex,grid_hindex,Qt::AlignRight );
       advancedLayout->addWidget(tline, grid_vindex++,grid_hindex+1);
-      if(grid_vindex>10){
+      if(grid_vindex>advanced_rows){
 	grid_vindex = 0;
 	grid_hindex +=2;
       }
@@ -261,13 +282,7 @@ void configTab::setup( Configuration* cf){
 //show or not show the other hunder optoins
 //the frame does not interact well with the layout manager when I "hide" it
 void configTab::toggleadvanced(){
-  show_advanced = !show_advanced;
-  cout<<show_advanced<<endl;
-  if(show_advanced){
-    advanced_frame->show();
-  } else {
-    advanced_frame->hide();
-  }
+  advanced_frame->show();
 }
 
 void configTab::writeconfig(){
@@ -310,8 +325,145 @@ void configTab::saveconfig(){
 
 
 
+
+
+
 simulationTab::simulationTab(QWidget *parent)
   :QWidget(parent){
   simulationLayout = new QGridLayout;
   setLayout(simulationLayout); 
+  curr_mode = simulationTab::GENERAL;
+  stats_ready = false;
+
+  generalFrame = new QTextEdit();
+  generalFrame->setReadOnly(true);
+  generalFrame->setFrameShape(QFrame::Box);
+  simulationLayout->addWidget(generalFrame,1,0);
+
+
+
+  pgraph = new QFrame();
+  pmin = new QLineEdit("0");
+  pmax = new QLineEdit("100");
+  pset = new QPushButton("Change Scale");
+  connect(pset, SIGNAL(clicked()),this,SLOT(changescale()));
+  connect(this, SIGNAL(redrawhist(int)), this, SLOT(getstats(int)));
+  packetFrame = new QFrame();
+  packetFrame->setFrameShape(QFrame::Box);
+  packetLayout = new QGridLayout;
+  packetFrame->setLayout(packetLayout);
+  packetLayout->addWidget(pgraph, 0,0,1,5);
+  packetLayout->addWidget(new QLabel("Min"), 1,0);
+  packetLayout->addWidget(pmin, 1,1);
+  packetLayout->addWidget(new QLabel("Max"), 1,2);
+  packetLayout->addWidget(pmax, 1,3);
+  packetLayout->addWidget(pset, 1,4);
+  packetLayout->setRowStretch(0,10);
+  packetLayout->setRowStretch(1,0);
+  simulationLayout->addWidget(packetFrame,1,0);
+  packetFrame->hide();
+
+  nodeFrame = new QFrame();
+  nodeFrame ->setFrameShape(QFrame::Box);
+  nodeLayout = new QGridLayout;
+  nodeFrame->setLayout(nodeLayout);
+  simulationLayout->addWidget(nodeFrame,1,0);
+  nodeFrame->hide();
+
+  channelFrame = new QFrame();
+  channelFrame ->setFrameShape(QFrame::Box);
+  channelLayout = new QGridLayout;
+  channelFrame->setLayout(channelLayout);
+  simulationLayout->addWidget(channelFrame,1,0);
+  channelFrame->hide();
+
+  mode_selector = new QComboBox(this);
+  mode_selector->addItem("General");
+  mode_selector->addItem("Packet Latency");
+  mode_selector->addItem("Node Throughput");
+  mode_selector->addItem("Channel Load");
+
+  simulationLayout->addWidget(mode_selector, 0,0);
+  connect(mode_selector, SIGNAL(activated(int)), this, SLOT(getstats(int)));
+  connect(this, SIGNAL(gotostats(int)), this, SLOT(getstats(int)));
+}
+
+void simulationTab::getstats(int m){
+  curr_mode = (simulationTab::StatModes)m;
+  cout<<"mode "<<m<<endl;
+  generalFrame->hide();
+  packetFrame->hide();
+  nodeFrame->hide();
+  channelFrame->hide();
+  stringstream infotext;
+  int min;
+  int max;
+  Stats* platency;
+  QPainter * painter;
+  if(stats_ready){
+    
+    switch(curr_mode){
+    case simulationTab::GENERAL :
+      //copied over from trafficmanager
+      infotext.str("");
+      infotext << "Overall minimum latency = " << GetStats("overall_min_latency_stat_0")->Average( )
+	       << " (" << GetStats("overall_min_latency_stat_0")->NumSamples( ) << " samples)" << endl;
+      infotext << "Overall average latency = " <<GetStats("overall_avg_latency_stat_0")->Average( )
+	       << " (" <<GetStats("overall_avg_latency_stat_0")->NumSamples( ) << " samples)" << endl;
+      infotext << "Overall maximum latency = " <<GetStats("overall_max_latency_stat_0")->Average( )
+	       << " (" <<GetStats("overall_max_latency_stat_0")->NumSamples( ) << " samples)" << endl;
+      infotext << "Overall minimum transaction latency = " <<GetStats("overall_min_tlat_stat_0")->Average( )
+	       << " (" <<GetStats("overall_min_tlat_stat_0")->NumSamples( ) << " samples)" << endl;
+      infotext << "Overall average transaction latency = " <<GetStats("overall_avg_tlat_stat_0")->Average( )
+	       << " (" <<GetStats("overall_avg_tlat_stat_0")->NumSamples( ) << " samples)" << endl;
+      infotext << "Overall maximum transaction latency = " <<GetStats("overall_max_tlat_stat_0")->Average( )
+	       << " (" <<GetStats("overall_max_tlat_stat_0")->NumSamples( ) << " samples)" << endl;
+      
+      infotext << "Overall minimum fragmentation = " <<GetStats("overall_min_frag_stat_0")->Average( )
+	       << " (" <<GetStats("overall_min_frag_stat_0")->NumSamples( ) << " samples)" << endl;
+      infotext << "Overall average fragmentation = " <<GetStats("overall_avg_frag_stat_0")->Average( )
+	       << " (" <<GetStats("overall_avg_frag_stat_0")->NumSamples( ) << " samples)" << endl;
+      infotext << "Overall maximum fragmentation = " <<GetStats("overall_max_frag_stat_0")->Average( )
+	       << " (" <<GetStats("overall_max_frag_stat_0")->NumSamples( ) << " samples)" << endl;
+      infotext << "Overall average accepted rate = " <<GetStats("overall_acceptance")->Average( )
+	       << " (" <<GetStats("overall_acceptance")->NumSamples( ) << " samples)" << endl;
+      
+      infotext << "Overall min accepted rate = " <<GetStats("overall_min_acceptance")->Average( )
+	       << " (" <<GetStats("overall_min_acceptance")->NumSamples( ) << " samples)" << endl;
+      
+      infotext << "Average hops = " <<GetStats("hop_stats")->Average( )
+	       << " (" <<GetStats("hop_stats")->NumSamples( ) << " samples)" << endl;
+      generalFrame->setText(infotext.str().c_str());
+      generalFrame->show();
+      break;
+    case simulationTab::PACKET_LATENCY   :
+      min = pmin->text().toInt();
+      max = pmax->text().toInt();
+      platency = GetStats("latency_stat_0");
+      painter = new QPainter(pgraph);
+
+      painter->drawRect(min, min, max, max);
+  
+      packetFrame->show();
+      delete painter;
+      break;
+    case simulationTab::NODE_THROUGHPUT:
+      nodeFrame->show();
+      break;
+    case simulationTab::CHANNEL_LOAD  :
+      channelFrame->show();
+      break;
+    default:
+      break;
+    }
+
+  } else {
+    generalFrame->show();
+  }
+
+}
+
+void simulationTab::readystats(bool sim_status){
+  stats_ready = sim_status;
+  emit gotostats(int(curr_mode));
 }

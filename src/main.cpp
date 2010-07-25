@@ -92,7 +92,11 @@ TrafficManager * trafficManager = NULL;
 
 class Stats;
 Stats * GetStats(const std::string & name) {
-  return trafficManager->getStats(name);
+  Stats* test =  trafficManager->getStats(name);
+  if(test == 0){
+    cout<<"warning statistics "<<name<<" not found"<<endl;
+  }
+  return test;
 }
 
 /* printing activity factor*/

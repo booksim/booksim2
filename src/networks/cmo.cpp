@@ -123,7 +123,7 @@ void CMO::_BuildNet( const Configuration &config )
     _routers[node] = Router::NewRouter( config, this, router_name.str( ),
                                         node, 4+_c, 4+_c );   // 4 connections to the outside world and 4 concentration
 
-    router_name.seekp( 0, ios::beg );  /// what is this? perhaps reseting the name back to original position
+    router_name.str("");  /// what is this? perhaps reseting the name back to original position
 
                                        // but who cares cause it's not used anymore
 

@@ -106,7 +106,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     for (int a = 0; a < _duplicate_networks; ++a) {
       _buf_states[s][a] = new BufferState( config, this, tmp_name.str( ) );
     }
-    tmp_name.seekp( 0, ios::beg );
+    tmp_name.str("");
   }
 
 
@@ -182,55 +182,55 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     tmp_name << "latency_stat_" << c;
     _latency_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _latency_stats[c];
-    tmp_name.seekp( 0, ios::beg );
+    tmp_name.str("");
 
     tmp_name << "overall_min_latency_stat_" << c;
     _overall_min_latency[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _overall_min_latency[c];
-    tmp_name.seekp( 0, ios::beg );  
+    tmp_name.str("");  
     tmp_name << "overall_avg_latency_stat_" << c;
     _overall_avg_latency[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _overall_avg_latency[c];
-    tmp_name.seekp( 0, ios::beg );  
+    tmp_name.str("");  
     tmp_name << "overall_max_latency_stat_" << c;
     _overall_max_latency[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _overall_max_latency[c];
-    tmp_name.seekp( 0, ios::beg );  
+    tmp_name.str("");  
 
     tmp_name << "tlat_stat_" << c;
     _tlat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _tlat_stats[c];
-    tmp_name.seekp( 0, ios::beg );
+    tmp_name.str("");
 
     tmp_name << "overall_min_tlat_stat_" << c;
     _overall_min_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _overall_min_tlat[c];
-    tmp_name.seekp( 0, ios::beg );  
+    tmp_name.str("");  
     tmp_name << "overall_avg_tlat_stat_" << c;
     _overall_avg_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _overall_avg_tlat[c];
-    tmp_name.seekp( 0, ios::beg );  
+    tmp_name.str("");  
     tmp_name << "overall_max_tlat_stat_" << c;
     _overall_max_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _overall_max_tlat[c];
-    tmp_name.seekp( 0, ios::beg );  
+    tmp_name.str("");  
 
     tmp_name << "frag_stat_" << c;
     _frag_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
     _stats[tmp_name.str()] = _frag_stats[c];
-    tmp_name.seekp( 0, ios::beg );
+    tmp_name.str("");
     tmp_name << "overall_min_frag_stat_" << c;
     _overall_min_frag[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
     _stats[tmp_name.str()] = _overall_min_frag[c];
-    tmp_name.seekp( 0, ios::beg );
+    tmp_name.str("");
     tmp_name << "overall_avg_frag_stat_" << c;
     _overall_avg_frag[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
     _stats[tmp_name.str()] = _overall_avg_frag[c];
-    tmp_name.seekp( 0, ios::beg );
+    tmp_name.str("");
     tmp_name << "overall_max_frag_stat_" << c;
     _overall_max_frag[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
     _stats[tmp_name.str()] = _overall_max_frag[c];
-    tmp_name.seekp( 0, ios::beg );
+    tmp_name.str("");
   }
 
   _hop_stats    = new Stats( this, "hop_stats", 1.0, 20 );
@@ -256,18 +256,18 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     tmp_name << "sent_stat_" << i;
     _sent_flits[i] = new Stats( this, tmp_name.str( ) );
     _stats[tmp_name.str()] = _sent_flits[i];
-    tmp_name.seekp( 0, ios::beg );    
+    tmp_name.str("");    
 
     for ( int j = 0; j < _dests; ++j ) {
       tmp_name << "pair_latency_stat_" << i << "_" << j;
       _pair_latency[i*_dests+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
       _stats[tmp_name.str()] = _pair_latency[i*_dests+j];
-      tmp_name.seekp( 0, ios::beg );
+      tmp_name.str("");
 
       tmp_name << "pair_tlat_stat_" << i << "_" << j;
       _pair_tlat[i*_dests+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
       _stats[tmp_name.str()] = _pair_tlat[i*_dests+j];
-      tmp_name.seekp( 0, ios::beg );
+      tmp_name.str("");
     }
   }
 
@@ -277,7 +277,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     tmp_name << "accepted_stat_" << i;
     _accepted_flits[i] = new Stats( this, tmp_name.str( ) );
     _stats[tmp_name.str()] = _accepted_flits[i];
-    tmp_name.seekp( 0, ios::beg );    
+    tmp_name.str("");    
   }
   
   _received_flow.resize(_duplicate_networks*_routers, 0);
@@ -365,6 +365,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   } else {
     _flow_out = new ofstream(flow_out_file.c_str());
   }
+
+
 }
 
 TrafficManager::~TrafficManager( )

@@ -119,7 +119,7 @@ void FatTree::_BuildNet( const Configuration& config )
 
       id = d * nPos + pos;
 
-      name.seekp( 0, ios::beg );
+      name.str("");
       name << "router_" << d << "_" << pos;
       _Router( d, pos ) = Router::NewRouter( config, this,
 					     name.str( ), id,

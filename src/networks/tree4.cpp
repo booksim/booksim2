@@ -112,7 +112,7 @@ void Tree4::_BuildNet( const Configuration& config )
       else
 	degree = 6;
       
-      name.seekp( 0, ios::beg );
+      name.str("");
       name << "router_" << h << "_" << pos;
       id = h * powi( _k, _n-1 ) + pos;
       _Router( h, pos ) = Router::NewRouter( config, this,

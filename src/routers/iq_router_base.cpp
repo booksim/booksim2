@@ -71,7 +71,7 @@ IQRouterBase::IQRouterBase( const Configuration& config,
     for ( int v = 0; v < _vcs; ++v ) { // Name the vc modules
       vc_name << "vc_i" << i << "_v" << v;
       _vc[i][v].SetName( this, vc_name.str( ) );
-      vc_name.seekp( 0, ios::beg );
+      vc_name.str("");
     }
   }
 
@@ -83,7 +83,7 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   for ( int o = 0; o < _outputs; ++o ) {
     vc_name << "next_vc_o" << o;
     _next_vcs[o].SetName( this, vc_name.str( ) );
-    vc_name.seekp( 0, ios::beg );
+    vc_name.str("");
   }
 
   // Alloc pipelines (to simulate processing/transmission delays)

@@ -9,11 +9,14 @@
 #include <QLineEdit>
 #include <QLabel>
 #include <QTabWidget>
-
+#include <QTimer>
+#include <QComboBox>
+#include <QTextEdit>
+#include <QPainter>
 
 #include <QString>
 #include "booksim_config.hpp"
-
+#include "globals.hpp"
 
 #include <map>
 #include <vector>
@@ -28,6 +31,7 @@ struct bsjob{
   Configuration * config;
   //0 booksim is free, 1 booksim is already running
   int status;
+  bool return_status;
 } ;
 
 
@@ -39,7 +43,7 @@ class configTab : public QWidget
   configTab(QWidget *parent = 0);
   void setup(Configuration * cf);
 
-protected slots:
+public slots:
   void toggleadvanced();
   void writeconfig();
   void saveconfig();
@@ -50,7 +54,6 @@ private:
   Configuration * config;
 
   //displaying the misc booksim options
-  bool show_advanced;
   QFrame* advanced_frame;
 
   //for the layout manager
@@ -73,11 +76,46 @@ private:
 
 class simulationTab : public QWidget
 {
-public:
+  //Qt required
+  Q_OBJECT
+  public:
   simulationTab(QWidget *parent = 0);
   
+  enum StatModes { GENERAL  = 0, 
+		  PACKET_LATENCY    = 1,
+		  NODE_THROUGHPUT = 2,
+		   CHANNEL_LOAD   = 3};
+
+signals:
+  void gotostats(int);
+  void redrawhist(int);
+public slots:
+  void getstats(int m );
+  void readystats(bool status);
+  void changescale(){emit redrawhist(simulationTab::PACKET_LATENCY);}
 private:
+  //
   QGridLayout *simulationLayout;
+
+  //
+  QTextEdit *generalFrame;
+  
+  QFrame * pgraph;
+  QLineEdit *pmin;
+  QLineEdit *pmax;
+  QPushButton *pset;
+  QFrame *packetFrame;
+  QGridLayout *packetLayout;
+  QFrame *nodeFrame;
+  QGridLayout *nodeLayout;
+  QFrame *channelFrame;
+  QGridLayout *channelLayout;
+
+  //
+  QComboBox* mode_selector;
+
+  StatModes curr_mode;
+  bool stats_ready;
 };
 
 
@@ -93,8 +131,12 @@ public:
   
   //allocsime is called by the gui instead of main, 
   void RegisterAllocSim(booksimfunc ,Configuration * cf);
-protected slots:
+public slots:
   void run();
+  void checksimulation();
+signals:
+  void updatestats(bool status);
+  void simulationstatus(bool status);
 private:
   
   //booksim job data such as functio pointer are here for pthread
@@ -107,6 +149,9 @@ private:
   
   //each tab is declared here
   configTab *configtab;
+  simulationTab *simulationtab;
+  //
+  QTimer *simulationTimer;
 
 };
 

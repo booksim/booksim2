@@ -147,7 +147,7 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
     cout << " ======== router node : " << node << " ======== " << " router_" << router_name.str() << " router node # : " << node << endl;
 #endif
 
-    router_name.seekp( 0, ios::beg );
+    router_name.str("");
 
     //******************************************************************
     // add inject/eject channels connected to the processor nodes

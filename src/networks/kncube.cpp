@@ -99,7 +99,7 @@ void KNCube::_BuildNet( const Configuration &config )
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
 					node, 2*_n + 1, 2*_n + 1 );
 
-    router_name.seekp( 0, ios::beg );
+    router_name.str("");
 
     for ( int dim = 0; dim < _n; ++dim ) {
 

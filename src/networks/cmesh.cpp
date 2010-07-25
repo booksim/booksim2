@@ -148,7 +148,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
 					node,
 					degree_in,
 					degree_out);
-    name.seekp( 0, ios::beg );
+    name.str("");
 
     //
     // Port Numbering: as best as I can determine, the order in

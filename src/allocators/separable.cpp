@@ -61,12 +61,12 @@ SeparableAllocator::SeparableAllocator( Module* parent, const string& name,
   for (int i = 0; i < inputs; ++i) {
     arb_name << "arb_i" << i;
     _input_arb[i] = Arbiter::NewArbiter(this, arb_name.str(), arb_type, outputs);
-    arb_name.seekp( 0, ios::beg );
+    arb_name.str("");
   }
   for (int i = 0; i < outputs; ++i) {
     arb_name << "arb_o" << i;
     _output_arb[i] = Arbiter::NewArbiter(this, arb_name.str( ), arb_type, inputs);
-    arb_name.seekp( 0, ios::beg );
+    arb_name.str("");
   }
   
   Clear() ;

@@ -102,7 +102,7 @@ void QTree::_BuildNet( const Configuration& config )
       _routers[r] = Router::NewRouter( config, this,
 				       routerName.str( ),
 				       id, d, d);
-      routerName.seekp( 0, ios::beg );
+      routerName.str("");
     }
   }
   

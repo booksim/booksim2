@@ -126,7 +126,7 @@ void MECS::_BuildNet( const Configuration &config ) {
 #ifdef DEBUG_MECS
     cout<<"=============="<<router_name.str()<<"===================\n";
 #endif
-    router_name.seekp( 0, ios::beg );
+    router_name.str("");
     
     //the MECSRouters has many non-standard methods....
     MECSRouter* cur = dynamic_cast<MECSRouter*>(_routers[node]);
