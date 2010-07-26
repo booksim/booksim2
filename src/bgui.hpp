@@ -13,6 +13,7 @@
 #include <QComboBox>
 #include <QTextEdit>
 #include <QPainter>
+#include <QColor>
 
 #include <QString>
 #include "booksim_config.hpp"
@@ -74,6 +75,36 @@ private:
   map<string, QLineEdit*> float_map_obj;
 };
 
+class Heatmap: public QWidget
+{
+public: 
+  Heatmap(QWidget *parent = 0);
+  
+  QColor GetColor(float max);
+  Stats * plot_data;
+
+  float min;
+  float max;
+protected:
+  void paintEvent(QPaintEvent *event);
+
+
+};
+
+class Histogram : public QWidget
+{
+public: 
+  Histogram(QWidget *parent = 0);
+
+  Stats * plot_data;
+  int bin_min;
+  int bin_max;
+protected:
+  void paintEvent(QPaintEvent *event);
+
+};
+
+
 class simulationTab : public QWidget
 {
   //Qt required
@@ -92,7 +123,11 @@ signals:
 public slots:
   void getstats(int m );
   void readystats(bool status);
-  void changescale(){emit redrawhist(simulationTab::PACKET_LATENCY);}
+  void changescale(){
+    pgraph->bin_min = pmin->text().toInt();
+    pgraph->bin_max = pmax->text().toInt();
+    emit redrawhist(simulationTab::PACKET_LATENCY);
+  }
 private:
   //
   QGridLayout *simulationLayout;
@@ -100,12 +135,14 @@ private:
   //
   QTextEdit *generalFrame;
   
-  QFrame * pgraph;
+  Histogram * pgraph;
   QLineEdit *pmin;
   QLineEdit *pmax;
   QPushButton *pset;
   QFrame *packetFrame;
   QGridLayout *packetLayout;
+
+  Heatmap* ngraph;
   QFrame *nodeFrame;
   QGridLayout *nodeLayout;
   QFrame *channelFrame;

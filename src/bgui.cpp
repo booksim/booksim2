@@ -323,9 +323,81 @@ void configTab::saveconfig(){
 }
 
 
+Histogram::Histogram(QWidget *parent)
+  :QWidget(parent){
+  plot_data = 0;
+  bin_min = 0;
+  bin_max = 100;
+  
+}
+
+void Histogram::paintEvent(QPaintEvent * /* event */)
+{
+  QPainter painter(this);
+  painter.setPen(Qt::NoPen);
+  painter.setBrush(Qt::black);
+  int height_max = 0;
 
 
+ 
+  for(int i = bin_min; i<bin_max; i++){
+    if(plot_data->GetBin(i) > height_max){
+      height_max = plot_data->GetBin(i);
+    }
+  }
+  painter.translate(0, rect().height());
+  painter.scale(float(rect().width())/float(bin_max-bin_min), float(rect().height())/float(height_max));
+  for(int i = bin_min; i<bin_max; i++){
+    painter.drawRect(i-bin_min, 0,1,-plot_data->GetBin(i)); 
+  }
 
+}
+
+Heatmap::Heatmap(QWidget *parent)
+  :QWidget(parent){
+  min = 0.0;
+  max = 1.0;
+
+
+}
+
+
+QColor Heatmap::GetColor(float map){
+  // by Ged Larsen
+  // map a float to 4 of 6 segments of a color progression
+  //
+  // -1 to -0.5 <0,0,1> to <0,1,1> dark blue to light blue
+  // -0.5 to 0 <0,1,1> to <0,1,0> light blue to green
+  // 0 to 0.5 <0,1,0> to <1,1,0> green to yellow
+  // 0.5 to 1 <1,1,0> to <1,0,0> yellow to red
+  
+  int fraction;
+  if (map < min) {
+    fraction = 0; 
+  }
+  else if (map > max) { 
+    fraction = 255; 
+  }
+  else { 
+    fraction = 255*map/(max-min)+127 - (max / (max-min))*255; 
+  }
+  
+  if ( fraction <=63 ) { return QColor(0, 4*fraction, 255); }
+  else if ( fraction <=127 ) { return QColor(0, 255, 256 - 4*(fraction-63)); }
+  else if ( fraction <=191 ) { return QColor((fraction-127)*4-1, 255, 0); }
+  else { return QColor(255, 256 - 4*(fraction - 191), 0); }
+}
+
+void Heatmap::paintEvent(QPaintEvent * /* event */)
+{
+  QPainter painter(this);
+  painter.setPen(Qt::NoPen);
+  painter.setBrush(Qt::black);
+
+
+  //next
+
+}
 
 
 simulationTab::simulationTab(QWidget *parent)
@@ -342,7 +414,7 @@ simulationTab::simulationTab(QWidget *parent)
 
 
 
-  pgraph = new QFrame();
+  pgraph = new Histogram();
   pmin = new QLineEdit("0");
   pmax = new QLineEdit("100");
   pset = new QPushButton("Change Scale");
@@ -363,9 +435,11 @@ simulationTab::simulationTab(QWidget *parent)
   simulationLayout->addWidget(packetFrame,1,0);
   packetFrame->hide();
 
+  ngraph = new Heatmap();
   nodeFrame = new QFrame();
   nodeFrame ->setFrameShape(QFrame::Box);
   nodeLayout = new QGridLayout;
+  nodeLayout->addWidget(ngraph, 0,0,1,5);
   nodeFrame->setLayout(nodeLayout);
   simulationLayout->addWidget(nodeFrame,1,0);
   nodeFrame->hide();
@@ -390,16 +464,11 @@ simulationTab::simulationTab(QWidget *parent)
 
 void simulationTab::getstats(int m){
   curr_mode = (simulationTab::StatModes)m;
-  cout<<"mode "<<m<<endl;
   generalFrame->hide();
   packetFrame->hide();
   nodeFrame->hide();
   channelFrame->hide();
   stringstream infotext;
-  int min;
-  int max;
-  Stats* platency;
-  QPainter * painter;
   if(stats_ready){
     
     switch(curr_mode){
@@ -437,15 +506,10 @@ void simulationTab::getstats(int m){
       generalFrame->show();
       break;
     case simulationTab::PACKET_LATENCY   :
-      min = pmin->text().toInt();
-      max = pmax->text().toInt();
-      platency = GetStats("latency_stat_0");
-      painter = new QPainter(pgraph);
 
-      painter->drawRect(min, min, max, max);
-  
+
+      pgraph->plot_data = GetStats("latency_stat_0");
       packetFrame->show();
-      delete painter;
       break;
     case simulationTab::NODE_THROUGHPUT:
       nodeFrame->show();
@@ -458,7 +522,9 @@ void simulationTab::getstats(int m){
     }
 
   } else {
+    generalFrame->setText("No simulation data available");
     generalFrame->show();
+
   }
 
 }

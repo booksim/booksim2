@@ -61,6 +61,7 @@ public:
   void AddSample( double val );
   void AddSample( int val );
 
+  int GetBin(int b){ return _hist[b];}
 
   void Display( ) const;
 
