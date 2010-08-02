@@ -517,7 +517,6 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
     vcBegin = gWriteReplyBeginVC;
     vcEnd   = gWriteReplyEndVC;
   } else if ( f->type ==  Flit::ANY_TYPE ) {
-    assert(gNumVCS>=2);
     vcBegin = 0;
     vcEnd   = gNumVCS-1;
   }
