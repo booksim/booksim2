@@ -111,6 +111,9 @@ void BufferState::_Init( const Configuration& config )
 
 BufferState::~BufferState( )
 {
+
+  //depending on network channel latency, curr_occupied may not be all zero upon simulation completion
+  //simulations stops after the last outstanding flit received, not the last outstanding credit.
   delete [] _in_use;
   delete [] _tail_sent;
   delete [] _cur_occupied;
