@@ -178,7 +178,7 @@ void IQRouterBase::_ReceiveFlits( )
 	    Error( "Received non-head flit at idle VC" );
 	  }
 	  cur_vc->SetState( VC::routing );
-	  _routing_vcs.push((input<<16)+f->vc);
+	  _routing_vcs.push(input*_vcs+f->vc);
       }
 
       if(f->watch) {
@@ -252,10 +252,10 @@ void IQRouterBase::_Route( )
   int size = _routing_vcs.size();
   for(int i = 0; i<size; i++){
     int vc_encode = _routing_vcs.front();
-    VC * cur_vc = _vc[vc_encode>>16][vc_encode&0x0000FFFF];
+    VC * cur_vc = _vc[vc_encode/_vcs][vc_encode%_vcs];
     if(cur_vc->GetStateTime( ) >= _routing_delay){
       Flit * f = cur_vc->FrontFlit( );
-      cur_vc->Route( _rf, this, f,  vc_encode>>16);
+      cur_vc->Route( _rf, this, f,  vc_encode/_vcs);
       cur_vc->SetState( VC::vc_alloc ) ;
       _vcalloc_vcs.insert(vc_encode);
       _routing_vcs.pop();

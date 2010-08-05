@@ -146,8 +146,8 @@ void IQRouterBaseline::_VCAlloc( )
 
   for ( set<int>::iterator item = _vcalloc_vcs.begin(); item!=_vcalloc_vcs.end(); ++item ) {
     int vc_encode = *item;
-    int input =  vc_encode>>16;
-    int vc =vc_encode&0x0000FFFF;
+    int input =  vc_encode/_vcs;
+    int vc =vc_encode%_vcs;
     cur_vc = _vc[input][vc];
     if ( ( _speculative > 0 ) && ( cur_vc->GetState( ) == VC::vc_alloc )){
       cur_vc->SetState( VC::vc_spec ) ;
@@ -229,7 +229,7 @@ void IQRouterBaseline::_VCAlloc( )
 	  cur_vc->SetState( VC::vc_spec_grant );
 	else
 	  cur_vc->SetState( VC::active );
-	_vcalloc_vcs.erase((match_input<<16)+match_vc);
+	_vcalloc_vcs.erase(match_input*_vcs+match_vc);
 	
 	cur_vc->SetOutput( output, vc );
 	dest_vc->TakeBuffer( vc );
@@ -609,11 +609,11 @@ void IQRouterBaseline::_SWAlloc( )
 	      cur_vc->SetState(VC::idle);
 	    } else if(_routing_delay > 0) {
 	      cur_vc->SetState(VC::routing);
-	      _routing_vcs.push((input<<16)+vc);
+	      _routing_vcs.push(input*_vcs+vc);
 	    } else {
 	      cur_vc->Route(_rf, this, cur_vc->FrontFlit(), input);
 	      cur_vc->SetState(VC::vc_alloc);
-	      _vcalloc_vcs.insert((input<<16)+vc);
+	      _vcalloc_vcs.insert(input*_vcs+vc);
 	    }
 	    _switch_hold_in[expanded_input]   = -1;
 	    _switch_hold_vc[expanded_input]   = -1;
