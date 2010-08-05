@@ -48,10 +48,10 @@ private:
 
   Allocator *_sw_allocator;
   
-  int *_vc_rr_offset;
-  int *_sw_rr_offset;
+  vector<int> _vc_rr_offset;
+  vector<int> _sw_rr_offset;
   
-  bool * _use_fast_path;
+  vector<bool> _use_fast_path;
   
 protected:
 

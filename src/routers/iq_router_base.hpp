@@ -92,31 +92,31 @@ protected:
   queue<int> _routing_vcs;
   set<int> _vcalloc_vcs;  
 
-  VC          **_vc;
-  BufferState *_next_vcs;
+  vector<vector<VC *> > _vc;
+  vector<BufferState *> _next_vcs;
 
   tRoutingFunction   _rf;
 
-  PipelineFIFO<Flit>   *_crossbar_pipe;
-  PipelineFIFO<Credit> *_credit_pipe;
+  PipelineFIFO<Flit> * _crossbar_pipe;
+  PipelineFIFO<Credit> * _credit_pipe;
   
   int _routing_delay;
   int _vc_alloc_delay;
   int _sw_alloc_delay;
   
-  //  queue<Flit *> *_input_buffer;
-  queue<Flit *> *_output_buffer;
+  //  vector<queue<Flit *> > _input_buffer;
+  vector<queue<Flit *> > _output_buffer;
 
-  queue<Credit *> *_in_cred_buffer;
-  //queue<Credit *> *_out_cred_buffer;
+  vector<queue<Credit *> > _in_cred_buffer;
+  //vector<queue<Credit *> > _out_cred_buffer;
 
   int _hold_switch_for_packet;
-  int *_switch_hold_in;
-  int *_switch_hold_out;
-  int *_switch_hold_vc;
+  vector<int> _switch_hold_in;
+  vector<int> _switch_hold_out;
+  vector<int> _switch_hold_vc;
 
-  int *_received_flits;
-  int *_sent_flits;
+  vector<int> _received_flits;
+  vector<int> _sent_flits;
 
   void _ReceiveFlits( );
   void _ReceiveCredits( );

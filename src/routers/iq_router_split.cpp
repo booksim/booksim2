@@ -63,29 +63,15 @@ IQRouterSplit::IQRouterSplit( const Configuration& config,
 					   _outputs*_output_speedup,
 					   iters, arb_type );
   
-  _vc_rr_offset = new int [_inputs*_vcs];
-  for ( int i = 0; i < _inputs*_vcs; ++i ) {
-    _vc_rr_offset[i] = 0;
-  }
-  _sw_rr_offset = new int [_inputs*_input_speedup];
-  for ( int i = 0; i < _inputs*_input_speedup; ++i ) {
-    _sw_rr_offset[i] = 0;
-  }
+  _vc_rr_offset.resize(_inputs*_vcs);
+  _sw_rr_offset.resize(_inputs*_input_speedup);
   
-  _use_fast_path = new bool [_inputs*_vcs];
-  for(int i = 0; i < _inputs*_vcs; i++) {
-    _use_fast_path[i] = true;
-  }
+  _use_fast_path.resize(_inputs*_vcs, true);
 }
 
 IQRouterSplit::~IQRouterSplit( )
 {
   delete _sw_allocator;
-  
-  delete [] _vc_rr_offset;
-  delete [] _sw_rr_offset;
-  
-  delete [] _use_fast_path;
 }
 
 void IQRouterSplit::_Alloc( )
@@ -120,7 +106,7 @@ void IQRouterSplit::_Alloc( )
 	  continue;
 	}
 	
-	VC * cur_vc = &_vc[input][vc];
+	VC * cur_vc = _vc[input][vc];
 	
 	VC::eVCState vc_state = cur_vc->GetState();
 	
@@ -176,7 +162,7 @@ void IQRouterSplit::_Alloc( )
 	    if((_switch_hold_in[expanded_input] == -1) && 
 	       (_switch_hold_out[expanded_output] == -1)) {
 	      
-	      BufferState * dest_vc = &_next_vcs[output];
+	      BufferState * dest_vc = _next_vcs[output];
 	      
 	      bool do_request = false;
 	      int in_priority;
@@ -263,7 +249,7 @@ void IQRouterSplit::_Alloc( )
       
       if(_use_fast_path[input*_vcs+vc]) {
 	
-	VC * cur_vc = &_vc[input][vc];
+	VC * cur_vc = _vc[input][vc];
 	
 	if(cur_vc->Empty()) {
 	  continue;
@@ -303,7 +289,7 @@ void IQRouterSplit::_Alloc( )
 	       << FullName() << endl
 	       << "VC: " << vc << ", input: " << input << ", flit: " << f->id
 	       << ", fast VC: " << fast_path_vcs[input] << ", fast flit: "
-	       << _vc[input][fast_path_vcs[input]].FrontFlit()->id << endl
+	       << _vc[input][fast_path_vcs[input]]->FrontFlit()->id << endl
 	       << "XXX" << endl;
 	assert(fast_path_vcs[input] < 0);
 	
@@ -319,7 +305,7 @@ void IQRouterSplit::_Alloc( )
 	    output = cur_vc->GetOutputPort();
 	  }
 	  
-	  BufferState * dest_vc = &_next_vcs[output];
+	  BufferState * dest_vc = _next_vcs[output];
 	  
 	  int expanded_output = (input%_output_speedup)*_outputs + output;
 	  
@@ -456,7 +442,7 @@ void IQRouterSplit::_Alloc( )
 	assert(_switch_hold_in[expanded_input] >= 0);
 	expanded_output = _switch_hold_in[expanded_input];
 	vc = _switch_hold_vc[expanded_input];
-	cur_vc = &_vc[input][vc];
+	cur_vc = _vc[input][vc];
 	
 	if(cur_vc->Empty()) { // Cancel held match if VC is empty
 	  expanded_output = -1;
@@ -465,7 +451,7 @@ void IQRouterSplit::_Alloc( )
 	expanded_output = _sw_allocator->OutputAssigned(expanded_input);
 	if(expanded_output >= 0) {
 	  vc = _sw_allocator->ReadRequest(expanded_input, expanded_output);
-	  cur_vc = &_vc[input][vc];
+	  cur_vc = _vc[input][vc];
 	} else {
 	  vc = -1;
 	  cur_vc = NULL;
@@ -493,7 +479,7 @@ void IQRouterSplit::_Alloc( )
 			<< ")." << endl;
 	  if(fvc >= 0) {
 	    assert(_use_fast_path[input*_vcs+fvc]);
-	    VC * fast_vc = &_vc[input][fvc];
+	    VC * fast_vc = _vc[input][fvc];
 	    assert(fast_vc->FrontFlit());
 	    if(fast_vc->FrontFlit()->watch)
 	      cout << GetSimTime() << " | " << FullName() << " | "
@@ -503,7 +489,7 @@ void IQRouterSplit::_Alloc( )
 	  }
 	}
 	
-	BufferState * dest_vc = &_next_vcs[output];
+	BufferState * dest_vc = _next_vcs[output];
 	
 	switch(cur_vc->GetState()) {
 	  
@@ -582,7 +568,7 @@ void IQRouterSplit::_Alloc( )
 	  assert(!cur_vc->Empty());
 	  assert(cur_vc->GetOutputPort() == output);
 	  
-	  dest_vc = &_next_vcs[output];
+	  dest_vc = _next_vcs[output];
 	  
 	  assert(!dest_vc->IsFullFor(cur_vc->GetOutputVC()));
 	  
@@ -659,7 +645,7 @@ void IQRouterSplit::_Alloc( )
 	
 	assert(_use_fast_path[input*_vcs+fvc]);
 	
-	VC * fast_vc = &_vc[input][fvc];
+	VC * fast_vc = _vc[input][fvc];
 	Flit * f = fast_vc->FrontFlit();
 	assert(f);
 	

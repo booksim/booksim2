@@ -59,22 +59,13 @@ IQRouterCombined::IQRouterCombined( const Configuration& config,
 					   _outputs*_output_speedup,
 					   iters, arb_type );
   
-  _vc_rr_offset = new int [_inputs*_input_speedup*_vcs];
-  for ( int i = 0; i < _inputs*_input_speedup*_vcs; ++i ) {
-    _vc_rr_offset[i] = 0;
-  }
-  _sw_rr_offset = new int [_inputs*_input_speedup];
-  for ( int i = 0; i < _inputs*_input_speedup; ++i ) {
-    _sw_rr_offset[i] = 0;
-  }
+  _vc_rr_offset.resize(_inputs*_input_speedup*_vcs);
+  _sw_rr_offset.resize(_inputs*_input_speedup);
 }
 
 IQRouterCombined::~IQRouterCombined( )
 {
   delete _sw_allocator;
-
-  delete [] _vc_rr_offset;
-  delete [] _sw_rr_offset;
 }
   
 void IQRouterCombined::_Alloc( )
@@ -104,7 +95,7 @@ void IQRouterCombined::_Alloc( )
 	  continue;
 	}
 	
-	VC * cur_vc = &_vc[input][vc];
+	VC * cur_vc = _vc[input][vc];
 	
 	VC::eVCState vc_state = cur_vc->GetState();
 
@@ -136,7 +127,7 @@ void IQRouterCombined::_Alloc( )
 	    if((_switch_hold_in[expanded_input] == -1) && 
 	       (_switch_hold_out[expanded_output] == -1)) {
 	      
-	      BufferState * dest_vc = &_next_vcs[output];
+	      BufferState * dest_vc = _next_vcs[output];
 	      
 	      bool do_request = false;
 	      int in_priority;
@@ -229,7 +220,7 @@ void IQRouterCombined::_Alloc( )
 	assert(_switch_hold_in[expanded_input] >= 0);
 	expanded_output = _switch_hold_in[expanded_input];
 	vc = _switch_hold_vc[expanded_input];
-	cur_vc = &_vc[input][vc];
+	cur_vc = _vc[input][vc];
 	
 	if (cur_vc->Empty()) { // Cancel held match if VC is empty
 	  expanded_output = -1;
@@ -238,14 +229,14 @@ void IQRouterCombined::_Alloc( )
 	expanded_output = _sw_allocator->OutputAssigned(expanded_input);
 	if(expanded_output >= 0) {
 	  vc = _sw_allocator->ReadRequest(expanded_input, expanded_output);
-	  cur_vc = &_vc[input][vc];
+	  cur_vc = _vc[input][vc];
 	}
       }
       
       if(expanded_output >= 0) {
 	int output = expanded_output % _outputs;
 	
-	BufferState * dest_vc = &_next_vcs[output];
+	BufferState * dest_vc = _next_vcs[output];
 	Flit * f = cur_vc->FrontFlit();
 	assert(f);
 	
@@ -299,7 +290,7 @@ void IQRouterCombined::_Alloc( )
 	  assert(!cur_vc->Empty());
 	  assert(cur_vc->GetOutputPort() == output);
 	  
-	  dest_vc = &_next_vcs[output];
+	  dest_vc = _next_vcs[output];
 	  
 	  assert(!dest_vc->IsFullFor(cur_vc->GetOutputVC()));
 	  

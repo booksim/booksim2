@@ -49,7 +49,7 @@ private:
   Allocator *_sw_allocator;
   Allocator *_spec_sw_allocator;
   
-  int *_sw_rr_offset;
+  vector<int> _sw_rr_offset;
 
 protected:
 

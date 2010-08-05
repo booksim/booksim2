@@ -61,28 +61,23 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   _rf = GetRoutingFunction( config );
 
   // Alloc VC's
-  _vc = new VC * [_inputs];
-
+  _vc.resize(_inputs);
   for ( int i = 0; i < _inputs; ++i ) {
-    _vc[i] = new VC [_vcs];
-    for (int j = 0; j < _vcs; ++j )
-      _vc[i][j]._Init(config,_outputs);
-
-    for ( int v = 0; v < _vcs; ++v ) { // Name the vc modules
-      vc_name << "vc_i" << i << "_v" << v;
-      _vc[i][v].SetName( this, vc_name.str( ) );
+    _vc[i].resize(_vcs);
+    for (int j = 0; j < _vcs; ++j ) {
+      _vc[i][j] = new VC(config, _outputs);
+      vc_name << "vc_i" << i << "_v" << j;
+      _vc[i][j]->SetName( this, vc_name.str( ) );
       vc_name.str("");
     }
   }
 
   // Alloc next VCs' buffer state
-  _next_vcs = new BufferState [_outputs];
-  for (int j = 0; j < _outputs; ++j) 
-    _next_vcs[j]._Init( config );
-
-  for ( int o = 0; o < _outputs; ++o ) {
-    vc_name << "next_vc_o" << o;
-    _next_vcs[o].SetName( this, vc_name.str( ) );
+  _next_vcs.resize(_outputs);
+  for (int j = 0; j < _outputs; ++j) {
+    _next_vcs[j] = new BufferState( config );
+    vc_name << "next_vc_o" << j;
+    _next_vcs[j]->SetName( this, vc_name.str( ) );
     vc_name.str("");
   }
 
@@ -96,29 +91,20 @@ IQRouterBase::IQRouterBase( const Configuration& config,
 			      _credit_delay );
 
   // Input and output queues
-  //_input_buffer  = new queue<Flit *> [_inputs]; 
-  _output_buffer = new queue<Flit *> [_outputs]; 
+  //_input_buffer.resize(_inputs); 
+  _output_buffer.resize(_outputs); 
 
-  _in_cred_buffer  = new queue<Credit *> [_inputs]; 
-  //_out_cred_buffer = new queue<Credit *> [_outputs];
+  _in_cred_buffer.resize(_inputs); 
+  //_out_cred_buffer.resize(_outputs);
 
   // Switch configuration (when held for multiple cycles)
   _hold_switch_for_packet = config.GetInt( "hold_switch_for_packet" );
-  _switch_hold_in  = new int [_inputs*_input_speedup];
-  _switch_hold_out = new int [_outputs*_output_speedup];
-  _switch_hold_vc  = new int [_inputs*_input_speedup];
+  _switch_hold_in.resize(_inputs*_input_speedup, -1);
+  _switch_hold_out.resize(_outputs*_output_speedup, -1);
+  _switch_hold_vc.resize(_inputs*_input_speedup, -1);
 
-  for ( int i = 0; i < _inputs*_input_speedup; ++i ) {
-    _switch_hold_in[i] = -1;
-    _switch_hold_vc[i] = -1;
-  }
-
-  for ( int i = 0; i < _outputs*_output_speedup; ++i ) {
-    _switch_hold_out[i] = -1;
-  }
-
-  _received_flits = new int[_inputs];
-  _sent_flits = new int[_outputs];
+  _received_flits.resize(_inputs);
+  _sent_flits.resize(_outputs);
   ResetFlitStats();
 }
 
@@ -134,28 +120,15 @@ IQRouterBase::~IQRouterBase( )
     cout << switchMonitor << endl ;
   }
 
-  for ( int i = 0; i < _inputs; ++i ) {
-    delete [] _vc[i];
-  }
-
-  delete [] _vc;
-  delete [] _next_vcs;
+  for ( int i = 0; i < _inputs; ++i )
+    for (int j = 0; j < _vcs; ++j )
+      delete _vc[i][j];
+  
+  for (int j = 0; j < _outputs; ++j)
+    delete _next_vcs[j];
 
   delete _crossbar_pipe;
   delete _credit_pipe;
-
-  //delete [] _input_buffer;
-  delete [] _output_buffer;
-
-  delete [] _in_cred_buffer;
-  //delete [] _out_cred_buffer;
-
-  delete [] _switch_hold_in;
-  delete [] _switch_hold_vc;
-  delete [] _switch_hold_out;
-
-  delete [] _received_flits;
-  delete [] _sent_flits;
 
 }
   
@@ -173,7 +146,7 @@ void IQRouterBase::InternalStep( )
   
   for ( int input = 0; input < _inputs; ++input ) {
     for ( int vc = 0; vc < _vcs; ++vc ) {
-      _vc[input][vc].AdvanceTime( );
+      _vc[input][vc]->AdvanceTime( );
     }
   }
 
@@ -198,7 +171,7 @@ void IQRouterBase::_ReceiveFlits( )
     f = (*_input_channels)[input]->Receive();
     if ( f ) {
       ++_received_flits[input];
-      VC * cur_vc = &_vc[input][f->vc];
+      VC * cur_vc = _vc[input][f->vc];
 
       if ( cur_vc->GetState( ) == VC::idle ) {
 	  if ( !f->head ) {
@@ -241,7 +214,7 @@ void IQRouterBase::_ReceiveCredits( )
   for ( int output = 0; output < _outputs; ++output ) {  
     c = (*_output_credits)[output]->Receive();
     if ( c ) {
-      _next_vcs[output].ProcessCredit( c );
+      _next_vcs[output]->ProcessCredit( c );
       delete c;
     }
   }
@@ -279,7 +252,7 @@ void IQRouterBase::_Route( )
   int size = _routing_vcs.size();
   for(int i = 0; i<size; i++){
     int vc_encode = _routing_vcs.front();
-    VC * cur_vc = &_vc[vc_encode>>16][vc_encode&0x0000FFFF];
+    VC * cur_vc = _vc[vc_encode>>16][vc_encode&0x0000FFFF];
     if(cur_vc->GetStateTime( ) >= _routing_delay){
       Flit * f = cur_vc->FrontFlit( );
       cur_vc->Route( _rf, this, f,  vc_encode>>16);
@@ -366,7 +339,7 @@ void IQRouterBase::Display( ) const
 {
   for ( int input = 0; input < _inputs; ++input ) {
     for ( int v = 0; v < _vcs; ++v ) {
-      _vc[input][v].Display( );
+      _vc[input][v]->Display( );
     }
   }
 }
@@ -375,7 +348,7 @@ int IQRouterBase::GetCredit(int out, int vc_begin, int vc_end ) const
 {
  
 
-  BufferState *dest_vc;
+  const BufferState *dest_vc;
   int    tmpsum = 0;
   int cnt = 0;
   
@@ -384,7 +357,7 @@ int IQRouterBase::GetCredit(int out, int vc_begin, int vc_end ) const
     exit(-1);
   }
   
-  dest_vc = &_next_vcs[out];
+  dest_vc = _next_vcs[out];
   //dest_vc_tmp = &_next_vcs_tmp[out];
   
   if (vc_begin == -1) {
@@ -410,7 +383,7 @@ int IQRouterBase::GetBuffer(int i) const {
   int i_end = (i >= 0) ? i : (_inputs - 1);
   for(int input = i_start; input <= i_end; ++input) {
     for(int vc = 0; vc < _vcs; ++vc) {
-      size += _vc[input][vc].GetSize();
+      size += _vc[input][vc]->GetSize();
     }
   }
   return size;

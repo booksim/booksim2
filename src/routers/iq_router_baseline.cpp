@@ -111,10 +111,7 @@ IQRouterBaseline::IQRouterBaseline( const Configuration& config,
 
   }
 
-  _sw_rr_offset = new int [_inputs*_input_speedup];
-  for ( int i = 0; i < _inputs*_input_speedup; ++i ) {
-    _sw_rr_offset[i] = 0;
-  }
+  _sw_rr_offset.resize(_inputs*_input_speedup);
   
 }
 
@@ -125,8 +122,6 @@ IQRouterBaseline::~IQRouterBaseline( )
 
   if ( _speculative >= 2 )
     delete _spec_sw_allocator;
-
-  delete [] _sw_rr_offset;
 }
   
 void IQRouterBaseline::_Alloc( )
@@ -153,7 +148,7 @@ void IQRouterBaseline::_VCAlloc( )
     int vc_encode = *item;
     int input =  vc_encode>>16;
     int vc =vc_encode&0x0000FFFF;
-    cur_vc = &_vc[input][vc];
+    cur_vc = _vc[input][vc];
     if ( ( _speculative > 0 ) && ( cur_vc->GetState( ) == VC::vc_alloc )){
       cur_vc->SetState( VC::vc_spec ) ;
     }
@@ -173,7 +168,7 @@ void IQRouterBaseline::_VCAlloc( )
       //cout<<setlist->size()<<endl;
       list<OutputSet::sSetElement>::const_iterator iset = setlist->begin( );
       while(iset!=setlist->end( )){
-	BufferState *dest_vc = &_next_vcs[iset->output_port];
+	BufferState *dest_vc = _next_vcs[iset->output_port];
 	for ( int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc ) {
 	  int in_priority = iset->pri;
 	  // On the input input side, a VC might request several output 
@@ -227,8 +222,8 @@ void IQRouterBaseline::_VCAlloc( )
 	match_input = input_and_vc / _vcs;
 	match_vc    = input_and_vc - match_input*_vcs;
 
-	cur_vc  = &_vc[match_input][match_vc];
-	dest_vc = &_next_vcs[output];
+	cur_vc  = _vc[match_input][match_vc];
+	dest_vc = _next_vcs[output];
 
 	if ( _speculative > 0 )
 	  cur_vc->SetState( VC::vc_spec_grant );
@@ -300,7 +295,7 @@ void IQRouterBaseline::_SWAlloc( )
 	  continue;
 	}
 	
-	cur_vc = &_vc[input][vc];
+	cur_vc = _vc[input][vc];
 
 	if(!cur_vc->Empty() &&
 	   (cur_vc->GetStateTime() >= _sw_alloc_delay)) {
@@ -311,7 +306,7 @@ void IQRouterBaseline::_SWAlloc( )
 	    {
 	      output = cur_vc->GetOutputPort( );
 
-	      dest_vc = &_next_vcs[output];
+	      dest_vc = _next_vcs[output];
 	      
 	      if ( !dest_vc->IsFullFor( cur_vc->GetOutputVC( ) ) ) {
 		
@@ -384,7 +379,7 @@ void IQRouterBaseline::_SWAlloc( )
 	      const list<OutputSet::sSetElement>* setlist = route_set ->GetSetList();
 	      list<OutputSet::sSetElement>::const_iterator iset = setlist->begin( );
 	      while(iset!=setlist->end( )){
-		BufferState * dest_vc = &_next_vcs[iset->output_port];
+		BufferState * dest_vc = _next_vcs[iset->output_port];
 		bool do_request = false;
 		
 		// check if any suitable VCs are available
@@ -482,7 +477,7 @@ void IQRouterBaseline::_SWAlloc( )
 	expanded_output = _switch_hold_in[expanded_input];
 	vc = _switch_hold_vc[expanded_input];
 	assert(vc >= 0);
-	cur_vc = &_vc[input][vc];
+	cur_vc = _vc[input][vc];
 	
 	if ( cur_vc->Empty( ) ) { // Cancel held match if VC is empty
 	  expanded_output = -1;
@@ -530,7 +525,7 @@ void IQRouterBaseline::_SWAlloc( )
 	    vc = _sw_allocator->ReadRequest(expanded_input, expanded_output);
 	  }
 	  assert(vc >= 0);
-	  cur_vc = &_vc[input][vc];
+	  cur_vc = _vc[input][vc];
 	}
 
 	// Detect speculative switch requests which succeeded when VC 
@@ -559,7 +554,7 @@ void IQRouterBaseline::_SWAlloc( )
 	  assert(!cur_vc->Empty());
 	  assert(cur_vc->GetOutputPort() == output);
 	  
-	  dest_vc = &_next_vcs[output];
+	  dest_vc = _next_vcs[output];
 	  
 	  if ( dest_vc->IsFullFor( cur_vc->GetOutputVC( ) ) )
 	    continue ;
@@ -645,7 +640,7 @@ void IQRouterBaseline::_SWAlloc( )
     
     // Promote all other virtual channel grants marked as speculative to active.
     for ( int vc = 0 ; vc < _vcs ; vc++ ) {
-      cur_vc = &_vc[input][vc] ;
+      cur_vc = _vc[input][vc] ;
       if ( cur_vc->GetState() == VC::vc_spec_grant ) {
 	cur_vc->SetState( VC::active ) ;	
       } 
