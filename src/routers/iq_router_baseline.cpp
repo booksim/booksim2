@@ -356,6 +356,19 @@ void IQRouterBaseline::_SWAlloc( )
 		  any_nonspec_output_reqs[expanded_output] = true;
 		  vc_ready_nonspec++;
 		}
+	      } else {
+		//if this vc has a hold on the switch need to cancel it to prevent deadlock
+		if(_hold_switch_for_packet){
+		  expanded_output = 
+		    (input%_output_speedup)*_outputs + output;
+		  if(_switch_hold_in[expanded_input] == expanded_output&&
+		     _switch_hold_vc[expanded_input] == vc&&
+		     _switch_hold_out[expanded_output] == expanded_input){
+		    _switch_hold_in[expanded_input]   = -1;
+		    _switch_hold_vc[expanded_input]   = -1;
+		    _switch_hold_out[expanded_output] = -1;
+		  }
+		}
 	      }
 	    }
 	    break;
@@ -481,6 +494,9 @@ void IQRouterBaseline::_SWAlloc( )
 	
 	if ( cur_vc->Empty( ) ) { // Cancel held match if VC is empty
 	  expanded_output = -1;
+	  _switch_hold_in[expanded_input]   = -1;
+	  _switch_hold_vc[expanded_input]   = -1;
+	  _switch_hold_out[expanded_output] = -1;
 	}
       } else {
 	expanded_output = _sw_allocator->OutputAssigned( expanded_input );
