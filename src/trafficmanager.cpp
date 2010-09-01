@@ -354,6 +354,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _stats_out = &cout;
   } else {
     _stats_out = new ofstream(stats_out_file.c_str());
+    config.WriteMatlabFile(_stats_out);
   }
   
   string flow_out_file;

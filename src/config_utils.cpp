@@ -266,3 +266,33 @@ void Configuration::WriteFile( const string& filename){
 }
 
 
+
+void  Configuration::WriteMatlabFile(ostream *config_out) const {
+
+  
+  
+  for(map<string,char *>::const_iterator i = _str_map.begin(); 
+      i!=_str_map.end();
+      i++){
+    //the parser won't read blanks lolz
+    if(i->second[0]!='\0'){
+      *config_out<<"%"<<i->first<<" = \'"<<i->second<<"\';"<<endl;
+    }
+  }
+  
+  for(map<string, unsigned int>::const_iterator i = _int_map.begin(); 
+      i!=_int_map.end();
+      i++){
+    *config_out<<"%"<<i->first<<" = "<<i->second<<";"<<endl;
+
+  }
+
+  for(map<string, double>::const_iterator i = _float_map.begin(); 
+      i!=_float_map.end();
+      i++){
+    *config_out<<"%"<<i->first<<" = "<<i->second<<";"<<endl;
+
+  }
+  config_out->flush();
+
+}

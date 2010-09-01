@@ -66,7 +66,7 @@ public:
   void ParseError( const string &msg, unsigned int lineno ) const;
   
   void WriteFile( const string& filename);
-
+  void WriteMatlabFile(ostream *o) const;
   //These Get functions are for the GUI to display all the options of booksim
   //const something maybe?
   map<string,char *> * GetStrMap(){
