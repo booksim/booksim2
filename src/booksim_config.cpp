@@ -139,11 +139,11 @@ BookSimConfig::BookSimConfig( )
   _int_map["input_speedup"]     = 1;  // expansion of input ports into crossbar
   _int_map["output_speedup"]    = 1;  // expansion of output ports into crossbar
 
-  _int_map["routing_delay"]    = 0;  
-  _int_map["vc_alloc_delay"]   = 0;  
-  _int_map["sw_alloc_delay"]   = 0;  
+  _int_map["routing_delay"]    = 1;  
+  _int_map["vc_alloc_delay"]   = 1;  
+  _int_map["sw_alloc_delay"]   = 1;  
   _int_map["st_prepare_delay"] = 0;
-  _int_map["st_final_delay"]   = 0;
+  _int_map["st_final_delay"]   = 1;
 
   //==== Event-driven =====================================
 
