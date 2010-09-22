@@ -47,6 +47,7 @@ extern int gK;
 extern int gN;
 extern int gC;
 
+extern bool gGUIMode;
 
 extern int realgk;
 extern int realgn;

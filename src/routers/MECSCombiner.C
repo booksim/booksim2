@@ -1,4 +1,4 @@
-// $Id$
+// $Id: MECSCombiner.cpp 1969 2010-05-10 11:09:22Z dub $
 
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
@@ -28,24 +28,62 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _RANDOM_UTILS_HPP_
-#define _RANDOM_UTILS_HPP_
+/*MECSCominber
+ *
+ *Combines the flit drop-off points from channels of a given direction
+ *
+ *   Flits are selected from the drop-off points using age based arbitration
+ *
+ */
+#include "MECSCombiner.hpp"
+#include "globals.hpp"
 
- //#include "rng.hpp"
+MECSCombiner::MECSCombiner(Module* parent, string name, int dir, int r)
+  : Module(parent, name){
+  direction = dir;
+  router = r;
+  seen_head = false;
+  location = -1;
+}
 
-#ifdef USE_TWISTER
-extern unsigned long  int_genrand( );
-extern void int_lsgenrand( unsigned long seed_array[] );
-extern void int_sgenrand( unsigned long seed );
+void MECSCombiner::ReadInputs(){
+  int time = -1;
 
-extern double float_genrand( );
-extern void   float_lsgenrand( unsigned long seed_array[] );
-extern void   float_sgenrand( unsigned long seed );
-#endif
+  Flit *f = 0;
 
-void RandomSeed( long seed );
-int RandomInt( int max ) ;
-float RandomFloat( float max = 1.0 );
-unsigned long RandomIntLong( );
+  if(!seen_head){
+    //age based flit select
+    for(int i = 0; i<inputs.size(); i++){
+      f = inputs.at(i)->PeekFlit();
+      if(f){
+	if(time == -1 || (f->time)<time){
+	  location = i;
+	  time = f->time;
+	}
+      }
+    }
+  }
+  if(location!=-1 && inputs.at(location)->FlitQueueSize()!=0){
+    f = inputs.at(location)->ReceiveFlit();
+    assert(f);
+    if(f->watch){
+      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		  <<f->id<<" load into router "<<router<<endl;
+    }
+  }
+  if(f){
+    
+    if(f->head){
+      seen_head = true;
+      
+    }
+    if(f->tail){
+      seen_head = false;
+      location = -1;
+    }
+  }
 
-#endif
+  // always send even if 0
+  chan_out->Send(f);
+
+}

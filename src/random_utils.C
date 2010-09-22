@@ -1,4 +1,4 @@
-// $Id$
+// $Id: random_utils.cpp 1839 2010-03-24 02:03:56Z dub $
 
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
@@ -28,24 +28,34 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _RANDOM_UTILS_HPP_
-#define _RANDOM_UTILS_HPP_
+#include "booksim.hpp"
+#include "random_utils.hpp"
 
- //#include "rng.hpp"
+void RandomSeed( long seed )
+{
+  //  ran_start( seed );
+  //ranf_start( seed );
+  srand48(seed);
+  srand(seed);
+}
 
-#ifdef USE_TWISTER
-extern unsigned long  int_genrand( );
-extern void int_lsgenrand( unsigned long seed_array[] );
-extern void int_sgenrand( unsigned long seed );
+int RandomInt( int max ) 
+  // Returns a random integer in the range [0,max]
+{
+  /// return ( ran_next( ) % (max+1) );
 
-extern double float_genrand( );
-extern void   float_lsgenrand( unsigned long seed_array[] );
-extern void   float_sgenrand( unsigned long seed );
-#endif
+ return lrand48() %(max+1);
+}
 
-void RandomSeed( long seed );
-int RandomInt( int max ) ;
-float RandomFloat( float max = 1.0 );
-unsigned long RandomIntLong( );
+unsigned long RandomIntLong( )
+{  
+  return lrand48();
+  //  return ran_next( );
+}
 
-#endif
+float RandomFloat( float max )
+  // Returns a random floating-point value in the rage [0,max]
+{
+  //  return ( (float)ranf_next( ) * max );
+return drand48()*max;
+}

@@ -1,4 +1,4 @@
-// $Id$
+// $Id: module.cpp 1839 2010-03-24 02:03:56Z dub $
 
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
@@ -28,24 +28,72 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _RANDOM_UTILS_HPP_
-#define _RANDOM_UTILS_HPP_
+/*module.cpp
+ *
+ *The basic class that is extended by all other components of the network
+ *Provides the basic hierarchy structure and basic fuctions
+ *
+ */
 
- //#include "rng.hpp"
+#include "booksim.hpp"
+#include <iostream>
+#include <stdlib.h>
+#include "module.hpp"
 
-#ifdef USE_TWISTER
-extern unsigned long  int_genrand( );
-extern void int_lsgenrand( unsigned long seed_array[] );
-extern void int_sgenrand( unsigned long seed );
+Module::Module( )
+{
+}
 
-extern double float_genrand( );
-extern void   float_lsgenrand( unsigned long seed_array[] );
-extern void   float_sgenrand( unsigned long seed );
-#endif
+Module::Module( Module *parent, const string& name )
+{
+  SetName( parent, name );
+}
 
-void RandomSeed( long seed );
-int RandomInt( int max ) ;
-float RandomFloat( float max = 1.0 );
-unsigned long RandomIntLong( );
+void Module::_AddChild( Module *child )
+{
+  _children.push_back( child );
+}
 
-#endif
+void Module::SetName( Module *parent, const string& name )
+{
+  _name = name;
+
+  if ( parent ) { 
+    parent->_AddChild( this );
+    _fullname = parent->_fullname + "/" + name;
+  } else {
+    _fullname = name;
+  }
+}
+
+void Module::DisplayHierarchy( int level ) const
+{
+  vector<Module *>::const_iterator mod_iter;
+
+  for ( int l = 0; l < level; l++ ) {
+    cout << "  ";  
+  }
+
+  cout << _name << endl;
+
+  for ( mod_iter = _children.begin( );
+	mod_iter != _children.end( ); mod_iter++ ) {
+    (*mod_iter)->DisplayHierarchy( level + 1 );
+  }
+}
+
+void Module::Error( const string& msg ) const
+{
+  cout << "Error in " << _fullname << " : " << msg << endl;
+  exit( -1 );
+}
+
+void Module::Debug( const string& msg ) const
+{
+  cout << "Debug (" << _fullname << ") : " << msg << endl;
+}
+
+void Module::Display( ) const 
+{
+  cout << "Display method not implemented for " << _fullname << endl;
+}

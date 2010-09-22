@@ -1,4 +1,4 @@
-// $Id$
+// $Id: singlenet.cpp 1970 2010-05-10 11:50:15Z dub $
 
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
@@ -28,24 +28,55 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _RANDOM_UTILS_HPP_
-#define _RANDOM_UTILS_HPP_
+/*singlenet.cpp
+ *
+ *single router network
+ *
+ *replaced by crossbar
+ */
 
- //#include "rng.hpp"
+#include "booksim.hpp"
+#include <vector>
 
-#ifdef USE_TWISTER
-extern unsigned long  int_genrand( );
-extern void int_lsgenrand( unsigned long seed_array[] );
-extern void int_sgenrand( unsigned long seed );
+#include "singlenet.hpp"
 
-extern double float_genrand( );
-extern void   float_lsgenrand( unsigned long seed_array[] );
-extern void   float_sgenrand( unsigned long seed );
-#endif
+SingleNet::SingleNet( const Configuration &config, const string & name ) :
+Network( config, name )
+{
+  _ComputeSize( config );
+  _Alloc( );
+  _BuildNet( config );
+}
 
-void RandomSeed( long seed );
-int RandomInt( int max ) ;
-float RandomFloat( float max = 1.0 );
-unsigned long RandomIntLong( );
+void SingleNet::_ComputeSize( const Configuration &config )
+{
+  _sources = config.GetInt( "in_ports" );
+  _dests   = config.GetInt( "out_ports" );
 
-#endif
+  _size     = 1;
+  _channels = 0;
+}
+void SingleNet::RegisterRoutingFunctions() {
+
+}
+void SingleNet::_BuildNet( const Configuration &config )
+{
+  int i;
+
+  _routers[0] = Router::NewRouter( config, this, "router", 0, 
+				   _sources, _dests );
+
+  for ( i = 0; i < _sources; ++i ) {
+    _routers[0]->AddInputChannel( _inject[i], _inject_cred[i] );
+  }
+
+  for ( i = 0; i < _dests; ++i ) {
+    _routers[0]->AddOutputChannel( _eject[i], _eject_cred[i] );
+  }
+}
+
+void SingleNet::Display( ) const
+{
+  _routers[0]->Display( );
+}
+

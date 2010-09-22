@@ -1,4 +1,4 @@
-// $Id$
+// $Id: misc_utils.cpp 1839 2010-03-24 02:03:56Z dub $
 
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
@@ -28,24 +28,28 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _RANDOM_UTILS_HPP_
-#define _RANDOM_UTILS_HPP_
+#include "booksim.hpp"
+#include "misc_utils.hpp"
 
- //#include "rng.hpp"
+int powi( int x, int y ) // compute x to the y
+{
+  int r = 1;
 
-#ifdef USE_TWISTER
-extern unsigned long  int_genrand( );
-extern void int_lsgenrand( unsigned long seed_array[] );
-extern void int_sgenrand( unsigned long seed );
+  for ( int i = 0; i < y; ++i ) {
+    r *= x;
+  }
 
-extern double float_genrand( );
-extern void   float_lsgenrand( unsigned long seed_array[] );
-extern void   float_sgenrand( unsigned long seed );
-#endif
+  return r;
+}
 
-void RandomSeed( long seed );
-int RandomInt( int max ) ;
-float RandomFloat( float max = 1.0 );
-unsigned long RandomIntLong( );
+int log_two( int x )
+{
+  int r = 0;
 
-#endif
+  x >>= 1;
+  while( x ) {
+    r++; x >>= 1;
+  }
+
+  return r;
+}

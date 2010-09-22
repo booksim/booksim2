@@ -1,4 +1,4 @@
-// $Id$
+// $Id: MECSCreditForwarder.cpp 1868 2010-03-29 08:54:05Z dub $
 
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
@@ -28,24 +28,44 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _RANDOM_UTILS_HPP_
-#define _RANDOM_UTILS_HPP_
+#include "MECSCreditForwarder.hpp"
 
- //#include "rng.hpp"
+MECSCreditForwarder::MECSCreditForwarder(Module* parent, string name, int router)
+  :Module( parent, name ){
 
-#ifdef USE_TWISTER
-extern unsigned long  int_genrand( );
-extern void int_lsgenrand( unsigned long seed_array[] );
-extern void int_sgenrand( unsigned long seed );
+  location = router;
+  cc = 0;
+  cred_in = 0;
+  cred_out = 0;
+}
 
-extern double float_genrand( );
-extern void   float_lsgenrand( unsigned long seed_array[] );
-extern void   float_sgenrand( unsigned long seed );
-#endif
 
-void RandomSeed( long seed );
-int RandomInt( int max ) ;
-float RandomFloat( float max = 1.0 );
-unsigned long RandomIntLong( );
+void MECSCreditForwarder::AddInChannel(CreditChannel* backchannel){
+  cred_in = backchannel;
+}
+void MECSCreditForwarder::AddOutChannel( CreditChannel* backchannel){
+  cred_out = backchannel;
+}
 
-#endif
+
+void MECSCreditForwarder::ReadInputs(){
+  Credit *c = cred_in->Receive();
+  if(c){
+    assert(c->dest_router>=0);
+    if(c->dest_router ==location){
+      credit_queue.push(c);
+      assert(credit_queue.size()<100); //if this trips, soemthign is wrong
+      cc = 0; //terminate if reached the destination
+    } else{
+      cc = c;
+    }
+  }
+}
+
+void MECSCreditForwarder::WriteOutputs(){
+  //always send, if the channels exists 
+  if(cred_out){
+    cred_out->Send(cc);
+    cc = 0; 
+  }
+}

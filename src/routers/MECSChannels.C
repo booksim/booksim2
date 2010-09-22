@@ -1,4 +1,4 @@
-// $Id$
+// $Id: MECSChannels.cpp 1839 2010-03-24 02:03:56Z dub $
 
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
@@ -28,24 +28,67 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _RANDOM_UTILS_HPP_
-#define _RANDOM_UTILS_HPP_
+/*MECSChannel
+ *
+ * A MECSChannel is composed of several normal flit channels 
+ * bridging the normal channels are forwarders that drop flits off at routers
+ */
 
- //#include "rng.hpp"
+#include "MECSChannels.hpp"
 
-#ifdef USE_TWISTER
-extern unsigned long  int_genrand( );
-extern void int_lsgenrand( unsigned long seed_array[] );
-extern void int_sgenrand( unsigned long seed );
+MECSChannels::MECSChannels(Module* parent, string name, int source, int direction, int stops)
+  :Module(parent,name){
 
-extern double float_genrand( );
-extern void   float_lsgenrand( unsigned long seed_array[] );
-extern void   float_sgenrand( unsigned long seed );
-#endif
+  source_router = source;
+  drop_count = stops;
 
-void RandomSeed( long seed );
-int RandomInt( int max ) ;
-float RandomFloat( float max = 1.0 );
-unsigned long RandomIntLong( );
+  drops = (MECSForwarder**)malloc(drop_count*sizeof(MECSForwarder*));
+  //router nunmbers are determined based ont he current router and
+  //the channel direction
+  for(int i =1; i<drop_count+1; i++){
+    int router = source_router;
+    switch(direction){
+    case 0:
+      router = source_router-i*gK;
+      break;
+    case 1:
+      router = source_router+i;
+      break;
+    case 2:
+      router = source_router+i*gK;
+      break;
+    case 3:
+      router = source_router-i;
+      break;
+    default:
+      cout<<direction<<endl;
+      assert(false);
+    }
+   
+    drops[i-1] = new MECSForwarder(this, name, router);
+  }
 
-#endif
+}
+
+void MECSChannels::AddChannel(FlitChannel* chan, int drop){
+
+  //add the first channel doens't have to "add outchannel"
+  if(drop == 0){
+  } else{
+    drops[drop-1]->AddOutChannel(chan);
+  }
+  drops[drop]->AddInChannel(chan);
+}
+
+void MECSChannels::ReadInputs(){
+
+  for(int i = 0; i<drop_count; i++){
+    drops[i]->ReadInputs();
+  }
+}
+void MECSChannels::WriteOutputs(){
+
+  for(int i = 0; i<drop_count; i++){
+    drops[i]->WriteOutputs();
+  }
+}

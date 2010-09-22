@@ -1,4 +1,4 @@
-// $Id$
+// $Id: MECSCreditCombiner.cpp 1901 2010-04-06 09:14:14Z dub $
 
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
@@ -28,24 +28,39 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _RANDOM_UTILS_HPP_
-#define _RANDOM_UTILS_HPP_
+/*MECSCreditCombiner
+ *
+ *Muxes the multiple credit channle inputs from a given direction
+ *
+ * Round robin style read from the forwarder queues and send it to the router
+ *
+ */
 
- //#include "rng.hpp"
+#include "MECSCreditCombiner.hpp"
 
-#ifdef USE_TWISTER
-extern unsigned long  int_genrand( );
-extern void int_lsgenrand( unsigned long seed_array[] );
-extern void int_sgenrand( unsigned long seed );
+MECSCreditCombiner::MECSCreditCombiner(Module* parent, string name, int dir, int r)
+  : Module(parent, name){
+  round_robin = 0;
+  direction = dir;
+  router = r;
+}
 
-extern double float_genrand( );
-extern void   float_lsgenrand( unsigned long seed_array[] );
-extern void   float_sgenrand( unsigned long seed );
-#endif
+void MECSCreditCombiner::ReadInputs(){
+  Credit *c = 0;
 
-void RandomSeed( long seed );
-int RandomInt( int max ) ;
-float RandomFloat( float max = 1.0 );
-unsigned long RandomIntLong( );
+  //prevent circle around
+  int begin_value = round_robin; 
 
-#endif
+  do{
+    //  round robin based credit select
+    if(inputs.size()!=0){
+      c = inputs.at(round_robin)->ReceiveCredit();  
+    }
+    
+    cred_out->Send(c);
+    round_robin++;
+    if(round_robin>=inputs.size()){
+      round_robin = 0;
+    } 
+  } while(round_robin!=begin_value  && c==0);
+}

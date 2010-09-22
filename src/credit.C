@@ -1,4 +1,4 @@
-// $Id$
+// $Id: credit.cpp 1839 2010-03-24 02:03:56Z dub $
 
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
@@ -28,24 +28,25 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _RANDOM_UTILS_HPP_
-#define _RANDOM_UTILS_HPP_
+/*credit.cpp
+ *
+ *A class for credits
+ */
 
- //#include "rng.hpp"
+#include "booksim.hpp"
+#include "credit.hpp"
 
-#ifdef USE_TWISTER
-extern unsigned long  int_genrand( );
-extern void int_lsgenrand( unsigned long seed_array[] );
-extern void int_sgenrand( unsigned long seed );
+Credit::Credit( int max_vcs )
+{
+  vc = new int [max_vcs];
+  vc_cnt = 0;
 
-extern double float_genrand( );
-extern void   float_lsgenrand( unsigned long seed_array[] );
-extern void   float_sgenrand( unsigned long seed );
-#endif
+  tail = false;
+  id   = -1;
+  dest_router = -1;
+}
 
-void RandomSeed( long seed );
-int RandomInt( int max ) ;
-float RandomFloat( float max = 1.0 );
-unsigned long RandomIntLong( );
-
-#endif
+Credit::~Credit( )
+{
+  delete [] vc;
+}

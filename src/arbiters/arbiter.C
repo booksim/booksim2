@@ -1,4 +1,4 @@
-// $Id$
+// $Id: arbiter.cpp 2187 2010-06-29 22:11:59Z dub $
 
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
@@ -28,24 +28,58 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _RANDOM_UTILS_HPP_
-#define _RANDOM_UTILS_HPP_
+// ----------------------------------------------------------------------
+//
+//  Arbiter: Base class for Matrix and Round Robin Arbiter
+//
+// ----------------------------------------------------------------------
 
- //#include "rng.hpp"
+#include "arbiter.hpp"
+#include "roundrobin_arb.hpp"
+#include "matrix_arb.hpp"
 
-#ifdef USE_TWISTER
-extern unsigned long  int_genrand( );
-extern void int_lsgenrand( unsigned long seed_array[] );
-extern void int_sgenrand( unsigned long seed );
+#include <limits>
+#include <cassert>
 
-extern double float_genrand( );
-extern void   float_lsgenrand( unsigned long seed_array[] );
-extern void   float_sgenrand( unsigned long seed );
-#endif
+using namespace std ;
 
-void RandomSeed( long seed );
-int RandomInt( int max ) ;
-float RandomFloat( float max = 1.0 );
-unsigned long RandomIntLong( );
+Arbiter::Arbiter( Module *parent, const string &name, int size )
+  : Module( parent, name ),
+    _input_size(size), _request(0), _num_reqs(0), _last_req(-1), _best_input(-1), _highest_pri(numeric_limits<int>::min())
+{
+  _request = new entry_t[size];
+  for ( int i = 0 ; i < size ; i++ ) 
+    _request[i].valid = false ;
+}
 
-#endif
+Arbiter::~Arbiter()
+{
+  if ( _request ) 
+    delete[] _request ;
+}
+
+void Arbiter::AddRequest( int input, int id, int pri )
+{
+  assert( 0 <= input && input < _input_size ) ;
+  if(!_request[input].valid || (_request[input].pri < pri)) {
+    _last_req = input ;
+    if(!_request[input].valid) {
+      _num_reqs++ ;
+      _request[input].valid = true ;
+    }
+    _request[input].id = id ;
+    _request[input].pri = pri ;
+  }
+}
+
+Arbiter *Arbiter::NewArbiter( Module *parent, const string& name,
+			      const string &arb_type, int size)
+{
+  Arbiter *a = NULL;
+  if(arb_type == "round_robin") {
+    a = new RoundRobinArbiter( parent, name, size );
+  } else if(arb_type == "matrix") {
+    a = new MatrixArbiter( parent, name, size );
+  } else assert(false);
+  return a;
+}
