@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ////////////////////////////////////////////////////////////////////////
 //
-// Tree4: Network with 64 Terminal Nodes arranged in a tree topology
+// Tree4: BSNetwork with 64 Terminal Nodes arranged in a tree topology
 //        with 4 routers at the root of the tree
 // 
 //  Level 0 :  4  8 x 8 Routers   (8 Descending Links per Router)
@@ -56,7 +56,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "misc_utils.hpp"
 
 Tree4::Tree4( const Configuration& config, const string & name )
-: Network ( config, name )
+: BSNetwork ( config, name )
 {
   _ComputeSize( config );
   _Alloc( );
@@ -126,8 +126,8 @@ void Tree4::_BuildNet( const Configuration& config )
   //
   int pp, pc;
   //
-  // Connection Rule: Output Ports 0:3 Move DOWN Network
-  //                  Output Ports 4:7 Move UP Network
+  // Connection Rule: Output Ports 0:3 Move DOWN BSNetwork
+  //                  Output Ports 4:7 Move UP BSNetwork
   //
   
   // Injection & Ejection Channels

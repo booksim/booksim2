@@ -62,7 +62,7 @@ protected:
   unsigned int _dests;
   unsigned int _routers;
 
-  vector<Network *> _net;
+  vector<BSNetwork *> _net;
   vector<vector<Router *> > _router_map;
 
   vector <Flit *> _flit_pool;
@@ -258,7 +258,7 @@ protected:
   void _LoadWatchList(const string & filename);
 
 public:
-  TrafficManager( const Configuration &config, const vector<Network *> & net );
+  TrafficManager( const Configuration &config, const vector<BSNetwork *> & net );
   ~TrafficManager( );
 
   bool Run( );
@@ -273,6 +273,9 @@ public:
   inline int getTime() { return _time;}
   Stats * getStats(const string & name) { return _stats[name]; }
 
+  int inflight(){
+    return  _total_in_flight_packets.size();
+  }
 };
 
 #endif

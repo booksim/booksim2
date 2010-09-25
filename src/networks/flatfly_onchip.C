@@ -71,7 +71,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 short FlatFlyOnChip::half_vcs = 0;
 
 FlatFlyOnChip::FlatFlyOnChip( const Configuration &config, const string & name ) :
-  Network( config, name )
+  BSNetwork( config, name )
 {
 
   _ComputeSize( config );

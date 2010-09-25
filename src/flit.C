@@ -55,6 +55,7 @@ ostream& operator<<( ostream& os, const Flit& f )
 Flit::Flit() 
 {  
   type      = ANY_TYPE ;
+  gems_net = -1;
   vc        = -1 ;
   head      = false ;
   tail      = false ;
@@ -79,7 +80,7 @@ Flit::Flit()
   minimal = 1;
   ring_par = -1;
   x_then_y = -1;
-  data = 0;
+  data = NULL;
   from_router = -1;
 }  
 
@@ -110,7 +111,7 @@ void Flit::Reset()
   minimal = 1;
   ring_par = -1;
   x_then_y = -1;
-  data = 0;
+  data = NULL;
   from_router = -1;
 }  
 

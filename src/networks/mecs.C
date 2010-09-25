@@ -57,7 +57,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 MECS::MECS( const Configuration &config, const string & name ) : 
-Network( config, name ){
+BSNetwork( config, name ){
   _ComputeSize( config );
   _Alloc( );
   _BuildNet( config );

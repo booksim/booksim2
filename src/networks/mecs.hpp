@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "routefunc.hpp"
 
 
-class MECS : public Network {
+class MECS : public BSNetwork {
 
   int _n;
   int _k;

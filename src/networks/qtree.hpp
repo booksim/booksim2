@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ////////////////////////////////////////////////////////////////////////
 //
-// QTree: A Quad-Tree Indirect Network.
+// QTree: A Quad-Tree Indirect BSNetwork.
 //
 //
 ////////////////////////////////////////////////////////////////////////
@@ -47,7 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assert.h>
 #include "network.hpp"
 
-class QTree : public Network {
+class QTree : public BSNetwork {
 
   int _k;
   int _n;

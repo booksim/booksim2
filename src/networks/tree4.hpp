@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ////////////////////////////////////////////////////////////////////////
 //
-// Tree4: Network with 64 Terminal Nodes arranged in a tree topology
+// Tree4: BSNetwork with 64 Terminal Nodes arranged in a tree topology
 //        with 4 routers at the root of the tree
 //
 ////////////////////////////////////////////////////////////////////////
@@ -47,7 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assert.h>
 #include "network.hpp"
 
-class Tree4 : public Network {
+class Tree4 : public BSNetwork {
 
   int _k;
   int _n;

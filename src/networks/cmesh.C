@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // ----------------------------------------------------------------------
 //
-// CMesh: Network with <Int> Terminal Nodes arranged in a concentrated
+// CMesh: BSNetwork with <Int> Terminal Nodes arranged in a concentrated
 //        mesh topology
 //
 // ----------------------------------------------------------------------
@@ -57,7 +57,7 @@ int CMesh::_memo_NodeShiftY = 0 ;
 int CMesh::_memo_PortShiftY = 0 ;
 
 CMesh::CMesh( const Configuration& config, const string & name ) 
-  : Network(config, name) 
+  : BSNetwork(config, name) 
 {
   _ComputeSize( config );
   _Alloc();

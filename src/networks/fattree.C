@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // FatTree
 //
-//       Each level of the hierarchical indirect Network has
+//       Each level of the hierarchical indirect BSNetwork has
 //       k^(n-1) Routers. The Routers are organized such that 
 //       each node has k ( = 4 ) descendents, and each parent is
 //       replicated k ( = 4 ) times.
@@ -59,7 +59,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 FatTree::FatTree( const Configuration& config,const string & name )
-  : Network( config ,name)
+  : BSNetwork( config ,name)
 {
   
 
@@ -133,8 +133,8 @@ void FatTree::_BuildNet( const Configuration& config )
   _AllocateChannelMap( );
 
   //
-  // Connection Rule: Output Ports 0:3 Move DOWN Network
-  //                  Output Ports 4:7 Move UP Network
+  // Connection Rule: Output Ports 0:3 Move DOWN BSNetwork
+  //                  Output Ports 4:7 Move UP BSNetwork
   //
   
   // Injection & Ejection Channels

@@ -43,6 +43,7 @@ Stats * GetStats(const std::string & name);
 
 extern bool _print_activity;
 
+extern int booksimTime;
 extern int gK;
 extern int gN;
 extern int gC;

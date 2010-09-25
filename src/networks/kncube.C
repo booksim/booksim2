@@ -44,7 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 KNCube::KNCube( const Configuration &config, const string & name, bool mesh ) :
-Network( config, name )
+BSNetwork( config, name )
 {
   _mesh = mesh;
 

@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include <iostream>
 
+#include "Message.h"
 struct Flit {
 
   const static int NUM_FLIT_TYPES = 5;
@@ -44,6 +45,7 @@ struct Flit {
                   ANY_TYPE      = 4 };
   FlitType type;
 
+  int gems_net;
   int vc;
 
   bool head;
@@ -89,9 +91,12 @@ struct Flit {
   // Fields for arbitrary data
   void* data ;
 
+  MsgPtr msg;
+
   // Constructor
   Flit() ;
   void Reset();
+
 };
 
 ostream& operator<<( ostream& os, const Flit& f );

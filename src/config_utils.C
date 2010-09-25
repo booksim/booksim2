@@ -146,7 +146,7 @@ void Configuration::ParseFile( const string& filename )
     exit( -1 );
   }
 
-  // configparse( );
+  configparse( );
 
   fclose( _config_file );
   _config_file = 0;
@@ -155,7 +155,7 @@ void Configuration::ParseFile( const string& filename )
 void Configuration::ParseString( const string& str )
 {
   _config_string = str + ';';
-  // configparse( );
+  configparse( );
   _config_string = "";
 }
 

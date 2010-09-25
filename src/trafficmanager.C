@@ -36,7 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "random_utils.hpp" 
 #include "vc.hpp"
 
-TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
+TrafficManager::TrafficManager( const Configuration &config, const vector<BSNetwork *> & net )
   : Module( 0, "traffic_manager" ), _net(net), _cur_id(0), _cur_pid(0),
    _time(0), _warmup_time(-1), _drain_time(-1), _empty_network(false),
    _deadlock_counter(1), _sub_network(0), _timed_mode(false), _last_id(-1), 
@@ -1354,7 +1354,7 @@ bool TrafficManager::_SingleSim( )
 	_sent_flow.assign(_duplicate_networks*_routers, 0);
       }
       cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) sent. Time used is " << _time - start_time << " cycles." << endl;
-      cout << "Draining the Network...................\n";
+      cout << "Draining the BSBSNetwork...................\n";
       _sim_state = draining;
       _drain_time = _time;
       int empty_steps = 0;

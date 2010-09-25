@@ -614,7 +614,8 @@ int route_yx( int router_id, int dest_id ) {
 void singlerf( const Router *, const Flit *f, int, OutputSet *outputs, bool inject )
 {
   outputs->Clear( );
-  outputs->Add( f->dest, f->dest % gNumVCS ); // VOQing
+  //  outputs->Add( f->dest, f->dest % gNumVCS ); // VOQing
+  outputs->Add( f->dest, f->gems_net ); // VOQing
 }
 
 //=============================================================

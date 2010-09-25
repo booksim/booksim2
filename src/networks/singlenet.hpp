@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "network.hpp"
 
-class SingleNet : public Network {
+class SingleNet : public BSNetwork {
 
   void _ComputeSize( const Configuration &config );
   void _BuildNet( const Configuration &config );

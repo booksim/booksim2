@@ -42,7 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 map<int, int>* global_routing_table;
 
 AnyNet::AnyNet( const Configuration &config, const string & name )
-  :  Network( config, name ){
+  :  BSNetwork( config, name ){
 
   _ComputeSize( config );
   _Alloc( );
@@ -61,7 +61,7 @@ void AnyNet::_ComputeSize( const Configuration &config ){
   readFile();
 
   _channels =0;
-  cout<<"========================Network File Parsed=================\n";
+  cout<<"========================BSNetwork File Parsed=================\n";
   cout<<"******************node listing**********************\n";
   map<int,  int >::const_iterator iter;
   for(iter = node_list.begin(); iter!=node_list.end(); iter++){

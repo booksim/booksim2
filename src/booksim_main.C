@@ -87,7 +87,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 TrafficManager * trafficManager = NULL;
 
  int GetSimTime() {
-  return trafficManager->getTime();
+   return booksimTime;
 }
 
 class Stats;
@@ -99,6 +99,7 @@ Stats * GetStats(const std::string & name) {
   return test;
 }
 
+int booksimTime =0;
 /* printing activity factor*/
 bool _print_activity = false;
 
@@ -149,7 +150,7 @@ bool gGUIMode = false;
 
 bool AllocatorSim( const Configuration& config )
 {
-  vector<Network *> net;
+  vector<BSNetwork *> net;
   string topo;
 
   config.GetStr( "topology", topo );

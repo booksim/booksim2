@@ -43,7 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "misc_utils.hpp"
 
 CMeshX2::CMeshX2( const Configuration &config, const string & name ) 
-: Network( config, name ) 
+: BSNetwork( config, name ) 
 {
 
   _subMesh[0] = new CMesh( config, name );

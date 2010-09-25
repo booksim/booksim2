@@ -1,4 +1,4 @@
-// $Id$
+// $Id: trafficmanager.hpp 2203 2010-07-02 00:04:02Z qtedq $
 
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
@@ -28,60 +28,72 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-////////////////////////////////////////////////////////////////////////
-//
-// CMeshX2: Two Concentrated Meshes 
-//
-////////////////////////////////////////////////////////////////////////
-//
-// RCS Information:
-//  $Author: jbalfour $
-//  $Date: 2007/06/26 22:49:23 $
-//  $Id$
-// 
-////////////////////////////////////////////////////////////////////////
-#ifndef _CMESHX2_HPP_
-#define _CMESHX2_HPP_
+#ifndef _GEMSTRAFFICMANAGER_HPP_
+#define _GEMSTRAFFICMANAGER_HPP_
 
+#include "Vector.h"
+#include <list>
+#include <map>
+#include <set>
+
+#include "trafficmanager.hpp"
+#include "config_utils.hpp"
 #include "network.hpp"
-#include "cmesh.hpp"
+#include "flit.hpp"
+#include "buffer_state.hpp"
+#include "stats.hpp"
+#include "traffic.hpp"
+#include "routefunc.hpp"
+#include "outputset.hpp"
+#include "injection.hpp"
 #include <assert.h>
 
-class CMeshX2 : public BSNetwork {
+#include "MessageBuffer.h"
 
-  int _k ;
-  int _n ;
-  int _c ;
+#include "Consumer.h"
+
+class InjectConsumer : public Consumer{
   
-  int* _f_read_history;
-  int* _c_read_history;
-
-  CMesh* _subMesh[2];
-  int _subNetAssignment[Flit::NUM_FLIT_TYPES];
-
-  void _ComputeSize(const Configuration& config );
-  void _BuildNet(const Configuration& config );
-
 public:
+  InjectConsumer(){
+    
+  }
+  ~InjectConsumer(){
+    
+  }
+  void wakeup(){
+    
+  }
+  void print(ostream& out) const{
+    
+  }
+};
 
-  CMeshX2( const Configuration &config, const string & name );
-  ~CMeshX2( );
+class GEMSTrafficManager : public TrafficManager {
+protected:
+  Vector<Vector<MessageBuffer*> >* input_buffer;
+  Vector<Vector<MessageBuffer*> >* output_buffer;
 
-  void  WriteFlit( Flit *f, int source );
-  Flit* ReadFlit( int dest );
+  int vc_classes;
+  int *vc_ptrs;
+protected:
+  virtual Flit *_NewFlit( );
+  virtual void _RetireFlit( Flit *f, int dest );
 
-  void    WriteCredit( Credit *c, int dest );
-  Credit* ReadCredit( int source );
+
   
-  void ReadInputs( );
-  void InternalStep( );
-  void WriteOutputs( );
+  virtual int  _IssuePacket( int source, int cl );
+  virtual void _GeneratePacket( int source, int size, int cl, int time );
 
-  int GetN( ) const;
-  int GetK( ) const;
+  void GemsInject();
+public:
+  GEMSTrafficManager(  const Configuration &config, const vector<BSNetwork *> & net , int vcc);
+  ~GEMSTrafficManager( );
+  
 
-  static void RegisterRoutingFunctions() ;
-
+  void _Step( );
+  void RegisterMessageBuffers(  Vector<Vector<MessageBuffer*> >* in,   Vector<Vector<MessageBuffer*> >* out);
+  
 
 };
 

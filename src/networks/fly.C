@@ -38,7 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //#define DEBUG_FLY
 
 KNFly::KNFly( const Configuration &config, const string & name ) :
-Network( config, name )
+BSNetwork( config, name )
 {
   _ComputeSize( config );
   _Alloc( );

@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 typedef Channel<Credit> CreditChannel;
 
 
-class Network : public Module {
+class BSNetwork : public Module {
 protected:
 
   int _size;
@@ -73,9 +73,10 @@ protected:
 
   void _Alloc( );
 
+  
 public:
-  Network( const Configuration &config, const string & name );
-  virtual ~Network( );
+  BSNetwork( const Configuration &config, const string & name );
+  virtual ~BSNetwork( );
 
   virtual void WriteFlit( Flit *f, int source );
   virtual Flit *ReadFlit( int dest );
@@ -96,7 +97,7 @@ public:
   virtual void ReadInputs( );
   virtual void InternalStep( );
   virtual void WriteOutputs( );
-
+  
   void Display( ) const;
 
   int NumChannels(){return _channels;}

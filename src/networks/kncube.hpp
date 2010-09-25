@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "network.hpp"
 
-class KNCube : public Network {
+class KNCube : public BSNetwork {
 
   bool _mesh;
 
