@@ -35,6 +35,7 @@
 #include "random_utils.hpp"
 #include "Message.h"
 #include "NetworkMessage.h"
+#include "Network.h"
 
 bool InjectConsumer::trigger_wakeup = true;
 GEMSTrafficManager::GEMSTrafficManager(  const Configuration &config, const vector<BSNetwork *> & net , int vcc)
@@ -43,6 +44,7 @@ GEMSTrafficManager::GEMSTrafficManager(  const Configuration &config, const vect
   vc_classes = vcc;
   vc_ptrs = new int[ _sources ];
   memset(vc_ptrs,0, _sources *sizeof(int));
+  flit_size = config.GetInt("channel_width");
 }
 
 GEMSTrafficManager::~GEMSTrafficManager( )
@@ -152,9 +154,12 @@ void GEMSTrafficManager::_GeneratePacket( int source, int stype,
   Vector<NodeID> a = msg_destinations.getAllDest();
   //cout<<"Node "<<source<<" count "<<msg_destinations.count()<<endl;
   //cout<<a<<endl;
+  //bytes
+  int size = (int) ceil((double) MessageSizeType_to_int(net_msg_ptr->getMessageSize())*8/flit_size ); 
+
   for(int dest_index = 0; dest_index<a.size(); dest_index++){
     Flit::FlitType packet_type = Flit::ANY_TYPE;
-    int size = gConstPacketSize; //input size 
+ 
     int ttime = time;
     int packet_destination = a[dest_index];
     bool record = false;

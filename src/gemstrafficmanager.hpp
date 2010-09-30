@@ -102,6 +102,8 @@ public:
   void RegisterMessageBuffers(  Vector<Vector<MessageBuffer*> >* in,   Vector<Vector<MessageBuffer*> >* out);
   
 
+private:
+  int flit_size;
 };
 
 #endif

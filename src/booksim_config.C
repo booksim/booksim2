@@ -51,6 +51,10 @@ BookSimConfig::BookSimConfig( )
   
   _int_map["use_read_write"] = 0;
 
+  _int_map["message_classes"] = 1;
+  _int_map["routing_classes"] = 1;
+  _int_map["vc_per_class"] = 1;
+
   _int_map["read_request_begin_vc"] = 0;
   _int_map["read_request_end_vc"] = 5;
 
