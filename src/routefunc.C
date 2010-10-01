@@ -53,7 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "qtree.hpp"
 #include "cmesh.hpp"
 
-
+#include "buffer_state.hpp"
 
 map<string, tRoutingFunction> gRoutingFunctionMap;
 
@@ -615,7 +615,7 @@ void singlerf( const Router *, const Flit *f, int, OutputSet *outputs, bool inje
 {
   outputs->Clear( );
   //  outputs->Add( f->dest, f->dest % gNumVCS ); // VOQing
-  outputs->Add( f->dest, f->gems_net ); // VOQing
+  outputs->Add( f->dest, BufferState::_vc_range_begin[f->type],  BufferState::_vc_range_begin[f->type]+ BufferState::_vc_range_size[f->type]-1); // VOQing
 }
 
 //=============================================================

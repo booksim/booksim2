@@ -96,7 +96,7 @@ limit = 0;
 // Routing
 //
 
-routing_function = ran_min;
+routing_function = xyyx;
 
 //1: batch mode, 0: injection mode
 use_read_write = 0;

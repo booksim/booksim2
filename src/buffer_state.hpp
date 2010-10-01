@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "flit.hpp"
 #include "credit.hpp"
 #include "config_utils.hpp"
-
+#include <vector>
 class BufferState : public Module {
 
   int  _wait_for_tail_credit;
@@ -47,11 +47,15 @@ class BufferState : public Module {
   bool *_tail_sent;
   int  *_cur_occupied;
 
-  int  _vc_range_begin[Flit::NUM_FLIT_TYPES];
-  int  _vc_range_size[Flit::NUM_FLIT_TYPES];
-  int  _vc_sel_last[Flit::NUM_FLIT_TYPES];
+
+  int _vc_sel_last[Flit::NUM_FLIT_TYPES];
+
 
 public:
+
+  static vector<int>  _vc_range_begin;
+  static vector<int>  _vc_range_size;
+
   BufferState( ) { };
   void _Init( const Configuration& config );
 
@@ -69,6 +73,7 @@ public:
   bool IsAvailableFor( int vc = 0 ) const;
 
   int FindAvailable( Flit::FlitType type = Flit::ANY_TYPE );
+  int FindAvailable( int t);
   int Size (int vc = 0) const;
   void Display( ) const;
 };

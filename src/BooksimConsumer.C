@@ -29,6 +29,9 @@ string topo;
   //most transplanted from booksim_main.C
   booksimconfig = new BookSimConfig();
   booksimconfig->ParseFile("/home/qtedq/booksim/gems_interface/testconfig");
+
+  booksimconfig->Assign("limit",(unsigned int)nodes);
+  booksimconfig->Assign("message_classes", (unsigned int)vcc);
   InitializeRoutingMap( );
   
   InitializeTrafficMap( );

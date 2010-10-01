@@ -1,31 +1,31 @@
 // $Id: buffer_state.cpp 2388 2010-08-05 21:36:41Z qtedq $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
-All rights reserved.
+  Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+  All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
+  Redistribution and use in source and binary forms, with or without modification,
+  are permitted provided that the following conditions are met:
 
-Redistributions of source code must retain the above copyright notice, this list
-of conditions and the following disclaimer.
-Redistributions in binary form must reproduce the above copyright notice, this 
-list of conditions and the following disclaimer in the documentation and/or 
-other materials provided with the distribution.
-Neither the name of the Stanford University nor the names of its contributors 
-may be used to endorse or promote products derived from this software without 
-specific prior written permission.
+  Redistributions of source code must retain the above copyright notice, this list
+  of conditions and the following disclaimer.
+  Redistributions in binary form must reproduce the above copyright notice, this 
+  list of conditions and the following disclaimer in the documentation and/or 
+  other materials provided with the distribution.
+  Neither the name of the Stanford University nor the names of its contributors 
+  may be used to endorse or promote products derived from this software without 
+  specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR 
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR 
+  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
+  ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /*buffer_state.cpp
@@ -41,6 +41,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "buffer_state.hpp"
 #include "random_utils.hpp"
+
+vector<int> BufferState::_vc_range_begin(0);
+vector<int> BufferState::_vc_range_size(0);
 
 BufferState::BufferState( const Configuration& config ) :
   Module( )
@@ -72,41 +75,62 @@ void BufferState::_Init( const Configuration& config )
     _tail_sent[v]    = false;
     _cur_occupied[v] = 0;
   }
+  if( BufferState::_vc_range_begin.size() == 0){
+    if(config.GetInt( "use_read_write" )){
+      BufferState::_vc_range_begin[Flit::READ_REQUEST] 
+	= config.GetInt( "read_request_begin_vc" );
+      BufferState::_vc_range_size[Flit::READ_REQUEST] 
+	= _vc_sel_last[Flit::READ_REQUEST] - BufferState::_vc_range_begin[Flit::READ_REQUEST] + 1;
 
-  /* each flit is given a type and these types can only exists in 
-   * specific virtual channels
-   */
-  _vc_range_begin[Flit::READ_REQUEST] 
-    = config.GetInt( "read_request_begin_vc" );
-  _vc_sel_last[Flit::READ_REQUEST]
-    = config.GetInt( "read_request_end_vc" );
-  _vc_range_size[Flit::READ_REQUEST] 
-    = _vc_sel_last[Flit::READ_REQUEST] - _vc_range_begin[Flit::READ_REQUEST] + 1;
+      BufferState::_vc_range_begin[Flit::WRITE_REQUEST] 
+	= config.GetInt( "write_request_begin_vc" );
+      BufferState::_vc_range_size[Flit::WRITE_REQUEST] 
+	= _vc_sel_last[Flit::WRITE_REQUEST] - BufferState::_vc_range_begin[Flit::WRITE_REQUEST] + 1;
 
-  _vc_range_begin[Flit::WRITE_REQUEST] 
-    = config.GetInt( "write_request_begin_vc" );
-  _vc_sel_last[Flit::WRITE_REQUEST]
-    = config.GetInt( "write_request_end_vc" );
-  _vc_range_size[Flit::WRITE_REQUEST] 
-    = _vc_sel_last[Flit::WRITE_REQUEST] - _vc_range_begin[Flit::WRITE_REQUEST] + 1;
+      BufferState::_vc_range_begin[Flit::READ_REPLY] 
+	= config.GetInt( "read_reply_begin_vc" );
+      BufferState::_vc_range_size[Flit::READ_REPLY] 
+	= _vc_sel_last[Flit::READ_REPLY] - BufferState::_vc_range_begin[Flit::READ_REPLY] + 1;
 
-  _vc_range_begin[Flit::READ_REPLY] 
-    = config.GetInt( "read_reply_begin_vc" );
-  _vc_sel_last[Flit::READ_REPLY]
-    = config.GetInt( "read_reply_end_vc" );
-  _vc_range_size[Flit::READ_REPLY] 
-    = _vc_sel_last[Flit::READ_REPLY] - _vc_range_begin[Flit::READ_REPLY] + 1;
-
-  _vc_range_begin[Flit::WRITE_REPLY] 
-    = config.GetInt( "write_reply_begin_vc" );
-  _vc_sel_last[Flit::WRITE_REPLY]
-    = config.GetInt( "write_reply_end_vc" );
-  _vc_range_size[Flit::WRITE_REPLY] 
-    = _vc_sel_last[Flit::WRITE_REPLY] - _vc_range_begin[Flit::WRITE_REPLY] + 1;
-
-  _vc_range_begin[Flit::ANY_TYPE] = 0 ;
-  _vc_range_size[Flit::ANY_TYPE]   = _vcs ;
-  _vc_sel_last[Flit::ANY_TYPE] = _vcs - 1 ;
+      BufferState::_vc_range_begin[Flit::WRITE_REPLY] 
+	= config.GetInt( "write_reply_begin_vc" );
+      BufferState::_vc_range_size[Flit::WRITE_REPLY] 
+	= _vc_sel_last[Flit::WRITE_REPLY] - BufferState::_vc_range_begin[Flit::WRITE_REPLY] + 1;
+    }  else {
+      assert(config.GetInt( "message_classes")*config.GetInt( "routing_classes")*config.GetInt( "vc_per_class")<=_vcs);
+      int vc_per_message = config.GetInt("routing_classes") * config.GetInt("vc_per_class");
+      int vc_start = 0;
+      for(int i = 0; i<config.GetInt( "message_classes"); i++){
+	BufferState::_vc_range_begin.push_back(vc_start) ;
+	vc_start+=vc_per_message;
+	BufferState::_vc_range_size.push_back(vc_per_message) ;
+      }
+    }
+  }
+  
+  //select pointer for the vc within a class
+  if(config.GetInt( "use_read_write" )){
+    _vc_sel_last[Flit::READ_REQUEST]
+      = config.GetInt( "read_request_end_vc" );
+    
+    _vc_sel_last[Flit::WRITE_REQUEST]
+      = config.GetInt( "write_request_end_vc" );
+    
+    _vc_sel_last[Flit::READ_REPLY]
+      = config.GetInt( "read_reply_end_vc" );
+    
+    _vc_sel_last[Flit::WRITE_REPLY]
+      = config.GetInt( "write_reply_end_vc" );
+    
+  }  else {
+    assert(config.GetInt( "message_classes")*config.GetInt( "routing_classes")*config.GetInt( "vc_per_class")<=_vcs);
+    int vc_per_message = config.GetInt("routing_classes") * config.GetInt("vc_per_class");
+    int vc_start = 0;
+    for(int i = 0; i<config.GetInt( "message_classes"); i++){
+      vc_start+=vc_per_message;
+      _vc_sel_last[i] = vc_start-1 ;
+    }
+  }
 }
 
 BufferState::~BufferState( )
@@ -193,15 +217,26 @@ bool BufferState::IsAvailableFor( int vc ) const
 
 int BufferState::FindAvailable( Flit::FlitType type )
 {
-  for (int v = 1; v <= _vc_range_size[type]; ++v) {
-    int vc = _vc_range_begin[type] + (_vc_sel_last[type] + v) % _vc_range_size[type];
-    if ( IsAvailableFor(vc) ) {
+  for (int v = 1; v <= BufferState::_vc_range_size[type]; ++v) {
+    int vc = BufferState::_vc_range_begin[type] + (_vc_sel_last[type] + v) % BufferState::_vc_range_size[type];
+    if ( IsAvailableFor(vc) && !IsFullFor(vc)) {
       _vc_sel_last[type] = vc;
       return vc;
     }
   }
+}
 
-  return -1;
+  int BufferState::FindAvailable( int type )
+{
+  for (int v = 1; v <= BufferState::_vc_range_size[type]; ++v) {
+    int vc = BufferState::_vc_range_begin[type] + (_vc_sel_last[type] + v) % BufferState::_vc_range_size[type];
+    if ( IsAvailableFor(vc) && !IsFullFor(vc)) {
+    _vc_sel_last[type] = vc;
+    return vc;
+  }
+}
+
+return -1;
 }
 
 int BufferState::Size(int vc) const{
@@ -221,7 +256,7 @@ void BufferState::Display( ) const
   }
 
   for ( int f = 0; f < Flit::NUM_FLIT_TYPES; ++f) {
-    cout << "vc_range[" << f << "] = [" << _vc_range_begin[f] 
-	 << "," <<  _vc_range_begin[f] + _vc_range_size[f] - 1 << "]" << endl;
+    cout << "vc_range[" << f << "] = [" << BufferState::_vc_range_begin[f] 
+	 << "," <<  BufferState::_vc_range_begin[f] + BufferState::_vc_range_size[f] - 1 << "]" << endl;
   }
 }

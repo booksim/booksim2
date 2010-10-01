@@ -59,7 +59,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "globals.hpp"
 
 
-
+#include "buffer_state.hpp"
 //#define DEBUG_FATFLY
 
 // Whether we want progressive choice of intermediate destination. If enabled, at every hop until you reach one, you can
@@ -365,6 +365,7 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
   int vcBegin = 0, vcEnd = gNumVCS-1;
   int available_vcs = 0;
   //each class must have ast east 2 vcs assigned or else xy_yx will deadlock
+  /*
   if ( f->type == Flit::READ_REQUEST ) {
     available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
     vcBegin = gReadReqBeginVC;
@@ -381,6 +382,9 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
     available_vcs = gNumVCS;
     vcBegin = 0;
   }
+  */
+  vcBegin = BufferState::_vc_range_begin[f->type];
+  available_vcs = BufferState::_vc_range_size[f->type];
   assert( available_vcs>=2);
   if(f->x_then_y){
     vcEnd   =vcBegin +(available_vcs>>1)-1;
@@ -504,6 +508,7 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
   }
  
   int vcBegin = 0, vcEnd = gNumVCS-1;
+  /*
   if ( f->type == Flit::READ_REQUEST ) {
     vcBegin = gReadReqBeginVC;
     vcEnd   = gReadReqEndVC;
@@ -520,6 +525,9 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
     vcBegin = 0;
     vcEnd   = gNumVCS-1;
   }
+  */
+  vcBegin = BufferState::_vc_range_begin[f->type];
+  vcEnd = vcBegin+ BufferState::_vc_range_size[f->type]-1;
     outputs->AddRange( out_port , vcBegin, vcEnd );
 }
 

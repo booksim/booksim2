@@ -212,8 +212,8 @@ void GEMSTrafficManager::_GeneratePacket( int source, int stype,
       if(gTrace){
 	cout<<"New Flit "<<f->src<<endl;
       }
-      f->type = packet_type;
-
+      //f->type = packet_type;
+      f->type = (Flit::FlitType)f->gems_net;
       if ( i == 0 ) { // Head flit
 	f->head = true;
 	//packets are only generated to nodes smaller or equal to limit
@@ -270,7 +270,7 @@ void GEMSTrafficManager::_GeneratePacket( int source, int stype,
 void GEMSTrafficManager::GemsInject(){
 
   // Receive credits and inject new traffic
-  for ( int input = 0; input < _sources; ++input ) {
+  for ( int input = 0; input < _limit; ++input ) {
     for (int i = 0; i < _duplicate_networks; ++i) {
       Credit * cred = _net[i]->ReadCredit( input );
       if ( cred ) {
@@ -303,9 +303,7 @@ void GEMSTrafficManager::GemsInject(){
       f = _partial_packets[input][c][0].front( );
       if ( f->head && f->vc == -1) {
 	//vc class should already be assigned depending on messagebuffer
-	if ( _buf_states[input][0]->IsAvailableFor( f->gems_net ) ) {
-	  f->vc = f->gems_net;
-	}
+	f->vc =  _buf_states[input][0]->FindAvailable((int)f->gems_net) ;
       }
       
       if ( ( f->vc != -1 ) &&
@@ -369,7 +367,7 @@ void GEMSTrafficManager::_Step( )
 
   for (int i = 0; i < _duplicate_networks; ++i) {
     // Eject traffic and send credits
-    for ( int output = 0; output < _dests; ++output ) {
+    for ( int output = 0; output < _limit; ++output ) {
       Flit * f = _net[i]->ReadFlit( output );
 
       if ( f ) {

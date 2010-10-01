@@ -37,7 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Message.h"
 struct Flit {
 
-  const static int NUM_FLIT_TYPES = 5;
+  const static int NUM_FLIT_TYPES = 10;
   enum FlitType { READ_REQUEST  = 0, 
 		  READ_REPLY    = 1,
 		  WRITE_REQUEST = 2,
