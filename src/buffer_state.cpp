@@ -195,7 +195,7 @@ int BufferState::FindAvailable( Flit::FlitType type )
 {
   for (int v = 1; v <= _vc_range_size[type]; ++v) {
     int vc = _vc_range_begin[type] + (_vc_sel_last[type] + v) % _vc_range_size[type];
-    if ( IsAvailableFor(vc) ) {
+    if ( IsAvailableFor(vc) && !IsFullFor(vc)  ) {
       _vc_sel_last[type] = vc;
       return vc;
     }

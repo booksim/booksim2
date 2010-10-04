@@ -33,7 +33,7 @@
 
 // Flow control
 // Total number of VCs must match the above assignments
-num_vcs     = 16;
+num_vcs     = 8;
 vc_buf_size = 4;
 
 wait_for_tail_credit = 0;
@@ -102,7 +102,7 @@ use_read_write = 0;
 
 //for injection mode
 const_flits_per_packet = 1;
-injection_rate = 0.4;
+injection_rate = 1.4;
 
 //for batch mode
 read_request_size=1;
