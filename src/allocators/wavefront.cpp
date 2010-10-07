@@ -63,8 +63,6 @@ void Wavefront::AddRequest( int in, int out, int label,
 
 void Wavefront::Allocate( )
 {
-  int input;
-  int output;
 
   // Clear matching
 
@@ -92,8 +90,8 @@ void Wavefront::Allocate( )
 
     for ( int p = 0; p < _square; ++p ) {
       for ( int q = 0; q < _square; ++q ) {
-	input = (_pri + p - q + _square) % _square;
-	output = q;
+	int input = (_pri + p - q + _square) % _square;
+	int output = q;
 	
 	if ( ( input < _inputs ) && ( output < _outputs ) && 
 	     ( _inmatch[input] == -1 ) && ( _outmatch[output] == -1 ) &&
