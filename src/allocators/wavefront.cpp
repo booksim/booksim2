@@ -89,29 +89,7 @@ void Wavefront::Allocate( )
   } else {
 
     // otherwise we have to loop through the diagonals of request matrix
-    
-    /*
-    for ( int p = 0; p < _square; ++p ) {
-      output = ( _pri + p ) % _square;
-      
-      // Step through the current diagonal
-      for ( input = 0; input < _inputs; ++input ) {
-	if ( ( output < _outputs ) && 
-	     ( _inmatch[input] == -1 ) && 
-	     ( _outmatch[output] == -1 ) &&
-	     ( _request[input][output].label != -1 ) ) {
-	  // Grant!
-	  _inmatch[input] = output;
-	  _outmatch[output] = input;
-	}
-	
-	output = ( output + 1 ) % _square;
-      }
-    }
-    */
-    
-    // dub: in PPIN, the wavefront allocator actually uses the upward diagonals,
-    // not the downward ones
+
     for ( int p = 0; p < _square; ++p ) {
       for ( int q = 0; q < _square; ++q ) {
 	input = (_pri + p - q + _square) % _square;
