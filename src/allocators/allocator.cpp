@@ -54,21 +54,14 @@ Allocator::Allocator( Module *parent, const string& name,
 		      int inputs, int outputs ) :
   Module( parent, name ), _inputs( inputs ), _outputs( outputs )
 {
- 
   _inmatch  = new int [_inputs];   
   _outmatch = new int [_outputs];
-  _outmask  = new int [_outputs];
-
-  for ( int out = 0; out < _outputs; ++out ) {
-    _outmask[out] = 0; // active
-  }
 }
 
 Allocator::~Allocator( )
 {
   delete [] _inmatch;
   delete [] _outmatch;
-  delete [] _outmask;
 }
 
 void Allocator::_ClearMatching( )
@@ -94,12 +87,6 @@ int Allocator::InputAssigned( int out ) const
   assert( ( out >= 0 ) && ( out < _outputs ) );
 
   return _outmatch[out];
-}
-
-void Allocator::MaskOutput( int out, int mask )
-{
-  assert( ( out >= 0 ) && ( out < _outputs ) );
-  _outmask[out] = mask;
 }
 
 //==================================================
@@ -426,17 +413,12 @@ void SparseAllocator::PrintRequests( ostream * os ) const
   *os << "], output requests = [ ";
   for ( int output = 0; output < _outputs; ++output ) {
     *os << output << " -> ";
-    if ( _outmask[output] == 0 ) {
-      *os << "[ ";
-      for ( iter = _out_req[output].begin( ); 
-	    iter != _out_req[output].end( ); iter++ ) {
-	*os << iter->port << " ";
-      }
-      *os << "]  ";
-    } else {
-      *os << "masked  ";
+    *os << "[ ";
+    for ( iter = _out_req[output].begin( ); 
+	  iter != _out_req[output].end( ); iter++ ) {
+      *os << iter->port << " ";
     }
-    *os << "] ";
+    *os << "]  ";
   }
   *os << "]." << endl;
 }

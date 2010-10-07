@@ -40,12 +40,19 @@ class SelAlloc : public SparseAllocator {
   int *_aptrs;
   int *_gptrs;
 
+  int *_outmask;
+
 public:
   SelAlloc( Module *parent, const string& name,
 	    int inputs, int outputs, int iters );
   ~SelAlloc( );
 
   void Allocate( );
+
+  void MaskOutput( int out, int mask = 1 );
+
+  virtual void PrintRequests( ostream * os = NULL ) const;
+
 };
 
 #endif 

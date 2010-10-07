@@ -45,12 +45,14 @@ SelAlloc::SelAlloc( Module *parent, const string& name,
   _grants = new int [outputs];
   _gptrs  = new int [outputs];
   _aptrs  = new int [inputs];
+  _outmask  = new int [outputs];
 
   for ( int i = 0; i < inputs; ++i ) {
     _aptrs[i] = 0;
   }
   for ( int j = 0; j < outputs; ++j ) {
     _gptrs[j] = 0;
+    _outmask[j] = 0; // active
   }
 }
 
@@ -59,6 +61,7 @@ SelAlloc::~SelAlloc( )
   delete [] _grants;
   delete [] _aptrs;
   delete [] _gptrs;
+  delete [] _outmask;
 }
 
 void SelAlloc::Allocate( )
@@ -230,3 +233,42 @@ void SelAlloc::Allocate( )
   cout << endl;
 #endif 
 }
+
+void SelAlloc::MaskOutput( int out, int mask )
+{
+  assert( ( out >= 0 ) && ( out < _outputs ) );
+  _outmask[out] = mask;
+}
+
+void SelAlloc::PrintRequests( ostream * os ) const
+{
+  list<sRequest>::const_iterator iter;
+  
+  if(!os) os = &cout;
+  
+  *os << "Input requests = [ ";
+  for ( int input = 0; input < _inputs; ++input ) {
+    *os << input << " -> [ ";
+    for ( iter = _in_req[input].begin( ); 
+	  iter != _in_req[input].end( ); iter++ ) {
+      *os << iter->port << " ";
+    }
+    *os << "]  ";
+  }
+  *os << "], output requests = [ ";
+  for ( int output = 0; output < _outputs; ++output ) {
+    *os << output << " -> ";
+    if ( _outmask[output] == 0 ) {
+      *os << "[ ";
+      for ( iter = _out_req[output].begin( ); 
+	    iter != _out_req[output].end( ); iter++ ) {
+	*os << iter->port << " ";
+      }
+      *os << "]  ";
+    } else {
+      *os << "masked  ";
+    }
+  }
+  *os << "]." << endl;
+}
+
