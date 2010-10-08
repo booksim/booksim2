@@ -164,9 +164,9 @@ void IQRouterBaseline::_VCAlloc( )
       
       const OutputSet *route_set    = cur_vc->GetRouteSet( );
       int out_priority = cur_vc->GetPriority( );
-      const list<OutputSet::sSetElement> setlist = route_set ->GetSetList();
+      const set<OutputSet::sSetElement> setlist = route_set ->GetSet();
       //cout<<setlist->size()<<endl;
-      list<OutputSet::sSetElement>::const_iterator iset = setlist.begin( );
+      set<OutputSet::sSetElement>::const_iterator iset = setlist.begin( );
       while(iset!=setlist.end( )){
 	BufferState *dest_vc = _next_vcs[iset->output_port];
 	for ( int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc ) {
@@ -389,8 +389,8 @@ void IQRouterBaseline::_SWAlloc( )
 	      assert( expanded_input == (vc%_input_speedup)*_inputs + input );
 	      
 	      const OutputSet * route_set = cur_vc->GetRouteSet( );
-	      const list<OutputSet::sSetElement> setlist = route_set->GetSetList();
-	      list<OutputSet::sSetElement>::const_iterator iset = setlist.begin( );
+	      const set<OutputSet::sSetElement> setlist = route_set->GetSet();
+	      set<OutputSet::sSetElement>::const_iterator iset = setlist.begin( );
 	      while(iset!=setlist.end( )){
 		BufferState * dest_vc = _next_vcs[iset->output_port];
 		bool do_request = false;
@@ -398,7 +398,6 @@ void IQRouterBaseline::_SWAlloc( )
 		// check if any suitable VCs are available
 	
 		for ( int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc ) {
-		  int vc_prio = iset->pri;
 		  if(!do_request && 
 		     ((_speculative < 3) || dest_vc->IsAvailableFor(out_vc))) {
 		    do_request = true;

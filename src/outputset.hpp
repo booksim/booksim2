@@ -31,8 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _OUTPUTSET_HPP_
 #define _OUTPUTSET_HPP_
 
-#include <queue>
-#include <list>
+#include <set>
 
 class OutputSet {
 
@@ -44,6 +43,7 @@ public:
     int pri;
     int output_port;
   };
+
   OutputSet( int num_outputs );
   ~OutputSet( );
 
@@ -55,13 +55,18 @@ public:
   bool OutputEmpty( int output_port ) const;
   int NumVCs( int output_port ) const;
   
-  const list<sSetElement> & GetSetList() const;
+  const set<sSetElement> & GetSet() const;
 
   int  GetVC( int output_port,  int vc_index, int *pri = 0 ) const;
   bool GetPortVC( int *out_port, int *out_vc ) const;
 private:
-  list<sSetElement> _outputs;
+  set<sSetElement> _outputs;
 };
+
+inline bool operator<(const OutputSet::sSetElement & se1, 
+	       const OutputSet::sSetElement & se2) {
+  return se1.pri > se2.pri; // higher priorities first!
+}
 
 #endif
 
