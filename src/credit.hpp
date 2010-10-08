@@ -31,12 +31,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _CREDIT_HPP_
 #define _CREDIT_HPP_
 
+#include <vector>
+
 class Credit {
 public:
   Credit( int max_vcs = 1 );
   ~Credit( );
 
-  int  *vc;
+  vector<int> vc;
   int  vc_cnt;
   bool head, tail;
   int  id;

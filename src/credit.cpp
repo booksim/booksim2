@@ -38,7 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Credit::Credit( int max_vcs )
 {
-  vc = new int [max_vcs];
+  vc.resize(max_vcs);
   vc_cnt = 0;
 
   tail = false;
@@ -48,5 +48,4 @@ Credit::Credit( int max_vcs )
 
 Credit::~Credit( )
 {
-  delete [] vc;
 }
