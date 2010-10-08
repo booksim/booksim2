@@ -34,9 +34,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 
 class Credit {
+
 public:
+
+  void Reset();
+  
   Credit( int max_vcs = 1 );
-  ~Credit( );
 
   vector<int> vc;
   int  vc_cnt;

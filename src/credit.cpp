@@ -39,13 +39,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Credit::Credit( int max_vcs )
 {
   vc.resize(max_vcs);
-  vc_cnt = 0;
+  Reset();
+}
 
+void Credit::Reset( )
+{
+  vc_cnt = 0;
   tail = false;
   id   = -1;
   dest_router = -1;
-}
-
-Credit::~Credit( )
-{
 }

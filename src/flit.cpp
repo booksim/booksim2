@@ -54,33 +54,7 @@ ostream& operator<<( ostream& os, const Flit& f )
 
 Flit::Flit() 
 {  
-  type      = ANY_TYPE ;
-  vc        = -1 ;
-  head      = false ;
-  tail      = false ;
-  true_tail = false ;
-  time      = -1 ;
-  ttime     = -1 ;
-  atime     = -1 ;
-  sn        = 0 ;
-  rob_time  = 0 ;
-  id        = -1 ;
-  pid       = -1 ;
-  hops      = 0 ;
-  watch     = false ;
-  record    = false ;
-  intm = 0;
-  src = -1;
-  dest = -1;
-  pri = 0;
-  intm =-1;
-  ph = -1;
-  dr = -1;
-  minimal = 1;
-  ring_par = -1;
-  x_then_y = -1;
-  data = 0;
-  from_router = -1;
+  Reset();
 }  
 
 void Flit::Reset() 

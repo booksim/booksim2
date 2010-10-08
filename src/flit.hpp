@@ -34,7 +34,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include <iostream>
 
-struct Flit {
+class Flit {
+
+public:
 
   const static int NUM_FLIT_TYPES = 5;
   enum FlitType { READ_REQUEST  = 0, 
@@ -89,9 +91,11 @@ struct Flit {
   // Fields for arbitrary data
   void* data ;
 
+  void Reset();
+
   // Constructor
   Flit() ;
-  void Reset();
+
 };
 
 ostream& operator<<( ostream& os, const Flit& f );
