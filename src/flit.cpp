@@ -107,7 +107,7 @@ void Flit::Free() {
 }
 
 void Flit::FreePool() {
-  while(_pool.empty()) {
+  while(!_pool.empty()) {
     delete _pool.top();
     _pool.pop();
   }
