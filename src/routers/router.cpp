@@ -92,7 +92,7 @@ Router::~Router( )
 
 Credit *Router::_NewCredit( int vcs )
 {
-  Credit *c = Credit::New(vcs);
+  return Credit::New(vcs);
 }
 
 void Router::_RetireCredit( Credit *c )
