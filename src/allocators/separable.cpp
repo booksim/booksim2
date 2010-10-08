@@ -51,40 +51,38 @@ SeparableAllocator::SeparableAllocator( Module* parent, const string& name,
   : Allocator( parent, name, inputs, outputs )
 {
   
-  _requests  = new vector<sRequest> [inputs] ;
+  _requests.resize(inputs) ;
   
-  _input_arb = new Arbiter*[inputs];
-  _output_arb = new Arbiter*[outputs];
-  
-  ostringstream arb_name;
-  
+  _input_arb.resize(inputs);
+
   for (int i = 0; i < inputs; ++i) {
-    arb_name << "arb_i" << i;
+    ostringstream arb_name("arb_i");
+    arb_name << i;
     _input_arb[i] = Arbiter::NewArbiter(this, arb_name.str(), arb_type, outputs);
-    arb_name.str("");
   }
+
+  _output_arb.resize(outputs);
+
   for (int i = 0; i < outputs; ++i) {
-    arb_name << "arb_o" << i;
+    ostringstream arb_name("arb_o");
+    arb_name << i;
     _output_arb[i] = Arbiter::NewArbiter(this, arb_name.str( ), arb_type, inputs);
-    arb_name.str("");
   }
   
   Clear() ;
+
 }
 
 SeparableAllocator::~SeparableAllocator() {
 
-  delete[] _requests ;
-
   for (int i = 0; i < _inputs; ++i) {
     delete _input_arb[i];
   }
-  delete[] _input_arb ;
 
   for (int i = 0; i < _outputs; ++i) {
     delete _output_arb[i];
   }
-  delete[] _output_arb ;
+
 }
 
 void SeparableAllocator::Clear() {

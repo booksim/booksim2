@@ -38,19 +38,15 @@ LOA::LOA( Module *parent, const string& name,
 	  int inputs, int outputs ) :
   DenseAllocator( parent, name, inputs, outputs )
 {
-  _req    = new int [inputs];
-  _counts = new int [outputs];
+  _req.resize(inputs);
+  _counts.resize(outputs);
 
-  _rptr   = new int [inputs];
-  _gptr   = new int [outputs];
+  _rptr.resize(inputs);
+  _gptr.resize(outputs);
 }
 
 LOA::~LOA( )
 {
-  delete [] _req;
-  delete [] _counts;
-  delete [] _rptr;
-  delete [] _gptr;
 }
 
 void LOA::Allocate( )
@@ -66,16 +62,13 @@ void LOA::Allocate( )
 
   // Clear matching
 
+  _ClearMatching();
+
   // Count phase --- the number of requests
   // per output is counted
 
-  for ( int i = 0; i < _inputs; ++i ) {
-    _inmatch[i] = -1;
-  }
   for ( int j = 0; j < _outputs; ++j ) {
-    _outmatch[j] = -1;
-    _counts[j]   = 0;
-
+    _counts[j] = 0;
     for ( int i = 0; i < _inputs; ++i ) {
       _counts[j] += ( _request[i][j].label != -1 ) ? 1 : 0;
     }

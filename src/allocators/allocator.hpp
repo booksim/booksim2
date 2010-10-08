@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 #include <list>
+#include <vector>
 
 #include "module.hpp"
 #include "config_utils.hpp"
@@ -42,8 +43,8 @@ protected:
   const int _inputs;
   const int _outputs;
 
-  int *_inmatch;
-  int *_outmatch;
+  vector<int> _inmatch;
+  vector<int> _outmatch;
 
   void _ClearMatching( );
 public:

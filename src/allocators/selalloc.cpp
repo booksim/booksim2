@@ -42,26 +42,14 @@ SelAlloc::SelAlloc( Module *parent, const string& name,
 {
   _iter = iters;
 
-  _grants = new int [outputs];
-  _gptrs  = new int [outputs];
-  _aptrs  = new int [inputs];
-  _outmask  = new int [outputs];
-
-  for ( int i = 0; i < inputs; ++i ) {
-    _aptrs[i] = 0;
-  }
-  for ( int j = 0; j < outputs; ++j ) {
-    _gptrs[j] = 0;
-    _outmask[j] = 0; // active
-  }
+  _grants.resize(outputs);
+  _gptrs.resize(outputs, 0);
+  _aptrs.resize(inputs, 0);
+  _outmask.resize(outputs, 0);
 }
 
 SelAlloc::~SelAlloc( )
 {
-  delete [] _grants;
-  delete [] _aptrs;
-  delete [] _gptrs;
-  delete [] _outmask;
 }
 
 void SelAlloc::Allocate( )
@@ -81,9 +69,7 @@ void SelAlloc::Allocate( )
 
   _ClearMatching( );
 
-  for ( int i = 0; i < _outputs; ++i ) {
-    _grants[i] = -1;
-  }
+  _grants.assign(_outputs, -1);
 
   for ( int iter = 0; iter < _iter; ++iter ) {
     // Grant phase

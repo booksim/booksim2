@@ -31,12 +31,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _PIM_HPP_
 #define _PIM_HPP_
 
+#include <vector>
+
 #include "allocator.hpp"
 
 class PIM : public DenseAllocator {
   int _PIM_iter;
 
-  int *_grants;
+  vector<int> _grants;
 public:
   PIM( Module *parent, const string& name,
        int inputs, int outputs, int iters );

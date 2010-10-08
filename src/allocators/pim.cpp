@@ -41,12 +41,11 @@ PIM::PIM( Module *parent, const string& name,
   DenseAllocator( parent, name, inputs, outputs ),
   _PIM_iter(iters)
 {
-  _grants = new int [outputs];
+  _grants.resize(outputs);
 }
 
 PIM::~PIM( )
 {
-  delete [] _grants;
 }
 
 void PIM::Allocate( )

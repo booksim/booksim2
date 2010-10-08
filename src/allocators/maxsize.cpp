@@ -72,7 +72,7 @@ MaxSizeMatch::MaxSizeMatch( Module *parent, const string& name,
 			    int inputs, int outputs ) :
   DenseAllocator( parent, name, inputs, outputs )
 {
-  _from = new int [outputs];
+  _from.resize(outputs);
   _s    = new int [inputs];
   _ns   = new int [inputs];
   _prio = 0;
@@ -80,20 +80,16 @@ MaxSizeMatch::MaxSizeMatch( Module *parent, const string& name,
 
 MaxSizeMatch::~MaxSizeMatch( )
 {
-  delete [] _from;
   delete [] _s;
   delete [] _ns;
 }
 
 void MaxSizeMatch::Allocate( )
 {
+
   // clear matching
-  for ( int i = 0; i < _inputs; ++i ) {
-    _inmatch[i] = -1;
-  }
-  for ( int j = 0; j < _outputs; ++j ) {
-    _outmatch[j] = -1;
-  }
+
+  _ClearMatching();
 
   // augment as many times as possible 
   // (this is an O(N^3) maximum-size matching algorithm)
@@ -108,7 +104,6 @@ bool MaxSizeMatch::_ShortestAugmenting( )
 {
   int i, j, jn;
   int slen, nslen;
-  int *t;
 
   // start with empty stack
   slen = 0;
@@ -119,8 +114,9 @@ bool MaxSizeMatch::_ShortestAugmenting( )
     if ( _inmatch[j] == -1 ) { // start with unmatched left nodes
       _s[slen++] = j;
     }
-    _from[j] = -1;
   }
+
+  _from.assign(_inputs, -1);
 
   for ( int iter = 0; iter < _inputs; iter++ ) {
     nslen = 0;
@@ -153,7 +149,7 @@ bool MaxSizeMatch::_ShortestAugmenting( )
     }
 
     // no augmenting path found yet, swap stacks
-    t = _s;
+    int * t = _s;
     _s = _ns;
     _ns = t;
     slen = nslen;

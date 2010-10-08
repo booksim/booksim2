@@ -66,12 +66,7 @@ void Wavefront::Allocate( )
 
   // Clear matching
 
-  for ( int i = 0; i < _inputs; ++i ) {
-    _inmatch[i] = -1;
-  }
-  for ( int j = 0; j < _outputs; ++j ) {
-    _outmatch[j] = -1;
-  }
+  _ClearMatching();
 
   if(_num_requests == 0)
 

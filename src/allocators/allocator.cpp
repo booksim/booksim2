@@ -54,25 +54,18 @@ Allocator::Allocator( Module *parent, const string& name,
 		      int inputs, int outputs ) :
   Module( parent, name ), _inputs( inputs ), _outputs( outputs )
 {
-  _inmatch  = new int [_inputs];   
-  _outmatch = new int [_outputs];
+  _inmatch.resize(_inputs);   
+  _outmatch.resize(_outputs);
 }
 
 Allocator::~Allocator( )
 {
-  delete [] _inmatch;
-  delete [] _outmatch;
 }
 
 void Allocator::_ClearMatching( )
 {
-  for ( int i = 0; i < _inputs; ++i ) {
-    _inmatch[i] = -1;
-  }
-
-  for ( int j = 0; j < _outputs; ++j ) {
-    _outmatch[j] = -1;
-  }
+  _inmatch.assign(_inputs, -1);
+  _outmatch.assign(_outputs, -1);
 }
 
 int Allocator::OutputAssigned( int in ) const

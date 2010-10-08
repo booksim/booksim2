@@ -47,12 +47,12 @@ class SeparableAllocator : public Allocator {
   
 protected:
 
-  int* _matched ;
+  vector<int> _matched ;
 
-  Arbiter** _input_arb ;
-  Arbiter** _output_arb ;
+  vector<Arbiter*> _input_arb ;
+  vector<Arbiter*> _output_arb ;
 
-  vector<sRequest>* _requests ;
+  vector<vector<sRequest> > _requests ;
 
 public:
   

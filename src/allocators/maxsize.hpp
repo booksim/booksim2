@@ -31,10 +31,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MAXSIZE_HPP_
 #define _MAXSIZE_HPP_
 
+#include <vector>
+
 #include "allocator.hpp"
 
 class MaxSizeMatch : public DenseAllocator {
-  int *_from;   // array to hold breadth-first tree
+  vector<int> _from;   // array to hold breadth-first tree
   int *_s;      // stack of leaf nodes in tree
   int *_ns;     // next stack
   int _prio;    // priority pointer to ensure fairness

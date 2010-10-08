@@ -31,16 +31,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _SELALLOC_HPP_
 #define _SELALLOC_HPP_
 
+#include <vector>
+
 #include "allocator.hpp"
 
 class SelAlloc : public SparseAllocator {
   int _iter;
 
-  int *_grants;
-  int *_aptrs;
-  int *_gptrs;
+  vector<int> _grants;
+  vector<int> _aptrs;
+  vector<int> _gptrs;
 
-  int *_outmask;
+  vector<int> _outmask;
 
 public:
   SelAlloc( Module *parent, const string& name,

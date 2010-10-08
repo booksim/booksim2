@@ -31,14 +31,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _LOA_HPP_
 #define _LOA_HPP_
 
+#include <vector>
+
 #include "allocator.hpp"
 
 class LOA : public DenseAllocator {
-  int *_counts;
-  int *_req;
+  vector<int> _counts;
+  vector<int> _req;
 
-  int *_rptr;
-  int *_gptr;
+  vector<int> _rptr;
+  vector<int> _gptr;
 
 public:
   LOA( Module *parent, const string& name,
