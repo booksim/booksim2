@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "booksim.hpp"
 #include <iostream>
+#include <limits>
 
 #include "wavefront.hpp"
 #include "random_utils.hpp"
@@ -43,8 +44,10 @@ Wavefront::Wavefront( Module *parent, const string& name,
 		      int inputs, int outputs ) :
   DenseAllocator( parent, name, inputs, outputs ),
   _pri(0), _num_requests(0), _last_in(-1), _last_out(-1),
-  _square((inputs > outputs) ? inputs : outputs)
+   _square((inputs > outputs) ? inputs : outputs), 
+   _max_prio(numeric_limits<int>::min())
 {
+
 }
 
 void Wavefront::AddRequest( int in, int out, int label, 
@@ -57,6 +60,10 @@ void Wavefront::AddRequest( int in, int out, int label,
     _num_requests++;
     _last_in = in;
     _last_out = out;
+    if(in_pri > _max_prio) {
+      _pri = (in + out) % _square;
+      _max_prio = in_pri;
+    }
   }
   DenseAllocator::AddRequest(in, out, label, in_pri, out_pri);
 }
@@ -105,6 +112,10 @@ void Wavefront::Allocate( )
   
   // Round-robin the priority diagonal
   _pri = ( _pri + 1 ) % _square;
+
+  // reset maximum priority
+  _max_prio = numeric_limits<int>::min();
+
 }
 
 

@@ -31,6 +31,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _WAVEFRONT_HPP_
 #define _WAVEFRONT_HPP_
 
+#include <vector>
+
 #include "allocator.hpp"
 
 class Wavefront : public DenseAllocator {
@@ -39,6 +41,8 @@ class Wavefront : public DenseAllocator {
   int _num_requests;
   int _last_in;
   int _last_out;
+
+  int _max_prio;
 
 public:
   Wavefront( Module *parent, const string& name,
