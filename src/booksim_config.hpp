@@ -51,7 +51,7 @@ class PowerConfig : public Configuration {
 public:
   PowerConfig( );
   //used for GUI
-  virtual vector< pair<string, vector< string> > > *GetImportantMap() {}
+    virtual vector< pair<string, vector< string> > > *GetImportantMap() { return NULL; }
 };
 
 #endif

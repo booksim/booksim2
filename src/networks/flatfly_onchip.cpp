@@ -489,11 +489,11 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
   outputs->Clear( );
   int dest  = flatfly_transformation(f->dest);
   int targetr= (int)(dest/gC);
-  int xdest = ((int)(dest/gC)) % gK;
-  int xcurr = ((r->GetID())) % gK;
+  //int xdest = ((int)(dest/gC)) % gK;
+  //int xcurr = ((r->GetID())) % gK;
 
-  int ydest = ((int)(dest/gC)) / gK;
-  int ycurr = ((r->GetID())) / gK;
+  //int ydest = ((int)(dest/gC)) / gK;
+  //int ycurr = ((r->GetID())) / gK;
 
   int out_port = -1;
 
