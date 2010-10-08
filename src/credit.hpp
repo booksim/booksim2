@@ -32,14 +32,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _CREDIT_HPP_
 
 #include <vector>
+#include <stack>
 
 class Credit {
 
 public:
-
-  void Reset();
-  
-  Credit( int max_vcs = 1 );
 
   vector<int> vc;
   int  vc_cnt;
@@ -47,6 +44,19 @@ public:
   int  id;
   //where this credit should be processed
   int dest_router;
+
+  void Reset(int max_vcs = 1);
+  
+  static Credit * New(int max_vcs = 1);
+  void Free();
+  static void FreePool();
+
+private:
+
+  static stack<Credit *> _pool;
+
+  Credit( int max_vcs = 1 );
+
 };
 
 #endif

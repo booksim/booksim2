@@ -367,7 +367,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
 TrafficManager::~TrafficManager( )
 {
-  _flit_pool.clear();
 
   for ( int s = 0; s < _sources; ++s ) {
     for (int a = 0; a < _duplicate_networks; ++a) {
@@ -415,6 +414,9 @@ TrafficManager::~TrafficManager( )
   if(gWatchOut && (gWatchOut != &cout)) delete gWatchOut;
   if(_stats_out && (_stats_out != &cout)) delete _stats_out;
   if(_flow_out && (_flow_out != &cout)) delete _flow_out;
+
+  Flit::FreePool();
+  Credit::FreePool();
 }
 
 
@@ -464,13 +466,7 @@ int TrafficManager::DivisionAlgorithm (int packet_type) {
 
 Flit *TrafficManager::_NewFlit( )
 {
-  Flit * f;
-  if(_flit_pool.empty()) {
-    f = new Flit;
-  } else {
-    f = _flit_pool.back();
-    _flit_pool.pop_back();
-  }
+  Flit * f = Flit::New();
   f->id    = _cur_id;
   _total_in_flight_flits[_cur_id] = f;
   f->watch = gWatchOut && (_flits_to_watch.count(_cur_id) > 0);
@@ -600,8 +596,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     for(multimap<int, Flit *>::iterator iter = res.first; iter != res.second; ++iter) {
       assert(iter->second->pid == fpid);
       //reset the flit and back to the poool
-      iter->second->Reset();
-      _flit_pool.push_back(iter->second);
+      iter->second->Free();
     }
     _total_in_flight_packets.erase(fpid);
 
@@ -854,7 +849,7 @@ void TrafficManager::_BatchInject(){
       Credit * cred = _net[i]->ReadCredit( input );
       if ( cred ) {
         _buf_states[input][i]->ProcessCredit( cred );
-        delete cred;
+        cred->Free();
       }
     }
     
@@ -960,7 +955,7 @@ void TrafficManager::_NormalInject(){
       Credit * cred = _net[i]->ReadCredit( input );
       if ( cred ) {
         _buf_states[input][i]->ProcessCredit( cred );
-        delete cred;
+        cred->Free();
       }
     }
     
@@ -1120,7 +1115,7 @@ void TrafficManager::_Step( )
 		      << "Injecting credit for VC " << f->vc << "." << endl;
         }
       
-        Credit * cred = new Credit( 1 );
+        Credit * cred = Credit::New(1);
         cred->vc[0] = f->vc;
         cred->vc_cnt = 1;
 	cred->dest_router = f->from_router;

@@ -65,8 +65,6 @@ protected:
   vector<Network *> _net;
   vector<vector<Router *> > _router_map;
 
-  vector <Flit *> _flit_pool;
-
   // ============ Message priorities ============ 
 
   enum ePriority { class_based, age_based, network_age_based, local_age_based, queue_length_based, hop_count_based, sequence_based, none };

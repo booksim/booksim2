@@ -92,15 +92,12 @@ Router::~Router( )
 
 Credit *Router::_NewCredit( int vcs )
 {
-  Credit *c;
-
-  c = new Credit( vcs );
-  return c;
+  Credit *c = Credit::New(vcs);
 }
 
 void Router::_RetireCredit( Credit *c )
 {
-  delete c;
+  c->Free();
 }
 
 void Router::AddInputChannel( FlitChannel *channel, CreditChannel *backchannel )

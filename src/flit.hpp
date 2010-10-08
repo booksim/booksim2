@@ -31,8 +31,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _FLIT_HPP_
 #define _FLIT_HPP_
 
-#include "booksim.hpp"
 #include <iostream>
+#include <stack>
+
+#include "booksim.hpp"
 
 class Flit {
 
@@ -93,8 +95,15 @@ public:
 
   void Reset();
 
-  // Constructor
-  Flit() ;
+  static Flit * New();
+  void Free();
+  static void FreePool();
+
+private:
+
+  Flit();
+
+  static stack<Flit *> _pool;
 
 };
 
