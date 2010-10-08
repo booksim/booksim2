@@ -47,11 +47,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _dests   = _net[0]->NumDests( );
   _routers = _net[0]->NumRouters( );
 
-  Flit* ftemp = new Flit[  _sources ];
-  for(int i = 0; i<  _sources ; i++){
-    _flit_pool.push_back(&ftemp[i]);
-  }
-
   //nodes higher than limit do not produce or receive packets
   //for default limit = sources
 
@@ -469,15 +464,13 @@ int TrafficManager::DivisionAlgorithm (int packet_type) {
 
 Flit *TrafficManager::_NewFlit( )
 {
-  if(_flit_pool.empty()){
-    Flit* ftemp = new Flit[  _sources ];
-    for(int i = 0; i<  _sources ; i++){
-      _flit_pool.push_back(&ftemp[i]);
-    }
+  Flit * f;
+  if(_flit_pool.empty()) {
+    f = new Flit;
+  } else {
+    f = _flit_pool.back();
+    _flit_pool.pop_back();
   }
-  //the constructor should initialize everything
-  Flit * f = _flit_pool.back();
-  _flit_pool.pop_back();
   f->id    = _cur_id;
   _total_in_flight_flits[_cur_id] = f;
   f->watch = gWatchOut && (_flits_to_watch.count(_cur_id) > 0);
