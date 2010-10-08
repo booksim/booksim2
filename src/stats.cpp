@@ -48,7 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Stats::Stats( Module *parent, const string &name,
 	      double bin_size, int num_bins ) :
   Module( parent, name ),
-   _num_bins( num_bins ), _bin_size( bin_size ), _hist(_num_bins, 0), _num_samples(0), _sample_sum(0.0), _min(numeric_limits<double>::max()), _max(numeric_limits<double>::min())
+   _num_bins( num_bins ), _bin_size( bin_size ), _hist(_num_bins, 0), _num_samples(0), _sample_sum(0.0), _min(numeric_limits<double>::max()), _max(-numeric_limits<double>::max())
 {
 
 }
@@ -61,7 +61,7 @@ void Stats::Clear( )
   _hist.assign(_num_bins, 0);
 
   _min = numeric_limits<double>::max();
-  _max = numeric_limits<double>::min();
+  _max = -numeric_limits<double>::max();
   
   //  _reset = true;
 }
@@ -98,8 +98,13 @@ void Stats::AddSample( double val )
   _num_samples++;
   _sample_sum += val;
 
-  _max = fmax(val, _max);
-  _min = fmin(val, _min);
+  if(_num_samples == 0) {
+    _min = val;
+    _max = val;
+  } else {
+    if(val > _max) _max = val;
+    if(val < _min) _min = val;
+  }
 
   //double clamp between 0 and num_bins-1
   b = (int)fmax(floor( val / _bin_size ), 0.0);
