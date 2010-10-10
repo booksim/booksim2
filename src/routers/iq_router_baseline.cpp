@@ -492,10 +492,10 @@ void IQRouterBaseline::_SWAlloc( )
 	cur_vc = _vc[input][vc];
 	
 	if ( cur_vc->Empty( ) ) { // Cancel held match if VC is empty
-	  expanded_output = -1;
 	  _switch_hold_in[expanded_input]   = -1;
 	  _switch_hold_vc[expanded_input]   = -1;
 	  _switch_hold_out[expanded_output] = -1;
+	  expanded_output = -1;
 	}
       } else {
 	expanded_output = _sw_allocator->OutputAssigned( expanded_input );
