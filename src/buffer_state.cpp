@@ -63,19 +63,17 @@ void BufferState::_Init( const Configuration& config )
   _wait_for_tail_credit = config.GetInt( "wait_for_tail_credit" );
   _vc_busy_when_full = config.GetInt( "vc_busy_when_full" );
 
-  _in_use       = new bool [_vcs];
-  _tail_sent    = new bool [_vcs];
-  _cur_occupied = new int  [_vcs];
-
-  for ( int v = 0; v < _vcs; ++v ) {
-    _in_use[v]       = false;
-    _tail_sent[v]    = false;
-    _cur_occupied[v] = 0;
-  }
+  _in_use.resize(_vcs, false);
+  _tail_sent.resize(_vcs, false);
+  _cur_occupied.resize(_vcs, 0);
 
   /* each flit is given a type and these types can only exists in 
    * specific virtual channels
    */
+  _vc_range_begin.resize(Flit::NUM_FLIT_TYPES);
+  _vc_sel_last.resize(Flit::NUM_FLIT_TYPES);
+  _vc_range_size.resize(Flit::NUM_FLIT_TYPES);
+
   _vc_range_begin[Flit::READ_REQUEST] 
     = config.GetInt( "read_request_begin_vc" );
   _vc_sel_last[Flit::READ_REQUEST]
@@ -111,12 +109,6 @@ void BufferState::_Init( const Configuration& config )
 
 BufferState::~BufferState( )
 {
-
-  //depending on network channel latency, curr_occupied may not be all zero upon simulation completion
-  //simulations stops after the last outstanding flit received, not the last outstanding credit.
-  delete [] _in_use;
-  delete [] _tail_sent;
-  delete [] _cur_occupied;
 }
 
 void BufferState::ProcessCredit( Credit *c )

@@ -31,6 +31,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _BUFFER_STATE_HPP_
 #define _BUFFER_STATE_HPP_
 
+#include <vector>
+
 #include "module.hpp"
 #include "flit.hpp"
 #include "credit.hpp"
@@ -43,13 +45,13 @@ class BufferState : public Module {
   int  _buf_size;
   int  _vcs;
 
-  bool *_in_use;
-  bool *_tail_sent;
-  int  *_cur_occupied;
+  vector<bool> _in_use;
+  vector<bool> _tail_sent;
+  vector<int> _cur_occupied;
 
-  int  _vc_range_begin[Flit::NUM_FLIT_TYPES];
-  int  _vc_range_size[Flit::NUM_FLIT_TYPES];
-  int  _vc_sel_last[Flit::NUM_FLIT_TYPES];
+  vector<int> _vc_range_begin;
+  vector<int> _vc_range_size;
+  vector<int> _vc_sel_last;
 
 public:
   BufferState( ) { };
