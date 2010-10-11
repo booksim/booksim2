@@ -209,9 +209,6 @@ protected:
   int _cur_pid;
   int _time;
 
-  list<Flit *> _used_flits;
-  list<Flit *> _free_flits;
-
   tTrafficFunction  _traffic_function;
   tRoutingFunction  _routing_function;
   tInjectionProcess _injection_process;
