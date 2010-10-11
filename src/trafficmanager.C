@@ -1227,7 +1227,7 @@ int TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, d
     *avg += stats[d]->Average( );
   }
 
-  *avg /= (double)_dests;
+  *avg /= (double)_limit;
 
   return dmin;
 }

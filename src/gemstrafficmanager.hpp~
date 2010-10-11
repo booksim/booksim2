@@ -52,17 +52,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "Consumer.h"
 
+
+#include "Global.h"
 class InjectConsumer : public Consumer{
   
 public:
-  InjectConsumer(){
-    
+  static bool trigger_wakeup;
+  Consumer * parent;
+  InjectConsumer(Consumer* p){
+    parent = p;
   }
   ~InjectConsumer(){
     
   }
   void wakeup(){
-    
+    if(trigger_wakeup){
+      g_eventQueue_ptr->scheduleEvent(parent, 1);
+      InjectConsumer::trigger_wakeup = false;
+    }
   }
   void print(ostream& out) const{
     
@@ -85,16 +92,22 @@ protected:
   virtual int  _IssuePacket( int source, int cl );
   virtual void _GeneratePacket( int source, int size, int cl, int time );
 
+
   void GemsInject();
 public:
   GEMSTrafficManager(  const Configuration &config, const vector<BSNetwork *> & net , int vcc);
   ~GEMSTrafficManager( );
   
 
+
+
+  void DisplayStats();
   void _Step( );
   void RegisterMessageBuffers(  Vector<Vector<MessageBuffer*> >* in,   Vector<Vector<MessageBuffer*> >* out);
   
 
+private:
+  int flit_size;
 };
 
 #endif

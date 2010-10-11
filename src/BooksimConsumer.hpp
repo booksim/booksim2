@@ -31,6 +31,7 @@ private:
   GEMSTrafficManager* manager;
   Configuration* booksimconfig;
   vector<BSNetwork*> net;
+  int next_report_time;
 };
 #endif
 

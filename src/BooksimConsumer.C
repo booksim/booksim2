@@ -28,7 +28,7 @@ BooksimConsumer::BooksimConsumer(int nodes, int vcc){
 string topo;
   //most transplanted from booksim_main.C
   booksimconfig = new BookSimConfig();
-  booksimconfig->ParseFile("/home/qtedq/booksim/gems_interface/testconfig");
+  booksimconfig->ParseFile("/home/qtedq/bsuptodate/tags/gems_interface/testconfig");
 
   booksimconfig->Assign("limit",(unsigned int)nodes);
   booksimconfig->Assign("message_classes", (unsigned int)vcc);
@@ -96,10 +96,13 @@ string topo;
   manager = new GEMSTrafficManager( *booksimconfig, net ,vcc) ;
 
   //  g_eventQueue_ptr->scheduleEvent(this, 1); // Execute in the next cycle.
+
+  next_report_time = 100000;
+
 }
 
 BooksimConsumer::~BooksimConsumer(){
-  delete manager;
+  // delete manager;
   delete net[0];
   delete booksimconfig;
 
@@ -108,6 +111,10 @@ BooksimConsumer::~BooksimConsumer(){
 void BooksimConsumer::wakeup(){
 
 
+  if(manager->getNetworkTime()>next_report_time){
+    manager->DisplayStats();
+    next_report_time=manager->getNetworkTime()+100000;
+  }
   
   manager->_Step();
   if(manager->inflight()){
@@ -123,6 +130,9 @@ void BooksimConsumer::print(ostream& out) const{
 
 void BooksimConsumer::printStats(ostream& out) const{
   //make a call to the network since there is no traffic mananger class?
+
+  out<<"BookismConsumer: FU you I don't print stats here\n";
+  manager->DisplayStats();
 }
 
 void BooksimConsumer::printConfig(ostream& out) const{

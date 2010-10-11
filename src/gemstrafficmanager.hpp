@@ -92,18 +92,25 @@ protected:
   virtual int  _IssuePacket( int source, int cl );
   virtual void _GeneratePacket( int source, int size, int cl, int time );
 
+
   void GemsInject();
 public:
   GEMSTrafficManager(  const Configuration &config, const vector<BSNetwork *> & net , int vcc);
   ~GEMSTrafficManager( );
   
 
+
+
+  void DisplayStats();
   void _Step( );
   void RegisterMessageBuffers(  Vector<Vector<MessageBuffer*> >* in,   Vector<Vector<MessageBuffer*> >* out);
   
-
+  inline int getNetworkTime(){
+    return _network_time;
+  }
 private:
   int flit_size;
+  int _network_time;
 };
 
 #endif

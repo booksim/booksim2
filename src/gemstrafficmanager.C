@@ -45,22 +45,31 @@ GEMSTrafficManager::GEMSTrafficManager(  const Configuration &config, const vect
   vc_ptrs = new int[ _sources ];
   memset(vc_ptrs,0, _sources *sizeof(int));
   flit_size = config.GetInt("channel_width");
+  _network_time = 0;
 }
 
-GEMSTrafficManager::~GEMSTrafficManager( )
-{
+void GEMSTrafficManager::DisplayStats(){
   int  total_phases  = 0;
   double cur_latency = _latency_stats[0]->Average( );
   int dmin;
   double min, avg;
   dmin = _ComputeStats( _accepted_flits, &avg, &min );
   double cur_accepted = avg;
+  _time =  g_eventQueue_ptr->getTime();
+  
+  cout << "I think time is\t"<<_network_time<<endl;
+  cout << "Real ruby time is\t"<< _time<<endl; 
   cout << "Minimum latency = " << _latency_stats[0]->Min( ) << endl;
   cout << "Average latency = " << cur_latency << endl;
   cout << "Maximum latency = " << _latency_stats[0]->Max( ) << endl;
   cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
-  cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
+  cout << "Accepted packets = " << min << " at node " << dmin << " (avg nonzero = " << avg << ")" << endl;
+  cout << "Packet count = "<< _latency_stats[0]->NumSamples( )<<endl;
+  cout << "Hop average = "<<_hop_stats->Average( )<<endl;
   if(_stats_out) {
+
+    *_stats_out << "%==============================================\n";
+    *_stats_out <<"time = "<<_time<<";"<<endl;
     *_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
 		<< "lat_hist(" << total_phases + 1 << ",:) = "
 		<< *_latency_stats[0] << ";" << endl
@@ -98,6 +107,10 @@ GEMSTrafficManager::~GEMSTrafficManager( )
     }
     *_stats_out << "];" << endl;
   }
+}
+
+GEMSTrafficManager::~GEMSTrafficManager( )
+{
 
 }
 
@@ -347,6 +360,8 @@ void GEMSTrafficManager::GemsInject(){
 void GEMSTrafficManager::_Step( )
 {
 
+  _time=g_eventQueue_ptr->getTime();
+
   GemsInject();
   
   //advance networks
@@ -407,9 +422,9 @@ void GEMSTrafficManager::_Step( )
       _router_map[i][j]->ResetFlitStats();
     }
   }
-  ++_time;
-  if(_time%100000==0){
-    cout<<"heart beat "<<_time<<" "<<endl;
+  ++_network_time;
+  if(_network_time%100000==0){
+    cout<<"heart beat "<<_network_time<<" "<<endl;
   }
   if(gTrace){
     cout<<"TIME "<<_time<<endl;
