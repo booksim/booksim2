@@ -38,8 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "routefunc.hpp"
 #include "config_utils.hpp"
 
-class VCRouter;
-
 class VC : public Module {
 public:
   enum eVCState { state_min = 0, idle = state_min, routing, vc_alloc, active, 
