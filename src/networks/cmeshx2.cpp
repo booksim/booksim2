@@ -105,6 +105,7 @@ CMeshX2::~CMeshX2( )
   if ( _subMesh[0] ) delete _subMesh[0];
   if ( _subMesh[1] ) delete _subMesh[1];
   if ( _f_read_history ) delete _f_read_history;
+  if ( _c_read_history ) delete _c_read_history;
 }
 
 void CMeshX2::_ComputeSize(const Configuration & config ) 
