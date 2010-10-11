@@ -154,7 +154,7 @@ void ChaosRouter::ReadInputs( )
   Credit *c;
 
   for ( int input = 0; input < _inputs; ++input ) { 
-    f = (*_input_channels)[input]->Receive();
+    f = _input_channels[input]->Receive();
 
     if ( f ) {
       _input_frame[input].push( f );
@@ -232,7 +232,7 @@ void ChaosRouter::ReadInputs( )
   // Process incoming credits
 
   for ( int output = 0; output < _outputs; ++output ) {
-    c = (*_output_credits)[output]->Receive();
+    c = _output_credits[output]->Receive();
     
     if ( c ) {
       _next_queue_cnt[output]--;
@@ -675,11 +675,11 @@ void ChaosRouter::_SendFlits( )
 
     if ( ( _next_queue_cnt[output] < _buffer_size ) &&
 	 ( !_output_frame[output].empty( ) ) ) {
-      (*_output_channels)[output]->Send( _output_frame[output].front( ) );
+      _output_channels[output]->Send( _output_frame[output].front( ) );
       _output_frame[output].pop( );
       ++_next_queue_cnt[output];
     } else {
-      (*_output_channels)[output]->Send(0);
+      _output_channels[output]->Send(0);
     }
   }
 }
@@ -695,7 +695,7 @@ void ChaosRouter::_SendCredits( )
     } else {
       c = 0;
     }
-    (*_input_credits)[input]->Send( c );
+    _input_credits[input]->Send( c );
 
   }
 }

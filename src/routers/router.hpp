@@ -59,11 +59,11 @@ protected:
   
   int _credit_delay;
   
-  vector<FlitChannel *>   *_input_channels;
-  vector<CreditChannel *> *_input_credits;
-  vector<FlitChannel *>   *_output_channels;
-  vector<CreditChannel *> *_output_credits;
-  vector<bool>            *_channel_faults;
+  vector<FlitChannel *>   _input_channels;
+  vector<CreditChannel *> _input_credits;
+  vector<FlitChannel *>   _output_channels;
+  vector<CreditChannel *> _output_credits;
+  vector<bool>            _channel_faults;
 
   Credit *_NewCredit( int vcs = 1 );
   void    _RetireCredit( Credit *c );

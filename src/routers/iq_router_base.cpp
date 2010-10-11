@@ -168,7 +168,7 @@ void IQRouterBase::_ReceiveFlits( )
   Flit *f;
   bufferMonitor.cycle() ;
   for ( int input = 0; input < _inputs; ++input ) { 
-    f = (*_input_channels)[input]->Receive();
+    f = _input_channels[input]->Receive();
     if ( f ) {
       ++_received_flits[input];
       VC * cur_vc = _vc[input][f->vc];
@@ -212,7 +212,7 @@ void IQRouterBase::_ReceiveCredits( )
   Credit *c;
 
   for ( int output = 0; output < _outputs; ++output ) {  
-    c = (*_output_credits)[output]->Receive();
+    c = _output_credits[output]->Receive();
     if ( c ) {
       _next_vcs[output]->ProcessCredit( c );
       delete c;
@@ -313,7 +313,7 @@ void IQRouterBase::_SendFlits( )
       f = 0;
     }
     if(gTrace && f){cout<<"Outport "<<output<<endl;cout<<"Stop Mark"<<endl;}
-    (*_output_channels)[output]->Send( f );
+    _output_channels[output]->Send( f );
   }
 }
 
@@ -329,7 +329,7 @@ void IQRouterBase::_SendCredits( )
       c = 0;
     }
 
-    (*_input_credits)[input]->Send( c );
+    _input_credits[input]->Send( c );
   }
 }
 

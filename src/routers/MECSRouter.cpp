@@ -81,8 +81,8 @@ MECSRouter::~MECSRouter(){
 
 void MECSRouter::AddInputChannel( FlitChannel *channel, CreditChannel *backchannel)
 {
-  _input_channels->push_back( channel );
-  _input_credits->push_back( backchannel );
+  _input_channels.push_back( channel );
+  _input_credits.push_back( backchannel );
 
   //need to properly set source and sink in the future
   if(channel){
@@ -92,8 +92,8 @@ void MECSRouter::AddInputChannel( FlitChannel *channel, CreditChannel *backchann
 
 void MECSRouter::AddInputChannel( FlitChannel *channel, CreditChannel *backchannel , int dir)
 {
-  _input_channels->push_back( channel );
-  _input_credits->push_back( backchannel );
+  _input_channels.push_back( channel );
+  _input_credits.push_back( backchannel );
 
  //need to properly set source and sink in the future
   if(channel){
@@ -123,11 +123,11 @@ void MECSRouter::AddInputChannel( FlitChannel *channel, CreditChannel *backchann
 
 void MECSRouter::AddOutputChannel( FlitChannel *channel, CreditChannel *backchannel )
 {
-  _output_channels->push_back( channel );
-  _output_credits->push_back( backchannel );
+  _output_channels.push_back( channel );
+  _output_credits.push_back( backchannel );
   
   //need to properly set source and sink in the future
-  _channel_faults->push_back( false );
+  _channel_faults.push_back( false );
   if(channel)
     channel->SetSource( this ) ;
 }
@@ -280,18 +280,18 @@ void MECSRouter::WriteOutputs( ) {
 void MECSRouter::Finalize(){
   for( int i = 0; i<_inputs; i++){
     if(i<gK){
-      sub_router->AddInputChannel(_input_channels->at(i), _input_credits->at(i));
+      sub_router->AddInputChannel(_input_channels.at(i), _input_credits.at(i));
     } else {
 
-      sub_router->AddInputChannel(_input_channels->at(i), _output_credits->at(i));
+      sub_router->AddInputChannel(_input_channels.at(i), _output_credits.at(i));
     }
   }
 
   for(int i = 0; i<_outputs; i++){
     if(i<gK){
-      sub_router->AddOutputChannel(_output_channels->at(i), _output_credits->at(i));
+      sub_router->AddOutputChannel(_output_channels.at(i), _output_credits.at(i));
     } else {
-      sub_router->AddOutputChannel(_output_channels->at(i), _input_credits->at(i));
+      sub_router->AddOutputChannel(_output_channels.at(i), _input_credits.at(i));
     }
   }
 }

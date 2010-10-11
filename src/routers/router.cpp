@@ -68,26 +68,10 @@ Router::Router( const Configuration& config,
   _credit_delay     = config.GetInt( "credit_delay" );
   _input_speedup    = config.GetInt( "input_speedup" );
   _output_speedup   = config.GetInt( "output_speedup" );
-
-  _input_channels = new vector<FlitChannel *>;
-  _input_credits  = new vector<CreditChannel *>;
-
-  _output_channels = new vector<FlitChannel *>;
-  _output_credits  = new vector<CreditChannel *>;
-
-  _channel_faults  = new vector<bool>;
-
- 
-
 }
 
 Router::~Router( )
 {
-  delete _input_channels;
-  delete _input_credits;
-  delete _output_channels;
-  delete _output_credits;
-  delete _channel_faults;
 }
 
 Credit *Router::_NewCredit( int vcs )
@@ -102,16 +86,16 @@ void Router::_RetireCredit( Credit *c )
 
 void Router::AddInputChannel( FlitChannel *channel, CreditChannel *backchannel )
 {
-  _input_channels->push_back( channel );
-  _input_credits->push_back( backchannel );
+  _input_channels.push_back( channel );
+  _input_credits.push_back( backchannel );
   channel->SetSink( this ) ;
 }
 
 void Router::AddOutputChannel( FlitChannel *channel, CreditChannel *backchannel )
 {
-  _output_channels->push_back( channel );
-  _output_credits->push_back( backchannel );
-  _channel_faults->push_back( false );
+  _output_channels.push_back( channel );
+  _output_credits.push_back( backchannel );
+  _channel_faults.push_back( false );
   channel->SetSource( this ) ;
 }
 
@@ -123,16 +107,16 @@ int Router::GetID( ) const
 
 void Router::OutChannelFault( int c, bool fault )
 {
-  assert( ( c >= 0 ) && ( (unsigned int)c < _channel_faults->size( ) ) );
+  assert( ( c >= 0 ) && ( (unsigned int)c < _channel_faults.size( ) ) );
 
-  (*_channel_faults)[c] = fault;
+  _channel_faults[c] = fault;
 }
 
 bool Router::IsFaultyOutput( int c ) const
 {
-  assert( ( c >= 0 ) && ( (unsigned int)c < _channel_faults->size( ) ) );
+  assert( ( c >= 0 ) && ( (unsigned int)c < _channel_faults.size( ) ) );
 
-  return (*_channel_faults)[c];
+  return _channel_faults[c];
 }
 
 /*Router constructor*/
