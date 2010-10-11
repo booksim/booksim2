@@ -230,7 +230,6 @@ protected:
   virtual Flit *_NewFlit( );
   virtual void _RetireFlit( Flit *f, int dest );
 
-  void _FirstStep( );
   void _NormalInject();
   void _BatchInject();
   void _Step( );

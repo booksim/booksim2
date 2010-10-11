@@ -823,24 +823,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   ++_cur_pid;
 }
 
-
-
-
-
-void TrafficManager::_FirstStep( )
-{  
-  
-  // Ensure that all outputs are defined before starting simulation
-  for (int i = 0; i < _duplicate_networks; ++i) { 
-    _net[i]->WriteOutputs( );
-  
-    for ( int output = 0; output < _net[i]->NumDests( ); ++output ) {
-      _net[i]->WriteCredit( 0, output );
-    }
-  }
-  
-}
-
 void TrafficManager::_BatchInject(){
   
   // Receive credits and inject new traffic
@@ -1650,8 +1632,6 @@ bool TrafficManager::_SingleSim( )
 
 bool TrafficManager::Run( )
 {
-  //      _FirstStep( );
-  
   for ( int sim = 0; sim < _total_sims; ++sim ) {
     if ( !_SingleSim( ) ) {
       cout << "Simulation unstable, ending ..." << endl;
