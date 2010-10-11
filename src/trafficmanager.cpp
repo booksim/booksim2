@@ -1082,6 +1082,9 @@ void TrafficManager::_Step( )
   //advance networks
   for (int i = 0; i < _duplicate_networks; ++i) {
     _net[i]->ReadInputs( );
+  }
+
+  for (int i = 0; i < _duplicate_networks; ++i) {
     _partial_internal_cycles[i] += _internal_speedup;
     while( _partial_internal_cycles[i] >= 1.0 ) {
       _net[i]->InternalStep( );
