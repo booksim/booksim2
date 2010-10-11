@@ -62,12 +62,13 @@ ChaosRouter::ChaosRouter( const Configuration& config,
 
   _rf = GetRoutingFunction( config );
 
-  _input_route = new OutputSet * [_inputs];
-  _mq_route    = new OutputSet * [_multi_queue_size];
+  _input_route.resize(_inputs);
 
   for ( i = 0; i < _inputs; ++i ) {
     _input_route[i] = new OutputSet( _outputs );
   }
+
+  _mq_route.resize(_multi_queue_size);
 
   for ( i = 0; i < _multi_queue_size; ++i ) {
     _mq_route[i] = new OutputSet( _outputs );
@@ -81,34 +82,23 @@ ChaosRouter::ChaosRouter( const Configuration& config,
 
   // Input and output queues
 
-  _input_frame  = new queue<Flit *> [_inputs];
-  _output_frame = new queue<Flit *> [_outputs]; 
-  _multi_queue  = new queue<Flit *> [_multi_queue_size];
+  _input_frame.resize(_inputs);
+  _output_frame.resize(_outputs); 
+  _multi_queue.resize(_multi_queue_size);
   
-  _credit_queue  = new queue<Credit *> [_inputs];
+  _credit_queue.resize(_inputs);
 
-  _input_state        = new eQState [_inputs];
-  _input_output_match = new int [_inputs];
-  _input_mq_match     = new int [_inputs];
+  _input_state.resize(_inputs, empty);
+  _input_output_match.resize(_inputs, -1);
+  _input_mq_match.resize(_inputs, -1);
 
-  _output_matched     = new bool [_outputs];
-  _next_queue_cnt     = new int [_outputs];
+  _output_matched.resize(_outputs, false);
+  _next_queue_cnt.resize(_outputs, 0);
 
-  for ( i = 0; i < _inputs; ++i ) {
-    _input_state[i]        = empty;
-    _input_output_match[i] = -1;
-    _input_mq_match[i]     = -1;
-  }
-
-  for ( i = 0; i < _outputs; ++i ) {
-    _output_matched[i] = false;
-    _next_queue_cnt[i] = 0;
-  }
-
-  _multi_match = new int  [_multi_queue_size];
-  _mq_age      = new int  [_multi_queue_size];
-  _mq_matched  = new bool [_multi_queue_size];
-  _multi_state = new eQState [_multi_queue_size];
+  _multi_match.resize(_multi_queue_size, -1);
+  _mq_age.resize(_multi_queue_size);
+  _mq_matched.resize(_multi_queue_size, false);
+  _multi_state.resize(_multi_queue_size, empty);
 
   for ( i = 0; i < _multi_queue_size; ++i ) {
     _multi_state[i] = empty;
@@ -123,19 +113,6 @@ ChaosRouter::~ChaosRouter( )
 
   delete _crossbar_pipe;
 
-  delete [] _input_frame;
-  delete [] _multi_queue;
-  delete [] _output_frame;
-  delete [] _credit_queue;
-  delete [] _input_state;
-  delete [] _input_output_match;
-  delete [] _input_mq_match;
-  delete [] _multi_match;
-  delete [] _output_matched;
-  delete [] _mq_age;
-  delete [] _mq_matched;
-  delete [] _multi_state;
-
   for ( i = 0; i < _inputs; ++i ) {
     delete _input_route[i];
   }
@@ -143,9 +120,6 @@ ChaosRouter::~ChaosRouter( )
   for ( i = 0; i < _multi_queue_size; ++i ) {
     delete _mq_route[i];
   }
-
-  delete [] _input_route;
-  delete [] _mq_route;
 }
   
 void ChaosRouter::ReadInputs( )
