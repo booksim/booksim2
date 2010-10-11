@@ -42,20 +42,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "buffer_state.hpp"
 #include "random_utils.hpp"
 
-BufferState::BufferState( const Configuration& config ) :
-  Module( )
-{
-  _Init( config );
-}
-
 BufferState::BufferState( const Configuration& config, 
 			  Module *parent, const string& name ) : 
   Module( parent, name )
-{
-  _Init( config );
-}
-
-void BufferState::_Init( const Configuration& config )
 {
   _buf_size     = config.GetInt( "vc_buf_size" );
   _vcs          = config.GetInt( "num_vcs" );
@@ -105,10 +94,6 @@ void BufferState::_Init( const Configuration& config )
   _vc_range_begin[Flit::ANY_TYPE] = 0 ;
   _vc_range_size[Flit::ANY_TYPE]   = _vcs ;
   _vc_sel_last[Flit::ANY_TYPE] = _vcs - 1 ;
-}
-
-BufferState::~BufferState( )
-{
 }
 
 void BufferState::ProcessCredit( Credit *c )

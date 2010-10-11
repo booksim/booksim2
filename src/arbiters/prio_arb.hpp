@@ -56,7 +56,6 @@ public:
   PriorityArbiter( const Configuration &config,
 		   Module *parent, const string& name,
 		   int inputs );
-  ~PriorityArbiter( );
 
   void Clear( );
 

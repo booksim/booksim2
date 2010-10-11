@@ -45,10 +45,6 @@ LOA::LOA( Module *parent, const string& name,
   _gptr.resize(outputs);
 }
 
-LOA::~LOA( )
-{
-}
-
 void LOA::Allocate( )
 {
   int input;

@@ -69,10 +69,6 @@ Router::Router( const Configuration& config,
   _output_speedup   = config.GetInt( "output_speedup" );
 }
 
-Router::~Router( )
-{
-}
-
 Credit *Router::_NewCredit( int vcs )
 {
   return Credit::New(vcs);

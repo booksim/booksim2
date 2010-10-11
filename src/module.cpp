@@ -40,21 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include "module.hpp"
 
-Module::Module( )
-{
-}
-
 Module::Module( Module *parent, const string& name )
-{
-  SetName( parent, name );
-}
-
-void Module::_AddChild( Module *child )
-{
-  _children.push_back( child );
-}
-
-void Module::SetName( Module *parent, const string& name )
 {
   _name = name;
 
@@ -64,6 +50,11 @@ void Module::SetName( Module *parent, const string& name )
   } else {
     _fullname = name;
   }
+}
+
+void Module::_AddChild( Module *child )
+{
+  _children.push_back( child );
 }
 
 void Module::DisplayHierarchy( int level ) const

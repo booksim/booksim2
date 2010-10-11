@@ -47,7 +47,6 @@ class SelAlloc : public SparseAllocator {
 public:
   SelAlloc( Module *parent, const string& name,
 	    int inputs, int outputs, int iters );
-  ~SelAlloc( );
 
   void Allocate( );
 

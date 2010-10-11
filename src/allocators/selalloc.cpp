@@ -48,10 +48,6 @@ SelAlloc::SelAlloc( Module *parent, const string& name,
   _outmask.resize(outputs, 0);
 }
 
-SelAlloc::~SelAlloc( )
-{
-}
-
 void SelAlloc::Allocate( )
 {
   int input;

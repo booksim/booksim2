@@ -45,7 +45,6 @@ class LOA : public DenseAllocator {
 public:
   LOA( Module *parent, const string& name,
        int inputs, int outputs );
-  ~LOA( );
 
   void Allocate( );
 };

@@ -80,13 +80,8 @@ private:
 
 public:
   
-  VC() {}; // jbalfour: hack for GCC 3.4.4+
-  void _Init( const Configuration& config, int outputs );
-
-  VC( const Configuration& config, int outputs );
   VC( const Configuration& config, int outputs,
       Module *parent, const string& name );
-  ~VC( );
 
   bool AddFlit( Flit *f );
   Flit *FrontFlit( );

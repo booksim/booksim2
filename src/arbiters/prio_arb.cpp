@@ -37,13 +37,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 PriorityArbiter::PriorityArbiter( const Configuration &config,
 				  Module *parent, const string& name,
 				  int inputs ) 
-  : Module( parent, name ), _inputs( inputs )
+: Module( parent, name ), _inputs( inputs ), _rr_ptr(0)
 {
-  _rr_ptr = 0;
-}
 
-PriorityArbiter::~PriorityArbiter( )
-{
 }
 
 void PriorityArbiter::Clear( )

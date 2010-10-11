@@ -47,12 +47,9 @@ protected:
   void _AddChild( Module *child );
 
 public:
-  Module( );
   Module( Module *parent, const string& name );
   virtual ~Module( ) { }
   
-  void SetName( Module *parent, const string& name );
-
   inline const string & Name() const { return _name; }
   inline const string & FullName() const { return _fullname; }
 

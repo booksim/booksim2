@@ -37,6 +37,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _ARBITER_HPP_
 #define _ARBITER_HPP_
 
+#include <vector>
+
 #include "module.hpp"
 
 class Arbiter : public Module {
@@ -49,7 +51,7 @@ protected:
     int pri ;
   } entry_t ;
   
-  entry_t* _request ;
+  vector<entry_t> _request ;
   int  _input_size ;
 
   int  _last_req ;
@@ -61,7 +63,6 @@ public:
   int  _num_reqs ;
   // Constructors
   Arbiter( Module *parent, const string &name, int size ) ;
-  virtual ~Arbiter() ;
   
   // Print priority matrix to standard output
   virtual void PrintState() const = 0 ;

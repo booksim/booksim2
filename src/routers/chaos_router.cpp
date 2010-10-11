@@ -65,13 +65,13 @@ ChaosRouter::ChaosRouter( const Configuration& config,
   _input_route.resize(_inputs);
 
   for ( i = 0; i < _inputs; ++i ) {
-    _input_route[i] = new OutputSet( _outputs );
+    _input_route[i] = new OutputSet( );
   }
 
   _mq_route.resize(_multi_queue_size);
 
   for ( i = 0; i < _multi_queue_size; ++i ) {
-    _mq_route[i] = new OutputSet( _outputs );
+    _mq_route[i] = new OutputSet( );
   }				       
 
   // Alloc pipelines (to simulate processing/transmission delays)

@@ -54,13 +54,9 @@ class BufferState : public Module {
   vector<int> _vc_sel_last;
 
 public:
-  BufferState( ) { };
-  void _Init( const Configuration& config );
 
-  BufferState( const Configuration& config );
   BufferState( const Configuration& config, 
 	       Module *parent, const string& name );
-  ~BufferState( );
 
   void ProcessCredit( Credit *c );
   void SendingFlit( Flit *f );

@@ -69,13 +69,9 @@ private:
   vector<eNextVCState> _state;
 
 public:
-  EventNextVCState() { };
-  void _Init( const Configuration& config );
 
-  EventNextVCState( const Configuration& config );
   EventNextVCState( const Configuration& config, 
 		    Module *parent, const string& name );
-  ~EventNextVCState( );
 
   eNextVCState GetState( int vc ) const;
   int GetPresence( int vc ) const;

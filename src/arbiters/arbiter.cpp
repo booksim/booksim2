@@ -45,17 +45,11 @@ using namespace std ;
 
 Arbiter::Arbiter( Module *parent, const string &name, int size )
   : Module( parent, name ),
-    _input_size(size), _request(0), _num_reqs(0), _last_req(-1), _best_input(-1), _highest_pri(numeric_limits<int>::min())
+    _input_size(size), _num_reqs(0), _last_req(-1), _best_input(-1), _highest_pri(numeric_limits<int>::min())
 {
-  _request = new entry_t[size];
+  _request.resize(size);
   for ( int i = 0 ; i < size ; i++ ) 
     _request[i].valid = false ;
-}
-
-Arbiter::~Arbiter()
-{
-  if ( _request ) 
-    delete[] _request ;
 }
 
 void Arbiter::AddRequest( int input, int id, int pri )

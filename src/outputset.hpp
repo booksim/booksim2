@@ -44,9 +44,6 @@ public:
     int output_port;
   };
 
-  OutputSet( int num_outputs );
-  ~OutputSet( );
-
   void Clear( );
   void Add( int output_port, int vc, int pri = 0 );
   void AddRange( int output_port, int vc_start, int vc_end, int pri = 0 );

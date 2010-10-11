@@ -65,9 +65,8 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   for ( int i = 0; i < _inputs; ++i ) {
     _vc[i].resize(_vcs);
     for (int j = 0; j < _vcs; ++j ) {
-      _vc[i][j] = new VC(config, _outputs);
       vc_name << "vc_i" << i << "_v" << j;
-      _vc[i][j]->SetName( this, vc_name.str( ) );
+      _vc[i][j] = new VC(config, _outputs, this, vc_name.str( ) );
       vc_name.str("");
     }
   }
@@ -75,9 +74,8 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   // Alloc next VCs' buffer state
   _next_vcs.resize(_outputs);
   for (int j = 0; j < _outputs; ++j) {
-    _next_vcs[j] = new BufferState( config );
     vc_name << "next_vc_o" << j;
-    _next_vcs[j]->SetName( this, vc_name.str( ) );
+    _next_vcs[j] = new BufferState( config, this, vc_name.str( ) );
     vc_name.str("");
   }
 

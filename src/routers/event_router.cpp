@@ -765,20 +765,9 @@ void EventRouter::Display( ) const
   }
 }
 
-EventNextVCState::EventNextVCState( const Configuration& config ) :
-  Module( )
-{
-  _Init( config );
-}
-
 EventNextVCState::EventNextVCState( const Configuration& config, 
 				    Module *parent, const string& name ) :
   Module( parent, name )
-{
-  _Init( config );
-}
-
-void EventNextVCState::_Init( const Configuration& config )
 {
   _buf_size = config.GetInt( "vc_buf_size" );
   _vcs      = config.GetInt( "num_vcs" );
@@ -789,10 +778,6 @@ void EventNextVCState::_Init( const Configuration& config )
   _inputVC.resize(_vcs);
   _waiting.resize(_vcs);
   _state.resize(_vcs, idle);
-}
-
-EventNextVCState::~EventNextVCState( )
-{
 }
 
 EventNextVCState::eNextVCState EventNextVCState::GetState( int vc ) const

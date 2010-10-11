@@ -41,16 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "outputset.hpp"
 
-OutputSet::OutputSet( int num_outputs )
-{
-  _outputs.clear();
-}
-
-OutputSet::~OutputSet( )
-{
-  _outputs.clear( );
-}
-
 void OutputSet::Clear( )
 {
   _outputs.clear( );

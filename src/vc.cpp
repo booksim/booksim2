@@ -56,31 +56,16 @@ VC::state_info_t VC::state_info[] = {{0},
 				     {0}};
 int VC::occupancy = 0;
 
-VC::VC( const Configuration& config, int outputs ) :
-  Module( )
-{
-  _Init( config, outputs );
-}
-
 VC::VC( const Configuration& config, int outputs, 
 	Module *parent, const string& name ) :
   Module( parent, name )
 {
-  _Init( config, outputs );
-}
-
-VC::~VC( )
-{
-}
-
-void VC::_Init( const Configuration& config, int outputs )
-{
   _state      = idle;
   _state_time = 0;
 
-  _size = int( config.GetInt( "vc_buf_size" ) );
+  _size = config.GetInt( "vc_buf_size" );
 
-  _route_set = new OutputSet( outputs );
+  _route_set = new OutputSet( );
 
   _total_cycles    = 0;
   _vc_alloc_cycles = 0;
