@@ -63,33 +63,31 @@ EventRouter::EventRouter( const Configuration& config,
 
   // Alloc VC's
 
-  _vc = new VC * [_inputs];
+  _vc.resize(_inputs);
 
   for ( int i = 0; i < _inputs; ++i ) {
-    _vc[i] = new VC [_vcs];
+    _vc[i].resize(_vcs);
 
     for ( int v = 0; v < _vcs; ++v ) { // Name the vc modules
-      _vc[i]->_Init( config, _outputs );
       module_name << "vc_i" << i << "_v" << v;
-      _vc[i][v].SetName( this, module_name.str( ) );
+      _vc[i][v] = new VC( config, _outputs, this, module_name.str( ) );
       module_name.seekp( 0, ios::beg );
     }
   }
 
   // Alloc next VCs' state
 
-  _output_state = new EventNextVCState [_outputs];
+  _output_state.resize(_outputs);
 
   for ( int o = 0; o < _outputs; ++o ) {
-    _output_state[o]._Init( config );
     module_name << "output" << o << "_vc_state";
-    _output_state[o].SetName( this, module_name.str( ) );
+    _output_state[o] = new EventNextVCState(config, this, module_name.str());
     module_name.seekp( 0, ios::beg );
   }
 
   // Alloc arbiters
 
-  _arrival_arbiter = new PriorityArbiter * [_outputs];
+  _arrival_arbiter.resize(_outputs);
 
   for ( int o = 0; o < _outputs; ++o ) {
     module_name << "arrival_arb_output" << o;
@@ -98,7 +96,7 @@ EventRouter::EventRouter( const Configuration& config,
     module_name.seekp( 0, ios::beg );
   }
 
-  _transport_arbiter = new PriorityArbiter * [_inputs];
+  _transport_arbiter.resize(_inputs);
 
   for ( int i = 0; i < _inputs; ++i ) {
     module_name << "transport_arb_input" << i;
@@ -123,34 +121,32 @@ EventRouter::EventRouter( const Configuration& config,
 
   // Queues
 
-  _input_buffer  = new queue<Flit *> [_inputs]; 
-  _output_buffer = new queue<Flit *> [_outputs]; 
+  _input_buffer.resize(_inputs); 
+  _output_buffer.resize(_outputs); 
 
-  _in_cred_buffer  = new queue<Credit *> [_inputs]; 
-  _out_cred_buffer = new queue<Credit *> [_outputs];
+  _in_cred_buffer.resize(_inputs); 
+  _out_cred_buffer.resize(_outputs);
 
-  _arrival_queue   = new queue<tArrivalEvent *> [_inputs];
-  _transport_queue = new queue<tTransportEvent *> [_outputs];
+  _arrival_queue.resize(_inputs);
+  _transport_queue.resize(_outputs);
 
   // Misc.
 
-  _transport_free  = new bool [_inputs];
-  _transport_match = new int  [_inputs];
-
-  for ( int i = 0; i < _inputs; ++i ) {
-    _transport_free[i]  = true;
-    _transport_match[i] = -1;
-  }
+  _transport_free.resize(_inputs, true);
+  _transport_match.resize(_inputs, -1);
 }
 
 EventRouter::~EventRouter( )
 {
   for ( int i = 0; i < _inputs; ++i ) {
-    delete [] _vc[i];
+    for ( int v = 0; v < _vcs; ++v ) {
+      delete _vc[i][v];
+    }
   }
 
-  delete [] _vc;
-  delete [] _output_state;
+  for ( int o = 0; o < _outputs; ++o ) {
+    delete _output_state[o];
+  }
 
   for ( int o = 0; o < _outputs; ++o ) {
     delete _arrival_arbiter[o];
@@ -160,24 +156,9 @@ EventRouter::~EventRouter( )
     delete _transport_arbiter[i];
   }
 
-  delete [] _arrival_arbiter;
-  delete [] _transport_arbiter;
-
   delete _crossbar_pipe;
   delete _credit_pipe;
   delete _arrival_pipe;
-
-  delete [] _input_buffer;
-  delete [] _output_buffer;
-
-  delete [] _in_cred_buffer;
-  delete [] _out_cred_buffer;
-
-  delete [] _arrival_queue;
-  delete [] _transport_queue;
-
-  delete [] _transport_free;
-  delete [] _transport_match;
 }
   
 void EventRouter::ReadInputs( )
@@ -279,21 +260,21 @@ void EventRouter::_ProcessWaiting( int output, int out_vc )
 
   EventNextVCState::tWaiting *w;
 
-  if ( _output_state[output].IsWaiting( out_vc ) ) {
+  if ( _output_state[output]->IsWaiting( out_vc ) ) {
 	    
     // State remains as busy, but the waiting VC takes over
-    w = _output_state[output].PopWaiting( out_vc );
+    w = _output_state[output]->PopWaiting( out_vc );
     
-    _output_state[output].SetState( out_vc, EventNextVCState::busy );
-    _output_state[output].SetInput( out_vc, w->input );
-    _output_state[output].SetInputVC( out_vc, w->vc );
+    _output_state[output]->SetState( out_vc, EventNextVCState::busy );
+    _output_state[output]->SetInput( out_vc, w->input );
+    _output_state[output]->SetInputVC( out_vc, w->vc );
 
     if ( w->watch ) {
       cout << "Dequeuing waiting arrival event at " << FullName() 
 	   << " for flit " << w->id << endl;
     }
     
-    credits = _output_state[output].GetCredits( out_vc );
+    credits = _output_state[output]->GetCredits( out_vc );
 
     // Try to queue a transmit event for a waiting packet
     if ( credits > 0 ) {
@@ -312,19 +293,19 @@ void EventRouter::_ProcessWaiting( int output, int out_vc )
       }
       
       credits--;
-      _output_state[output].SetCredits( out_vc, credits );
-      _output_state[output].SetPresence( out_vc, w->pres - 1 );
+      _output_state[output]->SetCredits( out_vc, credits );
+      _output_state[output]->SetPresence( out_vc, w->pres - 1 );
       
     } else {
       // No credits available, just store presence
-      _output_state[output].SetPresence( out_vc, w->pres );
+      _output_state[output]->SetPresence( out_vc, w->pres );
     }
 
     delete w;
 
   } else {
     // Tail sent, none waiting => VC is idle
-    _output_state[output].SetState( out_vc, EventNextVCState::idle );
+    _output_state[output]->SetState( out_vc, EventNextVCState::idle );
   }
 }
 
@@ -342,7 +323,7 @@ void EventRouter::_IncomingFlits( )
       f = _input_buffer[input].front( );
       _input_buffer[input].pop( );
 
-      cur_vc = &_vc[input][f->vc];
+      cur_vc = _vc[input][f->vc];
 
       if ( !cur_vc->AddFlit( f ) ) {
 	cout << "Error processing flit:" << endl << *f;
@@ -443,12 +424,12 @@ void EventRouter::_SendTransport( int input, int output, tArrivalEvent *aevt )
   int credits;
   int pres;
 
-  credits = _output_state[output].GetCredits( aevt->dst_vc );
+  credits = _output_state[output]->GetCredits( aevt->dst_vc );
   
   if ( credits > 0 ) {
     // Take a credit and queue a transport event
     credits--;
-    _output_state[output].SetCredits( aevt->dst_vc, credits );
+    _output_state[output]->SetCredits( aevt->dst_vc, credits );
     
     tevt         = new tTransportEvent;
     tevt->src_vc = aevt->src_vc;
@@ -470,8 +451,8 @@ void EventRouter::_SendTransport( int input, int output, tArrivalEvent *aevt )
     }
     
     // No credits available, just store presence
-    pres = _output_state[output].GetPresence( aevt->dst_vc );
-    _output_state[output].SetPresence( aevt->dst_vc, pres + 1 );
+    pres = _output_state[output]->GetPresence( aevt->dst_vc );
+    _output_state[output]->SetPresence( aevt->dst_vc, pres + 1 );
   }
 }
 
@@ -499,10 +480,10 @@ void EventRouter::_ArrivalArb( int output )
     } 
         
     EventNextVCState::eNextVCState state = 
-      _output_state[output].GetState( c->vc[0] );
+      _output_state[output]->GetState( c->vc[0] );
     
-    credits = _output_state[output].GetCredits( c->vc[0] );
-    pres    = _output_state[output].GetPresence( c->vc[0] );
+    credits = _output_state[output]->GetCredits( c->vc[0] );
+    pres    = _output_state[output]->GetPresence( c->vc[0] );
       
     if ( _vct ) {
       // In cut-through mode, only head credits indicate a change in 
@@ -510,12 +491,12 @@ void EventRouter::_ArrivalArb( int output )
 
       if ( c->head ) {
 	credits++;
-	_output_state[output].SetCredits( c->vc[0], credits );
+	_output_state[output]->SetCredits( c->vc[0], credits );
 	_ProcessWaiting( output, c->vc[0] );
       }
     } else {
       credits++;
-      _output_state[output].SetCredits( c->vc[0], credits );
+      _output_state[output]->SetCredits( c->vc[0], credits );
 
       if ( c->tail ) { // tail flit -- recycle VC
 	if ( state != EventNextVCState::busy ) {
@@ -527,8 +508,8 @@ void EventRouter::_ArrivalArb( int output )
 	// Flit is present => generate transport event
 	
 	tevt         = new tTransportEvent;
-	tevt->input  = _output_state[output].GetInput( c->vc[0] );
-	tevt->src_vc = _output_state[output].GetInputVC( c->vc[0] );
+	tevt->input  = _output_state[output]->GetInput( c->vc[0] );
+	tevt->src_vc = _output_state[output]->GetInputVC( c->vc[0] );
 	tevt->dst_vc = c->vc[0];
 	tevt->watch  = false;
 	tevt->id     = -1;
@@ -537,8 +518,8 @@ void EventRouter::_ArrivalArb( int output )
 	
 	pres--;
 	credits--;
-	_output_state[output].SetPresence( c->vc[0], pres );
-	_output_state[output].SetCredits( c->vc[0], credits );
+	_output_state[output]->SetPresence( c->vc[0], pres );
+	_output_state[output]->SetCredits( c->vc[0], credits );
       }
     }
 
@@ -562,14 +543,14 @@ void EventRouter::_ArrivalArb( int output )
     }
       
     EventNextVCState::eNextVCState state = 
-      _output_state[output].GetState( aevt->dst_vc );
+      _output_state[output]->GetState( aevt->dst_vc );
 
     if ( aevt->head ) { // Head flits
       if ( state == EventNextVCState::idle ) {
 	// Allocate the output VC and queue a transport event
-	_output_state[output].SetState( aevt->dst_vc, EventNextVCState::busy );
-	_output_state[output].SetInput( aevt->dst_vc, input );
-	_output_state[output].SetInputVC( aevt->dst_vc, aevt->src_vc );
+	_output_state[output]->SetState( aevt->dst_vc, EventNextVCState::busy );
+	_output_state[output]->SetInput( aevt->dst_vc, input );
+	_output_state[output]->SetInputVC( aevt->dst_vc, aevt->src_vc );
 
 	_SendTransport( input, output, aevt );
       } else {
@@ -583,7 +564,7 @@ void EventRouter::_ArrivalArb( int output )
 	w->watch = aevt->watch;
 	w->pres  = 1;
 
-	_output_state[output].PushWaiting( aevt->dst_vc, w );
+	_output_state[output]->PushWaiting( aevt->dst_vc, w );
       }
     } else {
       if ( _vct ) {
@@ -595,9 +576,9 @@ void EventRouter::_ArrivalArb( int output )
 	Error( "Received a body flit at a non-busy output VC" );
       }
       
-      if ( ( !_output_state[output].IsInputWaiting( aevt->dst_vc, input, aevt->src_vc ) ) &&
-	   ( input == _output_state[output].GetInput( aevt->dst_vc ) ) &&
-	   ( aevt->src_vc == _output_state[output].GetInputVC( aevt->dst_vc ) ) ) {
+      if ( ( !_output_state[output]->IsInputWaiting( aevt->dst_vc, input, aevt->src_vc ) ) &&
+	   ( input == _output_state[output]->GetInput( aevt->dst_vc ) ) &&
+	   ( aevt->src_vc == _output_state[output]->GetInputVC( aevt->dst_vc ) ) ) {
 	// Body flit part of the current active VC => queue transport event
 	// (the weird IsInputWaiting call handles a body flit waiting in addition
 	// to a head flit)
@@ -606,7 +587,7 @@ void EventRouter::_ArrivalArb( int output )
       } else {
 
 	// VC busy with a differnet transaction => update waiting event
-	_output_state[output].IncrWaiting( aevt->dst_vc, input, aevt->src_vc );
+	_output_state[output]->IncrWaiting( aevt->dst_vc, input, aevt->src_vc );
       } 
     }
 
@@ -651,7 +632,7 @@ void EventRouter::_TransportArb( int input )
 	   << " for flit " << tevt->id << endl;
     }
 
-    cur_vc = &_vc[input][tevt->src_vc];
+    cur_vc = _vc[input][tevt->src_vc];
 
     // Some sanity checking first
 
@@ -779,7 +760,7 @@ void EventRouter::Display( ) const
 {
   for ( int input = 0; input < _inputs; ++input ) {
     for ( int v = 0; v < _vcs; ++v ) {
-      _vc[input][v].Display( );
+      _vc[input][v]->Display( );
     }
   }
 }
@@ -802,28 +783,16 @@ void EventNextVCState::_Init( const Configuration& config )
   _buf_size = config.GetInt( "vc_buf_size" );
   _vcs      = config.GetInt( "num_vcs" );
 
-  _credits   = new int [_vcs];
-  _presence  = new int [_vcs];
-  _input     = new int [_vcs];
-  _inputVC   = new int [_vcs];
-  _waiting   = new list<tWaiting *> [_vcs];
-  _state     = new eNextVCState [_vcs];
-
-  for ( int vc = 0; vc < _vcs; ++vc ) {
-    _presence[vc] = 0;
-    _credits[vc]  = _buf_size;
-    _state[vc]    = idle;
-  }
+  _credits.resize(_vcs, _buf_size);
+  _presence.resize(_vcs, 0);
+  _input.resize(_vcs);
+  _inputVC.resize(_vcs);
+  _waiting.resize(_vcs);
+  _state.resize(_vcs, idle);
 }
 
 EventNextVCState::~EventNextVCState( )
 {
-  delete [] _credits;
-  delete [] _presence;
-  delete [] _input;
-  delete [] _inputVC;
-  delete [] _waiting;
-  delete [] _state;
 }
 
 EventNextVCState::eNextVCState EventNextVCState::GetState( int vc ) const

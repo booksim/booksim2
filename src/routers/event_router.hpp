@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 #include <queue>
+#include <vector>
 
 #include "module.hpp"
 #include "router.hpp"
@@ -58,14 +59,14 @@ private:
   int _buf_size;
   int _vcs;
 
-  int *_credits;
-  int *_presence;
-  int *_input;
-  int *_inputVC;
+  vector<int> _credits;
+  vector<int> _presence;
+  vector<int> _input;
+  vector<int> _inputVC;
 
-  list<tWaiting *> *_waiting;
+  vector<list<tWaiting *> > _waiting;
  
-  eNextVCState *_state;
+  vector<eNextVCState> _state;
 
 public:
   EventNextVCState() { };
@@ -102,20 +103,20 @@ class EventRouter : public Router {
 
   int _vct;
 
-  VC  **_vc;
+  vector<vector<VC*> > _vc;
 
   tRoutingFunction   _rf;
 
-  EventNextVCState *_output_state;
+  vector<EventNextVCState *> _output_state;
 
   PipelineFIFO<Flit>   *_crossbar_pipe;
   PipelineFIFO<Credit> *_credit_pipe;
 
-  queue<Flit *> *_input_buffer;
-  queue<Flit *> *_output_buffer;
+  vector<queue<Flit *> > _input_buffer;
+  vector<queue<Flit *> > _output_buffer;
 
-  queue<Credit *> *_in_cred_buffer;
-  queue<Credit *> *_out_cred_buffer;
+  vector<queue<Credit *> > _in_cred_buffer;
+  vector<queue<Credit *> > _out_cred_buffer;
 
   struct tArrivalEvent {
     int  input;
@@ -130,8 +131,8 @@ class EventRouter : public Router {
   };
 
   PipelineFIFO<tArrivalEvent> *_arrival_pipe;
-  queue<tArrivalEvent *>      *_arrival_queue;
-  PriorityArbiter             **_arrival_arbiter;
+  vector<queue<tArrivalEvent *> > _arrival_queue;
+  vector<PriorityArbiter*> _arrival_arbiter;
 
   struct tTransportEvent {
     int  input;
@@ -142,11 +143,11 @@ class EventRouter : public Router {
     bool watch; // debug
   };
 
-  queue<tTransportEvent *> *_transport_queue;
-  PriorityArbiter          **_transport_arbiter;
+  vector<queue<tTransportEvent *> > _transport_queue;
+  vector<PriorityArbiter*> _transport_arbiter;
 
-  bool *_transport_free;
-  int  *_transport_match;
+  vector<bool> _transport_free;
+  vector<int> _transport_match;
 
   void _ReceiveFlits( );
   void _ReceiveCredits( );
