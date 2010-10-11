@@ -41,6 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define CHANNEL_HPP
 
 #include <queue>
+#include <cassert>
 
 using namespace std;
 
@@ -86,18 +87,15 @@ void Channel<T>::SetLatency( int cycles ) {
 template<class T>
 void Channel<T>::Send( T* data ) {
 
-  while ( (_queue.size() > (unsigned int)_delay) && (_queue.front() == 0) )
-    _queue.pop( );
+  assert(!((_queue.size() > (unsigned int)_delay) && (_queue.front() == 0)));
 
   _queue.push(data);
-
 }
 
 template<class T>
 T* Channel<T>::Receive() {
 
-  if ( _queue.empty( ) )
-    return 0;
+  assert(!_queue.empty());
 
   T* data = _queue.front();
   _queue.pop();
@@ -105,10 +103,9 @@ T* Channel<T>::Receive() {
 }
 
 template<class T>
-T* Channel<T>::Peek( ) 
-{
-  if ( _queue.empty() )
-    return 0;
+T* Channel<T>::Peek( ) {
+
+  assert(!_queue.empty());
 
   return _queue.front( );
 }
