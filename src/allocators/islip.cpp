@@ -41,23 +41,9 @@ iSLIP_Sparse::iSLIP_Sparse( Module *parent, const string& name,
   SparseAllocator( parent, name, inputs, outputs ),
   _iSLIP_iter(iters)
 {
-  _grants = new int [_outputs];
-  _gptrs  = new int [_outputs];
-  _aptrs  = new int [_inputs];
-
-  for ( int i = 0; i < _inputs; ++i ) {
-    _aptrs[i] = 0;
-  }
-  for ( int j = 0; j < _outputs; ++j ) {
-    _gptrs[j] = 0;
-  }
-}
-
-iSLIP_Sparse::~iSLIP_Sparse( )
-{
-  delete [] _grants;
-  delete [] _gptrs;
-  delete [] _aptrs;
+  _grants.resize(_outputs);
+  _gptrs.resize(_outputs, 0);
+  _aptrs.resize(_inputs, 0);
 }
 
 void iSLIP_Sparse::Allocate( )
