@@ -58,7 +58,6 @@ public:
 
   Allocator( Module *parent, const string& name,
 	     int inputs, int outputs );
-  virtual ~Allocator( );
 
   virtual void Clear( ) = 0;
   
@@ -88,12 +87,11 @@ public:
 
 class DenseAllocator : public Allocator {
 protected:
-  sRequest **_request;
+  vector<vector<sRequest> > _request;
 
 public:
   DenseAllocator( Module *parent, const string& name,
 		  int inputs, int outputs );
-  virtual ~DenseAllocator( );
 
   void Clear( );
   
@@ -117,13 +115,12 @@ protected:
   list<int> _in_occ;
   list<int> _out_occ;
   
-  list<sRequest> *_in_req;
-  list<sRequest> *_out_req;
+  vector<list<sRequest> > _in_req;
+  vector<list<sRequest> > _out_req;
 
 public:
   SparseAllocator( Module *parent, const string& name,
 		   int inputs, int outputs );
-  virtual ~SparseAllocator( );
 
   void Clear( );
   

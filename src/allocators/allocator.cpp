@@ -58,10 +58,6 @@ Allocator::Allocator( Module *parent, const string& name,
   _outmatch.resize(_outputs);
 }
 
-Allocator::~Allocator( )
-{
-}
-
 void Allocator::_ClearMatching( )
 {
   _inmatch.assign(_inputs, -1);
@@ -90,22 +86,13 @@ DenseAllocator::DenseAllocator( Module *parent, const string& name,
 				int inputs, int outputs ) :
   Allocator( parent, name, inputs, outputs )
 {
-  _request  = new sRequest * [_inputs];
+  _request.resize(_inputs);
 
   for ( int i = 0; i < _inputs; ++i ) {
-    _request[i]  = new sRequest [_outputs];  
+    _request[i].resize(_outputs);  
   }
 
   Clear( );
-}
-
-DenseAllocator::~DenseAllocator( )
-{  
-  for ( int i = 0; i < _inputs; ++i ) {
-    delete [] _request[i];
-  }
-  
-  delete [] _request;
 }
 
 void DenseAllocator::Clear( )
@@ -178,16 +165,10 @@ SparseAllocator::SparseAllocator( Module *parent, const string& name,
 				  int inputs, int outputs ) :
   Allocator( parent, name, inputs, outputs )
 {
-  _in_req =  new list<sRequest> [_inputs];
-  _out_req = new list<sRequest> [_outputs];
+  _in_req.resize(_inputs);
+  _out_req.resize(_outputs);
 }
 
-
-SparseAllocator::~SparseAllocator( )
-{
-  delete [] _in_req;
-  delete [] _out_req;
-}
 
 void SparseAllocator::Clear( )
 {
