@@ -76,7 +76,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "qtree.hpp"
 #include "tree4.hpp"
 #include "fattree.hpp"
-#include "mecs.hpp"
 #include "anynet.hpp"
 #include "dragonfly.hpp"
 ///////////////////////////////////////////////////////////////////////////////
@@ -197,9 +196,6 @@ bool AllocatorSim( const Configuration& config )
     } else if ( topo == "cmo"){
       CMO::RegisterRoutingFunctions() ;
       net[i] = new CMO(config, name.str());
-    } else if ( topo == "MECS"){
-      MECS::RegisterRoutingFunctions() ;
-      net[i] = new MECS(config, name.str());
     } else if ( topo == "anynet"){
       AnyNet::RegisterRoutingFunctions() ;
       net[i] = new AnyNet(config, name.str());

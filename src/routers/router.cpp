@@ -52,7 +52,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "iq_router_split.hpp"
 #include "event_router.hpp"
 #include "chaos_router.hpp"
-#include "MECSRouter.hpp"
 ///////////////////////////////////////////////////////
 
 Router::Router( const Configuration& config,
@@ -132,11 +131,7 @@ Router *Router::NewRouter( const Configuration& config,
   config.GetStr( "topology", topo);
 
   if ( type == "iq" ) {
-    if(topo == "MECS"){
-      r = new MECSRouter( config, parent, name, id, inputs, outputs);
-    } else {
-      r = new IQRouterBaseline( config, parent, name, id, inputs, outputs );
-    }
+    r = new IQRouterBaseline( config, parent, name, id, inputs, outputs );
   } else if ( type == "iq_combined" ) {
     r = new IQRouterCombined( config, parent, name, id, inputs, outputs );
   } else if ( type == "iq_split" ) {
