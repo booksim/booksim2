@@ -127,7 +127,7 @@ void IQRouterCombined::_Alloc( )
 	    if((_switch_hold_in[expanded_input] == -1) && 
 	       (_switch_hold_out[expanded_output] == -1)) {
 	      
-	      BufferState * dest_vc = _next_vcs[output];
+	      BufferState * dest_buf = _next_buf[output];
 	      
 	      bool do_request = false;
 	      int in_priority;
@@ -140,11 +140,11 @@ void IQRouterCombined::_Alloc( )
 		int vc_prio;
 		int out_vc = route_set->GetVC(output, vc_index, &vc_prio);
 		if((((vc_state == VC::vc_alloc) &&
-		     dest_vc->IsAvailableFor(out_vc)) || 
+		     dest_buf->IsAvailableFor(out_vc)) || 
 		    ((vc_state == VC::active) &&
 		     (out_vc == cur_vc->GetOutputVC()))) &&
 		   (!do_request || (vc_prio > in_priority)) &&
-		   !dest_vc->IsFullFor(out_vc)) {
+		   !dest_buf->IsFullFor(out_vc)) {
 		  do_request = true;
 		  in_priority = vc_prio;
 		}
@@ -236,7 +236,7 @@ void IQRouterCombined::_Alloc( )
       if(expanded_output >= 0) {
 	int output = expanded_output % _outputs;
 	
-	BufferState * dest_vc = _next_vcs[output];
+	BufferState * dest_buf = _next_buf[output];
 	Flit * f = cur_vc->FrontFlit();
 	assert(f);
 	
@@ -252,8 +252,8 @@ void IQRouterCombined::_Alloc( )
 	    for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
 	      int out_prio;
 	      int out_vc = route_set->GetVC(output, vc_index, &out_prio);
-	      if(dest_vc->IsAvailableFor(out_vc) && 
-		 !dest_vc->IsFullFor(out_vc) && 
+	      if(dest_buf->IsAvailableFor(out_vc) && 
+		 !dest_buf->IsFullFor(out_vc) && 
 		 (out_prio > sel_prio)) {
 		sel_vc = out_vc;
 		sel_prio = out_prio;
@@ -266,7 +266,7 @@ void IQRouterCombined::_Alloc( )
 	    // dub: this is taken care of later on
 	    //cur_vc->SetState(VC::active);
 	    cur_vc->SetOutput(output, sel_vc);
-	    dest_vc->TakeBuffer(sel_vc);
+	    dest_buf->TakeBuffer(sel_vc);
 	    
 	    _vc_rr_offset[expanded_input*_vcs+vc] = (output + 1) % _outputs;
 	    
@@ -290,9 +290,9 @@ void IQRouterCombined::_Alloc( )
 	  assert(!cur_vc->Empty());
 	  assert(cur_vc->GetOutputPort() == output);
 	  
-	  dest_vc = _next_vcs[output];
+	  dest_buf = _next_buf[output];
 	  
-	  assert(!dest_vc->IsFullFor(cur_vc->GetOutputVC()));
+	  assert(!dest_buf->IsFullFor(cur_vc->GetOutputVC()));
 	  
 	  // Forward flit to crossbar and send credit back
 	  f = cur_vc->RemoveFlit();
@@ -331,7 +331,7 @@ void IQRouterCombined::_Alloc( )
 	  c->vc_cnt++;
 	  c->dest_router = f->from_router;
 	  f->vc = cur_vc->GetOutputVC();
-	  dest_vc->SendingFlit(f);
+	  dest_buf->SendingFlit(f);
 	  
 	  _crossbar_pipe->Write(f, expanded_output);
 	  

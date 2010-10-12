@@ -46,6 +46,7 @@ using namespace std;
 class VC;
 class Flit;
 class Credit;
+class Buffer;
 class BufferState;
 
 class SwitchMonitor {
@@ -92,7 +93,7 @@ protected:
   set<int> _vcalloc_vcs;  
 
   vector<vector<VC *> > _vc;
-  vector<BufferState *> _next_vcs;
+  vector<BufferState *> _next_buf;
 
   tRoutingFunction   _rf;
 

@@ -71,10 +71,10 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   }
 
   // Alloc next VCs' buffer state
-  _next_vcs.resize(_outputs);
+  _next_buf.resize(_outputs);
   for (int j = 0; j < _outputs; ++j) {
     vc_name << "next_vc_o" << j;
-    _next_vcs[j] = new BufferState( config, this, vc_name.str( ) );
+    _next_buf[j] = new BufferState( config, this, vc_name.str( ) );
     vc_name.str("");
   }
 
@@ -122,7 +122,7 @@ IQRouterBase::~IQRouterBase( )
       delete _vc[i][j];
   
   for (int j = 0; j < _outputs; ++j)
-    delete _next_vcs[j];
+    delete _next_buf[j];
 
   delete _crossbar_pipe;
   delete _credit_pipe;
@@ -211,7 +211,7 @@ void IQRouterBase::_ReceiveCredits( )
   for ( int output = 0; output < _outputs; ++output ) {  
     c = _output_credits[output]->Receive();
     if ( c ) {
-      _next_vcs[output]->ProcessCredit( c );
+      _next_buf[output]->ProcessCredit( c );
       delete c;
     }
   }
@@ -345,7 +345,7 @@ int IQRouterBase::GetCredit(int out, int vc_begin, int vc_end ) const
 {
  
 
-  const BufferState *dest_vc;
+  const BufferState *dest_buf;
   int    tmpsum = 0;
   int cnt = 0;
   
@@ -354,18 +354,18 @@ int IQRouterBase::GetCredit(int out, int vc_begin, int vc_end ) const
     exit(-1);
   }
   
-  dest_vc = _next_vcs[out];
-  //dest_vc_tmp = &_next_vcs_tmp[out];
+  dest_buf = _next_buf[out];
+  //dest_buf_tmp = &_next_buf_tmp[out];
   
   if (vc_begin == -1) {
     for (int v =0;v<_vcs;v++){
-      tmpsum+= dest_vc->Size(v);
+      tmpsum+= dest_buf->Size(v);
     }
     return tmpsum;
   }  else if (vc_begin != -1) {
     assert(vc_begin >= 0);
     for (int v =vc_begin;v<= vc_end ;v++)  {
-      tmpsum+= dest_vc->Size(v);
+      tmpsum+= dest_buf->Size(v);
       cnt++;
     }
     return tmpsum;

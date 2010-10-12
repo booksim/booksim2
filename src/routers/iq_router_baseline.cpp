@@ -133,7 +133,7 @@ void IQRouterBaseline::_Alloc( )
 void IQRouterBaseline::_VCAlloc( )
 {
   VC          *cur_vc;
-  BufferState *dest_vc;
+  BufferState *dest_buf;
   int         input_and_vc;
   int         match_input;
   int         match_vc;
@@ -168,7 +168,7 @@ void IQRouterBaseline::_VCAlloc( )
       //cout<<setlist->size()<<endl;
       set<OutputSet::sSetElement>::const_iterator iset = setlist.begin( );
       while(iset!=setlist.end( )){
-	BufferState *dest_vc = _next_vcs[iset->output_port];
+	BufferState *dest_buf = _next_buf[iset->output_port];
 	for ( int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc ) {
 	  int in_priority = iset->pri;
 	  // On the input input side, a VC might request several output 
@@ -179,7 +179,7 @@ void IQRouterBaseline::_VCAlloc( )
 	  // reflected in "out_priority".
 	    
 	  //	    cout<<
-	  if(dest_vc->IsAvailableFor(out_vc)) {
+	  if(dest_buf->IsAvailableFor(out_vc)) {
 	    if(f->watch){
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 			 << "Requesting VC " << out_vc
@@ -223,7 +223,7 @@ void IQRouterBaseline::_VCAlloc( )
 	match_vc    = input_and_vc - match_input*_vcs;
 
 	cur_vc  = _vc[match_input][match_vc];
-	dest_vc = _next_vcs[output];
+	dest_buf = _next_buf[output];
 
 	if ( _speculative > 0 )
 	  cur_vc->SetState( VC::vc_spec_grant );
@@ -232,7 +232,7 @@ void IQRouterBaseline::_VCAlloc( )
 	_vcalloc_vcs.erase(match_input*_vcs+match_vc);
 	
 	cur_vc->SetOutput( output, vc );
-	dest_vc->TakeBuffer( vc );
+	dest_buf->TakeBuffer( vc );
 
 	f = cur_vc->FrontFlit( );
 	
@@ -252,7 +252,7 @@ void IQRouterBaseline::_SWAlloc( )
   Credit      *c;
 
   VC          *cur_vc;
-  BufferState *dest_vc;
+  BufferState *dest_buf;
 
   int input;
   int output;
@@ -306,9 +306,9 @@ void IQRouterBaseline::_SWAlloc( )
 	    {
 	      output = cur_vc->GetOutputPort( );
 
-	      dest_vc = _next_vcs[output];
+	      dest_buf = _next_buf[output];
 	      
-	      if ( !dest_vc->IsFullFor( cur_vc->GetOutputVC( ) ) ) {
+	      if ( !dest_buf->IsFullFor( cur_vc->GetOutputVC( ) ) ) {
 		
 		// When input_speedup > 1, the virtual channel buffers are 
 		// interleaved to create multiple input ports to the switch. 
@@ -392,14 +392,14 @@ void IQRouterBaseline::_SWAlloc( )
 	      const set<OutputSet::sSetElement> setlist = route_set->GetSet();
 	      set<OutputSet::sSetElement>::const_iterator iset = setlist.begin( );
 	      while(iset!=setlist.end( )){
-		BufferState * dest_vc = _next_vcs[iset->output_port];
+		BufferState * dest_buf = _next_buf[iset->output_port];
 		bool do_request = false;
 		
 		// check if any suitable VCs are available
 	
 		for ( int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc ) {
 		  if(!do_request && 
-		     ((_speculative < 3) || dest_vc->IsAvailableFor(out_vc))) {
+		     ((_speculative < 3) || dest_buf->IsAvailableFor(out_vc))) {
 		    do_request = true;
 		    break;
 		  }
@@ -569,9 +569,9 @@ void IQRouterBaseline::_SWAlloc( )
 	  assert(!cur_vc->Empty());
 	  assert(cur_vc->GetOutputPort() == output);
 	  
-	  dest_vc = _next_vcs[output];
+	  dest_buf = _next_buf[output];
 	  
-	  if ( dest_vc->IsFullFor( cur_vc->GetOutputVC( ) ) )
+	  if ( dest_buf->IsFullFor( cur_vc->GetOutputVC( ) ) )
 	    continue ;
 	  
 	  // Forward flit to crossbar and send credit back
@@ -615,7 +615,7 @@ void IQRouterBaseline::_SWAlloc( )
 	  c->vc_cnt++;
 	  c->dest_router = f->from_router;
 	  f->vc = cur_vc->GetOutputVC( );
-	  dest_vc->SendingFlit( f );
+	  dest_buf->SendingFlit( f );
 	  
 	  _crossbar_pipe->Write( f, expanded_output );
 	  
