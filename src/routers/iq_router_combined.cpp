@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "globals.hpp"
 #include "random_utils.hpp"
+#include "buffer.hpp"
 #include "iq_router_combined.hpp"
 
 IQRouterCombined::IQRouterCombined( const Configuration& config,
@@ -95,16 +96,16 @@ void IQRouterCombined::_Alloc( )
 	  continue;
 	}
 	
-	VC * cur_vc = _vc[input][vc];
+	Buffer * cur_buf = _buf[input];
 	
-	VC::eVCState vc_state = cur_vc->GetState();
+	VC::eVCState vc_state = cur_buf->GetState(vc);
 
-	if(!cur_vc->Empty() &&
+	if(!cur_buf->Empty(vc) &&
 	   ((vc_state == VC::vc_alloc) || (vc_state == VC::active)) &&
-	   (cur_vc->GetStateTime() >= _sw_alloc_delay)) {
+	   (cur_buf->GetStateTime(vc) >= _sw_alloc_delay)) {
 	  
-	  const OutputSet * route_set = cur_vc->GetRouteSet();
-	  Flit * f = cur_vc->FrontFlit();
+	  const OutputSet * route_set = cur_buf->GetRouteSet(vc);
+	  Flit * f = cur_buf->FrontFlit(vc);
 	  assert(f);
 	  
 	  int output = _vc_rr_offset[expanded_input*_vcs+vc];
@@ -113,7 +114,7 @@ void IQRouterCombined::_Alloc( )
 	    
 	    // in active state, we only care about our assigned output port
 	    if(vc_state == VC::active) {
-	      output = cur_vc->GetOutputPort();
+	      output = cur_buf->GetOutputPort(vc);
 	    }
 	    
 	    // When input_speedup > 1, the virtual channel buffers are 
@@ -142,7 +143,7 @@ void IQRouterCombined::_Alloc( )
 		if((((vc_state == VC::vc_alloc) &&
 		     dest_buf->IsAvailableFor(out_vc)) || 
 		    ((vc_state == VC::active) &&
-		     (out_vc == cur_vc->GetOutputVC()))) &&
+		     (out_vc == cur_buf->GetOutputVC(vc)))) &&
 		   (!do_request || (vc_prio > in_priority)) &&
 		   !dest_buf->IsFullFor(out_vc)) {
 		  do_request = true;
@@ -170,7 +171,7 @@ void IQRouterCombined::_Alloc( )
 		// are strictly determined by the packet priorities.
 		
 		_sw_allocator->AddRequest(expanded_input, expanded_output, vc, 
-					  in_priority, cur_vc->GetPriority());
+					  in_priority, cur_buf->GetPriority(vc));
 		
 	      }
 	    }
@@ -213,23 +214,21 @@ void IQRouterCombined::_Alloc( )
       
       int expanded_input = s*_inputs + input;
       int expanded_output;
-      VC * cur_vc;
+      Buffer * cur_buf = _buf[input];
       int vc;
       
       if(_switch_hold_in[expanded_input] != -1) {
 	assert(_switch_hold_in[expanded_input] >= 0);
 	expanded_output = _switch_hold_in[expanded_input];
 	vc = _switch_hold_vc[expanded_input];
-	cur_vc = _vc[input][vc];
 	
-	if (cur_vc->Empty()) { // Cancel held match if VC is empty
+	if (cur_buf->Empty(vc)) { // Cancel held match if VC is empty
 	  expanded_output = -1;
 	}
       } else {
 	expanded_output = _sw_allocator->OutputAssigned(expanded_input);
 	if(expanded_output >= 0) {
 	  vc = _sw_allocator->ReadRequest(expanded_input, expanded_output);
-	  cur_vc = _vc[input][vc];
 	}
       }
       
@@ -237,14 +236,14 @@ void IQRouterCombined::_Alloc( )
 	int output = expanded_output % _outputs;
 	
 	BufferState * dest_buf = _next_buf[output];
-	Flit * f = cur_vc->FrontFlit();
+	Flit * f = cur_buf->FrontFlit(vc);
 	assert(f);
 	
-	switch(cur_vc->GetState()) {
+	switch(cur_buf->GetState(vc)) {
 
 	case VC::vc_alloc:
 	  {
-	    const OutputSet * route_set = cur_vc->GetRouteSet();
+	    const OutputSet * route_set = cur_buf->GetRouteSet(vc);
 	    int sel_prio = -1;
 	    int sel_vc = -1;
 	    int vc_cnt = route_set->NumVCs(output);
@@ -265,7 +264,7 @@ void IQRouterCombined::_Alloc( )
 	    
 	    // dub: this is taken care of later on
 	    //cur_vc->SetState(VC::active);
-	    cur_vc->SetOutput(output, sel_vc);
+	    cur_buf->SetOutput(vc, output, sel_vc);
 	    dest_buf->TakeBuffer(sel_vc);
 	    
 	    _vc_rr_offset[expanded_input*_vcs+vc] = (output + 1) % _outputs;
@@ -287,15 +286,15 @@ void IQRouterCombined::_Alloc( )
 	  }
 	  
 	  //assert(cur_vc->GetState() == VC::active);
-	  assert(!cur_vc->Empty());
-	  assert(cur_vc->GetOutputPort() == output);
+	  assert(!cur_buf->Empty(vc));
+	  assert(cur_buf->GetOutputPort(vc) == output);
 	  
 	  dest_buf = _next_buf[output];
 	  
-	  assert(!dest_buf->IsFullFor(cur_vc->GetOutputVC()));
+	  assert(!dest_buf->IsFullFor(cur_buf->GetOutputVC(vc)));
 	  
 	  // Forward flit to crossbar and send credit back
-	  f = cur_vc->RemoveFlit();
+	  f = cur_buf->RemoveFlit(vc);
 	  
 	  if(f->watch)
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | " 
@@ -330,27 +329,27 @@ void IQRouterCombined::_Alloc( )
 	  c->vc[c->vc_cnt] = f->vc;
 	  c->vc_cnt++;
 	  c->dest_router = f->from_router;
-	  f->vc = cur_vc->GetOutputVC();
+	  f->vc = cur_buf->GetOutputVC(vc);
 	  dest_buf->SendingFlit(f);
 	  
 	  _crossbar_pipe->Write(f, expanded_output);
 	  
 	  if(f->tail) {
-	    if(cur_vc->Empty()) {
-	      cur_vc->SetState(VC::idle);
+	    if(cur_buf->Empty(vc)) {
+	      cur_buf->SetState(vc, VC::idle);
 	    } else if(_routing_delay > 0) {
-	      cur_vc->SetState(VC::routing);
+	      cur_buf->SetState(vc, VC::routing);
 	      _routing_vcs.push(input*_vcs+vc);
 	    } else {
-	      cur_vc->Route(_rf, this, cur_vc->FrontFlit(), input);
-	      cur_vc->SetState(VC::vc_alloc);
+	      cur_buf->Route(vc, _rf, this, cur_buf->FrontFlit(vc), input);
+	      cur_buf->SetState(vc, VC::vc_alloc);
 	    }
 	    _switch_hold_in[expanded_input] = -1;
 	    _switch_hold_vc[expanded_input] = -1;
 	    _switch_hold_out[expanded_output] = -1;
 	  } else {
 	    // reset state timer for next flit
-	    cur_vc->SetState(VC::active);
+	    cur_buf->SetState(vc, VC::active);
 	  }
 	  
 	  _sw_rr_offset[expanded_input] = (vc + 1) % _vcs;

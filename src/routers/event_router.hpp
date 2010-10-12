@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "module.hpp"
 #include "router.hpp"
+#include "buffer.hpp"
 #include "vc.hpp"
 #include "prio_arb.hpp"
 #include "routefunc.hpp"
@@ -98,7 +99,7 @@ class EventRouter : public Router {
 
   int _vct;
 
-  vector<vector<VC*> > _vc;
+  vector<Buffer *> _buf;
 
   tRoutingFunction   _rf;
 

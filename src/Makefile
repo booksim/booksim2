@@ -51,6 +51,7 @@ CPP_SRCS = main.cpp \
    config_utils.cpp \
    booksim_config.cpp \
    module.cpp \
+   buffer.cpp \
    vc.cpp \
    routefunc.cpp \
    traffic.cpp \

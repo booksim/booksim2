@@ -92,7 +92,7 @@ protected:
   queue<int> _routing_vcs;
   set<int> _vcalloc_vcs;  
 
-  vector<vector<VC *> > _vc;
+  vector<Buffer *> _buf;
   vector<BufferState *> _next_buf;
 
   tRoutingFunction   _rf;

@@ -62,16 +62,12 @@ EventRouter::EventRouter( const Configuration& config,
 
   // Alloc VC's
 
-  _vc.resize(_inputs);
+  _buf.resize(_inputs);
 
   for ( int i = 0; i < _inputs; ++i ) {
-    _vc[i].resize(_vcs);
-
-    for ( int v = 0; v < _vcs; ++v ) { // Name the vc modules
-      module_name << "vc_i" << i << "_v" << v;
-      _vc[i][v] = new VC( config, _outputs, this, module_name.str( ) );
-      module_name.seekp( 0, ios::beg );
-    }
+    module_name << "buf_" << i;
+    _buf[i] = new Buffer( config, _outputs, this, module_name.str( ) );
+    module_name.seekp( 0, ios::beg );
   }
 
   // Alloc next VCs' state
@@ -138,9 +134,7 @@ EventRouter::EventRouter( const Configuration& config,
 EventRouter::~EventRouter( )
 {
   for ( int i = 0; i < _inputs; ++i ) {
-    for ( int v = 0; v < _vcs; ++v ) {
-      delete _vc[i][v];
-    }
+    delete _buf[i];
   }
 
   for ( int o = 0; o < _outputs; ++o ) {
@@ -311,7 +305,7 @@ void EventRouter::_ProcessWaiting( int output, int out_vc )
 void EventRouter::_IncomingFlits( )
 {
   Flit   *f;
-  VC     *cur_vc;
+  Buffer *cur_buf;
 
   tArrivalEvent *aevt;
 
@@ -322,15 +316,16 @@ void EventRouter::_IncomingFlits( )
       f = _input_buffer[input].front( );
       _input_buffer[input].pop( );
 
-      cur_vc = _vc[input][f->vc];
+      cur_buf = _buf[input];
+      int vc = f->vc;
 
-      if ( !cur_vc->AddFlit( f ) ) {
+      if ( !cur_buf->AddFlit( vc, f ) ) {
 	cout << "Error processing flit:" << endl << *f;
 	Error( "VC buffer overflow" );
       }
 
       // Head flit arriving at idle VC
-      if ( cur_vc->GetState( ) == VC::idle ) {
+      if ( cur_buf->GetState( vc ) == VC::idle ) {
 	
 	if ( !f->head ) {
 	  cout << "Non-head flit:" << endl;
@@ -341,15 +336,15 @@ void EventRouter::_IncomingFlits( )
 	const OutputSet *route_set;
 	int out_vc, out_port;
 
-	cur_vc->Route( _rf, this, f, input );
-	route_set = cur_vc->GetRouteSet( );
+	cur_buf->Route( vc, _rf, this, f, input );
+	route_set = cur_buf->GetRouteSet( vc );
 
 	if ( !route_set->GetPortVC( &out_port, &out_vc ) ) {
 	  Error( "The event-driven router requires routing functions with a single (port,vc) output" );
 	}
 
-	cur_vc->SetOutput( out_port, out_vc );
-	cur_vc->SetState( VC::active );
+	cur_buf->SetOutput( vc, out_port, out_vc );
+	cur_buf->SetState( vc, VC::active );
       } else {
 	if ( f->head ) {
 	  cout << *f;
@@ -360,8 +355,8 @@ void EventRouter::_IncomingFlits( )
       if ( f->watch ) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		    << "Received flit at " << FullName() << ".  Output port = " 
-		    << cur_vc->GetOutputPort( ) << ", output VC = " 
-		    << cur_vc->GetOutputVC( ) << endl
+		    << cur_buf->GetOutputPort( vc ) << ", output VC = " 
+		    << cur_buf->GetOutputVC( vc ) << endl
 		    << *f;
       }
 
@@ -375,9 +370,9 @@ void EventRouter::_IncomingFlits( )
 	aevt         = new tArrivalEvent;
 	
 	aevt->input  = input;
-	aevt->output = cur_vc->GetOutputPort( );
+	aevt->output = cur_buf->GetOutputPort( vc );
 	aevt->src_vc = f->vc;
-	aevt->dst_vc = cur_vc->GetOutputVC( );
+	aevt->dst_vc = cur_buf->GetOutputVC( vc );
 	aevt->head   = f->head;
 	aevt->tail   = f->tail;
 	
@@ -609,7 +604,7 @@ void EventRouter::_TransportArb( int input )
   tTransportEvent *tevt;
 
   int    output;
-  VC     *cur_vc;
+  Buffer *cur_buf;
   Flit   *f;
   Credit *c;
 
@@ -631,23 +626,24 @@ void EventRouter::_TransportArb( int input )
 	   << " for flit " << tevt->id << endl;
     }
 
-    cur_vc = _vc[input][tevt->src_vc];
+    cur_buf = _buf[input];
+    int vc = tevt->src_vc;
 
     // Some sanity checking first
 
-    if ( ( cur_vc->GetState( ) != VC::active ) ) {
+    if ( ( cur_buf->GetState( vc ) != VC::active ) ) {
       Error( "Non-active VC received grant." );
     }
 
-    if ( cur_vc->Empty( ) ) {
+    if ( cur_buf->Empty( vc ) ) {
       return; //Error( "Empty VC received grant." );
     }
 
-    if ( tevt->dst_vc != cur_vc->GetOutputVC( ) ) {
+    if ( tevt->dst_vc != cur_buf->GetOutputVC( vc ) ) {
       Error( "Transport event's VC does not match input's destination VC." );
     }
 
-    f = cur_vc->RemoveFlit( );
+    f = cur_buf->RemoveFlit( vc );
 
     if ( _vct ) {
       if ( f->tail ) {
@@ -657,7 +653,7 @@ void EventRouter::_TransportArb( int input )
 	_transport_queue[output].pop( );
 	delete tevt;
 
-	cur_vc->SetState( VC::idle );
+	cur_buf->SetState( vc, VC::idle );
       } else {
 	_transport_free[input]  = false;
 	_transport_match[input] = output;
@@ -670,7 +666,7 @@ void EventRouter::_TransportArb( int input )
       delete tevt;
 
       if ( f->tail ) {
-	cur_vc->SetState( VC::idle );
+	cur_buf->SetState( vc, VC::idle );
       }
     }
 
@@ -690,7 +686,7 @@ void EventRouter::_TransportArb( int input )
     // Update and forward the flit to the crossbar
 
     f->hops++;
-    f->vc = cur_vc->GetOutputVC( );
+    f->vc = cur_buf->GetOutputVC( vc );
     _crossbar_pipe->Write( f, output );
 
     if ( f->watch ) {
@@ -758,9 +754,7 @@ void EventRouter::_SendCredits( )
 void EventRouter::Display( ) const
 {
   for ( int input = 0; input < _inputs; ++input ) {
-    for ( int v = 0; v < _vcs; ++v ) {
-      _vc[input][v]->Display( );
-    }
+    _buf[input]->Display( );
   }
 }
 

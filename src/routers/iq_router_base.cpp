@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "globals.hpp"
 #include "random_utils.hpp"
+#include "buffer.hpp"
 #include "vc.hpp"
 #include "outputset.hpp"
 #include "buffer_state.hpp"
@@ -48,7 +49,7 @@ IQRouterBase::IQRouterBase( const Configuration& config,
     bufferMonitor(inputs), 
     switchMonitor(inputs, outputs) 
 {
-  ostringstream vc_name;
+  ostringstream module_name;
   
   _vcs         = config.GetInt( "num_vcs" );
 
@@ -60,22 +61,19 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   _rf = GetRoutingFunction( config );
 
   // Alloc VC's
-  _vc.resize(_inputs);
+  _buf.resize(_inputs);
   for ( int i = 0; i < _inputs; ++i ) {
-    _vc[i].resize(_vcs);
-    for (int j = 0; j < _vcs; ++j ) {
-      vc_name << "vc_i" << i << "_v" << j;
-      _vc[i][j] = new VC(config, _outputs, this, vc_name.str( ) );
-      vc_name.str("");
-    }
+    module_name << "buf_" << i;
+    _buf[i] = new Buffer(config, _outputs, this, module_name.str( ) );
+    module_name.str("");
   }
 
   // Alloc next VCs' buffer state
   _next_buf.resize(_outputs);
   for (int j = 0; j < _outputs; ++j) {
-    vc_name << "next_vc_o" << j;
-    _next_buf[j] = new BufferState( config, this, vc_name.str( ) );
-    vc_name.str("");
+    module_name << "next_vc_o" << j;
+    _next_buf[j] = new BufferState( config, this, module_name.str( ) );
+    module_name.str("");
   }
 
   // Alloc pipelines (to simulate processing/transmission delays)
@@ -117,9 +115,8 @@ IQRouterBase::~IQRouterBase( )
     cout << switchMonitor << endl ;
   }
 
-  for ( int i = 0; i < _inputs; ++i )
-    for (int j = 0; j < _vcs; ++j )
-      delete _vc[i][j];
+  for (int i = 0; i < _inputs; ++i)
+    delete _buf[i];
   
   for (int j = 0; j < _outputs; ++j)
     delete _next_buf[j];
@@ -142,9 +139,7 @@ void IQRouterBase::InternalStep( )
   _Alloc( );
   
   for ( int input = 0; input < _inputs; ++input ) {
-    for ( int vc = 0; vc < _vcs; ++vc ) {
-      _vc[input][vc]->AdvanceTime( );
-    }
+    _buf[input]->AdvanceTime( );
   }
 
   _crossbar_pipe->Advance( );
@@ -168,13 +163,14 @@ void IQRouterBase::_ReceiveFlits( )
     f = _input_channels[input]->Receive();
     if ( f ) {
       ++_received_flits[input];
-      VC * cur_vc = _vc[input][f->vc];
+      Buffer * cur_buf = _buf[input];
+      int vc = f->vc;
 
-      if ( cur_vc->GetState( ) == VC::idle ) {
+      if ( cur_buf->GetState( vc ) == VC::idle ) {
 	  if ( !f->head ) {
 	    Error( "Received non-head flit at idle VC" );
 	  }
-	  cur_vc->SetState( VC::routing );
+	  cur_buf->SetState( vc, VC::routing );
 	  _routing_vcs.push(input*_vcs+f->vc);
       }
 
@@ -183,12 +179,12 @@ void IQRouterBase::_ReceiveFlits( )
 		   << "Adding flit " << f->id
 		   << " to VC " << f->vc
 		   << " at input " << input
-		   << " (state: " << VC::VCSTATE[cur_vc->GetState()];
-	if(cur_vc->Empty()) {
+		   << " (state: " << VC::VCSTATE[cur_buf->GetState(vc)];
+	if(cur_buf->Empty(vc)) {
 	  *gWatchOut << ", empty";
 	} else {
-	  assert(cur_vc->FrontFlit());
-	  *gWatchOut << ", front: " << cur_vc->FrontFlit()->id;
+	  assert(cur_buf->FrontFlit(vc));
+	  *gWatchOut << ", front: " << cur_buf->FrontFlit(vc)->id;
 	}
 	*gWatchOut << ")." << endl;
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -196,7 +192,7 @@ void IQRouterBase::_ReceiveFlits( )
 		   << " from channel at input " << input
 		   << "." << endl;
       }
-      if ( !cur_vc->AddFlit( f ) ) {
+      if ( !cur_buf->AddFlit( vc, f ) ) {
 	Error( "VC buffer overflow" );
       }
       bufferMonitor.write( input, f ) ;
@@ -249,11 +245,12 @@ void IQRouterBase::_Route( )
   int size = _routing_vcs.size();
   for(int i = 0; i<size; i++){
     int vc_encode = _routing_vcs.front();
-    VC * cur_vc = _vc[vc_encode/_vcs][vc_encode%_vcs];
-    if(cur_vc->GetStateTime( ) >= _routing_delay){
-      Flit * f = cur_vc->FrontFlit( );
-      cur_vc->Route( _rf, this, f,  vc_encode/_vcs);
-      cur_vc->SetState( VC::vc_alloc ) ;
+    Buffer * cur_buf = _buf[vc_encode/_vcs];
+    int vc = vc_encode%_vcs;
+    if(cur_buf->GetStateTime(vc) >= _routing_delay){
+      Flit * f = cur_buf->FrontFlit(vc);
+      cur_buf->Route(vc, _rf, this, f,  vc_encode/_vcs);
+      cur_buf->SetState(vc, VC::vc_alloc) ;
       _vcalloc_vcs.insert(vc_encode);
       _routing_vcs.pop();
     } else {
@@ -335,9 +332,7 @@ void IQRouterBase::_SendCredits( )
 void IQRouterBase::Display( ) const
 {
   for ( int input = 0; input < _inputs; ++input ) {
-    for ( int v = 0; v < _vcs; ++v ) {
-      _vc[input][v]->Display( );
-    }
+    _buf[input]->Display( );
   }
 }
 
@@ -380,7 +375,7 @@ int IQRouterBase::GetBuffer(int i) const {
   int i_end = (i >= 0) ? i : (_inputs - 1);
   for(int input = i_start; input <= i_end; ++input) {
     for(int vc = 0; vc < _vcs; ++vc) {
-      size += _vc[input][vc]->GetSize();
+      size += _buf[input]->GetSize(vc);
     }
   }
   return size;
