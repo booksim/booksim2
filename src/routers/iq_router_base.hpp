@@ -86,7 +86,6 @@ class IQRouterBase : public Router {
 
 protected:
   int  _vcs ;
-  int  _vc_size ;
 
   //if a vc is in the vc::routing state, it is inserted here until routing_delay is up
   queue<int> _routing_vcs;

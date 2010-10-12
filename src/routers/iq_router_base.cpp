@@ -51,7 +51,6 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   ostringstream vc_name;
   
   _vcs         = config.GetInt( "num_vcs" );
-  _vc_size     = config.GetInt( "vc_buf_size" );
 
   _routing_delay    = config.GetInt( "routing_delay" );
   _vc_alloc_delay   = config.GetInt( "vc_alloc_delay" );

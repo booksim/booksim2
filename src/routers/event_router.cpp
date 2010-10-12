@@ -49,7 +49,6 @@ EventRouter::EventRouter( const Configuration& config,
   ostringstream module_name;
   
   _vcs            = config.GetInt( "num_vcs" );
-  _vc_size        = config.GetInt( "vc_buf_size" );
 
   // Cut-through mode --- packets are not broken
   // up and input buffers are assumed to be 

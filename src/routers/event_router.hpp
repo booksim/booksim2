@@ -95,7 +95,6 @@ public:
 
 class EventRouter : public Router {
   int _vcs;
-  int _vc_size;
 
   int _vct;
 
