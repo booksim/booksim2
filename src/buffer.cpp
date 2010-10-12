@@ -56,7 +56,7 @@ bool Buffer::AddFlit( int vc, Flit *f )
 
 Flit *Buffer::RemoveFlit( int vc )
 {
-  Flit *f = _vc[vc]->RemoveFlit( );
+  return _vc[vc]->RemoveFlit( );
 }
 
 bool Buffer::Empty( int vc ) const
