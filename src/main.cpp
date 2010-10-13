@@ -332,9 +332,5 @@ int main( int argc, char **argv )
   }
 #endif
 
-  PacketReplyInfo::FreeAll();
-  Flit::FreeAll();
-  Credit::FreeAll();
-
   return result ? -1 : 0;
 }
