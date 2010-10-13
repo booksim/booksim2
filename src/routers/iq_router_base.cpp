@@ -340,7 +340,7 @@ int IQRouterBase::GetCredit(int out, int vc_begin, int vc_end ) const
   int end = (vc_begin >= 0) ? vc_end : (_vcs - 1);
 
   int size = 0;
-  for (int v =vc_begin;v<= vc_end ;v++)  {
+  for (int v = start; v <= end; v++)  {
     size+= dest_buf->Size(v);
   }
   return size;
