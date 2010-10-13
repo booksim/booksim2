@@ -36,6 +36,41 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "random_utils.hpp" 
 #include "vc.hpp"
 
+stack<PacketReplyInfo*> PacketReplyInfo::_pool;
+
+PacketReplyInfo::PacketReplyInfo()
+{
+}
+
+PacketReplyInfo::~PacketReplyInfo()
+{
+}
+
+PacketReplyInfo * PacketReplyInfo::New()
+{
+  PacketReplyInfo * pr;
+  if(_pool.empty()) {
+    pr = new PacketReplyInfo();
+  } else {
+    pr = _pool.top();
+    _pool.pop();
+  }
+  return pr;
+}
+
+void PacketReplyInfo::Free()
+{
+  _pool.push(this);
+}
+
+void PacketReplyInfo::FreePool()
+{
+  while(!_pool.empty()) {
+    delete _pool.top();
+    _pool.pop();
+  }
+}
+
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
   : Module( 0, "traffic_manager" ), _net(net), _cur_id(0), _cur_pid(0),
    _time(0), _warmup_time(-1), _drain_time(-1), _empty_network(false),
@@ -415,6 +450,7 @@ TrafficManager::~TrafficManager( )
   if(_stats_out && (_stats_out != &cout)) delete _stats_out;
   if(_flow_out && (_flow_out != &cout)) delete _flow_out;
 
+  PacketReplyInfo::FreePool();
   Flit::FreePool();
   Credit::FreePool();
 }
@@ -524,13 +560,13 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
     //code the source of request, look carefully, its tricky ;)
     if (f->type == Flit::READ_REQUEST || f->type == Flit::WRITE_REQUEST) {
-      Packet_Reply* temp = new Packet_Reply;
-      temp->source = f->src;
-      temp->time = f->atime;
-      temp->ttime = f->ttime;
-      temp->record = f->record;
-      temp->type = f->type;
-      _repliesDetails[f->id] = temp;
+      PacketReplyInfo* rinfo = PacketReplyInfo::New();
+      rinfo->source = f->src;
+      rinfo->time = f->atime;
+      rinfo->ttime = f->ttime;
+      rinfo->record = f->record;
+      rinfo->type = f->type;
+      _repliesDetails[f->id] = rinfo;
       _repliesPending[dest].push_back(f->id);
     } else {
       if ( f->watch ) { 
@@ -705,25 +741,25 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       }
       packet_destination = _traffic_function( source, _limit );
     } else  {
-      map<int, Packet_Reply*>::iterator iter = _repliesDetails.find(stype);
-      Packet_Reply* temp = iter->second;
+      map<int, PacketReplyInfo*>::iterator iter = _repliesDetails.find(stype);
+      PacketReplyInfo* rinfo = iter->second;
       
-      if (temp->type == Flit::READ_REQUEST) {//read reply
+      if (rinfo->type == Flit::READ_REQUEST) {//read reply
 	size = _read_reply_size;
 	packet_type = Flit::READ_REPLY;
-      } else if(temp->type == Flit::WRITE_REQUEST) {  //write reply
+      } else if(rinfo->type == Flit::WRITE_REQUEST) {  //write reply
 	size = _write_reply_size;
 	packet_type = Flit::WRITE_REPLY;
       } else {
-	cerr << "Invalid packet type: " << temp->type << "!" << endl;
+	cerr << "Invalid packet type: " << rinfo->type << "!" << endl;
 	Error( "" );
       }
-      packet_destination = temp->source;
-      time = temp->time;
-      ttime = temp->ttime;
-      record = temp->record;
+      packet_destination = rinfo->source;
+      time = rinfo->time;
+      ttime = rinfo->ttime;
+      record = rinfo->record;
       _repliesDetails.erase(iter);
-      delete temp;
+      rinfo->Free();
     }
   } else {
     //use uniform packet size

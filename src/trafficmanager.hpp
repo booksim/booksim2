@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <list>
 #include <map>
 #include <set>
+#include <stack>
 
 #include "module.hpp"
 #include "config_utils.hpp"
@@ -48,12 +49,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assert.h>
 
 //register the requests to a node
-struct Packet_Reply {
+class PacketReplyInfo {
+
+public:
   int source;
   int time;
   int ttime;
   bool record;
   Flit::FlitType type;
+
+  static PacketReplyInfo* New();
+  void Free();
+  static void FreePool();
+
+private:
+
+  static stack<PacketReplyInfo*> _pool;
+
+  PacketReplyInfo();
+  ~PacketReplyInfo();
 };
 
 class TrafficManager : public Module {
@@ -100,7 +114,7 @@ protected:
   int _batch_size;
   int _batch_count;
   vector<list<int> > _repliesPending;
-  map<int, Packet_Reply*> _repliesDetails;
+  map<int, PacketReplyInfo*> _repliesDetails;
   vector<int> _requestsOutstanding;
   int _maxOutstanding;
   bool _replies_inherit_priority;
