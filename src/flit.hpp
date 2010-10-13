@@ -97,13 +97,15 @@ public:
 
   static Flit * New();
   void Free();
-  static void FreePool();
+  static void FreeAll();
 
 private:
 
   Flit();
+  ~Flit() {}
 
-  static stack<Flit *> _pool;
+  static stack<Flit *> _all;
+  static stack<Flit *> _free;
 
 };
 

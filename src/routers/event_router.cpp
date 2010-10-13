@@ -517,7 +517,7 @@ void EventRouter::_ArrivalArb( int output )
       }
     }
 
-    delete c;
+    _RetireCredit(c);
   }
 
   // Now process arrival events

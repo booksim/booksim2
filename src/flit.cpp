@@ -40,7 +40,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include "flit.hpp"
 
-stack<Flit *> Flit::_pool;
+stack<Flit *> Flit::_all;
+stack<Flit *> Flit::_free;
 
 ostream& operator<<( ostream& os, const Flit& f )
 {
@@ -92,23 +93,24 @@ void Flit::Reset()
 
 Flit * Flit::New() {
   Flit * f;
-  if(_pool.empty()) {
+  if(_free.empty()) {
     f = new Flit;
+    _all.push(f);
   } else {
-    f = _pool.top();
+    f = _free.top();
     f->Reset();
-    _pool.pop();
+    _free.pop();
   }
   return f;
 }
 
 void Flit::Free() {
-  _pool.push(this);
+  _free.push(this);
 }
 
-void Flit::FreePool() {
-  while(!_pool.empty()) {
-    delete _pool.top();
-    _pool.pop();
+void Flit::FreeAll() {
+  while(!_all.empty()) {
+    delete _all.top();
+    _all.pop();
   }
 }

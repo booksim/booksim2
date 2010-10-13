@@ -60,14 +60,15 @@ public:
 
   static PacketReplyInfo* New();
   void Free();
-  static void FreePool();
+  static void FreeAll();
 
 private:
 
-  static stack<PacketReplyInfo*> _pool;
+  static stack<PacketReplyInfo*> _all;
+  static stack<PacketReplyInfo*> _free;
 
-  PacketReplyInfo();
-  ~PacketReplyInfo();
+  PacketReplyInfo() {}
+  ~PacketReplyInfo() {}
 };
 
 class TrafficManager : public Module {

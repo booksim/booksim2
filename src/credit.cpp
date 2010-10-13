@@ -36,7 +36,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include "credit.hpp"
 
-stack<Credit *> Credit::_pool;
+stack<Credit *> Credit::_all;
+stack<Credit *> Credit::_free;
 
 Credit::Credit(int max_vcs)
 {
@@ -55,23 +56,24 @@ void Credit::Reset(int max_vcs)
 
 Credit * Credit::New(int max_vcs) {
   Credit * c;
-  if(_pool.empty()) {
+  if(_free.empty()) {
     c = new Credit(max_vcs);
+    _all.push(c);
   } else {
-    c = _pool.top();
+    c = _free.top();
     c->Reset(max_vcs);
-    _pool.pop();
+    _free.pop();
   }
   return c;
 }
 
 void Credit::Free() {
-  _pool.push(this);
+  _free.push(this);
 }
 
-void Credit::FreePool() {
-  while(!_pool.empty()) {
-    delete _pool.top();
-    _pool.pop();
+void Credit::FreeAll() {
+  while(!_all.empty()) {
+    delete _all.top();
+    _all.pop();
   }
 }

@@ -49,13 +49,15 @@ public:
   
   static Credit * New(int max_vcs = 1);
   void Free();
-  static void FreePool();
+  static void FreeAll();
 
 private:
 
-  static stack<Credit *> _pool;
+  static stack<Credit *> _all;
+  static stack<Credit *> _free;
 
   Credit( int max_vcs = 1 );
+  ~Credit() {}
 
 };
 

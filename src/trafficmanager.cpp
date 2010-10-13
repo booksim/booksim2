@@ -36,38 +36,32 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "random_utils.hpp" 
 #include "vc.hpp"
 
-stack<PacketReplyInfo*> PacketReplyInfo::_pool;
-
-PacketReplyInfo::PacketReplyInfo()
-{
-}
-
-PacketReplyInfo::~PacketReplyInfo()
-{
-}
+stack<PacketReplyInfo*> PacketReplyInfo::_all;
+stack<PacketReplyInfo*> PacketReplyInfo::_free;
 
 PacketReplyInfo * PacketReplyInfo::New()
 {
   PacketReplyInfo * pr;
-  if(_pool.empty()) {
+  if(_free.empty()) {
     pr = new PacketReplyInfo();
+    _all.push(pr);
   } else {
-    pr = _pool.top();
-    _pool.pop();
+    pr = _free.top();
+    _free.pop();
   }
   return pr;
 }
 
 void PacketReplyInfo::Free()
 {
-  _pool.push(this);
+  _free.push(this);
 }
 
-void PacketReplyInfo::FreePool()
+void PacketReplyInfo::FreeAll()
 {
-  while(!_pool.empty()) {
-    delete _pool.top();
-    _pool.pop();
+  while(!_all.empty()) {
+    delete _all.top();
+    _all.pop();
   }
 }
 
