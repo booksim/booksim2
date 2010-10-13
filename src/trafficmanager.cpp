@@ -118,13 +118,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _replies_inherit_priority = config.GetInt("replies_inherit_priority");
 
-  ostringstream tmp_name;
-  
   // ============ Injection VC states  ============ 
 
   _buf_states.resize(_sources);
 
   for ( int s = 0; s < _sources; ++s ) {
+    ostringstream tmp_name;
     tmp_name << "terminal_buf_state_" << s;
     _buf_states[s].resize(_duplicate_networks);
     for (int a = 0; a < _duplicate_networks; ++a) {
@@ -203,6 +202,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_max_frag.resize(_classes);
 
   for ( int c = 0; c < _classes; ++c ) {
+    ostringstream tmp_name;
     tmp_name << "latency_stat_" << c;
     _latency_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _latency_stats[c];
@@ -277,6 +277,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _injected_flow.resize(_sources, 0);
 
   for ( int i = 0; i < _sources; ++i ) {
+    ostringstream tmp_name;
     tmp_name << "sent_stat_" << i;
     _sent_flits[i] = new Stats( this, tmp_name.str( ) );
     _stats[tmp_name.str()] = _sent_flits[i];
@@ -298,6 +299,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _ejected_flow.resize(_dests, 0);
 
   for ( int i = 0; i < _dests; ++i ) {
+    ostringstream tmp_name;
     tmp_name << "accepted_stat_" << i;
     _accepted_flits[i] = new Stats( this, tmp_name.str( ) );
     _stats[tmp_name.str()] = _accepted_flits[i];

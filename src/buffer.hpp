@@ -51,6 +51,7 @@ public:
   
   Buffer( const Configuration& config, int outputs,
 	  Module *parent, const string& name );
+  ~Buffer();
 
   bool AddFlit( int vc, Flit *f );
 

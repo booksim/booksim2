@@ -43,7 +43,7 @@ class Configuration {
   string _config_string;
 
 protected:
-  map<string,char *>       _str_map;
+  map<string,string>       _str_map;
   map<string,unsigned int> _int_map;
   map<string,double>       _float_map;
   
@@ -69,7 +69,7 @@ public:
   void WriteMatlabFile(ostream *o) const;
   //These Get functions are for the GUI to display all the options of booksim
   //const something maybe?
-  map<string,char *> * GetStrMap(){
+  map<string,string>* GetStrMap(){
     return &_str_map;
   }
   map<string,unsigned int>* GetIntMap(){

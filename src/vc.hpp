@@ -82,6 +82,7 @@ public:
   
   VC( const Configuration& config, int outputs,
       Module *parent, const string& name );
+  ~VC();
 
   bool AddFlit( Flit *f );
   Flit *FrontFlit( );

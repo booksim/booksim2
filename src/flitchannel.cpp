@@ -48,8 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //  $Id$
 // ----------------------------------------------------------------------
 FlitChannel::FlitChannel( int cycles ) : Channel<Flit>(cycles), _idle(0) {
-  for ( int i = 0; i < Flit::NUM_FLIT_TYPES; ++i)
-    _active[i] = 0;
+  _active.resize(Flit::NUM_FLIT_TYPES, 0);
 }
 
 FlitChannel::~FlitChannel() {
@@ -72,7 +71,6 @@ FlitChannel::~FlitChannel() {
     }
     cout << ") (I#" << _idle << ")" << endl ;
   }
-  
 }
 
 void FlitChannel::SetSource( Router* router ) {

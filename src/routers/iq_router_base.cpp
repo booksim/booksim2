@@ -390,17 +390,11 @@ void IQRouterBase::ResetFlitStats() {
 //
 // ----------------------------------------------------------------------
 SwitchMonitor::SwitchMonitor( int inputs, int outputs ) {
-  // something is stomping on the arrays, so padding is applied
-  const int Offset = 16 ;
   _cycles  = 0 ;
   _inputs  = inputs ;
   _outputs = outputs ;
-  const int n = 2 * Offset + (inputs+1) * (outputs+1) * Flit::NUM_FLIT_TYPES ;
-  _event = new int [ n ] ;
-  for ( int i = 0 ; i < n ; i++ ) {
-	_event[i] = 0 ;
-  }
-  _event += Offset ;
+  const int n = (inputs+1) * (outputs+1) * Flit::NUM_FLIT_TYPES ;
+  _event.resize(n, 0) ;
 }
 
 int SwitchMonitor::index( int input, int output, int flitType ) const {
@@ -434,20 +428,12 @@ ostream& operator<<( ostream& os, const SwitchMonitor& obj ) {
 //
 // ----------------------------------------------------------------------
 BufferMonitor::BufferMonitor( int inputs ) {
-  // something is stomping on the arrays, so padding is applied
-  const int Offset = 16 ;
   _cycles = 0 ;
   _inputs = inputs ;
 
-  const int n = 2*Offset + 4 * inputs  * Flit::NUM_FLIT_TYPES ;
-  _reads  = new int [ n ] ;
-  _writes = new int [ n ] ;
-  for ( int i = 0 ; i < n ; i++ ) {
-    _reads[i]  = 0 ; 
-    _writes[i] = 0 ;
-  }
-  _reads += Offset ;
-  _writes += Offset ;
+  const int n = 4 * inputs  * Flit::NUM_FLIT_TYPES ;
+  _reads.resize(n, 0) ;
+  _writes.resize(n, 0) ;
 }
 
 int BufferMonitor::index( int input, int flitType ) const {

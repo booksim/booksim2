@@ -96,6 +96,11 @@ VC::VC( const Configuration& config, int outputs,
   _watched = false;
 }
 
+VC::~VC()
+{
+  delete _route_set;
+}
+
 bool VC::AddFlit( Flit *f )
 {
   assert(f);

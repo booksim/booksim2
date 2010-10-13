@@ -52,17 +52,16 @@ Configuration::Configuration( )
 
 void Configuration::AddStrField( const string &field, const string &value )
 {
-  _str_map[field] = strdup( value.c_str( ) );
+  _str_map[field] = value;
 }
 
 void Configuration::Assign( const string &field, const string &value )
 {
-  map<string,char *>::const_iterator match;
+  map<string,string>::const_iterator match;
   
   match = _str_map.find( field );
   if ( match != _str_map.end( ) ) {
-    free( _str_map[field] );
-    _str_map[field] = strdup( value.c_str( ) );
+    _str_map[field] = value;
   } else {
     string errmsg = "Unknown field ";
     errmsg += field;
@@ -103,7 +102,7 @@ void Configuration::Assign( const string &field, double value )
 
 void Configuration::GetStr( const string &field, string &value, const string &def ) const
 {
-  map<string,char *>::const_iterator match;
+  map<string,string>::const_iterator match;
 
   match = _str_map.find( field );
   if ( match != _str_map.end( ) ) {
@@ -238,7 +237,7 @@ void Configuration::WriteFile( const string& filename){
   ostream *config_out= new ofstream(filename.c_str());
   
   
-  for(map<string,char *>::const_iterator i = _str_map.begin(); 
+  for(map<string,string>::const_iterator i = _str_map.begin(); 
       i!=_str_map.end();
       i++){
     //the parser won't read blanks lolz
@@ -271,7 +270,7 @@ void  Configuration::WriteMatlabFile(ostream *config_out) const {
 
   
   
-  for(map<string,char *>::const_iterator i = _str_map.begin(); 
+  for(map<string,string>::const_iterator i = _str_map.begin(); 
       i!=_str_map.end();
       i++){
     //the parser won't read blanks lolz

@@ -85,7 +85,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  /* the current traffic manager instance */
 TrafficManager * trafficManager = NULL;
 
- int GetSimTime() {
+int GetSimTime() {
   return trafficManager->getTime();
 }
 
@@ -224,15 +224,14 @@ bool AllocatorSim( const Configuration& config )
   /*tcc and characterize are legacy
    *not sure how to use them 
    */
-  if(trafficManager){
-    delete trafficManager ;
-  }
+
+  assert(trafficManager == NULL);
   trafficManager = new TrafficManager( config, net ) ;
 
   /*Start the simulation run
    */
 
-double total_time; /* Amount of time we've run */
+  double total_time; /* Amount of time we've run */
   struct timeval start_time, end_time; /* Time before/after user code */
   total_time = 0.0;
   gettimeofday(&start_time, NULL);
@@ -256,6 +255,9 @@ double total_time; /* Amount of time we've run */
 
   for (int i=0; i<networks; ++i)
     delete net[i];
+
+  delete trafficManager;
+  trafficManager = NULL;
 
   return result;
 }

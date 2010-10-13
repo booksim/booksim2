@@ -132,7 +132,7 @@ void Power_Module::calcChannel(FlitChannel* f){
   channelArea += areaChannel(K,N,M);
 
   //activity factor;
-  int* temp = f->GetActivity();
+  const vector<int> temp = f->GetActivity();
   double* a = (double*)malloc(sizeof(double)* Flit::NUM_FLIT_TYPES);
   for(int i = 0; i< Flit::NUM_FLIT_TYPES; i++){
 
@@ -240,8 +240,8 @@ void Power_Module::calcBuffer(BufferMonitor *bm){
   double Pleak = powerMemoryBitLeak( depth ) * channel_width ;
   //area
 
-  int * reads = bm->GetReads();
-  int * writes = bm->GetWrites();
+  const vector<int> reads = bm->GetReads();
+  const vector<int> writes = bm->GetWrites();
   for(int i = 0; i<bm->NumInputs(); i++){
     inputArea += areaInputModule( depth );
     inputLeakagePower += Pleak ;
@@ -319,7 +319,7 @@ void Power_Module::calcSwitch(SwitchMonitor* sm){
   outputArea += areaOutputModule(sm->NumOutputs());
   switchPowerLeak += powerCrossbarLeak(channel_width, sm->NumInputs(), sm->NumOutputs());
 
-  int * activity = sm->GetActivity();
+  const vector<int> activity = sm->GetActivity();
   double * type_activity = (double*)malloc(sizeof(double)*Flit::NUM_FLIT_TYPES);
 
   for(int i = 0; i<sm->NumOutputs(); i++){

@@ -52,6 +52,13 @@ Module( parent, name ), _shared_count(0)
   }
 }
 
+Buffer::~Buffer()
+{
+  for(vector<VC*>::iterator i = _vc.begin(); i != _vc.end(); ++i) {
+    delete *i;
+  }
+}
+
 bool Buffer::AddFlit( int vc, Flit *f )
 {
   VC * v = _vc[vc];

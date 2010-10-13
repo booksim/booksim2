@@ -63,7 +63,7 @@ public:
   void SetSink( Router* router ) ;
   int GetSink();
 
-  int* GetActivity(){return _active;}
+  const vector<int> & GetActivity(){return _active;}
 
   // Check for flit on input. Used for tracking channel use
   bool InUse();
@@ -84,7 +84,7 @@ private:
   
 
   // Statistics for Activity Factors
-  int          _active[Flit::NUM_FLIT_TYPES];
+  vector<int>  _active;
   int          _idle;
 
 };
