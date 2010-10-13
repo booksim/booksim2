@@ -45,18 +45,16 @@ IQRouterSplit::IQRouterSplit( const Configuration& config,
 		    int inputs, int outputs )
   : IQRouterBase( config, parent, name, id, inputs, outputs )
 {
-  string alloc_type;
-  string arb_type;
-  int iters;
-
   // check constraints
   if(_routing_delay != 0)
     Error("This router architecture requires lookahead routing!");
   
   // Allocate the allocators
+  string alloc_type;
   config.GetStr( "sw_allocator", alloc_type );
+  string arb_type;
   config.GetStr( "sw_alloc_arb_type", arb_type );
-  iters = config.GetInt("sw_alloc_iters");
+  int iters = config.GetInt("sw_alloc_iters");
   if(iters == 0) iters = config.GetInt("alloc_iters");
   _sw_allocator = Allocator::NewAllocator( this, "sw_allocator",
 					   alloc_type,
@@ -78,7 +76,7 @@ IQRouterSplit::~IQRouterSplit( )
 void IQRouterSplit::_Alloc( )
 {
   bool watched = false;
-  int fast_path_vcs[_inputs];
+  vector<int> fast_path_vcs(_inputs);
   _sw_allocator->Clear( );
   
   for(int input = 0; input < _inputs; ++input) {

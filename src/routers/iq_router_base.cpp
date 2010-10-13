@@ -48,9 +48,7 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   : Router( config, parent, name, id, inputs, outputs ), 
     bufferMonitor(inputs), 
     switchMonitor(inputs, outputs) 
-{
-  ostringstream module_name;
-  
+{  
   _vcs         = config.GetInt( "num_vcs" );
 
   _routing_delay    = config.GetInt( "routing_delay" );
@@ -63,6 +61,7 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   // Alloc VC's
   _buf.resize(_inputs);
   for ( int i = 0; i < _inputs; ++i ) {
+    ostringstream module_name;
     module_name << "buf_" << i;
     _buf[i] = new Buffer(config, _outputs, this, module_name.str( ) );
     module_name.str("");
@@ -71,6 +70,7 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   // Alloc next VCs' buffer state
   _next_buf.resize(_outputs);
   for (int j = 0; j < _outputs; ++j) {
+    ostringstream module_name;
     module_name << "next_vc_o" << j;
     _next_buf[j] = new BufferState( config, this, module_name.str( ) );
     module_name.str("");
@@ -157,10 +157,9 @@ void IQRouterBase::WriteOutputs( )
 
 void IQRouterBase::_ReceiveFlits( )
 {
-  Flit *f;
   bufferMonitor.cycle() ;
   for ( int input = 0; input < _inputs; ++input ) { 
-    f = _input_channels[input]->Receive();
+    Flit * f = _input_channels[input]->Receive();
     if ( f ) {
       ++_received_flits[input];
       Buffer * cur_buf = _buf[input];
@@ -202,10 +201,8 @@ void IQRouterBase::_ReceiveFlits( )
 
 void IQRouterBase::_ReceiveCredits( )
 {
-  Credit *c;
-
   for ( int output = 0; output < _outputs; ++output ) {  
-    c = _output_credits[output]->Receive();
+    Credit * c = _output_credits[output]->Receive();
     if ( c ) {
       _next_buf[output]->ProcessCredit( c );
       delete c;
@@ -243,7 +240,7 @@ void IQRouterBase::_InputQueuing( )
 void IQRouterBase::_Route( )
 {
   int size = _routing_vcs.size();
-  for(int i = 0; i<size; i++){
+  for(int i = 0; i < size; i++){
     int vc_encode = _routing_vcs.front();
     Buffer * cur_buf = _buf[vc_encode/_vcs];
     int vc = vc_encode%_vcs;
@@ -290,9 +287,8 @@ void IQRouterBase::_OutputQueuing( )
 
 void IQRouterBase::_SendFlits( )
 {
-  Flit *f;
-
   for ( int output = 0; output < _outputs; ++output ) {
+    Flit *f = NULL;
     if ( !_output_buffer[output].empty( ) ) {
       f = _output_buffer[output].front( );
       f->from_router = this->GetID();
@@ -303,26 +299,20 @@ void IQRouterBase::_SendFlits( )
 		    << "Sending flit " << f->id
 		    << " to channel at output " << output
 		    << "." << endl;
-    } else {
-      f = 0;
+      if(gTrace){cout<<"Outport "<<output<<endl;cout<<"Stop Mark"<<endl;}
     }
-    if(gTrace && f){cout<<"Outport "<<output<<endl;cout<<"Stop Mark"<<endl;}
     _output_channels[output]->Send( f );
   }
 }
 
 void IQRouterBase::_SendCredits( )
 {
-  Credit *c;
-
   for ( int input = 0; input < _inputs; ++input ) {
+    Credit * c = NULL;
     if ( !_in_cred_buffer[input].empty( ) ) {
       c = _in_cred_buffer[input].front( );
       _in_cred_buffer[input].pop( );
-    } else {
-      c = 0;
     }
-
     _input_credits[input]->Send( c );
   }
 }
@@ -338,35 +328,22 @@ void IQRouterBase::Display( ) const
 
 int IQRouterBase::GetCredit(int out, int vc_begin, int vc_end ) const
 {
- 
-
-  const BufferState *dest_buf;
-  int    tmpsum = 0;
-  int cnt = 0;
-  
   if (out >= _outputs ) {
     cout << " ERROR  - big output  GetCredit : " << out << endl;
     exit(-1);
   }
   
-  dest_buf = _next_buf[out];
+  const BufferState * dest_buf = _next_buf[out];
   //dest_buf_tmp = &_next_buf_tmp[out];
   
-  if (vc_begin == -1) {
-    for (int v =0;v<_vcs;v++){
-      tmpsum+= dest_buf->Size(v);
-    }
-    return tmpsum;
-  }  else if (vc_begin != -1) {
-    assert(vc_begin >= 0);
-    for (int v =vc_begin;v<= vc_end ;v++)  {
-      tmpsum+= dest_buf->Size(v);
-      cnt++;
-    }
-    return tmpsum;
+  int start = (vc_begin >= 0) ? vc_begin : 0;
+  int end = (vc_begin >= 0) ? vc_end : (_vcs - 1);
+
+  int size = 0;
+  for (int v =vc_begin;v<= vc_end ;v++)  {
+    size+= dest_buf->Size(v);
   }
-  assert(0); // Should never reach here.
-  return -5;
+  return size;
 }
 
 int IQRouterBase::GetBuffer(int i) const {

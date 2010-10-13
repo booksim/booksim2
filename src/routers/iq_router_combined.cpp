@@ -45,14 +45,12 @@ IQRouterCombined::IQRouterCombined( const Configuration& config,
 		    int inputs, int outputs )
   : IQRouterBase( config, parent, name, id, inputs, outputs )
 {
-  string alloc_type;
-  string arb_type;
-  int iters;
-
   // Allocate the allocators
+  string alloc_type;
   config.GetStr( "sw_allocator", alloc_type );
+  string arb_type;
   config.GetStr( "sw_alloc_arb_type", arb_type );
-  iters = config.GetInt("sw_alloc_iters");
+  int iters = config.GetInt("sw_alloc_iters");
   if(iters == 0) iters = config.GetInt("alloc_iters");
   _sw_allocator = Allocator::NewAllocator( this, "sw_allocator",
 					   alloc_type,

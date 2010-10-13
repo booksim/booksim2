@@ -51,14 +51,12 @@ IQRouterBaseline::IQRouterBaseline( const Configuration& config,
 				    int inputs, int outputs )
   : IQRouterBase( config, parent, name, id, inputs, outputs )
 {
-  string alloc_type;
-  string arb_type;
-  int iters;
-
   // Alloc allocators
+  string alloc_type;
   config.GetStr( "vc_allocator", alloc_type );
+  string arb_type;
   config.GetStr( "vc_alloc_arb_type", arb_type );
-  iters = config.GetInt( "vc_alloc_iters" );
+  int iters = config.GetInt( "vc_alloc_iters" );
   if(iters == 0) iters = config.GetInt("alloc_iters");
   _vc_allocator = Allocator::NewAllocator( this, "vc_allocator",
 					   alloc_type,
@@ -133,28 +131,20 @@ void IQRouterBaseline::_Alloc( )
 
 void IQRouterBaseline::_VCAlloc( )
 {
-  Buffer *cur_buf;
-  BufferState *dest_buf;
-  int         input_and_vc;
-  int         match_input;
-  int         match_vc;
-
-  Flit        *f;
-  bool        watched = false;
+  bool watched = false;
 
   _vc_allocator->Clear( );
-
 
   for ( set<int>::iterator item = _vcalloc_vcs.begin(); item!=_vcalloc_vcs.end(); ++item ) {
     int vc_encode = *item;
     int input =  vc_encode/_vcs;
     int vc =vc_encode%_vcs;
-    cur_buf = _buf[input];
+    Buffer * cur_buf = _buf[input];
     if ( ( _speculative > 0 ) && ( cur_buf->GetState(vc) == VC::vc_alloc )){
       cur_buf->SetState(vc, VC::vc_spec);
     }
     if (  cur_buf->GetStateTime(vc) >= _vc_alloc_delay  ) {
-      f = cur_buf->FrontFlit(vc);
+      Flit * f = cur_buf->FrontFlit(vc);
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | " 
 		   << "VC " << vc << " at input " << input
@@ -216,15 +206,15 @@ void IQRouterBaseline::_VCAlloc( )
 
   for ( int output = 0; output < _outputs; ++output ) {
     for ( int vc = 0; vc < _vcs; ++vc ) {
-      input_and_vc = _vc_allocator->InputAssigned( output*_vcs + vc );
+      int input_and_vc = _vc_allocator->InputAssigned( output*_vcs + vc );
 
       if ( input_and_vc != -1 ) {
 	assert(input_and_vc >= 0);
-	match_input = input_and_vc / _vcs;
-	match_vc    = input_and_vc - match_input*_vcs;
+	int match_input = input_and_vc / _vcs;
+	int match_vc    = input_and_vc - match_input*_vcs;
 
-	cur_buf  = _buf[match_input];
-	dest_buf = _next_buf[output];
+	Buffer * cur_buf  = _buf[match_input];
+	BufferState * dest_buf = _next_buf[output];
 
 	if ( _speculative > 0 )
 	  cur_buf->SetState(match_vc, VC::vc_spec_grant);
@@ -235,7 +225,7 @@ void IQRouterBaseline::_VCAlloc( )
 	cur_buf->SetOutput(match_vc, output, vc);
 	dest_buf->TakeBuffer( vc );
 
-	f = cur_buf->FrontFlit(match_vc);
+	Flit * f = cur_buf->FrontFlit(match_vc);
 	
 	if(f->watch)
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -249,40 +239,26 @@ void IQRouterBaseline::_VCAlloc( )
 
 void IQRouterBaseline::_SWAlloc( )
 {
-  Flit        *f;
-  Credit      *c;
-
-  Buffer      *cur_buf;
-  BufferState *dest_buf;
-
-  int input;
-  int output;
-  int vc;
-
-  int expanded_input;
-  int expanded_output;
-  
-  bool        watched = false;
+  bool watched = false;
 
   bool any_nonspec_reqs = false;
-  bool any_nonspec_output_reqs[_outputs*_output_speedup];
-  memset(any_nonspec_output_reqs, 0, _outputs*_output_speedup*sizeof(bool));
+  vector<bool> any_nonspec_output_reqs(_outputs*_output_speedup, 0);
   
   _sw_allocator->Clear( );
   if ( _speculative >= 2 )
     _spec_sw_allocator->Clear( );
   
-  for ( input = 0; input < _inputs; ++input ) {
+  for ( int input = 0; input < _inputs; ++input ) {
     int vc_ready_nonspec = 0;
     int vc_ready_spec = 0;
     for ( int s = 0; s < _input_speedup; ++s ) {
-      expanded_input  = s*_inputs + input;
+      int expanded_input  = s*_inputs + input;
       
       // Arbitrate (round-robin) between multiple 
       // requesting VCs at the same input (handles 
       // the case when multiple VC's are requesting
       // the same output port)
-      vc = _sw_rr_offset[ expanded_input ];
+      int vc = _sw_rr_offset[ expanded_input ];
 
       for ( int v = 0; v < _vcs; ++v ) {
 
@@ -296,7 +272,7 @@ void IQRouterBaseline::_SWAlloc( )
 	  continue;
 	}
 	
-	cur_buf = _buf[input];
+	Buffer * cur_buf = _buf[input];
 
 	if(!cur_buf->Empty(vc) &&
 	   (cur_buf->GetStateTime(vc) >= _sw_alloc_delay)) {
@@ -305,9 +281,9 @@ void IQRouterBaseline::_SWAlloc( )
 	    
 	  case VC::active:
 	    {
-	      output = cur_buf->GetOutputPort(vc);
+	      int output = cur_buf->GetOutputPort(vc);
 
-	      dest_buf = _next_buf[output];
+	      BufferState * dest_buf = _next_buf[output];
 	      
 	      if ( !dest_buf->IsFullFor( cur_buf->GetOutputVC(vc) ) ) {
 		
@@ -317,7 +293,7 @@ void IQRouterBaseline::_SWAlloc( )
 		// originating input when output_speedup > 1.
 		
 		assert( expanded_input == (vc%_input_speedup)*_inputs + input );
-		expanded_output = 
+		int expanded_output = 
 		  (input%_output_speedup)*_outputs + output;
 		
 		if ( ( _switch_hold_in[expanded_input] == -1 ) && 
@@ -360,7 +336,7 @@ void IQRouterBaseline::_SWAlloc( )
 	      } else {
 		//if this vc has a hold on the switch need to cancel it to prevent deadlock
 		if(_hold_switch_for_packet){
-		  expanded_output = 
+		  int expanded_output = 
 		    (input%_output_speedup)*_outputs + output;
 		  if(_switch_hold_in[expanded_input] == expanded_output&&
 		     _switch_hold_vc[expanded_input] == vc&&
@@ -407,7 +383,7 @@ void IQRouterBaseline::_SWAlloc( )
 		}
 		
 		if(do_request) { 
-		  expanded_output = (input%_output_speedup)*_outputs + iset->output_port;
+		  int expanded_output = (input%_output_speedup)*_outputs + iset->output_port;
 		  if ( ( _switch_hold_in[expanded_input] == -1 ) && 
 		       ( _switch_hold_out[expanded_output] == -1 ) ) {
 		    
@@ -474,18 +450,20 @@ void IQRouterBaseline::_SWAlloc( )
   switchMonitor.cycle() ;
 
   for ( int input = 0; input < _inputs; ++input ) {
-    c = 0;
+    Credit * c = 0;
     
     int vc_grant_nonspec = 0;
     int vc_grant_spec = 0;
     
-    cur_buf = _buf[input];
+    Buffer * cur_buf = _buf[input];
 
     for ( int s = 0; s < _input_speedup; ++s ) {
 
       bool use_spec_grant = false;
       
-      expanded_input  = s*_inputs + input;
+      int expanded_input  = s*_inputs + input;
+      int expanded_output;
+      int vc;
 
       if ( _switch_hold_in[expanded_input] != -1 ) {
 	assert(_switch_hold_in[expanded_input] >= 0);
@@ -528,7 +506,7 @@ void IQRouterBaseline::_SWAlloc( )
       }
 
       if ( expanded_output >= 0 ) {
-	output = expanded_output % _outputs;
+	int output = expanded_output % _outputs;
 
 	if ( _switch_hold_in[expanded_input] == -1 ) {
 	  if(use_spec_grant) {
@@ -570,13 +548,13 @@ void IQRouterBaseline::_SWAlloc( )
 	  assert(!cur_buf->Empty(vc));
 	  assert(cur_buf->GetOutputPort(vc) == output);
 	  
-	  dest_buf = _next_buf[output];
+	  BufferState * dest_buf = _next_buf[output];
 	  
 	  if ( dest_buf->IsFullFor( cur_buf->GetOutputVC( vc ) ) )
 	    continue ;
 	  
 	  // Forward flit to crossbar and send credit back
-	  f = cur_buf->RemoveFlit(vc);
+	  Flit * f = cur_buf->RemoveFlit(vc);
 	  assert(f);
 	  if(f->watch) {
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
