@@ -40,7 +40,7 @@ stack<Credit *> Credit::_pool;
 
 Credit::Credit(int max_vcs)
 {
-  Reset();
+  Reset(max_vcs);
 }
 
 void Credit::Reset(int max_vcs)
