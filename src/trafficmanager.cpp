@@ -449,10 +449,6 @@ TrafficManager::~TrafficManager( )
   if(gWatchOut && (gWatchOut != &cout)) delete gWatchOut;
   if(_stats_out && (_stats_out != &cout)) delete _stats_out;
   if(_flow_out && (_flow_out != &cout)) delete _flow_out;
-
-  PacketReplyInfo::FreePool();
-  Flit::FreePool();
-  Credit::FreePool();
 }
 
 

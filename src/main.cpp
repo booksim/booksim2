@@ -328,5 +328,9 @@ int main( int argc, char **argv )
 #endif
   }
 
+  PacketReplyInfo::FreePool();
+  Flit::FreePool();
+  Credit::FreePool();
+
   return result ? -1 : 0;
 }
