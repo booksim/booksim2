@@ -47,6 +47,7 @@ void Credit::Reset(int max_vcs)
 {
   vc.resize(max_vcs);
   vc_cnt = 0;
+  head = false;
   tail = false;
   id   = -1;
   dest_router = -1;
