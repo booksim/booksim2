@@ -44,9 +44,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 BufferState::BufferState( const Configuration& config, 
 			  Module *parent, const string& name ) : 
-  Module( parent, name )
+Module( parent, name ), _shared_occupied(0)
 {
-  _buf_size     = config.GetInt( "vc_buf_size" );
+  _vc_buf_size     = config.GetInt( "vc_buf_size" );
+  _shared_buf_size = config.GetInt( "shared_buf_size" );
   _vcs          = config.GetInt( "num_vcs" );
   
   _wait_for_tail_credit = config.GetInt( "wait_for_tail_credit" );
@@ -109,6 +110,9 @@ void BufferState::ProcessCredit( Credit *c )
     }
 
     if ( _cur_occupied[c->vc[v]] > 0 ) {
+      if(_cur_occupied[c->vc[v]] > _vc_buf_size) {
+	--_shared_occupied;
+      }
       --_cur_occupied[c->vc[v]];
 
       if ( ( _cur_occupied[c->vc[v]] == 0 ) && 
@@ -127,18 +131,22 @@ void BufferState::SendingFlit( Flit *f )
 {
   assert( f && ( f->vc >= 0 ) && ( f->vc < _vcs ) );
 
-  if ( _cur_occupied[f->vc] < _buf_size ) {
+  if ( ( _shared_occupied >= _shared_buf_size ) &&
+       ( _cur_occupied[f->vc] >= _vc_buf_size ) ) {
+    Error( "Flit sent to full buffer" );
+  } else {
+    if ( _cur_occupied[f->vc] >= _vc_buf_size ) {
+      ++_shared_occupied;
+    }
     ++_cur_occupied[f->vc];
-
+    
     if ( f->tail ) {
       _tail_sent[f->vc] = true;
-
+      
       if ( !_wait_for_tail_credit ) {
 	_in_use[f->vc] = false;
       }
     }
-  } else {
-    Error( "Flit sent to full buffer" );
   }
 }
 
@@ -158,7 +166,8 @@ void BufferState::TakeBuffer( int vc )
 bool BufferState::IsFullFor( int vc  ) const
 {
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
-  return _cur_occupied[vc] == _buf_size;
+  return ( ( _shared_occupied >= _shared_buf_size ) &&
+	   ( _cur_occupied[vc] >= _vc_buf_size ) );
 }
 
 bool BufferState::IsAvailableFor( int vc ) const
@@ -190,6 +199,7 @@ int BufferState::Size(int vc) const{
 void BufferState::Display( ) const
 {
   cout << FullName() << " :" << endl;
+  cout << " shared_occupied = " << _shared_occupied << endl;
   for ( int v = 0; v < _vcs; ++v ) {
     cout << "  buffer class " << v << endl;
     cout << "    in_use = " << _in_use[v] 

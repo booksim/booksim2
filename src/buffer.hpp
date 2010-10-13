@@ -41,6 +41,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class Buffer : public Module {
   
+  int _vc_size;
+  int _shared_count;
+  int _shared_size;
+
   vector<VC*> _vc;
 
 public:
@@ -49,6 +53,7 @@ public:
 	  Module *parent, const string& name );
 
   bool AddFlit( int vc, Flit *f );
+
   Flit *RemoveFlit( int vc );
   
   inline Flit *FrontFlit( int vc )
@@ -56,7 +61,10 @@ public:
     return _vc[vc]->FrontFlit( );
   }
   
-  bool Empty( int vc ) const;
+  inline bool Empty( int vc ) const
+  {
+    return _vc[vc]->Empty( );
+  }
 
   bool Full( int vc ) const;
 

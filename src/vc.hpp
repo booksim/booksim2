@@ -136,11 +136,15 @@ public:
 
   void AdvanceTime( );
 
+  inline int GetSize() const
+  {
+    return (int)_buffer.size();
+  }
+
   // ==== Debug functions ====
 
   void SetWatch( bool watch = true );
   bool IsWatched( ) const;
-  int GetSize() const;
   void Display( ) const;
   static void DisplayStats( bool print_csv = false );
 };

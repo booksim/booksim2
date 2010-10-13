@@ -36,8 +36,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Buffer::Buffer( const Configuration& config, int outputs, 
 		Module *parent, const string& name ) :
-  Module( parent, name )
+Module( parent, name ), _shared_count(0)
 {
+  _vc_size = config.GetInt( "vc_buf_size" );
+  _shared_size = config.GetInt( "shared_buf_size" );
+
   int num_vcs = config.GetInt( "num_vcs" );
 
   _vc.resize(num_vcs);
@@ -51,22 +54,28 @@ Buffer::Buffer( const Configuration& config, int outputs,
 
 bool Buffer::AddFlit( int vc, Flit *f )
 {
-  return _vc[vc]->AddFlit(f);
+  VC * v = _vc[vc];
+  if(v->GetSize() < _vc_size) {
+    return v->AddFlit(f);
+  } else if(_shared_count < _shared_size) {
+    _shared_count++;
+    return v->AddFlit(f);
+  }
+  return false;
 }
 
 Flit *Buffer::RemoveFlit( int vc )
 {
+  VC * v = _vc[vc];
+  if(v->GetSize() > _vc_size) {
+    --_shared_count;
+  }
   return _vc[vc]->RemoveFlit( );
-}
-
-bool Buffer::Empty( int vc ) const
-{
-  return _vc[vc]->Empty( );
 }
 
 bool Buffer::Full( int vc ) const
 {
-  return _vc[vc]->Full( );
+  return (_shared_count >= _shared_size) && _vc[vc]->Full( );
 }
 
 void Buffer::Display( ) const

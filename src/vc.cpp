@@ -63,7 +63,7 @@ VC::VC( const Configuration& config, int outputs,
   _state      = idle;
   _state_time = 0;
 
-  _size = config.GetInt( "vc_buf_size" );
+  _size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
 
   _route_set = new OutputSet( );
 
@@ -199,11 +199,6 @@ void VC::UpdatePriority()
   }
 }
 
-
-int VC::GetSize() const
-{
-  return (int)_buffer.size();
-}
 
 void VC::Route( tRoutingFunction rf, const Router* router, const Flit* f, int in_channel )
 {  
