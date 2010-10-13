@@ -142,7 +142,9 @@ vector<int> gNodeStates;
 
 ostream * gWatchOut;
 
+#ifdef USE_GUI
 bool gGUIMode = false;
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -313,10 +315,12 @@ int main( int argc, char **argv )
   /*configure and run the simulator
    */
   bool result;
-  if(!gGUIMode){
-   result = AllocatorSim( config );
-  } else {
 #ifdef USE_GUI
+  if(!gGUIMode){
+#endif
+   result = AllocatorSim( config );
+#ifdef USE_GUI
+  } else {
     cout<<"GUI Mode\n";
     QApplication app(argc, argv);
     BooksimGUI * bs = new BooksimGUI();
@@ -325,8 +329,8 @@ int main( int argc, char **argv )
     bs->setGeometry(100, 100, 1200, 355);
     bs->show();
     return app.exec();
-#endif
   }
+#endif
 
   PacketReplyInfo::FreePool();
   Flit::FreePool();
