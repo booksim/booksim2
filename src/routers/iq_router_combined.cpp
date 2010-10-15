@@ -60,6 +60,9 @@ IQRouterCombined::IQRouterCombined( const Configuration& config,
   
   _vc_rr_offset.resize(_inputs*_input_speedup*_vcs);
   _sw_rr_offset.resize(_inputs*_input_speedup);
+  for(int i = 0; i < _inputs*_input_speedup; ++i)
+    _sw_rr_offset[i] = i / _inputs;
+
 }
 
 IQRouterCombined::~IQRouterCombined( )
@@ -81,19 +84,10 @@ void IQRouterCombined::_Alloc( )
       // input (handles the case when multiple VC's are requesting the same 
       // output port)
       int vc = _sw_rr_offset[expanded_input];
+      assert((vc % _input_speedup) == s);
 
       for(int v = 0; v < _vcs; ++v) {
 
-	// This continue acounts for the interleaving of VCs when input speedup 
-	// is used.
-	// dub: Essentially, this skips loop iterations corresponding to those 
-	// VCs not in the current speedup set. The skipped iterations will be 
-	// handled in a different iteration of the enclosing loop over 's'.
-	if((vc % _input_speedup) != s) {
-	  vc = (vc + 1) % _vcs;
-	  continue;
-	}
-	
 	Buffer * cur_buf = _buf[input];
 	
 	VC::eVCState vc_state = cur_buf->GetState(vc);
@@ -182,7 +176,8 @@ void IQRouterCombined::_Alloc( )
 	    output = (output + 1) % _outputs;
 	  }
 	}
-	vc = (vc + 1) % _vcs;
+	vc += _input_speedup;
+	if(vc >= _vcs) vc = s;
       }
     }
   }
@@ -350,7 +345,10 @@ void IQRouterCombined::_Alloc( )
 	    cur_buf->SetState(vc, VC::active);
 	  }
 	  
-	  _sw_rr_offset[expanded_input] = (vc + 1) % _vcs;
+	  int next_offset = vc + _input_speedup;
+	  _sw_rr_offset[expanded_input] = 
+	    (next_offset < _vcs) ? next_offset : s;
+
 	} 
       }
     }

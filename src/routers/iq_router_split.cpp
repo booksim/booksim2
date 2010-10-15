@@ -64,7 +64,9 @@ IQRouterSplit::IQRouterSplit( const Configuration& config,
   
   _vc_rr_offset.resize(_inputs*_vcs);
   _sw_rr_offset.resize(_inputs*_input_speedup);
-  
+  for(int i = 0; i < _inputs*_input_speedup; ++i)
+    _sw_rr_offset[i] = i / _inputs;
+
   _use_fast_path.resize(_inputs*_vcs, true);
 }
 
@@ -90,20 +92,9 @@ void IQRouterSplit::_Alloc( )
       // input (handles the case when multiple VC's are requesting the same 
       // output port)
       int vc = _sw_rr_offset[expanded_input];
-      
+      assert((vc % _input_speedup) == s);
+
       for(int v = 0; v < _vcs; ++v) {
-	
-	// This continue acounts for the interleaving of VCs when input speedup 
-	// is used.
-	// dub: Essentially, this skips loop iterations corresponding to those 
-	// VCs not in the current speedup set. The skipped iterations will be 
-	// handled in a different iteration of the enclosing loop over 's'.
-	// dub: Furthermore, we skip this iteration if the current VC has only a
-	// single, newly arrived flit.
-	if(((vc % _input_speedup) != s) || _use_fast_path[input*_vcs+vc]) {
-	  vc = (vc + 1) % _vcs;
-	  continue;
-	}
 	
 	Buffer * cur_buf = _buf[input];
 	
@@ -128,7 +119,8 @@ void IQRouterSplit::_Alloc( )
 			  << ", state: " << VC::VCSTATE[vc_state] 
 			  << ", state time: " << cur_buf->GetStateTime(vc) 
 			  << ")." << endl;
-	    vc = (vc + 1) % _vcs;
+	    vc += _input_speedup;
+	    if(vc >= _vcs) vc = s;
 	    continue;
 	  }	    
 	  
@@ -238,7 +230,8 @@ void IQRouterSplit::_Alloc( )
 	    output = (output + 1) % _outputs;
 	  }
 	}
-	vc = (vc + 1) % _vcs;
+	vc += _input_speedup;
+	if(vc >= _vcs) vc = s;
       }
     }
     
@@ -624,7 +617,9 @@ void IQRouterSplit::_Alloc( )
 	  }	  
 	  
 	  if(!_use_fast_path[input*_vcs+vc]) {
-	    _sw_rr_offset[expanded_input] = (vc + 1) % _vcs;
+	    int next_offset = vc + _input_speedup;
+	    _sw_rr_offset[expanded_input] = 
+	      (next_offset < _vcs) ? next_offset : s;
 	  }
 	  
 	  if(cur_buf->Empty(vc) && !_use_fast_path[input*_vcs+vc]) {
