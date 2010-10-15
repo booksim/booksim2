@@ -112,7 +112,7 @@ IQRouterBaseline::IQRouterBaseline( const Configuration& config,
 
   _sw_rr_offset.resize(_inputs*_input_speedup);
   for(int i = 0; i < _inputs*_input_speedup; ++i)
-    _sw_rr_offset[i] = i / _inputs;
+    _sw_rr_offset[i] = i % _input_speedup;
   
 }
 
@@ -254,7 +254,7 @@ void IQRouterBaseline::_SWAlloc( )
     int vc_ready_nonspec = 0;
     int vc_ready_spec = 0;
     for ( int s = 0; s < _input_speedup; ++s ) {
-      int expanded_input  = s*_inputs + input;
+      int expanded_input  = input * _input_speedup + s;
       
       // Arbitrate (round-robin) between multiple 
       // requesting VCs at the same input (handles 
@@ -285,9 +285,9 @@ void IQRouterBaseline::_SWAlloc( )
 		// Similarily, the output ports are interleaved based on their 
 		// originating input when output_speedup > 1.
 		
-		assert( expanded_input == (vc%_input_speedup)*_inputs + input );
+		assert( expanded_input == input *_input_speedup + vc % _input_speedup );
 		int expanded_output = 
-		  (input%_output_speedup)*_outputs + output;
+		  output * _output_speedup + input % _output_speedup;
 		
 		if ( ( _switch_hold_in[expanded_input] == -1 ) && 
 		     ( _switch_hold_out[expanded_output] == -1 ) ) {
@@ -330,9 +330,9 @@ void IQRouterBaseline::_SWAlloc( )
 		//if this vc has a hold on the switch need to cancel it to prevent deadlock
 		if(_hold_switch_for_packet){
 		  int expanded_output = 
-		    (input%_output_speedup)*_outputs + output;
-		  if(_switch_hold_in[expanded_input] == expanded_output&&
-		     _switch_hold_vc[expanded_input] == vc&&
+		    output * _output_speedup + input % _output_speedup;
+		  if(_switch_hold_in[expanded_input] == expanded_output &&
+		     _switch_hold_vc[expanded_input] == vc &&
 		     _switch_hold_out[expanded_output] == expanded_input){
 		    _switch_hold_in[expanded_input]   = -1;
 		    _switch_hold_vc[expanded_input]   = -1;
@@ -356,7 +356,7 @@ void IQRouterBaseline::_SWAlloc( )
 	  case VC::vc_spec_grant:
 	    {	      
 	      assert( _speculative > 0 );
-	      assert( expanded_input == (vc%_input_speedup)*_inputs + input );
+	      assert( expanded_input == input * _input_speedup + vc % _input_speedup );
 	      
 	      const OutputSet * route_set = cur_buf->GetRouteSet(vc);
 	      const set<OutputSet::sSetElement> setlist = route_set->GetSet();
@@ -376,7 +376,7 @@ void IQRouterBaseline::_SWAlloc( )
 		}
 		
 		if(do_request) { 
-		  int expanded_output = (input%_output_speedup)*_outputs + iset->output_port;
+		  int expanded_output = iset->output_port * _output_speedup + input % _output_speedup;
 		  if ( ( _switch_hold_in[expanded_input] == -1 ) && 
 		       ( _switch_hold_out[expanded_output] == -1 ) ) {
 		    
@@ -455,7 +455,7 @@ void IQRouterBaseline::_SWAlloc( )
 
       bool use_spec_grant = false;
       
-      int expanded_input  = s*_inputs + input;
+      int expanded_input  = input * _input_speedup + s;
       int expanded_output;
       int vc;
 
@@ -500,7 +500,7 @@ void IQRouterBaseline::_SWAlloc( )
       }
 
       if ( expanded_output >= 0 ) {
-	int output = expanded_output % _outputs;
+	int output = expanded_output / _output_speedup;
 
 	if ( _switch_hold_in[expanded_input] == -1 ) {
 	  if(use_spec_grant) {

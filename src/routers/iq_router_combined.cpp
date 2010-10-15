@@ -61,7 +61,7 @@ IQRouterCombined::IQRouterCombined( const Configuration& config,
   _vc_rr_offset.resize(_inputs*_input_speedup*_vcs);
   _sw_rr_offset.resize(_inputs*_input_speedup);
   for(int i = 0; i < _inputs*_input_speedup; ++i)
-    _sw_rr_offset[i] = i / _inputs;
+    _sw_rr_offset[i] = i % _input_speedup;
 
 }
 
@@ -78,7 +78,7 @@ void IQRouterCombined::_Alloc( )
   
   for(int input = 0; input < _inputs; ++input) {
     for(int s = 0; s < _input_speedup; ++s) {
-      int expanded_input  = s*_inputs + input;
+      int expanded_input  =  input * _input_speedup + s;
       
       // Arbitrate (round-robin) between multiple requesting VCs at the same 
       // input (handles the case when multiple VC's are requesting the same 
@@ -114,8 +114,9 @@ void IQRouterCombined::_Alloc( )
 	    // Similarily, the output ports are interleaved based on their 
 	    // originating input when output_speedup > 1.
 	    
-	    assert(expanded_input == (vc%_input_speedup)*_inputs+input);
-	    int expanded_output = (input%_output_speedup)*_outputs + output;
+	    assert(expanded_input == input * _input_speedup + vc % _input_speedup);
+	    int expanded_output = 
+	      output * _output_speedup + input % _output_speedup;
 	    
 	    if((_switch_hold_in[expanded_input] == -1) && 
 	       (_switch_hold_out[expanded_output] == -1)) {
@@ -205,7 +206,7 @@ void IQRouterCombined::_Alloc( )
     
     for(int s = 0; s < _input_speedup; ++s) {
       
-      int expanded_input = s*_inputs + input;
+      int expanded_input = input * _input_speedup + s;
       int expanded_output;
       Buffer * cur_buf = _buf[input];
       int vc;
@@ -226,7 +227,7 @@ void IQRouterCombined::_Alloc( )
       }
       
       if(expanded_output >= 0) {
-	int output = expanded_output % _outputs;
+	int output = expanded_output / _output_speedup;
 	
 	BufferState * dest_buf = _next_buf[output];
 	Flit * f = cur_buf->FrontFlit(vc);

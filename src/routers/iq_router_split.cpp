@@ -65,7 +65,7 @@ IQRouterSplit::IQRouterSplit( const Configuration& config,
   _vc_rr_offset.resize(_inputs*_vcs);
   _sw_rr_offset.resize(_inputs*_input_speedup);
   for(int i = 0; i < _inputs*_input_speedup; ++i)
-    _sw_rr_offset[i] = i / _inputs;
+    _sw_rr_offset[i] = i % _input_speedup;
 
   _use_fast_path.resize(_inputs*_vcs, true);
 }
@@ -86,7 +86,7 @@ void IQRouterSplit::_Alloc( )
     fast_path_vcs[input] = -1;
     
     for(int s = 0; s < _input_speedup; ++s) {
-      int expanded_input  = s*_inputs + input;
+      int expanded_input  = input * _input_speedup + s;
       
       // Arbitrate (round-robin) between multiple requesting VCs at the same 
       // input (handles the case when multiple VC's are requesting the same 
@@ -147,8 +147,8 @@ void IQRouterSplit::_Alloc( )
 	    // Similarily, the output ports are interleaved based on their 
 	    // originating input when output_speedup > 1.
 	    
-	    assert(expanded_input == (vc%_input_speedup)*_inputs+input);
-	    int expanded_output = (input%_output_speedup)*_outputs + output;
+	    assert(expanded_input == input * _input_speedup + vc % _input_speedup);
+	    int expanded_output = output * _output_speedup + input % _output_speedup;
 	    
 	    if((_switch_hold_in[expanded_input] == -1) && 
 	       (_switch_hold_out[expanded_output] == -1)) {
@@ -288,7 +288,7 @@ void IQRouterSplit::_Alloc( )
 	fast_path_vcs[input] = vc;
 	
 	const OutputSet * route_set = cur_buf->GetRouteSet(vc);
-	int expanded_input = (vc%_input_speedup)*_inputs+input;
+	int expanded_input = input * _input_speedup + vc % _input_speedup;
 	
 	for(int output = 0; output < _outputs; ++output) {
 	  
@@ -299,7 +299,8 @@ void IQRouterSplit::_Alloc( )
 	  
 	  BufferState * dest_buf = _next_buf[output];
 	  
-	  int expanded_output = (input%_output_speedup)*_outputs + output;
+	  int expanded_output = 
+	    output * _output_speedup + input % _output_speedup;
 	  
 	  if(_sw_allocator->ReadRequest(expanded_input, expanded_output) >= 0) {
 	    if(f->watch)
@@ -397,10 +398,10 @@ void IQRouterSplit::_Alloc( )
 		<< "Grants = [ ";
     for(int input = 0; input < _inputs; ++input)
       for(int s = 0; s < _input_speedup; ++s) {
-	int expanded_input = s * _inputs + input;
+	int expanded_input = input * _input_speedup + s;
 	int expanded_output = _sw_allocator->OutputAssigned(expanded_input);
 	if(expanded_output > -1) {
-	  int output = expanded_output % _outputs;
+	  int output = expanded_output / _output_speedup;
 	  int vc = _sw_allocator->ReadRequest(expanded_input, expanded_output);
 	  *gWatchOut << input << " -> " << output << " (vc:" << vc << ")  ";
 	}
@@ -424,7 +425,7 @@ void IQRouterSplit::_Alloc( )
     
     for(int s = 0; s < _input_speedup; ++s) {
       
-      int expanded_input = s*_inputs + input;
+      int expanded_input = input * _input_speedup + s;
       int expanded_output;
       Buffer * cur_buf = _buf[input];
       int vc;
@@ -449,7 +450,7 @@ void IQRouterSplit::_Alloc( )
       
       if(expanded_output >= 0) {
 	
-	int output = expanded_output % _outputs;
+	int output = expanded_output / _output_speedup;
 	
 	Flit * f = cur_buf->FrontFlit(vc);
 	assert(f);
