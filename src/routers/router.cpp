@@ -67,6 +67,8 @@ Router::Router( const Configuration& config,
   _credit_delay     = config.GetInt( "credit_delay" );
   _input_speedup    = config.GetInt( "input_speedup" );
   _output_speedup   = config.GetInt( "output_speedup" );
+  _internal_speedup = config.GetFloat( "internal_speedup" );
+  _partial_internal_cycles = 0.0;
 }
 
 Credit *Router::_NewCredit( int vcs )
@@ -92,6 +94,16 @@ void Router::AddOutputChannel( FlitChannel *channel, CreditChannel *backchannel 
   _output_credits.push_back( backchannel );
   _channel_faults.push_back( false );
   channel->SetSource( this ) ;
+}
+
+void Router::Evaluate( )
+{
+  ReadInputs( );
+  _partial_internal_cycles += _internal_speedup;
+  while( _partial_internal_cycles >= 1.0 ) {
+    InternalStep( );
+    _partial_internal_cycles -= 1.0;
+  }
 }
 
 int Router::GetID( ) const

@@ -323,8 +323,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _total_sims = config.GetInt( "sim_count" );
 
-  _internal_speedup = config.GetFloat( "internal_speedup" );
-  _partial_internal_cycles.resize(_duplicate_networks, 0.0);
   _router_map.resize(_duplicate_networks);
   _class_array.resize(_duplicate_networks);
   for (int i=0; i < _duplicate_networks; ++i) {
@@ -1095,19 +1093,11 @@ void TrafficManager::_Step( )
 
   //advance networks
   for (int i = 0; i < _duplicate_networks; ++i) {
-    _net[i]->ReadInputs( );
+    _net[i]->Evaluate( );
   }
 
   for (int i = 0; i < _duplicate_networks; ++i) {
-    _partial_internal_cycles[i] += _internal_speedup;
-    while( _partial_internal_cycles[i] >= 1.0 ) {
-      _net[i]->InternalStep( );
-      _partial_internal_cycles[i] -= 1.0;
-    }
-  }
-
-  for (int a = 0; a < _duplicate_networks; ++a) {
-    _net[a]->WriteOutputs( );
+    _net[i]->Update( );
   }
   
 

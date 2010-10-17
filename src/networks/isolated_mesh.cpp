@@ -213,20 +213,14 @@ Credit* IsolatedMesh::ReadCredit( int source )
   return c;
 } 
 
-void IsolatedMesh::ReadInputs( )
+void IsolatedMesh::Evaluate( )
 {
-  _subMesh[0]->ReadInputs( );
-  _subMesh[1]->ReadInputs( );
+  _subMesh[0]->Evaluate( );
+  _subMesh[1]->Evaluate( );
 }
 
-void IsolatedMesh::InternalStep( ) 
+void IsolatedMesh::Update( ) 
 {
-  _subMesh[0]->InternalStep( );
-  _subMesh[1]->InternalStep( );
-}
-
-void IsolatedMesh::WriteOutputs( )
-{
-  _subMesh[0]->WriteOutputs( );
-  _subMesh[1]->WriteOutputs( );
+  _subMesh[0]->Update( );
+  _subMesh[1]->Update( );
 }

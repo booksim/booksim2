@@ -119,24 +119,17 @@ int Network::NumDests( ) const
   return _dests;
 }
 
-void Network::ReadInputs( )
+void Network::Evaluate( )
 {
   for ( int r = 0; r < _size; ++r ) {
-    _routers[r]->ReadInputs( );
+    _routers[r]->Evaluate( );
   }
 }
 
-void Network::InternalStep( )
+void Network::Update( )
 {
   for ( int r = 0; r < _size; ++r ) {
-    _routers[r]->InternalStep( );
-  }
-}
-
-void Network::WriteOutputs( )
-{
-  for ( int r = 0; r < _size; ++r ) {
-    _routers[r]->WriteOutputs( );
+    _routers[r]->Update( );
   }
 
   for ( int c = 0; c < _channels; ++c ) {

@@ -217,9 +217,6 @@ protected:
   double _acc_stopping_threshold;
   double _warmup_threshold;
 
-  float _internal_speedup;
-  vector<float> _partial_internal_cycles;
-
   int _cur_id;
   int _cur_pid;
   int _time;
