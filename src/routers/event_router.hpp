@@ -100,6 +100,7 @@ class EventRouter : public Router {
   int _vct;
 
   vector<Buffer *> _buf;
+  vector<vector<bool> > _active;
 
   tRoutingFunction   _rf;
 

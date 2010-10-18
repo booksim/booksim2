@@ -63,11 +63,13 @@ EventRouter::EventRouter( const Configuration& config,
   // Alloc VC's
 
   _buf.resize(_inputs);
+  _active.resize(_inputs);
 
   for ( int i = 0; i < _inputs; ++i ) {
     module_name << "buf_" << i;
     _buf[i] = new Buffer( config, _outputs, this, module_name.str( ) );
     module_name.seekp( 0, ios::beg );
+    _active[i].resize(_vcs, false);
   }
 
   // Alloc next VCs' state
@@ -325,7 +327,7 @@ void EventRouter::_IncomingFlits( )
       }
 
       // Head flit arriving at idle VC
-      if ( cur_buf->GetState( vc ) == VC::idle ) {
+      if ( !_active[input][vc] ) {
 	
 	if ( !f->head ) {
 	  cout << "Non-head flit:" << endl;
@@ -344,7 +346,7 @@ void EventRouter::_IncomingFlits( )
 	}
 
 	cur_buf->SetOutput( vc, out_port, out_vc );
-	cur_buf->SetState( vc, VC::active );
+	_active[input][vc] = true;
       } else {
 	if ( f->head ) {
 	  cout << *f;
@@ -631,7 +633,7 @@ void EventRouter::_TransportArb( int input )
 
     // Some sanity checking first
 
-    if ( ( cur_buf->GetState( vc ) != VC::active ) ) {
+    if ( !_active[input][vc] ) {
       Error( "Non-active VC received grant." );
     }
 
@@ -653,7 +655,7 @@ void EventRouter::_TransportArb( int input )
 	_transport_queue[output].pop( );
 	delete tevt;
 
-	cur_buf->SetState( vc, VC::idle );
+	_active[input][vc] = false;
       } else {
 	_transport_free[input]  = false;
 	_transport_match[input] = output;
@@ -666,7 +668,7 @@ void EventRouter::_TransportArb( int input )
       delete tevt;
 
       if ( f->tail ) {
-	cur_buf->SetState( vc, VC::idle );
+	_active[input][vc] = false;
       }
     }
 
