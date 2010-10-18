@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <sstream>
 #include <iostream>
-#include <stdlib.h>
+#include <cstdlib>
 
 #include "chaos_router.hpp"
 #include "random_utils.hpp"

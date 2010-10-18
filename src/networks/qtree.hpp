@@ -44,7 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef _QTREE_HPP_
 #define _QTREE_HPP_
-#include <assert.h>
+#include <cassert>
 #include "network.hpp"
 
 class QTree : public Network {

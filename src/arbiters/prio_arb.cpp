@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "booksim.hpp"
-#include <assert.h>
+#include <cassert>
 
 #include "prio_arb.hpp"
 

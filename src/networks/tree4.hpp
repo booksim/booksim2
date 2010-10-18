@@ -44,7 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef _TREE4_HPP_
 #define _TREE4_HPP_
-#include <assert.h>
+#include <cassert>
 #include "network.hpp"
 
 class Tree4 : public Network {

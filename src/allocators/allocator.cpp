@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "booksim.hpp"
 #include <iostream>
-#include <assert.h>
+#include <cassert>
 #include "allocator.hpp"
 
 /////////////////////////////////////////////////////////////////////////

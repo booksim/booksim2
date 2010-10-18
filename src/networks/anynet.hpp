@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "network.hpp"
 #include "routefunc.hpp"
-#include <assert.h>
+#include <cassert>
 #include <string>
 #include <map>
 #include <list>

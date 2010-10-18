@@ -39,7 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "allocator.hpp"
 #include "arbiter.hpp"
-#include <assert.h>
+#include <cassert>
 
 #include <vector>
 

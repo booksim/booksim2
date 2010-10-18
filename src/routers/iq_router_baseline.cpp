@@ -32,8 +32,8 @@
 #include <sstream>
 #include <iostream>
 #include <iomanip>
-#include <stdlib.h>
-#include <assert.h>
+#include <cstdlib>
+#include <cassert>
 
 #include "globals.hpp"
 #include "random_utils.hpp"

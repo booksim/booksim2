@@ -45,7 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include <vector>
 #include <sstream>
-#include <assert.h>
+#include <cassert>
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
 #include "cmesh.hpp"

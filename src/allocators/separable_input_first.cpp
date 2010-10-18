@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 #include <iostream>
-#include <string.h>
+#include <cstring>
 
 SeparableInputFirstAllocator::
 SeparableInputFirstAllocator( Module* parent, const string& name, int inputs,

@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "network.hpp"
 
 #include "routefunc.hpp"
-#include <assert.h>
+#include <cassert>
 
 
 class FlatFlyOnChip : public Network {

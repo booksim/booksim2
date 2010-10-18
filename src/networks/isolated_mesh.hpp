@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "network.hpp"
 #include "kncube.hpp"
-#include <assert.h>
+#include <cassert>
 
 class IsolatedMesh : public Network {
 
