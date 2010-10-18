@@ -417,7 +417,7 @@ void IQRouterSplit::_Alloc( )
   // Switch Power Modelling
   //  - Record Total Cycles
   //
-  switchMonitor.cycle() ;
+  _switchMonitor->cycle() ;
 
   for(int input = 0; input < _inputs; ++input) {
     
@@ -578,8 +578,8 @@ void IQRouterSplit::_Alloc( )
 	  //
 	  // Switch Power Modelling
 	  //
-	  switchMonitor.traversal(input, output, f);
-	  bufferMonitor.read(input, f);
+	  _switchMonitor->traversal(input, output, f);
+	  _bufferMonitor->read(input, f);
 	  
 	  if(f->watch)
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "

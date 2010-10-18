@@ -45,9 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 IQRouterBase::IQRouterBase( const Configuration& config,
 		    Module *parent, const string & name, int id,
 		    int inputs, int outputs )
-  : Router( config, parent, name, id, inputs, outputs ), 
-    bufferMonitor(inputs), 
-    switchMonitor(inputs, outputs) 
+  : Router( config, parent, name, id, inputs, outputs )
 {  
   _vcs         = config.GetInt( "num_vcs" );
 
@@ -101,18 +99,21 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   _received_flits.resize(_inputs);
   _sent_flits.resize(_outputs);
   ResetFlitStats();
+
+  _bufferMonitor = new BufferMonitor(inputs);
+  _switchMonitor = new SwitchMonitor(inputs, outputs);
 }
 
 IQRouterBase::~IQRouterBase( )
 {
   if(_print_activity){
     cout << Name() << ".bufferMonitor:" << endl ; 
-    cout << bufferMonitor << endl ;
+    cout << *_bufferMonitor << endl ;
     
     cout << Name() << ".switchMonitor:" << endl ; 
     cout << "Inputs=" << _inputs ;
     cout << "Outputs=" << _outputs ;
-    cout << switchMonitor << endl ;
+    cout << *_switchMonitor << endl ;
   }
 
   for (int i = 0; i < _inputs; ++i)
@@ -124,6 +125,8 @@ IQRouterBase::~IQRouterBase( )
   delete _crossbar_pipe;
   delete _credit_pipe;
 
+  delete _bufferMonitor;
+  delete _switchMonitor;
 }
   
 void IQRouterBase::ReadInputs( )
@@ -157,7 +160,7 @@ void IQRouterBase::WriteOutputs( )
 
 void IQRouterBase::_ReceiveFlits( )
 {
-  bufferMonitor.cycle() ;
+  _bufferMonitor->cycle() ;
   for ( int input = 0; input < _inputs; ++input ) { 
     Flit * f = _input_channels[input]->Receive();
     if ( f ) {
@@ -194,7 +197,7 @@ void IQRouterBase::_ReceiveFlits( )
       if ( !cur_buf->AddFlit( vc, f ) ) {
 	Error( "VC buffer overflow" );
       }
-      bufferMonitor.write( input, f ) ;
+      _bufferMonitor->write( input, f ) ;
     }
   }
 }

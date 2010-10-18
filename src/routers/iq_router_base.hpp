@@ -131,12 +131,12 @@ protected:
   
   // ----------------------------------------
   //
-  //   Router Power Modelling
+  //   Router Power Modellingyes
   //
   // ----------------------------------------
 
-  SwitchMonitor switchMonitor ;
-  BufferMonitor bufferMonitor ;
+  SwitchMonitor * _switchMonitor ;
+  BufferMonitor * _bufferMonitor ;
   
 public:
   IQRouterBase( const Configuration& config,
@@ -156,8 +156,8 @@ public:
   virtual int GetSentFlits(int o = -1) const;
   virtual void ResetFlitStats();
 
-  const SwitchMonitor* GetSwitchMonitor() const {return &switchMonitor;}
-  const BufferMonitor* GetBufferMonitor() const {return &bufferMonitor;}
+  const SwitchMonitor* GetSwitchMonitor() const {return _switchMonitor;}
+  const BufferMonitor* GetBufferMonitor() const {return _bufferMonitor;}
 };
 
 #endif
