@@ -48,40 +48,8 @@ class Flit;
 class Credit;
 class Buffer;
 class BufferState;
-
-class SwitchMonitor {
-  int  _cycles ;
-  int  _inputs ;
-  int  _outputs ;
-  vector<int> _event ;
-  int index( int input, int output, int flitType ) const ;
-public:
-  SwitchMonitor( int inputs, int outputs ) ;
-  void cycle() ;
-  const vector<int> & GetActivity() const {return _event;}
-  int NumInputs() const {return _inputs;}
-  int NumOutputs() const {return _outputs;}
-  void traversal( int input, int output, Flit* flit ) ;
-  friend ostream& operator<<( ostream& os, const SwitchMonitor& obj ) ;
-  
-} ;
-
-class BufferMonitor {
-  int  _cycles ;
-  int  _inputs ;
-  vector<int> _reads ;
-  vector<int> _writes ;
-  int index( int input, int flitType ) const ;
-public:
-  BufferMonitor( int inputs ) ;
-  void cycle() ;
-  void write( int input, Flit* flit ) ;
-  void read( int input, Flit* flit ) ;
-  const vector<int> & GetReads() const {return _reads;}
-  const vector<int> & GetWrites() const {return _writes;}
-  int NumInputs() const {return _inputs;}
-  friend ostream& operator<<( ostream& os, const BufferMonitor& obj ) ;
-} ;
+class SwitchMonitor;
+class BufferMonitor;
 
 class IQRouterBase : public Router {
 

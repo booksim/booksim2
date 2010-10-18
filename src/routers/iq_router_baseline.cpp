@@ -45,6 +45,8 @@
 #include "pipefifo.hpp"
 #include "allocator.hpp"
 #include "iq_router_baseline.hpp"
+#include "switch_monitor.hpp"
+#include "buffer_monitor.hpp"
 
 IQRouterBaseline::IQRouterBaseline( const Configuration& config,
 				    Module *parent, const string & name, int id,

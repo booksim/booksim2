@@ -39,6 +39,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "random_utils.hpp"
 #include "buffer.hpp"
 #include "iq_router_split.hpp"
+#include "switch_monitor.hpp"
+#include "buffer_monitor.hpp"
 
 IQRouterSplit::IQRouterSplit( const Configuration& config,
 		    Module *parent, const string & name, int id,

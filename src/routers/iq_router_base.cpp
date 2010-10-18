@@ -41,6 +41,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vc.hpp"
 #include "outputset.hpp"
 #include "buffer_state.hpp"
+#include "buffer_monitor.hpp"
+#include "switch_monitor.hpp"
 
 IQRouterBase::IQRouterBase( const Configuration& config,
 		    Module *parent, const string & name, int id,
@@ -385,90 +387,3 @@ void IQRouterBase::ResetFlitStats() {
   for(int o = 0; o < _outputs; ++o)
     _sent_flits[o] = 0;
 }
-
-
-// ----------------------------------------------------------------------
-//
-//   Switch Monitor
-//
-// ----------------------------------------------------------------------
-SwitchMonitor::SwitchMonitor( int inputs, int outputs ) {
-  _cycles  = 0 ;
-  _inputs  = inputs ;
-  _outputs = outputs ;
-  const int n = (inputs+1) * (outputs+1) * Flit::NUM_FLIT_TYPES ;
-  _event.resize(n, 0) ;
-}
-
-int SwitchMonitor::index( int input, int output, int flitType ) const {
-  return flitType + Flit::NUM_FLIT_TYPES * ( output + _outputs * input ) ;
-}
-
-void SwitchMonitor::cycle() {
-  _cycles++ ;
-}
-
-void SwitchMonitor::traversal( int input, int output, Flit* flit ) {
-  _event[ index( input, output, flit->type) ]++ ;
-}
-
-ostream& operator<<( ostream& os, const SwitchMonitor& obj ) {
-  for ( int i = 0 ; i < obj._inputs ; i++ ) {
-    for ( int o = 0 ; o < obj._outputs ; o++) {
-      os << "[" << i << " -> " << o << "] " ;
-      for ( int f = 0 ; f < Flit::NUM_FLIT_TYPES ; f++ ) {
-	os << f << ":" << obj._event[ obj.index(i,o,f)] << " " ;
-      }
-      os << endl ;
-    }
-  }
-  return os ;
-}
-
-// ----------------------------------------------------------------------
-//
-//   Flit Buffer Monitor
-//
-// ----------------------------------------------------------------------
-BufferMonitor::BufferMonitor( int inputs ) {
-  _cycles = 0 ;
-  _inputs = inputs ;
-
-  const int n = 4 * inputs  * Flit::NUM_FLIT_TYPES ;
-  _reads.resize(n, 0) ;
-  _writes.resize(n, 0) ;
-}
-
-int BufferMonitor::index( int input, int flitType ) const {
-  if ( input < 0 || input > _inputs ) 
-    cerr << "ERROR: input out of range in BufferMonitor" << endl ;
-  if ( flitType < 0 || flitType> Flit::NUM_FLIT_TYPES ) 
-    cerr << "ERROR: flitType out of range in flitType" << endl ;
-  return flitType + Flit::NUM_FLIT_TYPES * input ;
-}
-
-void BufferMonitor::cycle() {
-  _cycles++ ;
-}
-
-void BufferMonitor::write( int input, Flit* flit ) {
-  _writes[ index(input, flit->type) ]++ ;
-}
-
-void BufferMonitor::read( int input, Flit* flit ) {
-  _reads[ index(input, flit->type) ]++ ;
-}
-
-ostream& operator<<( ostream& os, const BufferMonitor& obj ) {
-  for ( int i = 0 ; i < obj._inputs ; i++ ) {
-    os << "[ " << i << " ] " ;
-    for ( int f = 0 ; f < Flit::NUM_FLIT_TYPES ; f++ ) {
-      os << "Type=" << f
-	 << ":(R#" << obj._reads[ obj.index( i, f) ]  << ","
-	 << "W#" << obj._writes[ obj.index( i, f) ] << ")" << " " ;
-    }
-    os << endl ;
-  }
-  return os ;
-}
-

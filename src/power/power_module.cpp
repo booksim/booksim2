@@ -30,6 +30,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "power_module.hpp"
 #include "booksim_config.hpp"
+#include "buffer_monitor.hpp"
+#include "switch_monitor.hpp"
 
 Power_Module::Power_Module(Network * n , TrafficManager* parent, const Configuration &config)
   : Module( 0, "power_module" ){
