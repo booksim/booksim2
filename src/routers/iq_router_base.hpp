@@ -79,7 +79,7 @@ public:
   void read( int input, Flit* flit ) ;
   const vector<int> & GetReads() const {return _reads;}
   const vector<int> & GetWrites() const {return _writes;}
-  int NumInputs(){return _inputs;}
+  int NumInputs() const {return _inputs;}
   friend ostream& operator<<( ostream& os, const BufferMonitor& obj ) ;
 } ;
 
@@ -134,7 +134,7 @@ protected:
   //   Router Power Modelling
   //
   // ----------------------------------------
-public:
+
   SwitchMonitor switchMonitor ;
   BufferMonitor bufferMonitor ;
   
@@ -156,8 +156,8 @@ public:
   virtual int GetSentFlits(int o = -1) const;
   virtual void ResetFlitStats();
 
-  SwitchMonitor* GetSwitchMonitor(){return &switchMonitor;}
-  BufferMonitor* GetBufferMonitor(){return &bufferMonitor;}
+  const SwitchMonitor* GetSwitchMonitor() const {return &switchMonitor;}
+  const BufferMonitor* GetBufferMonitor() const {return &bufferMonitor;}
 };
 
 #endif

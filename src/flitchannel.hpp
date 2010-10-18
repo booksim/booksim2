@@ -59,14 +59,14 @@ public:
   ~FlitChannel();
 
   void SetSource( Router* router ) ;
-  int GetSource();
+  inline int GetSource() const {return _routerSource;}
   void SetSink( Router* router ) ;
-  int GetSink();
+  inline int GetSink() const {return _routerSink;}
 
-  const vector<int> & GetActivity(){return _active;}
+  inline const vector<int> & GetActivity() const {return _active;}
 
   // Check for flit on input. Used for tracking channel use
-  bool InUse();
+  bool InUse() const;
 
   // Send flit 
   virtual void Send( Flit* flit );

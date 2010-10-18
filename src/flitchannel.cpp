@@ -77,19 +77,11 @@ void FlitChannel::SetSource( Router* router ) {
   _routerSource = router->GetID() ;
 }
 
-int FlitChannel::GetSource(){
-  return _routerSource;
-}
-
 void FlitChannel::SetSink( Router* router ) {
   _routerSink = router->GetID() ;
 }
 
-int FlitChannel::GetSink(){
-  return _routerSink;
-}
-
-bool FlitChannel::InUse() {
+bool FlitChannel::InUse() const {
   if ( _queue.empty() )
     return false;
   return ( _queue.back() != 0 );

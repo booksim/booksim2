@@ -122,7 +122,7 @@ Power_Module::~Power_Module(){
 //Channels
 //////////////////////////////////////////////
 
-void Power_Module::calcChannel(FlitChannel* f){
+void Power_Module::calcChannel(const FlitChannel* f){
   double channelLength = f->GetLatency()* wire_length;
   wire * this_wire = wireOptimize(channelLength);
   double K = this_wire->K;
@@ -235,7 +235,7 @@ double Power_Module::powerWireDFF(double M, double W, double alpha){
 ///////////////////////////////////////////////////////////////
 //Memory
 //////////////////////////////////////////////////////////////
-void Power_Module::calcBuffer(BufferMonitor *bm){
+void Power_Module::calcBuffer(const BufferMonitor *bm){
   double depth = numVC * depthVC  ;
   double Pleak = powerMemoryBitLeak( depth ) * channel_width ;
   //area
@@ -313,7 +313,7 @@ double Power_Module::powerMemoryBitLeak(double memoryDepth ){
 //switch
 //////////////////////////////////////////////////////////////
 
-void Power_Module::calcSwitch(SwitchMonitor* sm){
+void Power_Module::calcSwitch(const SwitchMonitor* sm){
 
   switchArea += areaCrossbar(sm->NumInputs(), sm->NumOutputs());
   outputArea += areaOutputModule(sm->NumOutputs());
@@ -496,9 +496,9 @@ void Power_Module::run(){
   vector<Router*> routers = net->GetRouters();
   for(int i = 0; i < routers.size(); i++){
     IQRouterBase* temp = dynamic_cast<IQRouterBase*>(routers[i]);
-    BufferMonitor * bm = temp->GetBufferMonitor();
+    const BufferMonitor * bm = temp->GetBufferMonitor();
     calcBuffer(bm);
-    SwitchMonitor * sm = temp->GetSwitchMonitor();
+    const SwitchMonitor * sm = temp->GetSwitchMonitor();
     calcSwitch(sm);
   }
   

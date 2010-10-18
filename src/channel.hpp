@@ -52,7 +52,7 @@ public:
 
   // Physical Parameters
   void SetLatency( int cycles );
-  int GetLatency() { return _delay ; }
+  int GetLatency() const { return _delay ; }
   
   // Send data 
   virtual void Send( T* data );
@@ -61,7 +61,7 @@ public:
   T* Receive( ); 
 
   // Peek at data
-  T* Peek( );
+  T* Peek( ) const;
 
 protected:
   int       _delay;
@@ -103,7 +103,7 @@ T* Channel<T>::Receive() {
 }
 
 template<class T>
-T* Channel<T>::Peek( ) {
+T* Channel<T>::Peek( ) const {
 
   assert(!_queue.empty());
 

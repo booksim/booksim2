@@ -149,7 +149,7 @@ protected:
   ////////////////////////
 
   //channels
-  void calcChannel(FlitChannel * f);
+  void calcChannel(const FlitChannel * f);
   wire* wireOptimize(double l);
   double powerRepeatedWire(double L, double K, double M, double N);
   double powerRepeatedWireLeak (double K, double M, double N);
@@ -157,14 +157,14 @@ protected:
   double powerWireDFF(double M, double W, double alpha);
   
   //memory
-  void calcBuffer(BufferMonitor *bm);
+  void calcBuffer(const BufferMonitor *bm);
   double powerWordLine(double memoryWidth, double memoryDepth);
   double powerMemoryBitRead(double memoryDepth);
   double powerMemoryBitWrite(double memoryDepth);
   double powerMemoryBitLeak(double memoryDepth );
 
   //switch
-  void calcSwitch(SwitchMonitor *sm);
+  void calcSwitch(const SwitchMonitor *sm);
   double powerCrossbar(double width, double inputs, double outputs, double from, double to);
   double powerCrossbarCtrl(double width, double inputs, double outputs);
   double powerCrossbarLeak (double width, double inputs, double outputs);
