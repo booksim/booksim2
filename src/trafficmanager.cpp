@@ -35,35 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "trafficmanager.hpp"
 #include "random_utils.hpp" 
 #include "vc.hpp"
-
-stack<PacketReplyInfo*> PacketReplyInfo::_all;
-stack<PacketReplyInfo*> PacketReplyInfo::_free;
-
-PacketReplyInfo * PacketReplyInfo::New()
-{
-  PacketReplyInfo * pr;
-  if(_free.empty()) {
-    pr = new PacketReplyInfo();
-    _all.push(pr);
-  } else {
-    pr = _free.top();
-    _free.pop();
-  }
-  return pr;
-}
-
-void PacketReplyInfo::Free()
-{
-  _free.push(this);
-}
-
-void PacketReplyInfo::FreeAll()
-{
-  while(!_all.empty()) {
-    delete _all.top();
-    _all.pop();
-  }
-}
+#include "packet_reply_info.hpp"
 
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
   : Module( 0, "traffic_manager" ), _net(net), _cur_id(0), _cur_pid(0),

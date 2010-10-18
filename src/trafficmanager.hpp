@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 #include <set>
 #include <stack>
+#include <cassert>
 
 #include "module.hpp"
 #include "config_utils.hpp"
@@ -46,30 +47,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "routefunc.hpp"
 #include "outputset.hpp"
 #include "injection.hpp"
-#include <assert.h>
 
 //register the requests to a node
-class PacketReplyInfo {
-
-public:
-  int source;
-  int time;
-  int ttime;
-  bool record;
-  Flit::FlitType type;
-
-  static PacketReplyInfo* New();
-  void Free();
-  static void FreeAll();
-
-private:
-
-  static stack<PacketReplyInfo*> _all;
-  static stack<PacketReplyInfo*> _free;
-
-  PacketReplyInfo() {}
-  ~PacketReplyInfo() {}
-};
+class PacketReplyInfo;
 
 class TrafficManager : public Module {
 protected:
