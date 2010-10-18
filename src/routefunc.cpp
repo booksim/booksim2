@@ -39,15 +39,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
-#include "booksim.hpp"
 #include <map>
-#include <stdlib.h>
-#include <assert.h>
+#include <cstdlib>
+#include <cassert>
+
+#include "booksim.hpp"
 #include "routefunc.hpp"
 #include "kncube.hpp"
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
-
 #include "fattree.hpp"
 #include "tree4.hpp"
 #include "qtree.hpp"

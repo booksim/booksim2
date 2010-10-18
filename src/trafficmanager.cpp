@@ -28,10 +28,11 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "booksim.hpp"
 #include <sstream>
-#include <math.h>
+#include <cmath>
 #include <fstream>
+
+#include "booksim.hpp"
 #include "trafficmanager.hpp"
 #include "random_utils.hpp" 
 #include "vc.hpp"

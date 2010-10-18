@@ -34,11 +34,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * tracks the credit and how much of the buffer is in use 
  */
 
-#include "booksim.hpp"
 #include <iostream>
-#include <stdlib.h>
-#include <assert.h>
+#include <cstdlib>
+#include <cassert>
 
+#include "booksim.hpp"
 #include "buffer_state.hpp"
 #include "random_utils.hpp"
 

@@ -35,9 +35,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
-#include "booksim.hpp"
 #include <iostream>
-#include <stdlib.h>
+#include <cstdlib>
+
+#include "booksim.hpp"
 #include "module.hpp"
 
 Module::Module( Module *parent, const string& name )

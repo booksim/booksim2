@@ -38,7 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "booksim.hpp"
 #include <map>
-#include <assert.h>
+#include <cassert>
 
 #include "injection.hpp"
 #include "network.hpp"

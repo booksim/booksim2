@@ -34,8 +34,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdlib>
 #include <cstring>
-#include <limits.h>
-#include <assert.h>
+#include <climits>
+#include <cassert>
 #ifdef _WIN32_
 #pragma warning (disable: 4786)
 #include <ostream>

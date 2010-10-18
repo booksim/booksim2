@@ -36,9 +36,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
-#include "booksim.hpp"
-#include <assert.h>
+#include <cassert>
 
+#include "booksim.hpp"
 #include "outputset.hpp"
 
 void OutputSet::Clear( )
