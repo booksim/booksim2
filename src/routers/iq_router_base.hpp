@@ -57,8 +57,8 @@ protected:
   int  _vcs ;
 
   //if a vc is in the vc::routing state, it is inserted here until routing_delay is up
-  queue<int> _routing_vcs;
-  set<int> _vcalloc_vcs;  
+  queue<pair<int, int> > _routing_vcs;
+  set<pair<int, int> > _vcalloc_vcs;  
 
   vector<Buffer *> _buf;
   vector<BufferState *> _next_buf;

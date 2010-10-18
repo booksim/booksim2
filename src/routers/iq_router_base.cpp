@@ -175,7 +175,7 @@ void IQRouterBase::_ReceiveFlits( )
 	    Error( "Received non-head flit at idle VC" );
 	  }
 	  cur_buf->SetState( vc, VC::routing );
-	  _routing_vcs.push(input*_vcs+f->vc);
+	  _routing_vcs.push(make_pair(input, f->vc));
       }
 
       if(f->watch) {
@@ -244,22 +244,20 @@ void IQRouterBase::_InputQueuing( )
 //will be <routing delay
 void IQRouterBase::_Route( )
 {
-  int size = _routing_vcs.size();
-  for(int i = 0; i < size; i++){
-    int vc_encode = _routing_vcs.front();
-    Buffer * cur_buf = _buf[vc_encode/_vcs];
-    int vc = vc_encode%_vcs;
-    if(cur_buf->GetStateTime(vc) >= _routing_delay){
-      Flit * f = cur_buf->FrontFlit(vc);
-      cur_buf->Route(vc, _rf, this, f,  vc_encode/_vcs);
-      cur_buf->SetState(vc, VC::vc_alloc) ;
-      _vcalloc_vcs.insert(vc_encode);
-      _routing_vcs.pop();
-    } else {
+  while(!_routing_vcs.empty()) {
+    pair<int, int> item = _routing_vcs.front();
+    int input = item.first;
+    int vc = item.second;
+    Buffer * cur_buf = _buf[input];
+    if(cur_buf->GetStateTime(vc) < _routing_delay) {
       break;
     }
+    _routing_vcs.pop();
+    Flit * f = cur_buf->FrontFlit(vc);
+    cur_buf->Route(vc, _rf, this, f,  input);
+    cur_buf->SetState(vc, VC::vc_alloc) ;
+    _vcalloc_vcs.insert(item);
   }
-
 }
 
 void IQRouterBase::_OutputQueuing( )

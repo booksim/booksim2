@@ -335,7 +335,7 @@ void IQRouterCombined::_Alloc( )
 	      cur_buf->SetState(vc, VC::idle);
 	    } else if(_routing_delay > 0) {
 	      cur_buf->SetState(vc, VC::routing);
-	      _routing_vcs.push(input*_vcs+vc);
+	      _routing_vcs.push(make_pair(input, vc));
 	    } else {
 	      cur_buf->Route(vc, _rf, this, cur_buf->FrontFlit(vc), input);
 	      cur_buf->SetState(vc, VC::vc_alloc);
