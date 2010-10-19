@@ -28,27 +28,27 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/*wavefront.cpp
+/*fair_wavefront.cpp
  *
- *The wave front allocator
+ *A fairer wave front allocator
  *
  */
 #include "booksim.hpp"
 #include <iostream>
 
-#include "wavefront.hpp"
+#include "fair_wavefront.hpp"
 #include "random_utils.hpp"
 
-Wavefront::Wavefront( Module *parent, const string& name,
-		      int inputs, int outputs ) :
+FairWavefront::FairWavefront( Module *parent, const string& name,
+			      int inputs, int outputs ) :
   DenseAllocator( parent, name, inputs, outputs ),
   _pri(0), _num_requests(0), _last_in(-1), _last_out(-1),
   _square((inputs > outputs) ? inputs : outputs)
 {
 }
 
-void Wavefront::AddRequest( int in, int out, int label, 
-			    int in_pri, int out_pri )
+void FairWavefront::AddRequest( int in, int out, int label, 
+				int in_pri, int out_pri )
 {
   // count unique requests
   sRequest req;
@@ -61,7 +61,7 @@ void Wavefront::AddRequest( int in, int out, int label,
   DenseAllocator::AddRequest(in, out, label, in_pri, out_pri);
 }
 
-void Wavefront::Allocate( )
+void FairWavefront::Allocate( )
 {
 
   // Clear matching
@@ -79,9 +79,14 @@ void Wavefront::Allocate( )
     _inmatch[_last_in] = _last_out;
     _outmatch[_last_out] = _last_in;
     
+    // next time, start at the diagonal after the one with the request in it
+    _pri = ( _last_in + ( _square - _last_out ) + 1 ) % _square;
+    
   } else {
 
     // otherwise we have to loop through the diagonals of request matrix
+
+    int next_pri = -1;
 
     for ( int p = 0; p < _square; ++p ) {
       for ( int q = 0; q < _square; ++q ) {
@@ -94,17 +99,25 @@ void Wavefront::Allocate( )
 	  // Grant!
 	  _inmatch[input] = output;
 	  _outmatch[output] = input;
+
+	  // if this is the first diagonal to have any requests, start at the 
+	  // next one the next time around
+	  if(next_pri < 0) {
+	    next_pri = ((_pri + p) + 1) % _square;
+	  }
+
 	}
       }
     }
+    
+    // update priority diagonal
+    _pri = next_pri;
+
   }
   
   _num_requests = 0;
   _last_in = -1;
   _last_out = -1;
-  
-  // Round-robin the priority diagonal
-  _pri = ( _pri + 1 ) % _square;
 }
 
 
