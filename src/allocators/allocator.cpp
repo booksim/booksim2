@@ -41,6 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "loa.hpp"
 #include "wavefront.hpp"
 #include "fair_wavefront.hpp"
+#include "prio_wavefront.hpp"
 #include "selalloc.hpp"
 #include "separable_input_first.hpp"
 #include "separable_output_first.hpp"
@@ -421,6 +422,8 @@ Allocator *Allocator::NewAllocator( Module *parent, const string& name,
     a = new Wavefront( parent, name, inputs, outputs );
   } else if ( alloc_type == "fair_wavefront" ) {
     a = new FairWavefront( parent, name, inputs, outputs );
+  } else if ( alloc_type == "prio_wavefront" ) {
+    a = new PrioWavefront( parent, name, inputs, outputs );
   } else if ( alloc_type == "select" ) {
     a = new SelAlloc( parent, name, inputs, outputs, iters );
   } else if (alloc_type == "separable_input_first") {
