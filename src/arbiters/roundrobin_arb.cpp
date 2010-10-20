@@ -58,23 +58,17 @@ void RoundRobinArbiter::UpdateState() {
 
 void RoundRobinArbiter::AddRequest( int input, int id, int pri )
 {
-  assert( 0 <= input && input < _input_size ) ;
   if(!_request[input].valid || (_request[input].pri < pri)) {
-    if(!_request[input].valid) {
-      _num_reqs++ ;
-      _request[input].valid = true ;
-    }
-    _request[input].id = id ;
-    _request[input].pri = pri ;
-    if(_highest_pri<pri){
+    if(_highest_pri < pri) {
       _highest_pri = pri;
       _best_input = input;
-    } else if(_highest_pri==pri){
+    } else if(_highest_pri == pri) {
       int a = (input <= _pointer) ? (input + _input_size) : input;
       int b = (_best_input <= _pointer) ? (_best_input + _input_size) : _best_input;
-      _best_input = (a < b) ? input : _best_input; 
+      _best_input = (a < b) ? input : _best_input;
     }
   }
+  Arbiter::AddRequest(input, id, pri);
 }
 
 int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
