@@ -1445,6 +1445,7 @@ bool TrafficManager::_SingleSim( )
       cout << "Maximum latency = " << _latency_stats[0]->Max( ) << endl;
       cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
       cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
+      cout << "Packets in flight = " << _total_in_flight_packets.size() << " (" << _total_in_flight_flits.size() << " flits)" << endl;
       if(_stats_out) {
 	*_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
 		    << "lat_hist(" << total_phases + 1 << ",:) = "
@@ -1482,6 +1483,8 @@ bool TrafficManager::_SingleSim( )
 	  *_stats_out << _accepted_flits[d]->Average( ) << " ";
 	}
 	*_stats_out << "];" << endl;
+	*_stats_out << "packets(" << total_phases + 1 << ") = " << _total_in_flight_packets.size() << ";" << endl;
+	*_stats_out << "flits(" << total_phases + 1 << ") = " << _total_in_flight_flits.size() << ";" << endl;
       }
 
       // Fail safe for latency mode, throughput will ust continue
@@ -1717,9 +1720,9 @@ void TrafficManager::DisplayStats() {
 	 << " (" << _overall_avg_frag[c]->NumSamples( ) << " samples)" << endl;
     cout << "Overall maximum fragmentation = " << _overall_max_frag[c]->Average( )
 	 << " (" << _overall_max_frag[c]->NumSamples( ) << " samples)" << endl;
+
     cout << "Overall average accepted rate = " << _overall_accepted->Average( )
 	 << " (" << _overall_accepted->NumSamples( ) << " samples)" << endl;
-    
     cout << "Overall min accepted rate = " << _overall_accepted_min->Average( )
 	 << " (" << _overall_accepted_min->NumSamples( ) << " samples)" << endl;
     
