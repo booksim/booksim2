@@ -56,7 +56,7 @@ void SelAlloc::Allocate( )
   int output_offset;
 
   list<sRequest>::iterator p;
-  list<int>::iterator outer_iter;
+  set<int>::iterator outer_iter;
   bool wrapped;
 
   int max_index;

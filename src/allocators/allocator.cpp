@@ -231,44 +231,25 @@ void SparseAllocator::AddRequest( int in, int out, int label,
   assert( ( in >= 0 ) && ( in < _inputs ) &&
 	  ( out >= 0 ) && ( out < _outputs ) );
 
-  list<sRequest>::iterator insert_point;
-  list<int>::iterator occ_insert;
-  sRequest req;
-
-  // insert into occupied inputs list if
+  // insert into occupied inputs set if
   // input is currently empty
   if ( _in_req[in].empty( ) ) {
-    occ_insert = _in_occ.begin( );
-    while( ( occ_insert != _in_occ.end( ) ) &&
-	   ( *occ_insert < in ) ) {
-      occ_insert++;
-    }
-    assert( ( occ_insert == _in_occ.end( ) ) || 
-	    ( *occ_insert != in ) );
-
-    _in_occ.insert( occ_insert, in );
+    _in_occ.insert(in);
   }
 
   // similarly for the output
   if ( _out_req[out].empty( ) ) {
-    occ_insert = _out_occ.begin( );
-    while( ( occ_insert != _out_occ.end( ) ) &&
-	   ( *occ_insert < out ) ) {
-      occ_insert++;
-    }
-    assert( ( occ_insert == _out_occ.end( ) ) || 
-	    ( *occ_insert != out ) );
-
-    _out_occ.insert( occ_insert, out );
+    _out_occ.insert(out);
   }
 
   // insert input request in order of it's output
-  insert_point = _in_req[in].begin( );
+  list<sRequest>::iterator insert_point = _in_req[in].begin( );
   while( ( insert_point != _in_req[in].end( ) ) &&
 	 ( insert_point->port < out ) ) {
     insert_point++;
   }
 
+  sRequest req;
   req.port    = out;
   req.label   = label;
   req.in_pri  = in_pri;
@@ -342,14 +323,7 @@ void SparseAllocator::RemoveRequest( int in, int out, int label )
   // remove from occupied inputs list if
   // input is now empty
   if ( _in_req[in].empty( ) ) {
-    occ_remove = _in_occ.begin( );
-    while( ( occ_remove != _in_occ.end( ) ) &&
-	   ( *occ_remove != in ) ) {
-      occ_remove++;
-    }
-    
-    assert( occ_remove != _in_occ.end( ) );
-    _in_occ.erase( occ_remove );
+    _in_occ.erase(in);
   }
 
   // similarly for the output
@@ -363,14 +337,7 @@ void SparseAllocator::RemoveRequest( int in, int out, int label )
   _out_req[out].erase( erase_point );
 
   if ( _out_req[out].empty( ) ) {
-    occ_remove = _out_occ.begin( );
-    while( ( occ_remove != _out_occ.end( ) ) &&
-	   ( *occ_remove != out ) ) {
-      occ_remove++;
-    }
-
-    assert( occ_remove != _out_occ.end( ) );
-    _out_occ.erase( occ_remove );
+    _out_occ.erase(out);
   }
 }
 

@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 #include <list>
+#include <set>
 #include <vector>
 
 #include "module.hpp"
@@ -111,8 +112,8 @@ public:
 
 class SparseAllocator : public Allocator {
 protected:
-  list<int> _in_occ;
-  list<int> _out_occ;
+  set<int> _in_occ;
+  set<int> _out_occ;
   
   vector<list<sRequest> > _in_req;
   vector<list<sRequest> > _out_req;
