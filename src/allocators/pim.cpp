@@ -41,7 +41,6 @@ PIM::PIM( Module *parent, const string& name,
   DenseAllocator( parent, name, inputs, outputs ),
   _PIM_iter(iters)
 {
-  _grants.resize(outputs);
 }
 
 PIM::~PIM( )
@@ -62,8 +61,9 @@ void PIM::Allocate( )
     // Grant phase --- outputs randomly choose
     // between one of their requests
 
+    vector<int> grants(_outputs, -1);
+
     for ( output = 0; output < _outputs; ++output ) {
-      _grants[output] = -1;
       
       // A random arbiter between input requests
       input_offset  = RandomInt( _inputs - 1 );
@@ -76,7 +76,7 @@ void PIM::Allocate( )
 	     ( _outmatch[output] == -1 ) ) {
 	  
 	  // Grant
-	  _grants[output] = input;
+	  grants[output] = input;
 	  break;
 	}
       }
@@ -93,7 +93,7 @@ void PIM::Allocate( )
       for ( int o = 0; o < _outputs; ++o ) {
 	output = ( o + output_offset ) % _outputs;
 	
-	if ( _grants[output] == input ) {
+	if ( grants[output] == input ) {
 	  
 	  // Accept
 	  _inmatch[input]   = output;

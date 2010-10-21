@@ -38,7 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class SelAlloc : public SparseAllocator {
   int _iter;
 
-  vector<int> _grants;
   vector<int> _aptrs;
   vector<int> _gptrs;
 

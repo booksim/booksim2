@@ -38,7 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class PIM : public DenseAllocator {
   int _PIM_iter;
 
-  vector<int> _grants;
 public:
   PIM( Module *parent, const string& name,
        int inputs, int outputs, int iters );

@@ -41,7 +41,6 @@ iSLIP_Sparse::iSLIP_Sparse( Module *parent, const string& name,
   SparseAllocator( parent, name, inputs, outputs ),
   _iSLIP_iter(iters)
 {
-  _grants.resize(_outputs);
   _gptrs.resize(_outputs, 0);
   _aptrs.resize(_inputs, 0);
 }
@@ -62,8 +61,9 @@ void iSLIP_Sparse::Allocate( )
   for ( int iter = 0; iter < _iSLIP_iter; ++iter ) {
     // Grant phase
 
+    vector<int> grants(_outputs, -1);
+
     for ( output = 0; output < _outputs; ++output ) {
-      _grants[output] = -1;
 
       // Skip loop if there are no requests
       // or the output is already matched
@@ -98,7 +98,7 @@ void iSLIP_Sparse::Allocate( )
 	// we know the output is free (above) and
 	// if the input is free, grant request
 	if ( _inmatch[input] == -1 ) {
-	  _grants[output] = input;
+	  grants[output] = input;
 	  break;
 	}
 
@@ -109,7 +109,7 @@ void iSLIP_Sparse::Allocate( )
 #ifdef DEBUG_ISLIP
     cout << "grants: ";
     for ( int i = 0; i < _outputs; ++i ) {
-      cout << _grants[i] << " ";
+      cout << grants[i] << " ";
     }
     cout << endl;
 
@@ -153,7 +153,7 @@ void iSLIP_Sparse::Allocate( )
 
 	// we know the output is free (above) and
 	// if the input is free, grant request
-	if ( _grants[output] == input ) {
+	if ( grants[output] == input ) {
 	  // Accept
 	  _inmatch[input]   = output;
 	  _outmatch[output] = input;

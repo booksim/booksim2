@@ -38,7 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class iSLIP_Sparse : public SparseAllocator {
   int _iSLIP_iter;
 
-  vector<int> _grants;
   vector<int> _gptrs;
   vector<int> _aptrs;
 

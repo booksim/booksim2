@@ -42,7 +42,6 @@ SelAlloc::SelAlloc( Module *parent, const string& name,
 {
   _iter = iters;
 
-  _grants.resize(outputs);
   _gptrs.resize(outputs, 0);
   _aptrs.resize(inputs, 0);
   _outmask.resize(outputs, 0);
@@ -65,7 +64,7 @@ void SelAlloc::Allocate( )
 
   _ClearMatching( );
 
-  _grants.assign(_outputs, -1);
+  vector<int> grants(_outputs, -1);
 
   for ( int iter = 0; iter < _iter; ++iter ) {
     // Grant phase
@@ -120,14 +119,14 @@ void SelAlloc::Allocate( )
       }   
 
       if ( max_index != -1 ) { // grant
-	_grants[output] = max_index;
+	grants[output] = max_index;
       }
     }
 
 #ifdef DEBUG_SELALLOC
     cout << "grants: ";
     for ( int i = 0; i < _outputs; ++i ) {
-      cout << _grants[i] << " ";
+      cout << grants[i] << " ";
     }
     cout << endl;
 
@@ -175,7 +174,7 @@ void SelAlloc::Allocate( )
 	// we know the output is free (above) and
 	// if the input is free, check if the highest
 	// priroity
-	if ( ( _grants[output] == input ) && 
+	if ( ( grants[output] == input ) && 
 	     ( !_out_req[output].empty( ) ) &&
 	     ( ( p->in_pri > max_pri ) || ( max_index == -1 ) ) ) {
 	  max_pri   = p->in_pri;
