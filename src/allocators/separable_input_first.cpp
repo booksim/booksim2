@@ -52,17 +52,9 @@ SeparableInputFirstAllocator( Module* parent, const string& name, int inputs,
 void SeparableInputFirstAllocator::AddRequest( int in, int out, int label, int in_pri,
 				     int out_pri ) {
 
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) );
-
-  sRequest req ;
-  req.port    = out ;
-  req.label   = label ;
-  req.in_pri  = in_pri ;
-  req.out_pri = out_pri ;
-  _requests[in].push_back( req ) ;
+  SeparableAllocator::AddRequest(in, out, label, in_pri, out_pri);
   in_event.insert(in);
-  if ( req.label > -1 ) {
+  if ( label > -1 ) {
     _input_arb[in]->AddRequest( out, _requests[in].size()-1, in_pri ) ;
   }
   
