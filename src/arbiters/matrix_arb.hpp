@@ -37,14 +37,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MATRIX_ARB_HPP_
 #define _MATRIX_ARB_HPP_
 
+#include <vector>
+
 #include "arbiter.hpp"
+
+using namespace std;
 
 class MatrixArbiter : public Arbiter {
 
-  // Priority matrix and access methods
-  int* _matrix ;
-  int  _Priority( int row, int column ) const ;
-  void _SetPriority( int row, int column, int val ) ;
+  // Priority matrix
+  vector<vector<int> > _matrix ;
 
   int  _last_req ;
 
