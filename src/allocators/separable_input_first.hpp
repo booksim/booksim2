@@ -37,12 +37,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _SEPARABLE_INPUT_FIRST_HPP_
 #define _SEPARABLE_INPUT_FIRST_HPP_
 
-#include "separable.hpp"
 #include <set>
+
+#include "separable.hpp"
+
 class SeparableInputFirstAllocator : public SeparableAllocator {
 
-  set<int> in_event;
-  set<int> out_event;
+  set<int> _in_event;
+  set<int> _out_event;
 public:
   
   SeparableInputFirstAllocator( Module* parent, const string& name, int inputs,

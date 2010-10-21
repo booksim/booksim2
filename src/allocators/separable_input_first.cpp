@@ -53,7 +53,7 @@ void SeparableInputFirstAllocator::AddRequest( int in, int out, int label, int i
 				     int out_pri ) {
 
   SeparableAllocator::AddRequest(in, out, label, in_pri, out_pri);
-  in_event.insert(in);
+  _in_event.insert(in);
   if ( label > -1 ) {
     _input_arb[in]->AddRequest( out, _requests[in].size()-1, in_pri ) ;
   }
@@ -70,7 +70,7 @@ void SeparableInputFirstAllocator::Allocate() {
   
   // Execute the input arbiters and propagate the grants to the
   // output arbiters.
-  for(set<int>::iterator i = in_event.begin(); i!=in_event.end(); i++){
+  for(set<int>::iterator i = _in_event.begin(); i!=_in_event.end(); i++){
     int input = *i;
     int id;
     int pri;
@@ -78,12 +78,12 @@ void SeparableInputFirstAllocator::Allocate() {
     const sRequest& req = (_requests[input][id]); 
     assert(out == req.port && pri == req.in_pri);
     _output_arb[out]->AddRequest( input, req.label, req.out_pri );
-    out_event.insert(out);
+    _out_event.insert(out);
   }
 
 
   // Execute the output arbiters.
-  for(set<int>::iterator i = out_event.begin(); i!=out_event.end(); i++){
+  for(set<int>::iterator i = _out_event.begin(); i!=_out_event.end(); i++){
 
     int label, pri ;
     int output = *i;
@@ -95,6 +95,6 @@ void SeparableInputFirstAllocator::Allocate() {
     _output_arb[output]->UpdateState() ;
 
   }
-  in_event.clear();
-  out_event.clear();
+  _in_event.clear();
+  _out_event.clear();
 }
