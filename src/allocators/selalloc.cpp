@@ -62,8 +62,6 @@ void SelAlloc::Allocate( )
   int max_index;
   int max_pri;
 
-  _ClearMatching( );
-
   vector<int> grants(_outputs, -1);
 
   for ( int iter = 0; iter < _iter; ++iter ) {

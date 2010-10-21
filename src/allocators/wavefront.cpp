@@ -64,10 +64,6 @@ void Wavefront::AddRequest( int in, int out, int label,
 void Wavefront::Allocate( )
 {
 
-  // Clear matching
-
-  _ClearMatching();
-
   if(_num_requests == 0)
 
     // bypass allocator completely if there were no requests

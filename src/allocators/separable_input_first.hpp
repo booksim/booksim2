@@ -53,6 +53,8 @@ public:
 			   int in_pri = 0, int out_pri = 0 ) ;
   virtual void Allocate() ;
 
+  virtual void Clear();
+
 } ;
 
 #endif

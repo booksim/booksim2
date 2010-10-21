@@ -93,6 +93,7 @@ void SeparableAllocator::Clear() {
   for ( int o = 0; o < _outputs; o++ ) {
     _output_arb[o]->Clear();
   }
+  Allocator::Clear();
 }
 
 int SeparableAllocator::ReadRequest( int in, int out ) const {

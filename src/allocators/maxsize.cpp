@@ -87,10 +87,6 @@ MaxSizeMatch::~MaxSizeMatch( )
 void MaxSizeMatch::Allocate( )
 {
 
-  // clear matching
-
-  _ClearMatching();
-
   // augment as many times as possible 
   // (this is an O(N^3) maximum-size matching algorithm)
   while( _ShortestAugmenting( ) );

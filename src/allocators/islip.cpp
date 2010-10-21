@@ -56,8 +56,6 @@ void iSLIP_Sparse::Allocate( )
   list<sRequest>::iterator p;
   bool wrapped;
 
-  _ClearMatching( );
-
   for ( int iter = 0; iter < _iSLIP_iter; ++iter ) {
     // Grant phase
 

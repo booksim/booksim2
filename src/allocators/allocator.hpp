@@ -46,7 +46,6 @@ protected:
   vector<int> _inmatch;
   vector<int> _outmatch;
 
-  void _ClearMatching( );
 public:
 
   struct sRequest {
@@ -59,7 +58,7 @@ public:
   Allocator( Module *parent, const string& name,
 	     int inputs, int outputs );
 
-  virtual void Clear( ) = 0;
+  virtual void Clear( );
   
   virtual int  ReadRequest( int in, int out ) const = 0;
   virtual bool ReadRequest( sRequest &req, int in, int out ) const = 0;

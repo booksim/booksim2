@@ -56,10 +56,6 @@ void LOA::Allocate( )
   int lonely;
   int lonely_cnt;
 
-  // Clear matching
-
-  _ClearMatching();
-
   // Count phase --- the number of requests
   // per output is counted
 

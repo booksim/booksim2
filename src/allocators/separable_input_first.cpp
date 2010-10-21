@@ -57,13 +57,10 @@ void SeparableInputFirstAllocator::AddRequest( int in, int out, int label, int i
   if ( label > -1 ) {
     _input_arb[in]->AddRequest( out, _requests[in].size()-1, in_pri ) ;
   }
-  
 }
 
 
 void SeparableInputFirstAllocator::Allocate() {
-  
-  _ClearMatching() ;
   
   //  cout << "SeparableInputFirstAllocator::Allocate()" << endl ;
   //  PrintRequests() ;
@@ -95,6 +92,11 @@ void SeparableInputFirstAllocator::Allocate() {
     _output_arb[output]->UpdateState() ;
 
   }
+}
+
+void SeparableInputFirstAllocator::Clear()
+{
   _in_event.clear();
   _out_event.clear();
+  SeparableAllocator::Clear();
 }

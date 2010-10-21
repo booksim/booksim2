@@ -55,8 +55,6 @@ void PIM::Allocate( )
   int input_offset;
   int output_offset;
 
-  _ClearMatching( );
-
   for ( int iter = 0; iter < _PIM_iter; ++iter ) {
     // Grant phase --- outputs randomly choose
     // between one of their requests

@@ -69,10 +69,6 @@ void PrioWavefront::AddRequest( int in, int out, int label,
 void PrioWavefront::Allocate( )
 {
 
-  // Clear matching
-
-  _ClearMatching();
-
   if(_num_requests == 0)
 
     // bypass allocator completely if there were no requests

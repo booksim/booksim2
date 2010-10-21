@@ -60,7 +60,7 @@ Allocator::Allocator( Module *parent, const string& name,
   _outmatch.resize(_outputs);
 }
 
-void Allocator::_ClearMatching( )
+void Allocator::Clear( )
 {
   _inmatch.assign(_inputs, -1);
   _outmatch.assign(_outputs, -1);
@@ -104,6 +104,7 @@ void DenseAllocator::Clear( )
       _request[i][j].label = -1;
     }
   }
+  Allocator::Clear();
 }
 
 int DenseAllocator::ReadRequest( int in, int out ) const
@@ -184,6 +185,8 @@ void SparseAllocator::Clear( )
 
   _in_occ.clear( );
   _out_occ.clear( );
+
+  Allocator::Clear();
 }
 
 int SparseAllocator::ReadRequest( int in, int out ) const

@@ -51,8 +51,6 @@ SeparableOutputFirstAllocator( Module* parent, const string& name, int inputs,
 
 void SeparableOutputFirstAllocator::Allocate() {
   
-  _ClearMatching() ;
-
 //  cout << "SeparableOutputFirstAllocator::Allocate()" << endl ;
 //  PrintRequests() ;
   
