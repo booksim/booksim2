@@ -363,16 +363,20 @@ void IQRouterBaseline::_SWAlloc( )
 	      const set<OutputSet::sSetElement> setlist = route_set->GetSet();
 	      set<OutputSet::sSetElement>::const_iterator iset = setlist.begin( );
 	      while(iset!=setlist.end( )){
-		BufferState * dest_buf = _next_buf[iset->output_port];
-		bool do_request = false;
-		
-		// check if any suitable VCs are available
-	
-		for ( int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc ) {
-		  if(!do_request && 
-		     ((_speculative < 3) || dest_buf->IsAvailableFor(out_vc))) {
-		    do_request = true;
-		    break;
+
+		bool do_request = (_speculative < 3);
+
+		if(_speculative >= 3) {
+
+		  BufferState * dest_buf = _next_buf[iset->output_port];
+		  
+		  // check if at least one suitable VC is available at this output
+		  
+		  for ( int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc ) {
+		    if(dest_buf->IsAvailableFor(out_vc)) {
+		      do_request = true;
+		      break;
+		    }
 		  }
 		}
 		
