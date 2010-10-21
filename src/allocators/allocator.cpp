@@ -56,8 +56,8 @@ Allocator::Allocator( Module *parent, const string& name,
 		      int inputs, int outputs ) :
   Module( parent, name ), _inputs( inputs ), _outputs( outputs )
 {
-  _inmatch.resize(_inputs);   
-  _outmatch.resize(_outputs);
+  _inmatch.resize(_inputs, -1);   
+  _outmatch.resize(_outputs, -1);
 }
 
 void Allocator::Clear( )
@@ -91,10 +91,8 @@ DenseAllocator::DenseAllocator( Module *parent, const string& name,
   _request.resize(_inputs);
 
   for ( int i = 0; i < _inputs; ++i ) {
-    _request[i].resize(_outputs);  
+    _request[i].resize(_outputs, -1);  
   }
-
-  Clear( );
 }
 
 void DenseAllocator::Clear( )
