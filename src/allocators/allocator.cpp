@@ -91,7 +91,10 @@ DenseAllocator::DenseAllocator( Module *parent, const string& name,
   _request.resize(_inputs);
 
   for ( int i = 0; i < _inputs; ++i ) {
-    _request[i].resize(_outputs, -1);  
+    _request[i].resize(_outputs);  
+    for ( int j = 0; j < _outputs; ++j ) {
+      _request[i][j].label = -1;
+    }
   }
 }
 
