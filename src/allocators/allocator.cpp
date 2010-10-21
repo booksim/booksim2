@@ -207,16 +207,9 @@ bool SparseAllocator::ReadRequest( sRequest &req, int in, int out ) const
   assert( ( in >= 0 ) && ( in < _inputs ) &&
 	  ( out >= 0 ) && ( out < _outputs ) );
 
-  list<sRequest>::const_iterator match;
-
-  match = _in_req[in].begin( );
-  while( ( match != _in_req[in].end( ) ) &&
-	 ( match->port != out ) ) {
-    match++;
-  }
-
+  map<int, sRequest>::const_iterator match = _in_req[in].find(out);
   if ( match != _in_req[in].end( ) ) {
-    req = *match;
+    req = match->second;
     found = true;
   } else {
     found = false;
@@ -242,63 +235,28 @@ void SparseAllocator::AddRequest( int in, int out, int label,
     _out_occ.insert(out);
   }
 
-  // insert input request in order of it's output
-  list<sRequest>::iterator insert_point = _in_req[in].begin( );
-  while( ( insert_point != _in_req[in].end( ) ) &&
-	 ( insert_point->port < out ) ) {
-    insert_point++;
-  }
-
   sRequest req;
   req.port    = out;
   req.label   = label;
   req.in_pri  = in_pri;
   req.out_pri = out_pri;
 
-  bool del = false;
-  bool add = true;
-
-  // For consistent behavior, delete the existing request
-  // if it is for the same output and has a higher
-  // priority
-
-  if ( ( insert_point != _in_req[in].end( ) ) &&
-       ( insert_point->port == out ) ) {
-    if ( insert_point->in_pri < in_pri ) {
-      del = true;
-    } else {
-      add = false;
-    }
-  }
-
-  if ( add ) {
-    _in_req[in].insert( insert_point, req );
-  }
-
-  if ( del ) {
-    _in_req[in].erase( insert_point );
-  }
-
-  insert_point = _out_req[out].begin( );
-  while( ( insert_point != _out_req[out].end( ) ) &&
-	 ( insert_point->port < in ) ) {
-    insert_point++;
+  // insert input request in order of it's output
+  map<int, sRequest>::iterator insert_point = _in_req[in].find(out);
+  if(insert_point == _in_req[in].end()) {
+    _in_req[in][out] = req;
+  } else if(insert_point->second.in_pri < in_pri) {
+    insert_point->second = req;
   }
 
   req.port  = in;
   req.label = label;
 
-  if ( add ) {
-    _out_req[out].insert( insert_point, req );
-  }
-
-  if ( del ) {
-    // This should be consistent, but check for sanity
-    if ( ( insert_point == _out_req[out].end( ) ) ||
-	 ( insert_point->port != in ) ) {
-      Error( "Internal allocator error --- input and output requests non consistent" );
-    }
-    _out_req[out].erase( insert_point );
+  insert_point = _out_req[out].find(in);
+  if(insert_point == _out_req[out].end()) {
+    _out_req[out][in] = req;
+  } else if(insert_point->second.in_pri < in_pri) {
+    insert_point->second = req;
   }
 }
 
@@ -306,16 +264,9 @@ void SparseAllocator::RemoveRequest( int in, int out, int label )
 {
   assert( ( in >= 0 ) && ( in < _inputs ) &&
 	  ( out >= 0 ) && ( out < _outputs ) ); 
-  
-  list<sRequest>::iterator erase_point;
-  list<int>::iterator occ_remove;
 				 
   // insert input request in order of it's output
-  erase_point = _in_req[in].begin( );
-  while( ( erase_point != _in_req[in].end( ) ) &&
-	 ( erase_point->port != out ) ) {
-    erase_point++;
-  }
+  map<int, sRequest>::iterator erase_point = _in_req[in].find(out);
 
   assert( erase_point != _in_req[in].end( ) );
   _in_req[in].erase( erase_point );
@@ -327,11 +278,7 @@ void SparseAllocator::RemoveRequest( int in, int out, int label )
   }
 
   // similarly for the output
-  erase_point = _out_req[out].begin( );
-  while( ( erase_point != _out_req[out].end( ) ) &&
-	 ( erase_point->port != in ) ) {
-    erase_point++;
-  }
+  erase_point = _out_req[out].find(in);
 
   assert( erase_point != _out_req[out].end( ) );
   _out_req[out].erase( erase_point );
@@ -343,7 +290,7 @@ void SparseAllocator::RemoveRequest( int in, int out, int label )
 
 void SparseAllocator::PrintRequests( ostream * os ) const
 {
-  list<sRequest>::const_iterator iter;
+  map<int, sRequest>::const_iterator iter;
   
   if(!os) os = &cout;
   
@@ -352,7 +299,7 @@ void SparseAllocator::PrintRequests( ostream * os ) const
     *os << input << " -> [ ";
     for ( iter = _in_req[input].begin( ); 
 	  iter != _in_req[input].end( ); iter++ ) {
-      *os << iter->port << " ";
+      *os << iter->second.port << " ";
     }
     *os << "]  ";
   }
@@ -362,7 +309,7 @@ void SparseAllocator::PrintRequests( ostream * os ) const
     *os << "[ ";
     for ( iter = _out_req[output].begin( ); 
 	  iter != _out_req[output].end( ); iter++ ) {
-      *os << iter->port << " ";
+      *os << iter->second.port << " ";
     }
     *os << "]  ";
   }

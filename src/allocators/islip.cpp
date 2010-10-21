@@ -53,7 +53,7 @@ void iSLIP_Sparse::Allocate( )
   int input_offset;
   int output_offset;
 
-  list<sRequest>::iterator p;
+  map<int, sRequest>::iterator p;
   bool wrapped;
 
   for ( int iter = 0; iter < _iSLIP_iter; ++iter ) {
@@ -75,14 +75,14 @@ void iSLIP_Sparse::Allocate( )
 
       p = _out_req[output].begin( );
       while( ( p != _out_req[output].end( ) ) &&
-	     ( p->port < input_offset ) ) {
+	     ( p->second.port < input_offset ) ) {
 	p++;
       }
 
       wrapped = false;
       while( (!wrapped) || 
 	     ( ( p != _out_req[output].end( ) ) &&
-	       ( p->port < input_offset ) ) ) {
+	       ( p->second.port < input_offset ) ) ) {
 	if ( p == _out_req[output].end( ) ) {
 	  if ( wrapped ) { break; }
 	  // p is valid here because empty lists
@@ -91,7 +91,7 @@ void iSLIP_Sparse::Allocate( )
 	  wrapped = true;
 	}
 
-	input = p->port;
+	input = p->second.port;
 
 	// we know the output is free (above) and
 	// if the input is free, grant request
@@ -131,14 +131,14 @@ void iSLIP_Sparse::Allocate( )
 
       p = _in_req[input].begin( );
       while( ( p != _in_req[input].end( ) ) &&
-	     ( p->port < output_offset ) ) {
+	     ( p->second.port < output_offset ) ) {
 	p++;
       }
 
       wrapped = false;
       while( (!wrapped) || 
 	     ( ( p != _in_req[input].end( ) ) &&
-	       ( p->port < output_offset ) ) ) {
+	       ( p->second.port < output_offset ) ) ) {
 	if ( p == _in_req[input].end( ) ) {
 	  if ( wrapped ) { break; }
 	  // p is valid here because empty lists
@@ -147,7 +147,7 @@ void iSLIP_Sparse::Allocate( )
 	  wrapped = true;
 	}
 
-	output = p->port;
+	output = p->second.port;
 
 	// we know the output is free (above) and
 	// if the input is free, grant request

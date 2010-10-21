@@ -55,7 +55,7 @@ void SelAlloc::Allocate( )
   int input_offset;
   int output_offset;
 
-  list<sRequest>::iterator p;
+  map<int, sRequest>::iterator p;
   set<int>::iterator outer_iter;
   bool wrapped;
 
@@ -85,7 +85,7 @@ void SelAlloc::Allocate( )
 
       p = _out_req[output].begin( );
       while( ( p != _out_req[output].end( ) ) &&
-	     ( p->port < input_offset ) ) {
+	     ( p->second.port < input_offset ) ) {
 	p++;
       }
 
@@ -93,7 +93,7 @@ void SelAlloc::Allocate( )
       max_pri   = 0;
 
       wrapped = false;
-      while( (!wrapped) || ( p->port < input_offset ) ) {
+      while( (!wrapped) || ( p->second.port < input_offset ) ) {
 	if ( p == _out_req[output].end( ) ) {
 	  if ( wrapped ) { break; }
 	  // p is valid here because empty lists
@@ -102,14 +102,14 @@ void SelAlloc::Allocate( )
 	  wrapped = true;
 	}
 
-	input = p->port;
+	input = p->second.port;
 
 	// we know the output is free (above) and
 	// if the input is free, check if request is the
 	// highest priority so far
 	if ( ( _inmatch[input] == -1 ) &&
-	     ( ( p->out_pri > max_pri ) || ( max_index == -1 ) ) ) {
-	  max_pri   = p->out_pri;
+	     ( ( p->second.out_pri > max_pri ) || ( max_index == -1 ) ) ) {
+	  max_pri   = p->second.out_pri;
 	  max_index = input;
 	}
 
@@ -150,7 +150,7 @@ void SelAlloc::Allocate( )
 
       p = _in_req[input].begin( );
       while( ( p != _in_req[input].end( ) ) &&
-	     ( p->port < output_offset ) ) {
+	     ( p->second.port < output_offset ) ) {
 	p++;
       }
 
@@ -158,7 +158,7 @@ void SelAlloc::Allocate( )
       max_pri   = 0;
 
       wrapped = false;
-      while( (!wrapped) || ( p->port < output_offset ) ) {
+      while( (!wrapped) || ( p->second.port < output_offset ) ) {
 	if ( p == _in_req[input].end( ) ) {
 	  if ( wrapped ) { break; }
 	  // p is valid here because empty lists
@@ -167,15 +167,15 @@ void SelAlloc::Allocate( )
 	  wrapped = true;
 	}
 
-	output = p->port;
+	output = p->second.port;
 
 	// we know the output is free (above) and
 	// if the input is free, check if the highest
 	// priroity
 	if ( ( grants[output] == input ) && 
 	     ( !_out_req[output].empty( ) ) &&
-	     ( ( p->in_pri > max_pri ) || ( max_index == -1 ) ) ) {
-	  max_pri   = p->in_pri;
+	     ( ( p->second.in_pri > max_pri ) || ( max_index == -1 ) ) ) {
+	  max_pri   = p->second.in_pri;
 	  max_index = output;
 	}
 
@@ -221,7 +221,7 @@ void SelAlloc::MaskOutput( int out, int mask )
 
 void SelAlloc::PrintRequests( ostream * os ) const
 {
-  list<sRequest>::const_iterator iter;
+  map<int, sRequest>::const_iterator iter;
   
   if(!os) os = &cout;
   
@@ -230,7 +230,7 @@ void SelAlloc::PrintRequests( ostream * os ) const
     *os << input << " -> [ ";
     for ( iter = _in_req[input].begin( ); 
 	  iter != _in_req[input].end( ); iter++ ) {
-      *os << iter->port << " ";
+      *os << iter->second.port << " ";
     }
     *os << "]  ";
   }
@@ -241,7 +241,7 @@ void SelAlloc::PrintRequests( ostream * os ) const
       *os << "[ ";
       for ( iter = _out_req[output].begin( ); 
 	    iter != _out_req[output].end( ); iter++ ) {
-	*os << iter->port << " ";
+	*os << iter->second.port << " ";
       }
       *os << "]  ";
     } else {

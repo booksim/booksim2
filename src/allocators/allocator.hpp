@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _ALLOCATOR_HPP_
 
 #include <string>
-#include <list>
+#include <map>
 #include <set>
 #include <vector>
 
@@ -115,8 +115,8 @@ protected:
   set<int> _in_occ;
   set<int> _out_occ;
   
-  vector<list<sRequest> > _in_req;
-  vector<list<sRequest> > _out_req;
+  vector<map<int, sRequest> > _in_req;
+  vector<map<int, sRequest> > _out_req;
 
 public:
   SparseAllocator( Module *parent, const string& name,
