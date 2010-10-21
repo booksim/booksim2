@@ -47,8 +47,6 @@ class SeparableAllocator : public Allocator {
   
 protected:
 
-  vector<int> _matched ;
-
   vector<Arbiter*> _input_arb ;
   vector<Arbiter*> _output_arb ;
 
