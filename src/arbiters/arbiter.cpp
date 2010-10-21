@@ -45,7 +45,7 @@ using namespace std ;
 
 Arbiter::Arbiter( Module *parent, const string &name, int size )
   : Module( parent, name ),
-    _input_size(size), _num_reqs(0), _last_req(-1), _best_input(-1), _highest_pri(numeric_limits<int>::min())
+    _input_size(size), _num_reqs(0), _best_input(-1), _highest_pri(numeric_limits<int>::min())
 {
   _request.resize(size);
   for ( int i = 0 ; i < size ; i++ ) 
@@ -56,13 +56,24 @@ void Arbiter::AddRequest( int input, int id, int pri )
 {
   assert( 0 <= input && input < _input_size ) ;
   if(!_request[input].valid || (_request[input].pri < pri)) {
-    _last_req = input ;
     if(!_request[input].valid) {
       _num_reqs++ ;
       _request[input].valid = true ;
     }
     _request[input].id = id ;
     _request[input].pri = pri ;
+  }
+}
+
+void Arbiter::Clear()
+{
+  if(_num_reqs > 0) {
+    
+    // clear the request vector
+    for ( int i = 0; i < _input_size ; i++ )
+      _request[i].valid = false ;
+    _num_reqs = 0 ;
+    _selected = -1;
   }
 }
 

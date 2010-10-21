@@ -54,7 +54,6 @@ protected:
   vector<entry_t> _request ;
   int  _input_size ;
 
-  int  _last_req ;
   int  _selected ;
   int _highest_pri;
   int _best_input;
@@ -76,7 +75,9 @@ public:
   // Arbitrate amongst requests. Returns winning input and 
   // updates pointers to metadata when valid pointers are passed
   virtual int Arbitrate( int* id = 0, int* pri = 0) = 0 ;
-  
+
+  virtual void Clear();
+
   static Arbiter *NewArbiter( Module *parent, const string &name,
 			      const string &arb_type, int size );
 } ;

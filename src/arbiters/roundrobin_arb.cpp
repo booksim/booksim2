@@ -82,16 +82,14 @@ int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
       *id = _request[_selected].id ;
     if ( pri ) 
       *pri = _request[_selected].pri ;
-    
-    // clear the request vector
-    for ( int i = 0; i < _input_size ; i++ )
-      _request[i].valid = false ;
-    _num_reqs = 0 ;
-    _highest_pri = numeric_limits<int>::min();
-    _best_input = -1;
-  } else {
-    assert(_num_reqs == 0);
-  }
-  
+  }    
+
   return _selected ;
+}
+
+void RoundRobinArbiter::Clear()
+{
+  _highest_pri = numeric_limits<int>::min();
+  _best_input = -1;
+  Arbiter::Clear();
 }

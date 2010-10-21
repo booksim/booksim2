@@ -39,15 +39,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "arbiter.hpp"
 
-#include <iostream>
-using namespace std ;
-
 class MatrixArbiter : public Arbiter {
 
   // Priority matrix and access methods
   int* _matrix ;
   int  _Priority( int row, int column ) const ;
   void _SetPriority( int row, int column, int val ) ;
+
+  int  _last_req ;
 
 public:
 
@@ -63,6 +62,10 @@ public:
   // Arbitrate amongst requests. Returns winning input and 
   // updates pointers to metadata when valid pointers are passed
   virtual int Arbitrate( int* id = 0, int* pri = 0) ;
+
+  virtual void AddRequest( int input, int id, int pri ) ;
+
+  virtual void Clear();
 
 } ;
 

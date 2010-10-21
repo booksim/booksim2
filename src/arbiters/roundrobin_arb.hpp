@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class RoundRobinArbiter : public Arbiter {
 
-  // Priority matrix and access methods
+  // Priority pointer
   int  _pointer ;
 
 public:
@@ -60,6 +60,9 @@ public:
   virtual int Arbitrate( int* id = 0, int* pri = 0) ;
 
   virtual void AddRequest( int input, int id, int pri ) ;
+
+  virtual void Clear();
+
 } ;
 
 #endif

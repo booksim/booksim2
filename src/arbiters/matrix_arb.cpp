@@ -39,7 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace std ;
 
 MatrixArbiter::MatrixArbiter( Module *parent, const string &name, int size )
-  : Arbiter( parent, name, size ) {
+  : Arbiter( parent, name, size ), _last_req(-1) {
   _matrix  = new int [ size * size ] ;
   for ( int i = 0 ; i < size*size ; i++ )
     _matrix[i] = 0 ;
@@ -77,6 +77,12 @@ void MatrixArbiter::UpdateState() {
       _SetPriority( i, _selected, 1 ) ;
     }
   }
+}
+
+void MatrixArbiter::AddRequest( int input, int id, int pri )
+{
+  _last_req = input;
+  Arbiter::AddRequest(input, id, pri);
 }
 
 int MatrixArbiter::Arbitrate( int* id, int* pri ) {
@@ -121,15 +127,13 @@ int MatrixArbiter::Arbitrate( int* id, int* pri ) {
     if ( pri )
       *pri = _request[_selected].pri ;
 
-    // clear the request vector
-    for ( int i = 0; i < _input_size ; i++ )
-      _request[i].valid = false ;
-    _num_reqs = 0 ;
-    _last_req = -1 ;
-  } else {
-    assert(_num_reqs == 0);
-    assert(_last_req == -1);
   }
 
   return _selected ;
+}
+
+void MatrixArbiter::Clear()
+{
+  _last_req = -1;
+  Arbiter::Clear();
 }

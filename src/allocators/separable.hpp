@@ -37,11 +37,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _SEPARABLE_HPP_
 #define _SEPARABLE_HPP_
 
-#include "allocator.hpp"
-#include "arbiter.hpp"
+#include <vector>
 #include <cassert>
 
-#include <vector>
+#include "allocator.hpp"
+#include "arbiter.hpp"
 
 class SeparableAllocator : public Allocator {
   
