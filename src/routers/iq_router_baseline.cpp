@@ -214,7 +214,7 @@ void IQRouterBaseline::_VCAlloc( )
       if ( input_and_vc != -1 ) {
 	assert(input_and_vc >= 0);
 	int match_input = input_and_vc / _vcs;
-	int match_vc    = input_and_vc - match_input*_vcs;
+	int match_vc    = input_and_vc % _vcs;
 
 	Buffer * cur_buf  = _buf[match_input];
 	BufferState * dest_buf = _next_buf[output];
