@@ -383,6 +383,8 @@ void IQRouterBaseline::_SWAlloc( )
 		  if ( ( _switch_hold_in[expanded_input] == -1 ) && 
 		       ( _switch_hold_out[expanded_output] == -1 ) ) {
 		    
+		    int prio = ((_speculative == 1) ? numeric_limits<int>::min() : 0) + cur_buf->GetPriority(vc);
+
 		    Flit * f = cur_buf->FrontFlit(vc);
 		    assert(f);
 		    if(f->watch) {
@@ -392,7 +394,7 @@ void IQRouterBaseline::_SWAlloc( )
 				 << " (spec., exp. input: " << expanded_input
 				 << ", exp. output: " << expanded_output
 				 << ", flit: " << f->id
-				 << ", prio: " << cur_buf->GetPriority(vc)
+				 << ", prio: " << prio
 				 << ")." << endl;
 		      watched = true;
 		    }
@@ -402,16 +404,11 @@ void IQRouterBaseline::_SWAlloc( )
 		    // speculative requests over speculative ones
 		    if( _speculative == 1 )
 		      _sw_allocator->AddRequest(expanded_input, expanded_output,
-						vc, 
-						numeric_limits<int>::min() + 
-						cur_buf->GetPriority(vc), 
-						numeric_limits<int>::min() + 
-						cur_buf->GetPriority(vc));
+						vc, prio, prio);
 		    else
 		      _spec_sw_allocator->AddRequest(expanded_input, 
 						     expanded_output, vc,
-						     cur_buf->GetPriority(vc), 
-						     cur_buf->GetPriority(vc));
+						     prio, prio);
 		    vc_ready_spec++;
 		  }
 		}
