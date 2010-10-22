@@ -794,13 +794,14 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     switch( _pri_type ) {
     case class_based:
       f->pri = cl;
+      assert(f->pri >= 0);
       break;
     case age_based:
-      f->pri = numeric_limits<int>::max() - (_replies_inherit_priority ? ttime : time) - 1;
+      f->pri = numeric_limits<int>::max() - (_replies_inherit_priority ? ttime : time);
       assert(f->pri >= 0);
       break;
     case sequence_based:
-      f->pri = numeric_limits<int>::max() - _packets_sent[source] - 1;
+      f->pri = numeric_limits<int>::max() - _packets_sent[source];
       assert(f->pri >= 0);
       break;
     default:
@@ -903,7 +904,7 @@ void TrafficManager::_BatchInject(){
 	  write_flit = true;
 
 	  if(_pri_type == network_age_based) {
-	    f->pri = numeric_limits<int>::max() - _time - 1;
+	    f->pri = numeric_limits<int>::max() - _time;
 	    assert(f->pri >= 0);
 	  }
 
@@ -1025,7 +1026,7 @@ void TrafficManager::_NormalInject(){
 	  write_flit = true;
 
 	  if(_pri_type == network_age_based) {
-	    f->pri = numeric_limits<int>::max() - _time - 1;
+	    f->pri = numeric_limits<int>::max() - _time;
 	    assert(f->pri >= 0);
 	  }
 

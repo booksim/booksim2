@@ -115,6 +115,7 @@ bool VC::AddFlit( Flit *f )
     assert(f->pri >= 0);
   } else if(_pri_type == hop_count_based) {
     f->pri = f->hops;
+    assert(f->pri >= 0);
   }
 
   _buffer.push_back(f);
