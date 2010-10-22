@@ -605,18 +605,10 @@ void IQRouterSplit::_Alloc( )
 	  _crossbar_pipe->Write(f, expanded_output);
 	  
 	  if(f->tail) {
-	    if(cur_buf->Empty(vc)) {
-	      cur_buf->SetState(vc, VC::idle);
-	    } else {
-	      cur_buf->Route(vc, _rf, this, cur_buf->FrontFlit(vc), input);
-	      cur_buf->SetState(vc, VC::vc_alloc);
-	    }
+	    cur_buf->SetState(vc, VC::idle);
 	    _switch_hold_in[expanded_input] = -1;
 	    _switch_hold_vc[expanded_input] = -1;
 	    _switch_hold_out[expanded_output] = -1;
-	  } else {
-	    // reset state timer for next flit
-	    cur_buf->SetState(vc, VC::active);
 	  }	  
 	  
 	  if(!_use_fast_path[input*_vcs+vc]) {

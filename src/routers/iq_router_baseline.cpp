@@ -597,22 +597,10 @@ void IQRouterBaseline::_SWAlloc( )
 	  _crossbar_pipe->Write( f, expanded_output );
 	  
 	  if(f->tail) {
-	    if(cur_buf->Empty(vc)) {
-	      cur_buf->SetState(vc, VC::idle);
-	    } else if(_routing_delay > 0) {
-	      cur_buf->SetState(vc, VC::routing);
-	      _routing_vcs.push(make_pair(input, vc));
-	    } else {
-	      cur_buf->Route(vc, _rf, this, cur_buf->FrontFlit(vc), input);
-	      cur_buf->SetState(vc, VC::vc_alloc);
-	      _vcalloc_vcs.insert(make_pair(input, vc));
-	    }
+	    cur_buf->SetState(vc, VC::idle);
 	    _switch_hold_in[expanded_input]   = -1;
 	    _switch_hold_vc[expanded_input]   = -1;
 	    _switch_hold_out[expanded_output] = -1;
-	  } else {
-	    // reset state timer for next flit
-	    cur_buf->SetState(vc, VC::active);
 	  }
 	  
 	  int next_offset = vc + _input_speedup;
