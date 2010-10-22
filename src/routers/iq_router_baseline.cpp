@@ -34,6 +34,7 @@
 #include <iomanip>
 #include <cstdlib>
 #include <cassert>
+#include <limits>
 
 #include "globals.hpp"
 #include "random_utils.hpp"
@@ -316,13 +317,10 @@ void IQRouterBaseline::_SWAlloc( )
 		  // dub: for the old-style speculation implementation, we 
 		  // overload the packet priorities to prioritize 
 		  // non-speculative requests over speculative ones
-		  if( _speculative == 1 )
-		    _sw_allocator->AddRequest(expanded_input, expanded_output, 
-					      vc, 1, 1);
-		  else
-		    _sw_allocator->AddRequest(expanded_input, expanded_output, 
-					      vc, cur_buf->GetPriority(vc), 
-					      cur_buf->GetPriority(vc));
+		  _sw_allocator->AddRequest(expanded_input, expanded_output, 
+					    vc, 
+					    cur_buf->GetPriority(vc), 
+					    cur_buf->GetPriority(vc));
 		  any_nonspec_reqs = true;
 		  any_nonspec_output_reqs[expanded_output] = true;
 		  vc_ready_nonspec++;
@@ -404,7 +402,11 @@ void IQRouterBaseline::_SWAlloc( )
 		    // speculative requests over speculative ones
 		    if( _speculative == 1 )
 		      _sw_allocator->AddRequest(expanded_input, expanded_output,
-						vc, 0, 0);
+						vc, 
+						numeric_limits<int>::min() + 
+						cur_buf->GetPriority(vc), 
+						numeric_limits<int>::min() + 
+						cur_buf->GetPriority(vc));
 		    else
 		      _spec_sw_allocator->AddRequest(expanded_input, 
 						     expanded_output, vc,
