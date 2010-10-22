@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sstream>
 #include <cmath>
 #include <fstream>
+#include <limits>
 
 #include "booksim.hpp"
 #include "trafficmanager.hpp"
@@ -795,15 +796,16 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       f->pri = cl;
       break;
     case age_based:
-      f->pri = _replies_inherit_priority ? -ttime : -time;
+      f->pri = numeric_limits<int>::max() - (_replies_inherit_priority ? ttime : time) - 1;
+      assert(f->pri >= 0);
       break;
     case sequence_based:
-      f->pri = -_packets_sent[source];
+      f->pri = numeric_limits<int>::max() - _packets_sent[source] - 1;
+      assert(f->pri >= 0);
       break;
     default:
       f->pri = 0;
     }
-
     if ( i == ( size - 1 ) ) { // Tail flit
       f->tail = true;
     } else {
@@ -901,7 +903,8 @@ void TrafficManager::_BatchInject(){
 	  write_flit = true;
 
 	  if(_pri_type == network_age_based) {
-	    f->pri = -_time;
+	    f->pri = numeric_limits<int>::max() - _time - 1;
+	    assert(f->pri >= 0);
 	  }
 
 	  if(f->watch) {
@@ -1022,7 +1025,8 @@ void TrafficManager::_NormalInject(){
 	  write_flit = true;
 
 	  if(_pri_type == network_age_based) {
-	    f->pri = -_time;
+	    f->pri = numeric_limits<int>::max() - _time - 1;
+	    assert(f->pri >= 0);
 	  }
 
 	  if(f->watch) {

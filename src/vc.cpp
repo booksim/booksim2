@@ -36,6 +36,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *This class calls the routing functions
  */
 
+#include <limits>
+
 #include "globals.hpp"
 #include "booksim.hpp"
 #include "vc.hpp"
@@ -109,7 +111,8 @@ bool VC::AddFlit( Flit *f )
 
   // update flit priority before adding to VC buffer
   if(_pri_type == local_age_based) {
-    f->pri = -GetSimTime();
+    f->pri = numeric_limits<int>::max() - GetSimTime() - 1;
+    assert(f->pri >= 0);
   } else if(_pri_type == hop_count_based) {
     f->pri = f->hops;
   }
