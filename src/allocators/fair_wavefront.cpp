@@ -41,9 +41,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 FairWavefront::FairWavefront( Module *parent, const string& name,
 			      int inputs, int outputs ) :
-  DenseAllocator( parent, name, inputs, outputs ),
-  _pri(0), _num_requests(0), _last_in(-1), _last_out(-1),
-  _square((inputs > outputs) ? inputs : outputs)
+DenseAllocator( parent, name, inputs, outputs ),
+   _square((inputs > outputs) ? inputs : outputs), _pri(0), _num_requests(0), 
+   _last_in(-1), _last_out(-1)
 {
 }
 

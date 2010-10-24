@@ -272,77 +272,74 @@ void IQRouterBaseline::_SWAlloc( )
 	if(!cur_buf->Empty(vc) &&
 	   (cur_buf->GetStateTime(vc) >= _sw_alloc_delay)) {
 	  
-	  switch(cur_buf->GetState(vc)) {
+	  if(cur_buf->GetState(vc) == VC::active) {
 	    
-	  case VC::active:
-	    {
-	      int output = cur_buf->GetOutputPort(vc);
-
-	      BufferState * dest_buf = _next_buf[output];
+	    int output = cur_buf->GetOutputPort(vc);
+	    
+	    BufferState * dest_buf = _next_buf[output];
+	    
+	    if ( !dest_buf->IsFullFor( cur_buf->GetOutputVC(vc) ) ) {
 	      
-	      if ( !dest_buf->IsFullFor( cur_buf->GetOutputVC(vc) ) ) {
+	      // When input_speedup > 1, the virtual channel buffers are 
+	      // interleaved to create multiple input ports to the switch. 
+	      // Similarily, the output ports are interleaved based on their 
+	      // originating input when output_speedup > 1.
+	      
+	      assert( expanded_input == input *_input_speedup + vc % _input_speedup );
+	      int expanded_output = 
+		output * _output_speedup + input % _output_speedup;
+	      
+	      if ( ( _switch_hold_in[expanded_input] == -1 ) && 
+		   ( _switch_hold_out[expanded_output] == -1 ) ) {
 		
-		// When input_speedup > 1, the virtual channel buffers are 
-		// interleaved to create multiple input ports to the switch. 
-		// Similarily, the output ports are interleaved based on their 
-		// originating input when output_speedup > 1.
+		// We could have requested this same input-output pair in a 
+		// previous iteration; only replace the previous request if 
+		// the current request has a higher priority (this is default 
+		// behavior of the allocators).  Switch allocation priorities 
+		// are strictly determined by the packet priorities.
 		
-		assert( expanded_input == input *_input_speedup + vc % _input_speedup );
+		Flit * f = cur_buf->FrontFlit(vc);
+		assert(f);
+		if(f->watch) {
+		  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			     << "VC " << vc << " at input " << input 
+			     << " requested output " << output 
+			     << " (non-spec., exp. input: " << expanded_input
+			     << ", exp. output: " << expanded_output
+			     << ", flit: " << f->id
+			     << ", prio: " << cur_buf->GetPriority(vc)
+			     << ")." << endl;
+		  watched = true;
+		}
+		
+		// dub: for the old-style speculation implementation, we 
+		// overload the packet priorities to prioritize 
+		// non-speculative requests over speculative ones
+		_sw_allocator->AddRequest(expanded_input, expanded_output, 
+					  vc, 
+					  cur_buf->GetPriority(vc), 
+					  cur_buf->GetPriority(vc));
+		any_nonspec_reqs = true;
+		any_nonspec_output_reqs[expanded_output] = true;
+		vc_ready_nonspec++;
+	      }
+	    } else {
+	      //if this vc has a hold on the switch need to cancel it to prevent deadlock
+	      if(_hold_switch_for_packet){
 		int expanded_output = 
 		  output * _output_speedup + input % _output_speedup;
-		
-		if ( ( _switch_hold_in[expanded_input] == -1 ) && 
-		     ( _switch_hold_out[expanded_output] == -1 ) ) {
-		  
-		  // We could have requested this same input-output pair in a 
-		  // previous iteration; only replace the previous request if 
-		  // the current request has a higher priority (this is default 
-		  // behavior of the allocators).  Switch allocation priorities 
-		  // are strictly determined by the packet priorities.
-		  
-		  Flit * f = cur_buf->FrontFlit(vc);
-		  assert(f);
-		  if(f->watch) {
-		    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-			       << "VC " << vc << " at input " << input 
-			       << " requested output " << output 
-			       << " (non-spec., exp. input: " << expanded_input
-			       << ", exp. output: " << expanded_output
-			       << ", flit: " << f->id
-			       << ", prio: " << cur_buf->GetPriority(vc)
-			       << ")." << endl;
-		    watched = true;
-		  }
-		  
-		  // dub: for the old-style speculation implementation, we 
-		  // overload the packet priorities to prioritize 
-		  // non-speculative requests over speculative ones
-		  _sw_allocator->AddRequest(expanded_input, expanded_output, 
-					    vc, 
-					    cur_buf->GetPriority(vc), 
-					    cur_buf->GetPriority(vc));
-		  any_nonspec_reqs = true;
-		  any_nonspec_output_reqs[expanded_output] = true;
-		  vc_ready_nonspec++;
-		}
-	      } else {
-		//if this vc has a hold on the switch need to cancel it to prevent deadlock
-		if(_hold_switch_for_packet){
-		  int expanded_output = 
-		    output * _output_speedup + input % _output_speedup;
-		  if(_switch_hold_in[expanded_input] == expanded_output &&
-		     _switch_hold_vc[expanded_input] == vc &&
-		     _switch_hold_out[expanded_output] == expanded_input){
-		    _switch_hold_in[expanded_input]   = -1;
-		    _switch_hold_vc[expanded_input]   = -1;
-		    _switch_hold_out[expanded_output] = -1;
-		  }
+		if(_switch_hold_in[expanded_input] == expanded_output &&
+		   _switch_hold_vc[expanded_input] == vc &&
+		   _switch_hold_out[expanded_output] == expanded_input){
+		  _switch_hold_in[expanded_input]   = -1;
+		  _switch_hold_vc[expanded_input]   = -1;
+		  _switch_hold_out[expanded_output] = -1;
 		}
 	      }
 	    }
-	    break;
-	    
-	    
+	  } else if((cur_buf->GetState(vc) == VC::vc_spec) ||
+		    (cur_buf->GetState(vc) == VC::vc_spec_grant)) {
+	  
 	    //
 	    // The following models the speculative VC allocation aspects 
 	    // of the pipeline. An input VC with a request in for an egress
@@ -351,71 +348,67 @@ void IQRouterBaseline::_SWAlloc( )
 	    // speculative requests are handled in a separate allocator so 
 	    // as to prevent them from interfering with non-speculative bids
 	    //
-	  case VC::vc_spec:
-	  case VC::vc_spec_grant:
-	    {	      
-	      assert( _speculative > 0 );
-	      assert( expanded_input == input * _input_speedup + vc % _input_speedup );
+
+	    assert( _speculative > 0 );
+	    assert( expanded_input == input * _input_speedup + vc % _input_speedup );
+	    
+	    const OutputSet * route_set = cur_buf->GetRouteSet(vc);
+	    const set<OutputSet::sSetElement> setlist = route_set->GetSet();
+	    set<OutputSet::sSetElement>::const_iterator iset = setlist.begin( );
+	    while(iset!=setlist.end( )){
 	      
-	      const OutputSet * route_set = cur_buf->GetRouteSet(vc);
-	      const set<OutputSet::sSetElement> setlist = route_set->GetSet();
-	      set<OutputSet::sSetElement>::const_iterator iset = setlist.begin( );
-	      while(iset!=setlist.end( )){
-
-		bool do_request = (_speculative < 3);
-
-		if(_speculative >= 3) {
-
-		  BufferState * dest_buf = _next_buf[iset->output_port];
-		  
-		  // check if at least one suitable VC is available at this output
-		  
-		  for ( int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc ) {
-		    if(dest_buf->IsAvailableFor(out_vc)) {
-		      do_request = true;
-		      break;
-		    }
-		  }
-		}
+	      bool do_request = (_speculative < 3);
+	      
+	      if(_speculative >= 3) {
 		
-		if(do_request) { 
-		  int expanded_output = iset->output_port * _output_speedup + input % _output_speedup;
-		  if ( ( _switch_hold_in[expanded_input] == -1 ) && 
-		       ( _switch_hold_out[expanded_output] == -1 ) ) {
-		    
-		    int prio = ((_speculative == 1) ? numeric_limits<int>::min() : 0) + cur_buf->GetPriority(vc);
-
-		    Flit * f = cur_buf->FrontFlit(vc);
-		    assert(f);
-		    if(f->watch) {
-		      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-				 << "VC " << vc << " at input " << input 
-				 << " requested output " << iset->output_port
-				 << " (spec., exp. input: " << expanded_input
-				 << ", exp. output: " << expanded_output
-				 << ", flit: " << f->id
-				 << ", prio: " << prio
-				 << ")." << endl;
-		      watched = true;
-		    }
-		    
-		    // dub: for the old-style speculation implementation, we 
-		    // overload the packet priorities to prioritize non-
-		    // speculative requests over speculative ones
-		    if( _speculative == 1 )
-		      _sw_allocator->AddRequest(expanded_input, expanded_output,
-						vc, prio, prio);
-		    else
-		      _spec_sw_allocator->AddRequest(expanded_input, 
-						     expanded_output, vc,
-						     prio, prio);
-		    vc_ready_spec++;
+		BufferState * dest_buf = _next_buf[iset->output_port];
+		
+		// check if at least one suitable VC is available at this output
+		
+		for ( int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc ) {
+		  if(dest_buf->IsAvailableFor(out_vc)) {
+		    do_request = true;
+		    break;
 		  }
 		}
-		iset++;
 	      }
+	      
+	      if(do_request) { 
+		int expanded_output = iset->output_port * _output_speedup + input % _output_speedup;
+		if ( ( _switch_hold_in[expanded_input] == -1 ) && 
+		     ( _switch_hold_out[expanded_output] == -1 ) ) {
+		  
+		  int prio = ((_speculative == 1) ? numeric_limits<int>::min() : 0) + cur_buf->GetPriority(vc);
+		  
+		  Flit * f = cur_buf->FrontFlit(vc);
+		  assert(f);
+		  if(f->watch) {
+		    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			       << "VC " << vc << " at input " << input 
+			       << " requested output " << iset->output_port
+			       << " (spec., exp. input: " << expanded_input
+			       << ", exp. output: " << expanded_output
+			       << ", flit: " << f->id
+			       << ", prio: " << prio
+			       << ")." << endl;
+		    watched = true;
+		  }
+		  
+		  // dub: for the old-style speculation implementation, we 
+		  // overload the packet priorities to prioritize non-
+		  // speculative requests over speculative ones
+		  if( _speculative == 1 )
+		    _sw_allocator->AddRequest(expanded_input, expanded_output,
+					      vc, prio, prio);
+		  else
+		    _spec_sw_allocator->AddRequest(expanded_input, 
+						   expanded_output, vc,
+						   prio, prio);
+		  vc_ready_spec++;
+		}
+	      }
+	      iset++;
 	    }
-	    break;
 	  }
 	}
 	vc += _input_speedup;

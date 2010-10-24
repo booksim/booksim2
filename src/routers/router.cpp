@@ -131,7 +131,7 @@ Router *Router::NewRouter( const Configuration& config,
 			   Module *parent, string name, int id,
 			   int inputs, int outputs )
 {
-  Router *r;
+  Router *r = NULL;
   string type;
   string topo;
 

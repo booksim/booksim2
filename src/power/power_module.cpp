@@ -496,7 +496,7 @@ void Power_Module::run(){
   }
 
   vector<Router*> routers = net->GetRouters();
-  for(int i = 0; i < routers.size(); i++){
+  for(size_t i = 0; i < routers.size(); i++){
     IQRouterBase* temp = dynamic_cast<IQRouterBase*>(routers[i]);
     const BufferMonitor * bm = temp->GetBufferMonitor();
     calcBuffer(bm);

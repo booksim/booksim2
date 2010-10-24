@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iomanip>
 #include <cstdlib>
 #include <cassert>
+#include <limits>
 
 #include "globals.hpp"
 #include "random_utils.hpp"
@@ -158,7 +159,7 @@ void IQRouterSplit::_Alloc( )
 	      BufferState * dest_buf = _next_buf[output];
 	      
 	      bool do_request = false;
-	      int in_priority;
+	      int in_priority = numeric_limits<int>::min();
 	      
 	      // check if any suitable VCs are available and determine the 
 	      // highest priority for this port
@@ -319,7 +320,7 @@ void IQRouterSplit::_Alloc( )
 	  }
 	  
 	  bool do_request = false;
-	  int in_priority;
+	  int in_priority = numeric_limits<int>::min();
 	  
 	  int vc_cnt = route_set->NumVCs(output);
 	  assert((vc_state != VC::active) || (vc_cnt > 0));
@@ -482,72 +483,70 @@ void IQRouterSplit::_Alloc( )
 	
 	BufferState * dest_buf = _next_buf[output];
 	
-	switch(cur_buf->GetState(vc)) {
+	if((cur_buf->GetState(vc) == VC::vc_alloc) ||
+	   (cur_buf->GetState(vc) == VC::active)) {
 	  
-	case VC::vc_alloc:
-	  {
-	    const OutputSet * route_set = cur_buf->GetRouteSet(vc);
-	    int sel_prio = -1;
-	    int sel_vc = -1;
-	    int vc_cnt = route_set->NumVCs(output);
-	    
-	    for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
-	      int out_prio;
-	      int out_vc = route_set->GetVC(output, vc_index, &out_prio);
-	      if(!dest_buf->IsAvailableFor(out_vc)) {
-		if(f->watch)
-		  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-			      << "VC " << out_vc << " at output "
-			      << output << " is busy." << endl;
-		continue;
-	      }
-	      if(dest_buf->IsFullFor(out_vc)) {
-		if(f->watch)
-		  *gWatchOut << GetSimTime() << " | " << FullName() << " | " 
-			      << "VC " << out_vc << " at output "
-			      << output << " has no buffers available." << endl;
-		continue;
-	      }
-	      
+	  const OutputSet * route_set = cur_buf->GetRouteSet(vc);
+	  int sel_prio = -1;
+	  int sel_vc = -1;
+	  int vc_cnt = route_set->NumVCs(output);
+	  
+	  for(int vc_index = 0; vc_index < vc_cnt; ++vc_index) {
+	    int out_prio;
+	    int out_vc = route_set->GetVC(output, vc_index, &out_prio);
+	    if(!dest_buf->IsAvailableFor(out_vc)) {
+	      if(f->watch)
+		*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			   << "VC " << out_vc << " at output "
+			   << output << " is busy." << endl;
+	      continue;
+	    }
+	    if(dest_buf->IsFullFor(out_vc)) {
 	      if(f->watch)
 		*gWatchOut << GetSimTime() << " | " << FullName() << " | " 
-			    << "VC " << out_vc << " at output "
-			    << output << " is available." << endl;
-	      if(out_prio > sel_prio) {
-		sel_vc = out_vc;
-		sel_prio = out_prio;
-	      }
+			   << "VC " << out_vc << " at output "
+			   << output << " has no buffers available." << endl;
+	      continue;
 	    }
-	    
-	    if(sel_vc < 0) {
-	      cout << "XXX" << endl
-		   << "Flit " << f->id
-		   << ", VC " << vc
-		   << ", input " << input << ":" << endl
-		   << "None of " << vc_cnt << " VCs at output " << output 
-		   << " were suitable and available." << endl 
-		   << "XXX" << endl;
-	    }
-	    // we should only get to this point if some VC requested 
-	    // allocation
-	    assert(sel_vc > -1);
-	    
-	    // dub: this is taken care of later on
-	    //cur_vc->SetState(VC::active);
-	    cur_buf->SetOutput(vc, output, sel_vc);
-	    dest_buf->TakeBuffer(sel_vc);
-	    
-	    _vc_rr_offset[input*_vcs+vc] = (output + 1) % _outputs;
 	    
 	    if(f->watch)
-	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-			  << "VC " << sel_vc << " at output " << output
-			  << " granted to VC " << vc << " at input " << input
-			  << " (flit: " << f->id << ")." << endl;
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | " 
+			 << "VC " << out_vc << " at output "
+			 << output << " is available." << endl;
+	    if(out_prio > sel_prio) {
+	      sel_vc = out_vc;
+	      sel_prio = out_prio;
+	    }
 	  }
-	  // NOTE: from here, we just fall through to the code for VC::active!
 	  
-	case VC::active:
+	  if(sel_vc < 0) {
+	    cout << "XXX" << endl
+		 << "Flit " << f->id
+		 << ", VC " << vc
+		 << ", input " << input << ":" << endl
+		 << "None of " << vc_cnt << " VCs at output " << output 
+		 << " were suitable and available." << endl 
+		 << "XXX" << endl;
+	  }
+	  // we should only get to this point if some VC requested 
+	  // allocation
+	  assert(sel_vc > -1);
+	  
+	  // dub: this is taken care of later on
+	  //cur_vc->SetState(VC::active);
+	  cur_buf->SetOutput(vc, output, sel_vc);
+	  dest_buf->TakeBuffer(sel_vc);
+	  
+	  _vc_rr_offset[input*_vcs+vc] = (output + 1) % _outputs;
+	  
+	  if(f->watch)
+	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		       << "VC " << sel_vc << " at output " << output
+		       << " granted to VC " << vc << " at input " << input
+		       << " (flit: " << f->id << ")." << endl;
+	}
+	  
+	if(cur_buf->GetState(vc) == VC::active) {
 	  
 	  if(_hold_switch_for_packet) {
 	    _switch_hold_in[expanded_input] = expanded_output;

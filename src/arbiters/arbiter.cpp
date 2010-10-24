@@ -45,7 +45,8 @@ using namespace std ;
 
 Arbiter::Arbiter( Module *parent, const string &name, int size )
   : Module( parent, name ),
-    _input_size(size), _num_reqs(0), _best_input(-1), _highest_pri(numeric_limits<int>::min())
+    _input_size(size), _selected(-1), _highest_pri(numeric_limits<int>::min()),
+    _best_input(-1), _num_reqs(0)
 {
   _request.resize(size);
   for ( int i = 0 ; i < size ; i++ ) 
