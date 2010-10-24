@@ -93,7 +93,9 @@ void SelAlloc::Allocate( )
       max_pri   = 0;
 
       wrapped = false;
-      while( (!wrapped) || ( p->second.port < input_offset ) ) {
+      while( (!wrapped) || 
+	     ( ( p != _out_req[output].end() ) && 
+	       ( p->second.port < input_offset ) ) ) {
 	if ( p == _out_req[output].end( ) ) {
 	  if ( wrapped ) { break; }
 	  // p is valid here because empty lists
@@ -158,7 +160,9 @@ void SelAlloc::Allocate( )
       max_pri   = 0;
 
       wrapped = false;
-      while( (!wrapped) || ( p->second.port < output_offset ) ) {
+      while( (!wrapped) || 
+	     ( ( p != _in_req[input].end() ) && 
+	       ( p->second.port < output_offset ) ) ) {
 	if ( p == _in_req[input].end( ) ) {
 	  if ( wrapped ) { break; }
 	  // p is valid here because empty lists
