@@ -484,7 +484,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
   
   if (dest >= grp_ID*grp_size_nodes && dest < (grp_ID+1)*grp_size_nodes) {
     // routing within router.
-    f->ph == 2;
+    f->ph = 2;
   } 
 
   if (f->ph == 0) {
