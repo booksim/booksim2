@@ -316,13 +316,9 @@ int main( int argc, char **argv )
 
   /*configure and run the simulator
    */
-  bool result;
+
 #ifdef USE_GUI
-  if(!gGUIMode){
-#endif
-   result = AllocatorSim( config );
-#ifdef USE_GUI
-  } else {
+  if(gGUIMode){
     cout<<"GUI Mode\n";
     QApplication app(argc, argv);
     BooksimGUI * bs = new BooksimGUI();
@@ -334,5 +330,6 @@ int main( int argc, char **argv )
   }
 #endif
 
+  bool result = AllocatorSim( config );
   return result ? -1 : 0;
 }
