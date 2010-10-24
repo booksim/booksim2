@@ -1184,17 +1184,18 @@ void TrafficManager::_ClearStats( )
 
 int TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const 
 {
-  int dmin = numeric_limits<double>::max();
+  int dmin = -1;
 
-  *min = dmin;
+  *min = numeric_limits<double>::max();
   *avg = 0.0;
 
   for ( unsigned int d = 0; d < _dests; ++d ) {
-    if ( stats[d]->Average( ) < *min ) {
-      *min = stats[d]->Average( );
+    double curr = stats[d]->Average( );
+    if ( curr < *min ) {
+      *min = curr;
       dmin = d;
     }
-    *avg += stats[d]->Average( );
+    *avg += curr;
   }
 
   *avg /= (double)_dests;
