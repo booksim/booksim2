@@ -591,6 +591,9 @@ void IQRouterBaseline::_SWAlloc( )
 	  
 	  if(f->tail) {
 	    cur_buf->SetState(vc, VC::idle);
+	    if(!cur_buf->Empty(vc)) {
+	      _queuing_vcs.push(make_pair(input, vc));
+	    }
 	    _switch_hold_in[expanded_input]   = -1;
 	    _switch_hold_vc[expanded_input]   = -1;
 	    _switch_hold_out[expanded_output] = -1;

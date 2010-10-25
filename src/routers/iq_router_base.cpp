@@ -139,7 +139,7 @@ void IQRouterBase::ReadInputs( )
 
 void IQRouterBase::InternalStep( )
 {
-  //  _InputQueuing( );
+  _InputQueuing( );
   _Route( );
   _Alloc( );
   
@@ -151,7 +151,7 @@ void IQRouterBase::InternalStep( )
   _credit_pipe->Advance( );
 
 
-    _OutputQueuing( );
+  _OutputQueuing( );
 }
 
 void IQRouterBase::WriteOutputs( )
@@ -166,16 +166,20 @@ void IQRouterBase::_ReceiveFlits( )
   for ( int input = 0; input < _inputs; ++input ) { 
     Flit * f = _input_channels[input]->Receive();
     if ( f ) {
+
       ++_received_flits[input];
+      if ( f->watch ) {
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		   << "Received flit " << f->id
+		   << " from channel at input " << input
+		   << "." << endl;
+      }
+
       Buffer * cur_buf = _buf[input];
       int vc = f->vc;
 
-      if ( cur_buf->GetState( vc ) == VC::idle ) {
-	  if ( !f->head ) {
-	    Error( "Received non-head flit at idle VC" );
-	  }
-	  cur_buf->SetState( vc, VC::routing );
-	  _routing_vcs.push(make_pair(input, f->vc));
+      if ( ( cur_buf->GetState( vc ) == VC::idle ) && !f->head ) {
+	Error( "Received non-head flit at idle VC" );
       }
 
       if(f->watch) {
@@ -191,14 +195,11 @@ void IQRouterBase::_ReceiveFlits( )
 	  *gWatchOut << ", front: " << cur_buf->FrontFlit(vc)->id;
 	}
 	*gWatchOut << ")." << endl;
-	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		   << "Received flit " << f->id
-		   << " from channel at input " << input
-		   << "." << endl;
       }
       if ( !cur_buf->AddFlit( vc, f ) ) {
 	Error( "VC buffer overflow" );
       }
+      _queuing_vcs.push(make_pair(input, f->vc));
       _bufferMonitor->write( input, f ) ;
     }
   }
@@ -217,26 +218,24 @@ void IQRouterBase::_ReceiveCredits( )
 
 void IQRouterBase::_InputQueuing( )
 {
-  /*
-  for ( int input = 0; input < _inputs; ++input ) {
-    for ( int vc = 0; vc < _vcs; ++vc ) {
+  while(!_queuing_vcs.empty()) {
 
-      VC * cur_vc = &_vc[input][vc];
+    pair<int, int> item = _queuing_vcs.front();
+    _queuing_vcs.pop();
+    int & input = item.first;
+    int & vc = item.second;
+
+    Buffer * cur_buf = _buf[input];
+
+    assert(cur_buf->FrontFlit(vc));
+
+    if ( cur_buf->GetState(vc) == VC::idle ) {
       
-      if ( cur_vc->GetState( ) == VC::idle ) {
-	Flit * f = cur_vc->FrontFlit( );
-
-	if ( f ) {
-	  if ( !f->head ) {
-	    Error( "Received non-head flit at idle VC" );
-	  }
-
-	  cur_vc->SetState( VC::routing );
-	}
-      }
+      cur_buf->SetState( vc, VC::routing );
+      _routing_vcs.push(item);
     }
+
   } 
-  */ 
 }
 
 //this function relies on the fact that _routing delay is constant for all packets
@@ -246,11 +245,11 @@ void IQRouterBase::_Route( )
 {
   while(!_routing_vcs.empty()) {
     pair<int, int> item = _routing_vcs.front();
-    int input = item.first;
-    int vc = item.second;
+    int & input = item.first;
+    int & vc = item.second;
     Buffer * cur_buf = _buf[input];
     if(cur_buf->GetStateTime(vc) < _routing_delay) {
-      break;
+      return;
     }
     _routing_vcs.pop();
     Flit * f = cur_buf->FrontFlit(vc);
