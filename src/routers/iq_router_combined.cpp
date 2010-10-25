@@ -236,8 +236,7 @@ void IQRouterCombined::_Alloc( )
 	Flit * f = cur_buf->FrontFlit(vc);
 	assert(f);
 	
-	if((cur_buf->GetState(vc) == VC::vc_alloc) || 
-	   (cur_buf->GetState(vc) == VC::active)) {
+	if(cur_buf->GetState(vc) == VC::vc_alloc) {
 	  const OutputSet * route_set = cur_buf->GetRouteSet(vc);
 	  int sel_prio = -1;
 	  int sel_vc = -1;
@@ -257,8 +256,7 @@ void IQRouterCombined::_Alloc( )
 	  // we should only get to this point if some VC requested allocation
 	  assert(sel_vc > -1);
 	  
-	  // dub: this is taken care of later on
-	  //cur_vc->SetState(VC::active);
+	  cur_buf->SetState(vc, VC::active);
 	  cur_buf->SetOutput(vc, output, sel_vc);
 	  dest_buf->TakeBuffer(sel_vc);
 	  
@@ -330,6 +328,9 @@ void IQRouterCombined::_Alloc( )
 	  
 	  if(f->tail) {
 	    cur_buf->SetState(vc, VC::idle);
+	    if(!cur_buf->Empty(vc)) {
+	      _queuing_vcs.push(make_pair(input, vc));
+	    }
 	    _switch_hold_in[expanded_input] = -1;
 	    _switch_hold_vc[expanded_input] = -1;
 	    _switch_hold_out[expanded_output] = -1;
