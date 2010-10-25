@@ -329,6 +329,13 @@ int badperm_dflynew( int source, int total_nodes )
   return dest;
 }
 
+int badperm_yarc(int source, int total_nodes){
+  int row = (int)(source/realgk);
+  int col = (int)(source%realgk);
+  
+  return RandomInt(realgk-1)*realgk+row;
+}
+
 void InitializeTrafficMap( )
 {
 
@@ -358,7 +365,7 @@ void InitializeTrafficMap( )
   gTrafficFunctionMap["taper64"]    = &taper64;
 
   gTrafficFunctionMap["bad_dragon"]    = &badperm_dflynew;
-
+  gTrafficFunctionMap["badperm_yarc"] = &badperm_yarc;
 }
 
 void ResetTrafficFunction( )
