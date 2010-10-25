@@ -113,7 +113,7 @@ bool VC::AddFlit( Flit *f )
 
   // update flit priority before adding to VC buffer
   if(_pri_type == local_age_based) {
-    f->pri = numeric_limits<int>::max() - GetSimTime() - 1;
+    f->pri = numeric_limits<int>::max() - GetSimTime();
     assert(f->pri >= 0);
   } else if(_pri_type == hop_count_based) {
     f->pri = f->hops;
