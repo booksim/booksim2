@@ -78,6 +78,8 @@ private:
 
   bool _watched;
 
+  int _expected_pid;
+
 public:
   
   VC( const Configuration& config, int outputs,

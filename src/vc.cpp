@@ -63,7 +63,7 @@ VC::VC( const Configuration& config, int outputs,
   : Module( parent, name ), 
     _state(idle), _state_time(0), _out_port(-1), _out_vc(-1), _total_cycles(0),
     _vc_alloc_cycles(0), _active_cycles(0), _idle_cycles(0), _routing_cycles(0),
-    _pri(0), _watched(false)
+    _pri(0), _watched(false), _expected_pid(-1)
 {
   _size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
 
@@ -95,7 +95,21 @@ bool VC::AddFlit( Flit *f )
 {
   assert(f);
 
-  if((int)_buffer.size() >= _size) return false;
+  if(_expected_pid >= 0) {
+    if(f->pid != _expected_pid) {
+      Error("Received flit with unexpected packet ID.");
+      return false;
+    } else if(f->tail) {
+      _expected_pid = -1;
+    }
+  } else if(!f->tail) {
+    _expected_pid = f->pid;
+  }
+    
+  if((int)_buffer.size() >= _size) {
+    Error("Flit buffer overflow.");
+    return false;
+  }
 
   // update flit priority before adding to VC buffer
   if(_pri_type == local_age_based) {
@@ -123,6 +137,8 @@ Flit *VC::RemoveFlit( )
     f = _buffer.front( );
     _buffer.pop_front( );
     UpdatePriority();
+  } else {
+    Error("Trying to remove flit from empty buffer.");
   }
   return f;
 }

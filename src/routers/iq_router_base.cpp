@@ -178,14 +178,10 @@ void IQRouterBase::_ReceiveFlits( )
       Buffer * cur_buf = _buf[input];
       int vc = f->vc;
 
-      if ( ( cur_buf->GetState( vc ) == VC::idle ) && !f->head ) {
-	Error( "Received non-head flit at idle VC" );
-      }
-
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "Adding flit " << f->id
-		   << " to VC " << f->vc
+		   << " to VC " << vc
 		   << " at input " << input
 		   << " (state: " << VC::VCSTATE[cur_buf->GetState(vc)];
 	if(cur_buf->Empty(vc)) {
@@ -199,7 +195,7 @@ void IQRouterBase::_ReceiveFlits( )
       if ( !cur_buf->AddFlit( vc, f ) ) {
 	Error( "VC buffer overflow" );
       }
-      _queuing_vcs.push(make_pair(input, f->vc));
+      _queuing_vcs.push(make_pair(input, vc));
       _bufferMonitor->write( input, f ) ;
     }
   }
