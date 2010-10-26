@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 #include <queue>
+#include <list>
 
 #include "router.hpp"
 #include "routefunc.hpp"
@@ -64,9 +65,10 @@ class IQRouter : public Router {
   vector<int> _received_flits;
   vector<int> _sent_flits;
 
-  queue<pair<int, int> > _queuing_vcs;
-  queue<pair<int, int> > _routing_vcs;
-  set<pair<int, int> > _vcalloc_vcs;  
+  list<pair<int, int> > _queuing_vcs;
+  queue<pair<int, pair<int, int> > > _route_waiting_vcs;
+  queue<pair<int, pair<int, int> > > _vc_alloc_waiting_vcs;  
+  list<pair<int, int> > _vc_alloc_pending_vcs;
 
   vector<Buffer *> _buf;
   vector<BufferState *> _next_buf;
