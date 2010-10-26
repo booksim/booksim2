@@ -234,9 +234,6 @@ void IQRouterBase::_InputQueuing( )
   } 
 }
 
-//this function relies on the fact that _routing delay is constant for all packets
-//if the packet at the head of the queue is <routing_delay, then all other vc in the queue
-//will be <routing delay
 void IQRouterBase::_Route( )
 {
   while(!_routing_vcs.empty()) {
