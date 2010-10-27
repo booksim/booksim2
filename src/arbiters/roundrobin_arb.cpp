@@ -59,7 +59,7 @@ void RoundRobinArbiter::UpdateState() {
 void RoundRobinArbiter::AddRequest( int input, int id, int pri )
 {
   if(!_request[input].valid || (_request[input].pri < pri)) {
-    if(_highest_pri < pri) {
+    if((_num_reqs == 0) || (_highest_pri < pri)) {
       _highest_pri = pri;
       _best_input = input;
     } else if(_highest_pri == pri) {
