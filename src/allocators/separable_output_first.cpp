@@ -51,56 +51,56 @@ SeparableOutputFirstAllocator( Module* parent, const string& name, int inputs,
 
 void SeparableOutputFirstAllocator::Allocate() {
   
-//  cout << "SeparableOutputFirstAllocator::Allocate()" << endl ;
-//  PrintRequests() ;
-  
-  for ( int input = 0 ; input < _inputs ; input++ ) {
+  set<int>::const_iterator port_iter = _out_occ.begin();
+  while(port_iter != _out_occ.end()) {
     
-    // Add requests to the output arbiters
-    vector<sRequest>::const_iterator it  = _requests[input].begin() ;
-    vector<sRequest>::const_iterator end = _requests[input].end() ;
-    while ( it != end ) {
-      const sRequest& req = *it ;
-      if ( req.label > -1 ) {
-	_output_arb[req.port]->AddRequest( input, req.label, req.out_pri );
-      }
-      it++ ;
-    }
-    
-  }
-  
-  for ( int output = 0; output < _outputs; output++ ) {
-    
-    // Execute the output arbiters and propagate the grants to the
-    // input arbiters.
-    int in = _output_arb[output]->Arbitrate( NULL, NULL ) ;
-    
-    if ( in > -1 ) {
-      vector<sRequest>::const_iterator it  = _requests[in].begin() ;
-      vector<sRequest>::const_iterator end = _requests[in].end() ;
-      while ( it != end ) {
-	const sRequest& req = *it ;
-	if ( ( req.label > -1 ) && ( req.port == output ) ) {
-	  _input_arb[in]->AddRequest( output, req.label, req.in_pri );
-	}
-	it++ ;
-      }
-    }
-  }
-  
-  // Execute the input arbiters.
-  for ( int input = 0 ; input < _inputs ; input++ ) {
+    const int & output = *port_iter;
 
-    int label, pri ;
-    int output      = _input_arb[input]->Arbitrate( &label, &pri ) ;
+    // add requests to the output arbiter
+
+    map<int, sRequest>::const_iterator req_iter = _out_req[output].begin();
+    while(req_iter != _out_req[output].end()) {
+      
+      const sRequest & req = req_iter->second;
+
+      _output_arb[output]->AddRequest(req.port, req.label, req.out_pri);
+
+      ++req_iter;
+    }
+    
+    // Execute the output arbiter and propagate the grants to the
+    // input arbiters.
+
+    int label = -1;
+    const int input = _output_arb[output]->Arbitrate(&label, NULL);
+    assert(input > -1);
+
+    const sRequest & req = _in_req[input][output];
+    assert((req.port == output) && (req.label == label));
+
+    _input_arb[input]->AddRequest(req.port, req.label, req.in_pri);
+
+    ++port_iter;
+  }
   
-    if ( output > -1 ) {
-      assert( _inmatch[input] == -1 && _outmatch[output] == -1 ) ;
-      _inmatch[input]   = output ;
-      _outmatch[output] = input ;
+  port_iter = _in_occ.begin();
+  while(port_iter != _in_occ.end()) {
+    
+    const int & input = *port_iter;
+
+    // Execute the input arbiters.
+    
+    const int output = _input_arb[input]->Arbitrate(NULL, NULL);
+  
+    if(output > -1) {
+      assert((_inmatch[input] == -1) && (_outmatch[output] == -1));
+
+      _inmatch[input] = output;
+      _outmatch[output] = input;
       _input_arb[input]->UpdateState() ;
       _output_arb[output]->UpdateState() ;
-
     }
+    
+    ++port_iter;
   }
 }

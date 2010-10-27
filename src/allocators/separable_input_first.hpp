@@ -43,17 +43,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class SeparableInputFirstAllocator : public SeparableAllocator {
 
-  set<int> _in_event;
-  set<int> _out_event;
 public:
   
   SeparableInputFirstAllocator( Module* parent, const string& name, int inputs,
 				int outputs, const string& arb_type ) ;
-  virtual void AddRequest( int in, int out, int label = 1, 
-			   int in_pri = 0, int out_pri = 0 ) ;
-  virtual void Allocate() ;
 
-  virtual void Clear();
+  virtual void Allocate() ;
 
 } ;
 

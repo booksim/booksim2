@@ -49,54 +49,58 @@ SeparableInputFirstAllocator( Module* parent, const string& name, int inputs,
   : SeparableAllocator( parent, name, inputs, outputs, arb_type )
 {}
 
-void SeparableInputFirstAllocator::AddRequest( int in, int out, int label, int in_pri,
-				     int out_pri ) {
-
-  SeparableAllocator::AddRequest(in, out, label, in_pri, out_pri);
-  _in_event.insert(in);
-  _input_arb[in]->AddRequest( out, _requests[in].size()-1, in_pri ) ;
-}
-
-
 void SeparableInputFirstAllocator::Allocate() {
   
-  //  cout << "SeparableInputFirstAllocator::Allocate()" << endl ;
-  //  PrintRequests() ;
-  
-  // Execute the input arbiters and propagate the grants to the
-  // output arbiters.
-  for(set<int>::iterator i = _in_event.begin(); i!=_in_event.end(); i++){
-    int input = *i;
-    assert(input >= 0 && input < _inputs);
-    int id;
-    int pri;
-    int out =_input_arb[input]->Arbitrate( &id, &pri );
-    assert(out >= 0 && out < _outputs);
-    const sRequest& req = (_requests[input][id]); 
-    assert(out == req.port && pri == req.in_pri);
-    _output_arb[out]->AddRequest( input, req.label, req.out_pri );
-    _out_event.insert(out);
+  set<int>::const_iterator port_iter = _in_occ.begin();
+  while(port_iter != _in_occ.end()) {
+    
+    const int & input = *port_iter;
+
+    // add requests to the output arbiter
+
+    map<int, sRequest>::const_iterator req_iter = _in_req[input].begin();
+    while(req_iter != _in_req[input].end()) {
+
+      const sRequest & req = req_iter->second;
+      
+      _input_arb[input]->AddRequest(req.port, req.label, req.in_pri);
+
+      ++req_iter;
+    }
+
+    // Execute the input arbiters and propagate the grants to the
+    // output arbiters.
+
+    int label = -1;
+    const int output = _input_arb[input]->Arbitrate(&label, NULL);
+    assert(output > -1);
+
+    const sRequest & req = _out_req[output][input]; 
+    assert((req.port == input) && (req.label == label));
+
+    _output_arb[output]->AddRequest(req.port, req.label, req.out_pri);
+
+    ++port_iter;
   }
 
+  port_iter = _out_occ.begin();
+  while(port_iter != _out_occ.end()) {
 
-  // Execute the output arbiters.
-  for(set<int>::iterator i = _out_event.begin(); i!=_out_event.end(); i++){
+    const int & output = *port_iter;
 
-    int label, pri ;
-    int output = *i;
-    int  input = _output_arb[output]->Arbitrate( &label, &pri ) ;
-    assert( _inmatch[input] == -1 && _outmatch[output] == -1 ) ;
-    _inmatch[input]   = output ;
-    _outmatch[output] = input ;
-    _input_arb[input]->UpdateState() ;
-    _output_arb[output]->UpdateState() ;
+    // Execute the output arbiters.
+    
+    const int input = _output_arb[output]->Arbitrate(NULL, NULL);
 
+    if(input > -1) {
+      assert((_inmatch[input] == -1) && (_outmatch[output] == -1));
+
+      _inmatch[input] = output ;
+      _outmatch[output] = input ;
+      _input_arb[input]->UpdateState() ;
+      _output_arb[output]->UpdateState() ;
+    }
+
+    ++port_iter;
   }
-}
-
-void SeparableInputFirstAllocator::Clear()
-{
-  _in_event.clear();
-  _out_event.clear();
-  SeparableAllocator::Clear();
 }
