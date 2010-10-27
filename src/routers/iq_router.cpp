@@ -922,7 +922,6 @@ int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
   }
   
   const BufferState * dest_buf = _next_buf[out];
-  //dest_buf_tmp = &_next_buf_tmp[out];
   
   const int start = (vc_begin >= 0) ? vc_begin : 0;
   const int end = (vc_begin >= 0) ? vc_end : (_vcs - 1);
