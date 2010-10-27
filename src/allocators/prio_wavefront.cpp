@@ -122,17 +122,15 @@ void PrioWavefront::Allocate( )
     // eliminating lower-priority ones, with more dependent requests being 
     // eliminated first
 
-    // note that the diagonal with p=0 is already covered by the high-priority 
-    // loops above
-
-    for ( int p = 1; p < _square; ++p ) {
+    for ( int p = 0; p < _square; ++p ) {
       for ( int q = 0; q < _square; ++q ) {
 	int input = ( ( _pri + _square - p ) + ( _square - q ) ) % _square;
 	int output = q;
 	
 	if ( ( input < _inputs ) && ( output < _outputs ) && 
 	     ( _inmatch[input] == -1 ) && ( _outmatch[output] == -1 ) &&
-	     ( _request[input][output].label != -1 ) ) {
+	     ( _request[input][output].label != -1 ) &&
+	     ( _request[input][output].in_pri < _max_prio ) ) {
 
 	  // Grant!
 	  _inmatch[input] = output;
