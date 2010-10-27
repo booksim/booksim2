@@ -106,7 +106,7 @@ EventRouter::EventRouter( const Configuration& config,
 
   _crossbar_pipe = 
     new PipelineFIFO<Flit>( this, "crossbar_pipeline", _outputs, 
-			    _st_prepare_delay + _st_final_delay );
+			    _crossbar_delay );
 
   _credit_pipe =
     new PipelineFIFO<Credit>( this, "credit_pipeline", _inputs,

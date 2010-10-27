@@ -57,9 +57,7 @@ protected:
   float _internal_speedup;
   float _partial_internal_cycles;
 
-  int _st_prepare_delay;
-  int _st_final_delay;
-  
+  int _crossbar_delay;
   int _credit_delay;
   
   vector<FlitChannel *>   _input_channels;

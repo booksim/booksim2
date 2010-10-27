@@ -62,8 +62,8 @@ Router::Router( const Configuration& config,
   _inputs( inputs ),
   _outputs( outputs )
 {
-  _st_prepare_delay = config.GetInt( "st_prepare_delay" );
-  _st_final_delay   = config.GetInt( "st_final_delay" );
+  _crossbar_delay   = ( config.GetInt( "st_prepare_delay" ) + 
+			config.GetInt( "st_final_delay" ) );
   _credit_delay     = config.GetInt( "credit_delay" );
   _input_speedup    = config.GetInt( "input_speedup" );
   _output_speedup   = config.GetInt( "output_speedup" );
