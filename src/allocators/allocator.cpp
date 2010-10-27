@@ -118,16 +118,16 @@ void DenseAllocator::Clear( )
 
 int DenseAllocator::ReadRequest( int in, int out ) const
 {
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) );
+  assert( ( in >= 0 ) && ( in < _inputs ) );
+  assert( ( out >= 0 ) && ( out < _outputs ) );
 
   return _request[in][out].label;
 }
 
 bool DenseAllocator::ReadRequest( sRequest &req, int in, int out ) const
 {
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) );
+  assert( ( in >= 0 ) && ( in < _inputs ) );
+  assert( ( out >= 0 ) && ( out < _outputs ) );
 
   req = _request[in][out];
 
@@ -148,8 +148,8 @@ void DenseAllocator::AddRequest( int in, int out, int label,
 
 void DenseAllocator::RemoveRequest( int in, int out, int label )
 {
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) ); 
+  assert( ( in >= 0 ) && ( in < _inputs ) );
+  assert( ( out >= 0 ) && ( out < _outputs ) ); 
   
   _request[in][out].label = -1;
 }
@@ -212,8 +212,8 @@ bool SparseAllocator::ReadRequest( sRequest &req, int in, int out ) const
 {
   bool found;
 
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) );
+  assert( ( in >= 0 ) && ( in < _inputs ) );
+  assert( ( out >= 0 ) && ( out < _outputs ) );
 
   map<int, sRequest>::const_iterator match = _in_req[in].find(out);
   if ( match != _in_req[in].end( ) ) {
@@ -269,8 +269,8 @@ void SparseAllocator::AddRequest( int in, int out, int label,
 
 void SparseAllocator::RemoveRequest( int in, int out, int label )
 {
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) ); 
+  assert( ( in >= 0 ) && ( in < _inputs ) );
+  assert( ( out >= 0 ) && ( out < _outputs ) ); 
 				 
   // insert input request in order of it's output
   map<int, sRequest>::iterator erase_point = _in_req[in].find(out);
