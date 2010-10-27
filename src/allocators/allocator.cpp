@@ -248,23 +248,12 @@ void SparseAllocator::AddRequest( int in, int out, int label,
   req.in_pri  = in_pri;
   req.out_pri = out_pri;
 
-  // insert input request in order of it's output
-  map<int, sRequest>::iterator insert_point = _in_req[in].find(out);
-  if(insert_point == _in_req[in].end()) {
-    _in_req[in][out] = req;
-  } else if(insert_point->second.in_pri < in_pri) {
-    insert_point->second = req;
-  }
+  _in_req[in][out] = req;
 
   req.port  = in;
   req.label = label;
 
-  insert_point = _out_req[out].find(in);
-  if(insert_point == _out_req[out].end()) {
-    _out_req[out][in] = req;
-  } else if(insert_point->second.in_pri < in_pri) {
-    insert_point->second = req;
-  }
+  _out_req[out][in] = req;
 }
 
 void SparseAllocator::RemoveRequest( int in, int out, int label )
@@ -272,11 +261,8 @@ void SparseAllocator::RemoveRequest( int in, int out, int label )
   assert( ( in >= 0 ) && ( in < _inputs ) );
   assert( ( out >= 0 ) && ( out < _outputs ) ); 
 				 
-  // insert input request in order of it's output
-  map<int, sRequest>::iterator erase_point = _in_req[in].find(out);
-
-  assert( erase_point != _in_req[in].end( ) );
-  _in_req[in].erase( erase_point );
+  assert( _in_req[in].count( out ) > 0 );
+  _in_req[in].erase( out );
 
   // remove from occupied inputs list if
   // input is now empty
@@ -285,10 +271,8 @@ void SparseAllocator::RemoveRequest( int in, int out, int label )
   }
 
   // similarly for the output
-  erase_point = _out_req[out].find(in);
-
-  assert( erase_point != _out_req[out].end( ) );
-  _out_req[out].erase( erase_point );
+  assert( _out_req[out].count( out ) > 0 );
+  _out_req[out].erase( out );
 
   if ( _out_req[out].empty( ) ) {
     _out_occ.erase(out);
