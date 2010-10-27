@@ -65,7 +65,7 @@ public:
   virtual bool ReadRequest( sRequest &req, int in, int out ) const = 0;
 
   virtual void AddRequest( int in, int out, int label = 1, 
-			   int in_pri = 0, int out_pri = 0 ) = 0;
+			   int in_pri = 0, int out_pri = 0 );
   virtual void RemoveRequest( int in, int out, int label = 1 ) = 0;
   
   virtual void Allocate( ) = 0;

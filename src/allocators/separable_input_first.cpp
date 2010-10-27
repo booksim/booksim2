@@ -54,9 +54,7 @@ void SeparableInputFirstAllocator::AddRequest( int in, int out, int label, int i
 
   SeparableAllocator::AddRequest(in, out, label, in_pri, out_pri);
   _in_event.insert(in);
-  if ( label > -1 ) {
-    _input_arb[in]->AddRequest( out, _requests[in].size()-1, in_pri ) ;
-  }
+  _input_arb[in]->AddRequest( out, _requests[in].size()-1, in_pri ) ;
 }
 
 
@@ -69,9 +67,11 @@ void SeparableInputFirstAllocator::Allocate() {
   // output arbiters.
   for(set<int>::iterator i = _in_event.begin(); i!=_in_event.end(); i++){
     int input = *i;
+    assert(input >= 0 && input < _inputs);
     int id;
     int pri;
     int out =_input_arb[input]->Arbitrate( &id, &pri );
+    assert(out >= 0 && out < _outputs);
     const sRequest& req = (_requests[input][id]); 
     assert(out == req.port && pri == req.in_pri);
     _output_arb[out]->AddRequest( input, req.label, req.out_pri );

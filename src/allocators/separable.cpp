@@ -56,6 +56,7 @@ SeparableAllocator::SeparableAllocator( Module* parent, const string& name,
   _input_arb.resize(inputs);
 
   for (int i = 0; i < inputs; ++i) {
+    _requests[i].clear();
     ostringstream arb_name("arb_i");
     arb_name << i;
     _input_arb[i] = Arbiter::NewArbiter(this, arb_name.str(), arb_type, outputs);
@@ -68,8 +69,6 @@ SeparableAllocator::SeparableAllocator( Module* parent, const string& name,
     arb_name << i;
     _output_arb[i] = Arbiter::NewArbiter(this, arb_name.str( ), arb_type, inputs);
   }
-  
-  Clear() ;
 
 }
 
@@ -130,8 +129,7 @@ bool SeparableAllocator::ReadRequest( sRequest &req, int in, int out ) const {
 void SeparableAllocator::AddRequest( int in, int out, int label, int in_pri,
 				     int out_pri ) {
 
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) );
+  Allocator::AddRequest(in, out, label, in_pri, out_pri);
 
   sRequest req ;
   req.port    = out ;

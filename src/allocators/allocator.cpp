@@ -66,6 +66,14 @@ void Allocator::Clear( )
   _outmatch.assign(_outputs, -1);
 }
 
+void Allocator::AddRequest( int in, int out, int label, int in_pri,
+			    int out_pri ) {
+
+  assert( ( in >= 0 ) && ( in < _inputs ) );
+  assert( ( out >= 0 ) && ( out < _outputs ) );
+  assert( label >= 0 );
+}
+
 int Allocator::OutputAssigned( int in ) const
 {
   assert( ( in >= 0 ) && ( in < _inputs ) );
@@ -129,9 +137,8 @@ bool DenseAllocator::ReadRequest( sRequest &req, int in, int out ) const
 void DenseAllocator::AddRequest( int in, int out, int label, 
 				 int in_pri, int out_pri )
 {
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) );
-  
+  Allocator::AddRequest(in, out, label, in_pri, out_pri);
+
   if((_request[in][out].label == -1) || (_request[in][out].in_pri < in_pri)) {
     _request[in][out].label   = label;
     _request[in][out].in_pri  = in_pri;
@@ -222,8 +229,7 @@ bool SparseAllocator::ReadRequest( sRequest &req, int in, int out ) const
 void SparseAllocator::AddRequest( int in, int out, int label, 
 				  int in_pri, int out_pri )
 {
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) );
+  Allocator::AddRequest(in, out, label, in_pri, out_pri);
 
   // insert into occupied inputs set if
   // input is currently empty
