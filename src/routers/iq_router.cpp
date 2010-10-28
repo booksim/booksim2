@@ -143,11 +143,7 @@ IQRouter::IQRouter( const Configuration& config, Module *parent,
   for(int i = 0; i < _inputs*_input_speedup; ++i)
     _sw_rr_offset[i] = i % _input_speedup;
   
-  // Alloc pipelines (to simulate processing/transmission delays)
-  _crossbar_pipe = 
-    new PipelineFIFO<Flit>( this, "crossbar_pipeline", _outputs*_output_speedup, 
-			    _crossbar_delay );
-
+  // Alloc pipeline (to simulate processing delay)
   _credit_pipe =
     new PipelineFIFO<Credit>( this, "credit_pipeline", _inputs,
 			      _credit_delay );
@@ -198,7 +194,6 @@ IQRouter::~IQRouter( )
   if ( _speculative >= 2 )
     delete _spec_sw_allocator;
 
-  delete _crossbar_pipe;
   delete _credit_pipe;
 
   delete _bufferMonitor;
@@ -222,7 +217,6 @@ void IQRouter::InternalStep( )
     _buf[input]->AdvanceTime( );
   }
 
-  _crossbar_pipe->Advance( );
   _credit_pipe->Advance( );
 
 
@@ -270,7 +264,7 @@ void IQRouter::_ReceiveFlits( )
       if ( !cur_buf->AddFlit( vc, f ) ) {
 	Error( "VC buffer overflow" );
       }
-      _queuing_vcs.push_back(make_pair(input, vc));
+      _in_queue_vcs.push_back(make_pair(input, vc));
       _bufferMonitor->write( input, f ) ;
     }
   }
@@ -289,9 +283,9 @@ void IQRouter::_ReceiveCredits( )
 
 void IQRouter::_InputQueuing( )
 {
-  while(!_queuing_vcs.empty()) {
+  while(!_in_queue_vcs.empty()) {
     
-    const pair<int, int> & item = _queuing_vcs.front();
+    const pair<int, int> & item = _in_queue_vcs.front();
     const int & input = item.first;
     const int & vc = item.second;
 
@@ -305,7 +299,7 @@ void IQRouter::_InputQueuing( )
       _route_waiting_vcs.push(make_pair(GetSimTime() + _routing_delay, item));
     }
 
-    _queuing_vcs.pop_front();
+    _in_queue_vcs.pop_front();
   }
 }
 
@@ -651,8 +645,6 @@ void IQRouter::_SWAlloc( )
   
   // Winning flits cross the switch
 
-  _crossbar_pipe->WriteAll( 0 );
-
   //////////////////////////////
   // Switch Power Modelling
   //  - Record Total Cycles
@@ -806,12 +798,13 @@ void IQRouter::_SWAlloc( )
 	  f->vc = cur_buf->GetOutputVC(vc);
 	  dest_buf->SendingFlit( f );
 	  
-	  _crossbar_pipe->Write( f, expanded_output );
+	  _crossbar_waiting_flits.push(make_pair(GetSimTime() + _routing_delay, 
+						 make_pair(expanded_output, f)));
 	  
 	  if(f->tail) {
 	    cur_buf->SetState(vc, VC::idle);
 	    if(!cur_buf->Empty(vc)) {
-	      _queuing_vcs.push_back(make_pair(input, vc));
+	      _in_queue_vcs.push_back(make_pair(input, vc));
 	    }
 	    _switch_hold_in[expanded_input]   = -1;
 	    _switch_hold_vc[expanded_input]   = -1;
@@ -849,22 +842,24 @@ void IQRouter::_SWAlloc( )
 
 void IQRouter::_OutputQueuing( )
 {
-
-  for ( int output = 0; output < _outputs; ++output ) {
-    for ( int t = 0; t < _output_speedup; ++t ) {
-      const int expanded_output = _outputs*t + output;
-      Flit * f = _crossbar_pipe->Read( expanded_output );
-
-      if ( f ) {
-	_output_buffer[output].push( f );
-	if(f->watch)
-	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		      << "Buffering flit " << f->id
-		      << " at output " << output
-		      << "." << endl;
-      }
+  while(!_crossbar_waiting_flits.empty()) {
+    const pair<int, pair<int, Flit *> > & item = _crossbar_waiting_flits.front();
+    const int & time = item.first;
+    if(GetSimTime() < time) {
+      break;
     }
-  }  
+    const int & expanded_output = item.second.first;
+    const int output = expanded_output % _outputs;
+    Flit * f = item.second.second;
+    assert(f);
+    _output_buffer[output].push(f);
+    if(f->watch)
+      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		 << "Buffering flit " << f->id
+		 << " at output " << output
+		 << "." << endl;
+    _crossbar_waiting_flits.pop();
+  }
 
   for ( int input = 0; input < _inputs; ++input ) {
     Credit * c = _credit_pipe->Read( input );

@@ -65,10 +65,11 @@ class IQRouter : public Router {
   vector<int> _received_flits;
   vector<int> _sent_flits;
 
-  list<pair<int, int> > _queuing_vcs;
+  list<pair<int, int> > _in_queue_vcs;
   queue<pair<int, pair<int, int> > > _route_waiting_vcs;
   queue<pair<int, pair<int, int> > > _vc_alloc_waiting_vcs;  
   list<pair<int, int> > _vc_alloc_pending_vcs;
+  queue<pair<int, pair<int, Flit *> > > _crossbar_waiting_flits;
 
   vector<Buffer *> _buf;
   vector<BufferState *> _next_buf;
@@ -81,7 +82,6 @@ class IQRouter : public Router {
 
   tRoutingFunction   _rf;
 
-  PipelineFIFO<Flit> * _crossbar_pipe;
   PipelineFIFO<Credit> * _credit_pipe;
   
   //  vector<queue<Flit *> > _input_buffer;
