@@ -287,22 +287,26 @@ void SparseAllocator::PrintRequests( ostream * os ) const
   
   *os << "Input requests = [ ";
   for ( int input = 0; input < _inputs; ++input ) {
-    *os << input << " -> [ ";
-    for ( iter = _in_req[input].begin( ); 
-	  iter != _in_req[input].end( ); iter++ ) {
-      *os << iter->second.port << " ";
+    if(!_in_req[input].empty()) {
+      *os << input << " -> [ ";
+      for ( iter = _in_req[input].begin( ); 
+	    iter != _in_req[input].end( ); iter++ ) {
+	*os << iter->second.port << " ";
+      }
+      *os << "]  ";
     }
-    *os << "]  ";
   }
   *os << "], output requests = [ ";
   for ( int output = 0; output < _outputs; ++output ) {
-    *os << output << " -> ";
-    *os << "[ ";
-    for ( iter = _out_req[output].begin( ); 
-	  iter != _out_req[output].end( ); iter++ ) {
-      *os << iter->second.port << " ";
+    if(!_out_req[output].empty()) {
+      *os << output << " -> ";
+      *os << "[ ";
+      for ( iter = _out_req[output].begin( ); 
+	    iter != _out_req[output].end( ); iter++ ) {
+	*os << iter->second.port << " ";
+      }
+      *os << "]  ";
     }
-    *os << "]  ";
   }
   *os << "]." << endl;
 }
