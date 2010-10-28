@@ -457,8 +457,7 @@ void IQRouter::_SWAlloc( )
 {
   bool watched = false;
 
-  bool any_nonspec_reqs = false;
-  vector<bool> any_nonspec_output_reqs(_outputs*_output_speedup, 0);
+  set<int> outputs_with_nonspec_reqs;
   
   _sw_allocator->Clear();
   if (_speculative > 1)
@@ -531,8 +530,11 @@ void IQRouter::_SWAlloc( )
 					  vc, 
 					  cur_buf->GetPriority(vc), 
 					  cur_buf->GetPriority(vc));
-		any_nonspec_reqs = true;
-		any_nonspec_output_reqs[expanded_output] = true;
+
+		if(_speculative > 1) {
+		  outputs_with_nonspec_reqs.insert(expanded_output);
+		}
+
 		vc_ready_nonspec++;
 	      }
 	    } else {
@@ -680,18 +682,18 @@ void IQRouter::_SWAlloc( )
 	}
       } else {
 	expanded_output = _sw_allocator->OutputAssigned( expanded_input );
-	if ( ( _speculative >= 2 ) && ( expanded_output < 0 ) ) {
+	if ( ( _speculative > 1 ) && ( expanded_output < 0 ) ) {
 	  expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
 	  if ( expanded_output >= 0 ) {
 	    assert(_spec_sw_allocator->InputAssigned(expanded_output) >= 0);
 	    assert(_spec_sw_allocator->ReadRequest(expanded_input, expanded_output) >= 0);
 	    switch ( _filter_spec_grants ) {
 	    case 0:
-	      if ( any_nonspec_reqs )
+	      if ( outputs_with_nonspec_reqs.size() > 0 )
 		expanded_output = -1;
 	      break;
 	    case 1:
-	      if ( any_nonspec_output_reqs[expanded_output] )
+	      if ( outputs_with_nonspec_reqs.count(expanded_output) > 0 )
 		expanded_output = -1;
 	      break;
 	    case 2:
