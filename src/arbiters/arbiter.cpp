@@ -66,6 +66,20 @@ void Arbiter::AddRequest( int input, int id, int pri )
   }
 }
 
+int Arbiter::Arbitrate( int* id, int* pri )
+{
+  if ( _selected != -1 ) {
+    if ( id )
+      *id  = _request[_selected].id ;
+    if ( pri )
+      *pri = _request[_selected].pri ;
+  }
+
+  assert((_selected >= 0) || (_num_reqs == 0));
+
+  return _selected ;
+}
+
 void Arbiter::Clear()
 {
   if(_num_reqs > 0) {

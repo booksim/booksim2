@@ -114,15 +114,7 @@ int MatrixArbiter::Arbitrate( int* id, int* pri ) {
     }
   }
     
-  if ( _selected != -1 ) {
-    if ( id )
-      *id  = _request[_selected].id ;
-    if ( pri )
-      *pri = _request[_selected].pri ;
-
-  }
-
-  return _selected ;
+  return Arbiter::Arbitrate(id, pri);
 }
 
 void MatrixArbiter::Clear()

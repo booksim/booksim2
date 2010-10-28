@@ -73,18 +73,9 @@ void RoundRobinArbiter::AddRequest( int input, int id, int pri )
 
 int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
   
-  // avoid running arbiter if it has not recevied at least two requests
-  // (in this case, requests and grants are identical)
   _selected = _best_input;
   
-  if ( _selected > -1 ) {
-    if ( id ) 
-      *id = _request[_selected].id ;
-    if ( pri ) 
-      *pri = _request[_selected].pri ;
-  }    
-
-  return _selected ;
+  return Arbiter::Arbitrate(id, pri);
 }
 
 void RoundRobinArbiter::Clear()

@@ -74,7 +74,7 @@ public:
 
   // Arbitrate amongst requests. Returns winning input and 
   // updates pointers to metadata when valid pointers are passed
-  virtual int Arbitrate( int* id = 0, int* pri = 0) = 0 ;
+  virtual int Arbitrate( int* id = 0, int* pri = 0 ) ;
 
   virtual void Clear();
 
