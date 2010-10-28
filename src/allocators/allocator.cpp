@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "booksim.hpp"
 #include <iostream>
+#include <sstream>
 #include <cassert>
 #include "allocator.hpp"
 
@@ -157,13 +158,34 @@ void DenseAllocator::RemoveRequest( int in, int out, int label )
 void DenseAllocator::PrintRequests( ostream * os ) const
 {
   if(!os) os = &cout;
-  *os << "Requests = [ ";
-  for ( int i = 0; i < _inputs; ++i ) {
-    *os << "[ ";
-    for ( int j = 0; j < _outputs; ++j ) {
-      *os << ( _request[i][j].label != -1 ) << " ";
+
+  *os << "Input requests = [ ";
+  for ( int input = 0; input < _inputs; ++input ) {
+    bool print = false;
+    ostringstream ss;
+    for ( int output = 0; output < _outputs; ++output ) {
+      if ( _request[input][output].label != -1 ) {
+	print = true;
+	ss << _request[input][output].port << " ";
+      }
     }
-    *os << "] ";
+    if(print) {
+      *os << input << " -> [ " << ss << "]  ";
+    }
+  }
+  *os << "], output requests = [ ";
+  for ( int output = 0; output < _outputs; ++output ) {
+    bool print = false;
+    ostringstream ss;
+    for ( int input = 0; input < _inputs; ++input ) {
+      if ( _request[input][output].label != -1 ) {
+	print = true;
+	ss << _request[input][output].port << " ";
+      }
+    }
+    if(print) {
+      *os << output << " -> [ " << ss << "]  ";
+    }
   }
   *os << "]." << endl;
 }
