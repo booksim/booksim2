@@ -84,11 +84,9 @@ class IQRouter : public Router {
 
   PipelineFIFO<Credit> * _credit_pipe;
   
-  //  vector<queue<Flit *> > _input_buffer;
   vector<queue<Flit *> > _output_buffer;
 
-  vector<queue<Credit *> > _in_cred_buffer;
-  //vector<queue<Credit *> > _out_cred_buffer;
+  vector<queue<Credit *> > _credit_buffer;
 
   int _hold_switch_for_packet;
   vector<int> _switch_hold_in;

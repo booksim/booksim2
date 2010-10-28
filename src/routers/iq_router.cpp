@@ -148,12 +148,9 @@ IQRouter::IQRouter( const Configuration& config, Module *parent,
     new PipelineFIFO<Credit>( this, "credit_pipeline", _inputs,
 			      _credit_delay );
 
-  // Input and output queues
-  //_input_buffer.resize(_inputs); 
+  // Output queues
   _output_buffer.resize(_outputs); 
-
-  _in_cred_buffer.resize(_inputs); 
-  //_out_cred_buffer.resize(_outputs);
+  _credit_buffer.resize(_inputs); 
 
   // Switch configuration (when held for multiple cycles)
   _hold_switch_for_packet = config.GetInt( "hold_switch_for_packet" );
@@ -865,7 +862,7 @@ void IQRouter::_OutputQueuing( )
     Credit * c = _credit_pipe->Read( input );
 
     if ( c ) {
-      _in_cred_buffer[input].push( c );
+      _credit_buffer[input].push( c );
     }
   }
 }
@@ -894,9 +891,9 @@ void IQRouter::_SendCredits( )
 {
   for ( int input = 0; input < _inputs; ++input ) {
     Credit * c = NULL;
-    if ( !_in_cred_buffer[input].empty( ) ) {
-      c = _in_cred_buffer[input].front( );
-      _in_cred_buffer[input].pop( );
+    if ( !_credit_buffer[input].empty( ) ) {
+      c = _credit_buffer[input].front( );
+      _credit_buffer[input].pop( );
     }
     _input_credits[input]->Send( c );
   }
