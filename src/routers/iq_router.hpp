@@ -37,7 +37,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "router.hpp"
 #include "routefunc.hpp"
-#include "pipefifo.hpp"
 #include "iq_router_base.hpp"
 
 using namespace std;
@@ -70,6 +69,7 @@ class IQRouter : public Router {
   queue<pair<int, pair<int, int> > > _vc_alloc_waiting_vcs;  
   list<pair<int, int> > _vc_alloc_pending_vcs;
   queue<pair<int, pair<int, Flit *> > > _crossbar_waiting_flits;
+  queue<pair<int, pair<int, Credit *> > > _proc_waiting_credits;
 
   vector<Buffer *> _buf;
   vector<BufferState *> _next_buf;
@@ -82,8 +82,6 @@ class IQRouter : public Router {
 
   tRoutingFunction   _rf;
 
-  PipelineFIFO<Credit> * _credit_pipe;
-  
   vector<queue<Flit *> > _output_buffer;
 
   vector<queue<Credit *> > _credit_buffer;

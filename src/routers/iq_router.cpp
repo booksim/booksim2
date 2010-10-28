@@ -45,7 +45,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "outputset.hpp"
 #include "buffer.hpp"
 #include "buffer_state.hpp"
-#include "pipefifo.hpp"
 #include "allocator.hpp"
 #include "switch_monitor.hpp"
 #include "buffer_monitor.hpp"
@@ -143,11 +142,6 @@ IQRouter::IQRouter( const Configuration& config, Module *parent,
   for(int i = 0; i < _inputs*_input_speedup; ++i)
     _sw_rr_offset[i] = i % _input_speedup;
   
-  // Alloc pipeline (to simulate processing delay)
-  _credit_pipe =
-    new PipelineFIFO<Credit>( this, "credit_pipeline", _inputs,
-			      _credit_delay );
-
   // Output queues
   _output_buffer.resize(_outputs); 
   _credit_buffer.resize(_inputs); 
@@ -191,8 +185,6 @@ IQRouter::~IQRouter( )
   if ( _speculative >= 2 )
     delete _spec_sw_allocator;
 
-  delete _credit_pipe;
-
   delete _bufferMonitor;
   delete _switchMonitor;
 }
@@ -213,9 +205,6 @@ void IQRouter::InternalStep( )
   for ( int input = 0; input < _inputs; ++input ) {
     _buf[input]->AdvanceTime( );
   }
-
-  _credit_pipe->Advance( );
-
 
   _OutputQueuing( );
 }
@@ -272,9 +261,22 @@ void IQRouter::_ReceiveCredits( )
   for(int output = 0; output < _outputs; ++output) {  
     Credit * c = _output_credits[output]->Receive();
     if(c) {
-      _next_buf[output]->ProcessCredit(c);
-      _RetireCredit(c);
+      _proc_waiting_credits.push(make_pair(GetSimTime() + _credit_delay,
+					   make_pair(output, c)));
     }
+  }
+  
+  while(!_proc_waiting_credits.empty()) {
+    pair<int, pair<int, Credit *> > & item = _proc_waiting_credits.front();
+    int & time = item.first;
+    if(GetSimTime() < time) {
+      return;
+    }
+    const int & output = item.second.first;
+    Credit * c = item.second.second;
+    _next_buf[output]->ProcessCredit(c);
+    _RetireCredit(c);
+    _proc_waiting_credits.pop();
   }
 }
 
@@ -833,7 +835,7 @@ void IQRouter::_SWAlloc( )
       } 
     }
     
-    _credit_pipe->Write( c, input );
+    _credit_buffer[input].push(c);
   }
 }
 
@@ -856,14 +858,6 @@ void IQRouter::_OutputQueuing( )
 		 << " at output " << output
 		 << "." << endl;
     _crossbar_waiting_flits.pop();
-  }
-
-  for ( int input = 0; input < _inputs; ++input ) {
-    Credit * c = _credit_pipe->Read( input );
-
-    if ( c ) {
-      _credit_buffer[input].push( c );
-    }
   }
 }
 
