@@ -385,7 +385,7 @@ void IQRouter::_VCAlloc( )
 		       << "." << endl;
 	  }
 	  _vc_allocator->AddRequest(input * _vcs + vc, 
-				    iset->output_port * _vcs + out_vc, out_vc, 
+				    iset->output_port * _vcs + out_vc, 0, 
 				    in_priority, out_priority);
 	} else {
 	  if(f->watch)
