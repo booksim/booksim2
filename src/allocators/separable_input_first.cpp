@@ -56,7 +56,7 @@ void SeparableInputFirstAllocator::Allocate() {
     
     const int & input = *port_iter;
 
-    // add requests to the output arbiter
+    // add requests to the input arbiter
 
     map<int, sRequest>::const_iterator req_iter = _in_req[input].begin();
     while(req_iter != _in_req[input].end()) {
