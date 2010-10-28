@@ -201,12 +201,12 @@ void IQRouter::InternalStep( )
   _Route( );
   _VCAlloc( );
   _SWAlloc( );
-  
+  _OutputQueuing( );
+
   for ( int input = 0; input < _inputs; ++input ) {
     _buf[input]->AdvanceTime( );
   }
 
-  _OutputQueuing( );
 }
 
 void IQRouter::WriteOutputs( )
