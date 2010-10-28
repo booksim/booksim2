@@ -164,9 +164,10 @@ void DenseAllocator::PrintRequests( ostream * os ) const
     bool print = false;
     ostringstream ss;
     for ( int output = 0; output < _outputs; ++output ) {
-      if ( _request[input][output].label != -1 ) {
+      const sRequest & req = _request[input][output];
+      if ( req.label != -1 ) {
 	print = true;
-	ss << _request[input][output].port << " ";
+	ss << req.port << "@" << req.in_pri << " ";
       }
     }
     if(print) {
@@ -178,9 +179,10 @@ void DenseAllocator::PrintRequests( ostream * os ) const
     bool print = false;
     ostringstream ss;
     for ( int input = 0; input < _inputs; ++input ) {
-      if ( _request[input][output].label != -1 ) {
+      const sRequest & req = _request[input][output];
+      if ( req.label != -1 ) {
 	print = true;
-	ss << _request[input][output].port << " ";
+	ss << req.port << "@" << req.out_pri << " ";
       }
     }
     if(print) {
@@ -313,7 +315,7 @@ void SparseAllocator::PrintRequests( ostream * os ) const
       *os << input << " -> [ ";
       for ( iter = _in_req[input].begin( ); 
 	    iter != _in_req[input].end( ); iter++ ) {
-	*os << iter->second.port << " ";
+	*os << iter->second.port << "@" << iter->second.in_pri << " ";
       }
       *os << "]  ";
     }
@@ -325,7 +327,7 @@ void SparseAllocator::PrintRequests( ostream * os ) const
       *os << "[ ";
       for ( iter = _out_req[output].begin( ); 
 	    iter != _out_req[output].end( ); iter++ ) {
-	*os << iter->second.port << " ";
+	*os << iter->second.port << "@" << iter->second.out_pri << " ";
       }
       *os << "]  ";
     }
