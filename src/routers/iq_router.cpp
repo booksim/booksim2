@@ -464,8 +464,6 @@ void IQRouter::_SWAlloc( )
     _spec_sw_allocator->Clear();
   
   for ( int input = 0; input < _inputs; ++input ) {
-    int vc_ready_nonspec = 0;
-    int vc_ready_spec = 0;
     for ( int s = 0; s < _input_speedup; ++s ) {
       const int expanded_input  = input * _input_speedup + s;
       
@@ -535,7 +533,6 @@ void IQRouter::_SWAlloc( )
 		  outputs_with_nonspec_reqs.insert(expanded_output);
 		}
 
-		vc_ready_nonspec++;
 	      }
 	    } else {
 	      //if this vc has a hold on the switch need to cancel it to prevent deadlock
@@ -618,7 +615,6 @@ void IQRouter::_SWAlloc( )
 		    _spec_sw_allocator->AddRequest(expanded_input, 
 						   expanded_output, vc,
 						   prio, prio);
-		  vc_ready_spec++;
 		}
 	      }
 	      iset++;
