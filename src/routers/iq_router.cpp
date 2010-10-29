@@ -407,6 +407,11 @@ void IQRouter::_VCAlloc( )
 
   _vc_allocator->Allocate();
 
+  if(watched) {
+    *gWatchOut << GetSimTime() << " | " << _vc_allocator->FullName() << " | ";
+    _vc_allocator->PrintGrants( gWatchOut );
+  }
+
   // Winning flits get a VC
 
   iter = _vc_alloc_pending_vcs.begin();
@@ -640,6 +645,15 @@ void IQRouter::_SWAlloc( )
   if(_speculative >= 2)
     _spec_sw_allocator->Allocate();
   
+  if(watched) {
+    *gWatchOut << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
+    _sw_allocator->PrintGrants( gWatchOut );
+    if(_speculative >= 2) {
+      *gWatchOut << GetSimTime() << " | " << _spec_sw_allocator->FullName() << " | ";
+      _spec_sw_allocator->PrintGrants( gWatchOut );
+    }
+  }
+
   // Winning flits cross the switch
 
   //////////////////////////////
