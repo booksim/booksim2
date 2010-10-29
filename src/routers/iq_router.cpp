@@ -819,7 +819,7 @@ void IQRouter::_SWAlloc( )
 	  if(f->watch)
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		       << "Speculation failed at output " << output
-		       << "(exp. input: " << expanded_input
+		       << " (exp. input: " << expanded_input
 		       << ", exp. output: " << expanded_output
 		       << ", flit: " << f->id << ")." << endl;
 	} 
