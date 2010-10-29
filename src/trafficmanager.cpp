@@ -1066,6 +1066,14 @@ void TrafficManager::_Step( )
 {
   if(_deadlock_counter++ == 0){
     cout << "WARNING: Possible network deadlock.\n";
+    map<int, Flit *>::iterator iter = _total_in_flight_flits.begin();
+    while(iter != _total_in_flight_flits.end()) {
+      iter->second->watch = true;
+      ++iter;
+    }
+    if(!gWatchOut) {
+      gWatchOut = &cerr;
+    }
   }
 
   if(_sim_mode == batch){
