@@ -429,6 +429,18 @@ void IQRouter::_VCAlloc( )
 
     } else {
       
+      const int match_output = output_and_vc / _vcs;
+      const int match_vc = output_and_vc % _vcs;
+
+      if(watched) {
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		   << "VC allocation grants VC " << match_vc
+		   << " at output " << match_output 
+		   << " to VC " << vc
+		   << " at output " << input
+		   << "." << endl;
+      }
+
       // match -- update state and remove request from pending list
 
       Buffer * cur_buf = _buf[input];
@@ -438,8 +450,6 @@ void IQRouter::_VCAlloc( )
 	cur_buf->SetState(vc, VC::vc_spec_grant);
       }
       
-      const int match_output = output_and_vc / _vcs;
-      const int match_vc = output_and_vc % _vcs;
       cur_buf->SetOutput(vc, match_output, match_vc);
 
       BufferState * dest_buf = _next_buf[match_output];
@@ -682,6 +692,15 @@ void IQRouter::_SWAlloc( )
 	assert(_switch_hold_in[expanded_input] >= 0);
 	expanded_output = _switch_hold_in[expanded_input];
 	vc = _switch_hold_vc[expanded_input];
+
+	if(watched) {
+	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		     << "Switch allocation held exp. output " << expanded_output
+		     << " for VC " << vc << " at input " << input
+		     << " (exp. input " << expanded_input
+		     << ")." << endl;
+	}
+
 	assert(vc >= 0);
 	
 	if ( cur_buf->Empty(vc) ) { // Cancel held match if VC is empty
@@ -732,6 +751,16 @@ void IQRouter::_SWAlloc( )
 	    assert(_sw_allocator->InputAssigned(expanded_output) >= 0);
 	    vc = _sw_allocator->ReadRequest(expanded_input, expanded_output);
 	  }
+	  
+	  if(watched) {
+	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		       << "Switch allocation grants exp. output " << expanded_output
+		       << " to VC " << vc
+		       << " at input " << input
+		       << " (exp. input " << expanded_input
+		       << ")." << endl;
+	  }
+
 	  assert(vc >= 0);
 	}
 
