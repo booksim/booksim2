@@ -291,12 +291,17 @@ void SparseAllocator::AddRequest( int in, int out, int label,
   req.in_pri  = in_pri;
   req.out_pri = out_pri;
 
-  _in_req[in][out] = req;
+  if((_in_req[in].count(out) == 0) || 
+     (_in_req[in][out].in_pri < req.in_pri)) {
+    _in_req[in][out] = req;
+  }
 
   req.port  = in;
-  req.label = label;
 
-  _out_req[out][in] = req;
+  if((_out_req[out].count(in) == 0) ||
+     (_out_req[out][in].in_pri < req.in_pri)) {
+    _out_req[out][in] = req;
+  }
 }
 
 void SparseAllocator::RemoveRequest( int in, int out, int label )
