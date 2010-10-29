@@ -73,6 +73,7 @@ public:
   int OutputAssigned( int in ) const;
   int InputAssigned( int out ) const;
   virtual void PrintRequests( ostream * os = NULL ) const = 0;
+  void PrintGrants( ostream * os = NULL ) const;
 
   static Allocator *NewAllocator( Module *parent, const string& name,
 				  const string &alloc_type, 

@@ -89,6 +89,25 @@ int Allocator::InputAssigned( int out ) const
   return _outmatch[out];
 }
 
+void Allocator::PrintGrants( ostream * os ) const
+{
+  if(!os) os = &cout;
+
+  *os << "Input grants = [ ";
+  for ( int input = 0; input < _inputs; ++input ) {
+    if(_inmatch[input] >= 0) {
+      *os << input << " -> " << _inmatch[input] << "  ";
+    }
+  }
+  *os << "], output grants = [ ";
+  for ( int output = 0; output < _outputs; ++output ) {
+    if(_outmatch[output] >= 0) {
+      *os << output << " -> " << _outmatch[output] << "  ";
+    }
+  }
+  *os << "]." << endl;
+}
+
 //==================================================
 // DenseAllocator
 //==================================================
