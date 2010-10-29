@@ -253,11 +253,17 @@ void VC::Display( ) const
 {
   if ( _state != VC::idle ) {
     cout << FullName() << ": "
-	 << " state: " << VCSTATE[_state]
-	 << " out_port: " << _out_port
-	 << " out_vc: " << _out_vc 
-	 << " fill: " << _buffer.size() 
-	 << endl ;
+	 << " state: " << VCSTATE[_state];
+    if((_state == VC::vc_spec_grant) || (_state == VC::active)) {
+      cout << " out_port: " << _out_port
+	   << " out_vc: " << _out_vc;
+    }
+    cout << " fill: " << _buffer.size();
+    if(!_buffer.empty()) {
+      cout << " front: " << _buffer.front()->id;
+    }
+    cout << " pri: " << _pri;
+    cout << endl;
   }
 }
 
