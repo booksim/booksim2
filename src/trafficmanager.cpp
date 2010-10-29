@@ -341,6 +341,14 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   config.GetStr( "watch_file", watch_file );
   _LoadWatchList(watch_file);
 
+  int watch_flit = config.GetInt( "watch_flit" );
+  if(watch_flit >= 0)
+    _flits_to_watch.insert(watch_flit);
+  
+  int watch_packet = config.GetInt( "watch_packet" );
+  if(watch_packet >= 0)
+    _packets_to_watch.insert(watch_packet);
+
   string stats_out_file;
   config.GetStr( "stats_out", stats_out_file );
   if(stats_out_file == "") {
