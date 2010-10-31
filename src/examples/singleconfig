@@ -1,4 +1,4 @@
-// $Id$
+cva// $Id$
 
 // Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
 // All rights reserved.
@@ -34,7 +34,7 @@ topology = single;
 in_ports = 10;
 out_ports = 10;
 
-num_vcs = ;
+num_vcs = 8 ;
 
 vc_buf_size = 8;
 
@@ -47,7 +47,7 @@ traffic = uniform;
 
 use_read_write = 0;
 
-injection_rate = 1.6;
+injection_rate = 1.0;
 
 
 

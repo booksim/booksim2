@@ -370,10 +370,13 @@ double Power_Module::powerCrossbar(double width, double inputs, double outputs, 
   double CinputDriver = 5.0/16.0 * (1 + Co_delay/Ci_delay) * (0.5 * Cw * Wxbar + Cti) ;
 
   // total switched capacitance
+  
+  //this maybe missing +Cto
   double Cin  = CinputDriver + CwIn + Cti + (outputs * Cxi) ;
   if ( to < outputs/2 ) {
     Cin -= ( 0.5 * CwIn + outputs/2 * Cxi) ;
   }
+  //this maybe missing +cti
   double Cout = CwOut + Cto + (inputs * Cxo) ;
   if ( from < inputs/2) {
     Cout -= ( 0.5 * CwOut + (inputs/2 * Cxo)) ;
