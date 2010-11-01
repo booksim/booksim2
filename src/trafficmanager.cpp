@@ -102,6 +102,14 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     }
     tmp_name.str("");
   }
+  
+  string fn;
+  config.GetStr( "routing_function", fn, "none" );
+  if(fn.find("xyyx")!=string::npos || fn.find("xy_yx")!=string::npos ){
+    _use_xyyx = true;
+  } else {
+    _use_xyyx = false;
+  }
 
 
   // ============ Injection queues ============ 
@@ -789,6 +797,14 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       //packets are only generated to nodes smaller or equal to limit
       f->dest = packet_destination;
       _total_in_flight_packets.insert(pair<int, Flit *>(f->pid, f));
+      //obliviously assign a packet to xy or yx route
+      if(_use_xyyx){
+	if(RandomInt(1)){
+	  f->x_then_y = true;
+	} else {
+	  f->x_then_y = false;
+	}
+      }
       if(record) {
 	_measured_in_flight_packets.insert(pair<int, Flit *>(f->pid, f));
       }
@@ -894,7 +910,11 @@ void TrafficManager::_BatchInject(){
         f = _partial_packets[input][highest_class][i].front( );
         if ( f->head && f->vc == -1) { // Find first available VC
 
-	  f->vc = _buf_states[input][i]->FindAvailable( f->type );
+	  if(_use_xyyx){
+	    f->vc = _buf_states[input][i]->FindAvailable( f->type ,f->x_then_y);
+	  } else {
+	    f->vc = _buf_states[input][i]->FindAvailable( f->type );
+	  }
 	  if ( f->vc != -1 ) {
 	    _buf_states[input][i]->TakeBuffer( f->vc );
 	  }
@@ -1014,7 +1034,12 @@ void TrafficManager::_NormalInject(){
 	      f->vc = f->dest;
   	    }
 	  } else {
-	    f->vc = _buf_states[input][i]->FindAvailable( f->type );
+
+	    if(_use_xyyx){
+	      f->vc = _buf_states[input][i]->FindAvailable( f->type ,f->x_then_y);
+	    } else {
+	      f->vc = _buf_states[input][i]->FindAvailable( f->type );
+	    }
 	  }
 	  
 	  if ( f->vc != -1 ) {

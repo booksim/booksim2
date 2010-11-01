@@ -525,12 +525,10 @@ void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel,
     
     // Tiles send data on channels 0 through 3
     if (in_channel <= 3) {
-      if ( RandomInt(1) ) {
+      if (f->x_then_y) {
 	out_port = cmesh_xy( cur_router, dest_router );
-	f->x_then_y = true;
       } else {
 	out_port = cmesh_yx( cur_router, dest_router );
-	f->x_then_y = false;
       }
     }
     // Use meta-data in flit to determine routing order
@@ -564,10 +562,10 @@ void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel,
   }
   assert( available_vcs>=2);
   if(f->x_then_y){
-    vcEnd   =vcBegin +(available_vcs>>1)-1;
-  }else{
     vcEnd   = vcBegin+(available_vcs-1);
     vcBegin = vcBegin+(available_vcs>>1);
+  }else{
+    vcEnd   =vcBegin +(available_vcs>>1)-1;
   } 
   outputs->AddRange( out_port , vcBegin, vcEnd );
 }
@@ -667,12 +665,10 @@ void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
     
     // Tiles send data on channels 0 through 3
     if (in_channel <= 3) {
-      if ( RandomInt(1) ) {
+      if (f->x_then_y) {
 	out_port = cmesh_xy_no_express( cur_router, dest_router );
-	f->x_then_y = true;
       } else {
 	out_port = cmesh_yx_no_express( cur_router, dest_router );
-	f->x_then_y = false;
       }
     }
     // Use meta-data in flit to determine routing order
@@ -706,10 +702,10 @@ void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
   }
   assert( available_vcs>=2);
   if(f->x_then_y){
-    vcEnd   =vcBegin +(available_vcs>>1)-1;
-  }else{
     vcEnd   = vcBegin+(available_vcs-1);
     vcBegin = vcBegin+(available_vcs>>1);
+  }else{
+    vcEnd   =vcBegin +(available_vcs>>1)-1;
   } 
   outputs->AddRange( out_port , vcBegin, vcEnd );
 

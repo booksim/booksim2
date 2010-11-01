@@ -177,6 +177,28 @@ bool BufferState::IsAvailableFor( int vc ) const
   return !_in_use[vc] && (!_vc_busy_when_full || !IsFullFor(vc));
 }
 
+//specialize for xyyx routing
+int BufferState::FindAvailable( Flit::FlitType type, bool x_then_y )
+{
+  int vcBegin = _vc_range_begin[type];
+  //split the vc space in two partitipons
+  int available_vcs = (_vc_range_size[type]>>1);
+  if(x_then_y){
+    vcBegin = vcBegin+(available_vcs);
+  } 
+  
+  for (int v = 1; v <= available_vcs; ++v) {
+    int vc = vcBegin + ((_vc_sel_last[type] + v) % (available_vcs));
+    if ( IsAvailableFor(vc) && !IsFullFor(vc)  ) {
+      _vc_sel_last[type] = _vc_sel_last[type] + v;
+      return vc;
+    }
+  }
+
+  return -1;
+}
+
+
 int BufferState::FindAvailable( Flit::FlitType type )
 {
   for (int v = 1; v <= _vc_range_size[type]; ++v) {

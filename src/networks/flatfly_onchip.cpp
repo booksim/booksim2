@@ -342,13 +342,6 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
   int out_port = -1;
 
 
-  if(in_channel<gC){
-    if(RandomInt(1)){
-      f->x_then_y = true;
-    } else {
-      f->x_then_y = false;
-    }
-  }  
   
   if(targetr==r->GetID()){ //if we are at the final router, yay, output to client
     out_port = dest  - targetr*gC;
@@ -383,10 +376,10 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
   }
   assert( available_vcs>=2);
   if(f->x_then_y){
-    vcEnd   =vcBegin +(available_vcs>>1)-1;
-  }else{
     vcEnd   = vcBegin+(available_vcs-1);
     vcBegin = vcBegin+(available_vcs>>1);
+  }else{
+    vcEnd   =vcBegin +(available_vcs>>1)-1;
   } 
   outputs->AddRange( out_port , vcBegin, vcEnd );
 }
@@ -554,11 +547,6 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       cout<<"New Flit "<<f->src<<endl;
     }
     f->ph   = 0;
-    if(RandomInt(1)){
-      f->x_then_y = true;
-    } else {
-      f->x_then_y = false;
-    }
   }
 
   if(gTrace){

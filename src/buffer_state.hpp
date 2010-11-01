@@ -67,7 +67,7 @@ public:
 
   bool IsFullFor( int vc = 0 ) const;
   bool IsAvailableFor( int vc = 0 ) const;
-
+  int FindAvailable( Flit::FlitType type, bool x_then_y);
   int FindAvailable( Flit::FlitType type = Flit::ANY_TYPE );
   int Size (int vc = 0) const;
   void Display( ) const;

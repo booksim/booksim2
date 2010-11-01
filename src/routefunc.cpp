@@ -511,12 +511,10 @@ void xy_yx_mesh( const Router *r, const Flit *f,
   // Route order (XY or YX) determined when packet is injected
   //  into the network
   if (in_channel == 4) {
-    if ( RandomInt(1) ) {
+    if ( f->x_then_y ) {
       out_port = route_xy( r->GetID(), f->dest );
-      f->x_then_y = true;
     } else {
       out_port = route_yx( r->GetID(), f->dest );
-      f->x_then_y = false;
     }
   } else {
     if ( f->x_then_y )
@@ -547,10 +545,10 @@ void xy_yx_mesh( const Router *r, const Flit *f,
   }
   assert( available_vcs>=2);
   if(f->x_then_y){
-    vcEnd   =vcBegin +(available_vcs>>1)-1;
-  }else{
     vcEnd   = vcBegin+(available_vcs-1);
     vcBegin = vcBegin+(available_vcs>>1);
+  }else{
+    vcEnd   =vcBegin +(available_vcs>>1)-1;
   } 
   outputs->AddRange( out_port , vcBegin, vcEnd );
   

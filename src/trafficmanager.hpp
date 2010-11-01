@@ -71,6 +71,7 @@ protected:
 
   vector<vector<BufferState *> > _buf_states;
 
+  bool _use_xyyx;
   // ============ Injection queues ============ 
 
   int          _voqing;
