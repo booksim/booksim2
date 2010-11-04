@@ -44,11 +44,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 BufferState::BufferState( const Configuration& config, 
 			  Module *parent, const string& name ) : 
-Module( parent, name ), _shared_occupied(0)
+Module( parent, name ), _shared_occupied(0), _active_vcs(0)
 {
   _vc_buf_size     = config.GetInt( "vc_buf_size" );
   _shared_buf_size = config.GetInt( "shared_buf_size" );
-  _vcs          = config.GetInt( "num_vcs" );
+  _dynamic_sharing = config.GetInt( "dynamic_sharing" );
+  _vcs             = config.GetInt( "num_vcs" );
   
   _wait_for_tail_credit = config.GetInt( "wait_for_tail_credit" );
   _vc_busy_when_full = config.GetInt( "vc_busy_when_full" );
@@ -120,6 +121,8 @@ void BufferState::ProcessCredit( Credit *c )
 	   ( _tail_sent[c->vc[v]] ) ) {
 	assert(_in_use[c->vc[v]]);
 	_in_use[c->vc[v]] = false;
+	assert(_active_vcs > 0);
+	--_active_vcs;
       }
     } else {
       cout << "VC = " << c->vc[v] << endl;
@@ -148,6 +151,8 @@ void BufferState::SendingFlit( Flit *f )
       if ( !_wait_for_tail_credit ) {
 	assert(_in_use[f->vc]);
 	_in_use[f->vc] = false;
+	assert(_active_vcs > 0);
+	--_active_vcs;
       }
     }
   }
@@ -164,13 +169,19 @@ void BufferState::TakeBuffer( int vc )
   }
   _in_use[vc]    = true;
   _tail_sent[vc] = false;
+  assert(_active_vcs < _vcs);
+  ++_active_vcs;
 }
 
 bool BufferState::IsFullFor( int vc  ) const
 {
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
-  return ( ( _shared_occupied >= _shared_buf_size ) &&
-	   ( _cur_occupied[vc] >= _vc_buf_size ) );
+  if(_dynamic_sharing && (_active_vcs > 0)) {
+    return ( ( _cur_occupied[vc] >= _vc_buf_size ) &&
+	     ( _shared_occupied >= (_shared_buf_size / _active_vcs ) ) );
+  }
+  return ( ( _cur_occupied[vc] >= _vc_buf_size ) &&
+	   ( _shared_occupied >= _shared_buf_size ) );
 }
 
 bool BufferState::IsAvailableFor( int vc ) const

@@ -45,7 +45,9 @@ class BufferState : public Module {
   int  _vc_buf_size;
   int  _shared_buf_size;
   int  _shared_occupied;
+  bool _dynamic_sharing;
   int  _vcs;
+  int  _active_vcs;
 
   vector<bool> _in_use;
   vector<bool> _tail_sent;
