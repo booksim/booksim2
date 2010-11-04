@@ -115,8 +115,10 @@ void BufferState::ProcessCredit( Credit *c )
       }
       --_cur_occupied[c->vc[v]];
 
-      if ( ( _cur_occupied[c->vc[v]] == 0 ) && 
+      if ( _wait_for_tail_credit &&
+	   ( _cur_occupied[c->vc[v]] == 0 ) && 
 	   ( _tail_sent[c->vc[v]] ) ) {
+	assert(_in_use[c->vc[v]]);
 	_in_use[c->vc[v]] = false;
       }
     } else {
@@ -144,6 +146,7 @@ void BufferState::SendingFlit( Flit *f )
       _tail_sent[f->vc] = true;
       
       if ( !_wait_for_tail_credit ) {
+	assert(_in_use[f->vc]);
 	_in_use[f->vc] = false;
       }
     }
