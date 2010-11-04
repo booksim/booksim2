@@ -176,12 +176,10 @@ void BufferState::TakeBuffer( int vc )
 bool BufferState::IsFullFor( int vc  ) const
 {
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
-  if(_dynamic_sharing && (_active_vcs > 0)) {
-    return ( ( _cur_occupied[vc] >= _vc_buf_size ) &&
-	     ( _shared_occupied >= (_shared_buf_size / _active_vcs ) ) );
-  }
   return ( ( _cur_occupied[vc] >= _vc_buf_size ) &&
-	   ( _shared_occupied >= _shared_buf_size ) );
+	   ( ( _shared_occupied >= _shared_buf_size ) ||
+	     ( _dynamic_sharing && ( _active_vcs > 0 ) &&
+	       ( ( _cur_occupied[vc] - _vc_buf_size ) >= ( _shared_buf_size / _active_vcs ) ) ) ) );
 }
 
 bool BufferState::IsAvailableFor( int vc ) const
