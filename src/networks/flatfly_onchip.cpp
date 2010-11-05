@@ -52,6 +52,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include <vector>
 #include <sstream>
+#include <limits>
 #include <cmath>
 #include "flatfly_onchip.hpp"
 #include "random_utils.hpp"
@@ -613,7 +614,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
        cout << " NONMIN tmp_out_port: " << tmp_out_port << endl;
      }
      if (_ran_intm >= rID*_concentration && _ran_intm < (rID+1)*_concentration) {
-       _nonmin_queucnt = 9999;
+       _nonmin_queucnt = numeric_limits<int>::max();
      } else  {
        _nonmin_queucnt =   r->GetCredit(tmp_out_port, -1, -1);
      }
@@ -792,7 +793,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 		   << " NONMIN tmp_out_port: " << tmp_out_port << endl;
      }
      if (_ran_intm >= rID*_concentration && _ran_intm < (rID+1)*_concentration) {
-       _nonmin_queucnt = 9999;
+       _nonmin_queucnt = numeric_limits<int>::max();
      } else  {
        _nonmin_queucnt =   r->GetCredit(tmp_out_port, -1, -1);
      }

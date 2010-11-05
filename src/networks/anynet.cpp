@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "anynet.hpp"
 #include <fstream>
 #include <sstream>
+#include <limits>
 
 //this is a hack, I can't easily get the routing talbe out of the network
 map<int, int>* global_routing_table;
@@ -263,7 +264,7 @@ int AnyNet::findPath(int router, int dest, int* hop_count,map<int, bool>* visite
   map<int,   map<int, int >*>::const_iterator riter = router_list[1].find(router);
   map<int, int >::const_iterator rriter;
 
-  int shortest_distance = 99999;
+  int shortest_distance = numeric_limits<int>::max();
   int shortest_port = -1;
   for(rriter = riter->second->begin();rriter!=riter->second->end(); rriter++){
     int outport = -1;
