@@ -809,6 +809,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 	_measured_in_flight_packets.insert(pair<int, Flit *>(f->pid, f));
       }
     } else {
+      _total_in_flight_packets.insert(pair<int, Flit *>(f->pid, f));
       f->head = false;
       f->dest = -1;
     }
