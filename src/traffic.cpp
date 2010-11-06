@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdlib>
 
 #include "booksim.hpp"
+#include "booksim_config.hpp"
 #include "traffic.hpp"
 #include "network.hpp"
 #include "random_utils.hpp"
@@ -336,6 +337,27 @@ int badperm_yarc(int source, int total_nodes){
   return RandomInt(realgk-1)*realgk+row;
 }
 
+//=============================================================
+
+static int _hs_max_val;
+static vector<pair<int, int> > _hs_elems;
+
+int hotspot(int source, int total_nodes){
+  int pct = RandomInt(_hs_max_val);
+  for(int i = 0; i < (_hs_elems.size()-1); ++i) {
+    int limit = _hs_elems[i].first;
+    if(limit > pct) {
+      return _hs_elems[i].second;
+    } else {
+      pct -= limit;
+    }
+  }
+  assert(_hs_elems.back().first > pct);
+  return _hs_elems.back().second;
+}
+
+//=============================================================
+
 void InitializeTrafficMap( )
 {
 
@@ -366,6 +388,8 @@ void InitializeTrafficMap( )
 
   gTrafficFunctionMap["bad_dragon"]   = &badperm_dflynew;
   gTrafficFunctionMap["badperm_yarc"] = &badperm_yarc;
+
+  gTrafficFunctionMap["hotspot"] = &hotspot;
 }
 
 void ResetTrafficFunction( )
@@ -391,6 +415,19 @@ tTrafficFunction GetTrafficFunction( const Configuration& config )
     realgn = gN;
   }
 
+  string hotspot_nodes_str;
+  config.GetStr("hotspot_nodes", hotspot_nodes_str);
+  vector<string> hotspot_nodes = BookSimConfig::tokenize(hotspot_nodes_str);
+  string hotspot_rates_str;
+  config.GetStr("hotspot_rates", hotspot_rates_str);
+  vector<string> hotspot_rates = BookSimConfig::tokenize(hotspot_rates_str);
+  _hs_max_val = -1;
+  for(int i = 0; i < hotspot_nodes.size(); ++i) {
+    int rate = hotspot_rates.empty() ? 1 : atoi(hotspot_rates[i].c_str());
+    _hs_elems.push_back(make_pair(rate, atoi(hotspot_nodes[i].c_str())));
+    _hs_max_val += rate;
+  }
+  
   map<string, tTrafficFunction>::const_iterator match;
   tTrafficFunction tf;
 
