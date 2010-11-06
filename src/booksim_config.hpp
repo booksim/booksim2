@@ -38,6 +38,8 @@ public:
   BookSimConfig( );
   //used for GUI
   virtual vector< pair<string, vector< string> > > *GetImportantMap();
+
+  static vector<string> tokenize(string data);
 };
 
 #endif

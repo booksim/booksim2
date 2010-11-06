@@ -32,8 +32,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 #include <fstream>
 #include <limits>
+#include <cstdlib>
 
 #include "booksim.hpp"
+#include "booksim_config.hpp"
 #include "trafficmanager.hpp"
 #include "random_utils.hpp" 
 #include "vc.hpp"
@@ -349,13 +351,19 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   config.GetStr( "watch_file", watch_file );
   _LoadWatchList(watch_file);
 
-  int watch_flit = config.GetInt( "watch_flit" );
-  if(watch_flit >= 0)
-    _flits_to_watch.insert(watch_flit);
+  string watch_flits_str;
+  config.GetStr("watch_flits", watch_flits_str);
+  vector<string> watch_flits = BookSimConfig::tokenize(watch_flits_str);
+  for(int i = 0; i < watch_flits.size(); ++i) {
+    _flits_to_watch.insert(atoi(watch_flits[i].c_str()));
+  }
   
-  int watch_packet = config.GetInt( "watch_packet" );
-  if(watch_packet >= 0)
-    _packets_to_watch.insert(watch_packet);
+  string watch_packets_str;
+  config.GetStr("watch_packets", watch_packets_str);
+  vector<string> watch_packets = BookSimConfig::tokenize(watch_packets_str);
+  for(int i = 0; i < watch_packets.size(); ++i) {
+    _packets_to_watch.insert(atoi(watch_packets[i].c_str()));
+  }
 
   string stats_out_file;
   config.GetStr( "stats_out", stats_out_file );

@@ -236,8 +236,8 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField("watch_file", "");
   
-  _int_map["watch_flit"] = -1;
-  _int_map["watch_packet"] = -1;
+  AddStrField("watch_flits", "");
+  AddStrField("watch_packets", "");
 
   AddStrField("watch_out", "");
 
@@ -309,7 +309,18 @@ vector< pair<string, vector< string> > > *BookSimConfig::GetImportantMap(){
   return important;
 }
 
-
+vector<string> BookSimConfig::tokenize(string data) {
+  const string separator = "{,}";
+  vector<string> result;
+  size_t last_pos = data.find_first_not_of(separator);
+  size_t pos = data.find_first_of(separator, last_pos);
+  while(pos != string::npos || last_pos != string::npos) {
+    result.push_back(data.substr(last_pos, pos - last_pos));
+    last_pos = data.find_first_not_of(separator, pos);
+    pos = data.find_first_of(separator, last_pos);
+  }
+  return result;
+}
 
 PowerConfig::PowerConfig( )
 { 
