@@ -75,9 +75,9 @@ fi
 inj_rate="0"`echo "scale=4; ${zero_load_inj} / ${scale}" | bc`
 
 echo "SWEEP: Determining zero-load latency..."
-${sim} $* print_csv_results=1 injection_rate=${inj_rate} | tee ${sim}.${$}.log
-lat=`grep "results:" ${sim}.${$}.log | cut -d , -f 8`
-rm ${sim}.${$}.log
+${sim} $* print_csv_results=1 injection_rate=${inj_rate} | tee ${sim}.${HOSTNAME}.${$}.log
+lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 8`
+rm ${sim}.${HOSTNAME}.${$}.log
 if [ "${lat}" = "" ]
 then
     echo "SWEEP: Simulation run failed."
@@ -107,9 +107,9 @@ do
 	lat=""
     else
 	echo "SWEEP: Simulating for injection rate ${inj_rate}..."
-	${sim} $* print_csv_results=1 injection_rate=${inj_rate} | tee ${sim}.${$}.log
-	lat=`grep "results:" ${sim}.${$}.log | cut -d , -f 8`
-	rm ${sim}.${$}.log
+	${sim} $* print_csv_results=1 injection_rate=${inj_rate} | tee ${sim}.${HOSTNAME}.${$}.log
+	lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 8`
+	rm ${sim}.${HOSTNAME}.${$}.log
     fi
     if [ "${lat}" = "" ]
     then
@@ -162,9 +162,9 @@ do
 			inj_rate="0"`echo "scale=4; ${ref_inj} / ${scale}" | bc`
 			echo "SWEEP: Simulating for injection rate ${inj_rate}..."
 			ref_inj=$[${ref_inj} + ${ref_step}]
-			${sim} $* print_csv_results=1 injection_rate=${inj_rate} | tee ${sim}.${$}.log
-			intm_lat=`grep "results:" ${sim}.${$}.log | cut -d , -f 8`
-			rm ${sim}.${$}.log
+			${sim} $* print_csv_results=1 injection_rate=${inj_rate} | tee ${sim}.${HOSTNAME}.${$}.log
+			intm_lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 8`
+			rm ${sim}.${HOSTNAME}.${$}.log
 			if [ ${?} -eq 0 ]
 			then
 			    echo "SWEEP: Simulation failed unexpectedly."
