@@ -342,7 +342,7 @@ void InitializeTrafficMap( )
 
   /* Register Traffic functions here */
 
-  gTrafficFunctionMap["uniform"]  = &uniform;
+  gTrafficFunctionMap["uniform"] = &uniform;
 
   // "Bit" patterns
 
@@ -353,18 +353,18 @@ void InitializeTrafficMap( )
 
   // "Digit" patterns
 
-  gTrafficFunctionMap["tornado"]   = &tornado;
-  gTrafficFunctionMap["neighbor"]  = &neighbor;
+  gTrafficFunctionMap["tornado"]  = &tornado;
+  gTrafficFunctionMap["neighbor"] = &neighbor;
 
   // Other patterns
 
-  gTrafficFunctionMap["randperm"]   = &randperm;
+  gTrafficFunctionMap["randperm"] = &randperm;
 
   gTrafficFunctionMap["diagonal"]   = &diagonal;
   gTrafficFunctionMap["asymmetric"] = &asymmetric;
   gTrafficFunctionMap["taper64"]    = &taper64;
 
-  gTrafficFunctionMap["bad_dragon"]    = &badperm_dflynew;
+  gTrafficFunctionMap["bad_dragon"]   = &badperm_dflynew;
   gTrafficFunctionMap["badperm_yarc"] = &badperm_yarc;
 }
 
@@ -390,9 +390,6 @@ tTrafficFunction GetTrafficFunction( const Configuration& config )
     realgk = gK;
     realgn = gN;
   }
-
-  string topo;
-  config.GetStr( "topology", topo );
 
   map<string, tTrafficFunction>::const_iterator match;
   tTrafficFunction tf;
