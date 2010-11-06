@@ -63,7 +63,7 @@ void Configuration::Assign( const string &field, const string &value )
   if ( match != _str_map.end( ) ) {
     _str_map[field] = value;
   } else {
-    string errmsg = "Unknown field ";
+    string errmsg = "Unknown string field ";
     errmsg += field;
 
     ParseError( errmsg, 0 );
@@ -78,7 +78,7 @@ void Configuration::Assign( const string &field, unsigned int value )
   if ( match != _int_map.end( ) ) {
     _int_map[field] = value;
   } else {
-    string errmsg = "Unknown field ";
+    string errmsg = "Unknown integer field ";
     errmsg += field;
 
     ParseError( errmsg, 0 );
@@ -93,7 +93,7 @@ void Configuration::Assign( const string &field, double value )
   if ( match != _float_map.end( ) ) {
     _float_map[field] = value;
   } else {
-    string errmsg = "Unknown field ";
+    string errmsg = "Unknown double field ";
     errmsg += field;
 
     ParseError( errmsg, 0 );
