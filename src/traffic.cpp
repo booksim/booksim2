@@ -358,6 +358,25 @@ int hotspot(int source, int total_nodes){
 
 //=============================================================
 
+static int _cp_max_val;
+static vector<pair<int, tTrafficFunction> > _cp_elems;
+
+int combined(int source, int total_nodes){
+  int pct = RandomInt(_cp_max_val);
+  for(int i = 0; i < (_cp_elems.size()-1); ++i) {
+    int limit = _cp_elems[i].first;
+    if(limit > pct) {
+      return _cp_elems[i].second(source, total_nodes);
+    } else {
+      pct -= limit;
+    }
+  }
+  assert(_cp_elems.back().first > pct);
+  return _cp_elems.back().second(source, total_nodes);
+}
+
+//=============================================================
+
 void InitializeTrafficMap( )
 {
 
@@ -389,7 +408,9 @@ void InitializeTrafficMap( )
   gTrafficFunctionMap["bad_dragon"]   = &badperm_dflynew;
   gTrafficFunctionMap["badperm_yarc"] = &badperm_yarc;
 
-  gTrafficFunctionMap["hotspot"] = &hotspot;
+  gTrafficFunctionMap["hotspot"]  = &hotspot;
+  gTrafficFunctionMap["combined"] = &combined;
+
 }
 
 void ResetTrafficFunction( )
@@ -429,9 +450,27 @@ tTrafficFunction GetTrafficFunction( const Configuration& config )
   }
   
   map<string, tTrafficFunction>::const_iterator match;
-  tTrafficFunction tf;
+
+  string combined_patterns_str;
+  config.GetStr("combined_patterns", combined_patterns_str);
+  vector<string> combined_patterns = BookSimConfig::tokenize(combined_patterns_str);
+  string combined_rates_str;
+  config.GetStr("combined_rates", combined_rates_str);
+  vector<string> combined_rates = BookSimConfig::tokenize(combined_rates_str);
+  _cp_max_val = -1;
+  for(int i = 0; i < combined_patterns.size(); ++i) {
+    match = gTrafficFunctionMap.find(combined_patterns[i]);
+    if(match == gTrafficFunctionMap.end()) {
+      cout << "Error: Undefined traffic pattern '" << combined_patterns[i] << "'." << endl;
+      exit(-1);
+    }
+    int rate = combined_rates.empty() ? 1 : atoi(combined_rates[i].c_str());
+    _cp_elems.push_back(make_pair(rate, match->second));
+    _cp_max_val += rate;
+  }
 
   string fn;
+  tTrafficFunction tf;
 
   config.GetStr( "traffic", fn, "none" );
   match = gTrafficFunctionMap.find( fn );

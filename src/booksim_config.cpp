@@ -173,6 +173,9 @@ BookSimConfig::BookSimConfig( )
   AddStrField( "hotspot_nodes", "" );
   AddStrField( "hotspot_rates", "" );
 
+  AddStrField( "combined_patterns", "" );
+  AddStrField( "combined_rates", "" );
+
   _int_map["perm_seed"] = 0;         // seed value for random permuation trafficpattern generator
 
   _float_map["injection_rate"]       = 0.1; //if 0.0 assumes it is batch mode
