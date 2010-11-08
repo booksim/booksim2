@@ -802,7 +802,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       f->head = true;
       //packets are only generated to nodes smaller or equal to limit
       f->dest = packet_destination;
-      _total_in_flight_packets.insert(pair<int, Flit *>(f->pid, f));
+      _total_in_flight_packets.insert(make_pair(f->pid, f));
       //obliviously assign a packet to xy or yx route
       if(_use_xyyx){
 	if(RandomInt(1)){
@@ -812,10 +812,10 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 	}
       }
       if(record) {
-	_measured_in_flight_packets.insert(pair<int, Flit *>(f->pid, f));
+	_measured_in_flight_packets.insert(make_pair(f->pid, f));
       }
     } else {
-      _total_in_flight_packets.insert(pair<int, Flit *>(f->pid, f));
+      _total_in_flight_packets.insert(make_pair(f->pid, f));
       f->head = false;
       f->dest = -1;
     }
