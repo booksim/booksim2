@@ -583,8 +583,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       
       _hop_stats->AddSample( f->hops );
 
-      switch( _pri_type ) {
-      case class_based:
+      if( _pri_type  == class_based ) {
 	if((_slowest_flit[f->pri] < 0) ||
 	   (_latency_stats[f->pri]->Max() < (f->atime - f->time)))
 	  _slowest_flit[f->pri] = f->id;
@@ -592,8 +591,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	_frag_stats[f->pri]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
 	if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
 	  _tlat_stats[f->pri]->AddSample( f->atime - f->ttime );
-	break;
-      default: // fall through
+      } else {
 	if((_slowest_flit[0] < 0) ||
 	   (_latency_stats[0]->Max() < (f->atime - f->time)))
 	   _slowest_flit[0] = f->id;
