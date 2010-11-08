@@ -154,7 +154,7 @@ bool AllocatorSim( const Configuration& config )
   string topo;
 
   config.GetStr( "topology", topo );
-  short networks = config.GetInt("physical_subnetworks");
+  int networks = config.GetInt("physical_subnetworks");
   /*To include a new network, must register the network here
    *add an else if statement with the name of the network
    */

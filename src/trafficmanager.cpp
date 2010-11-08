@@ -906,7 +906,7 @@ void TrafficManager::_BatchInject(){
     for (int i = 0; i < _duplicate_networks; ++i) {
       int highest_class = 0;
       // Now just find which is the highest_class.
-      for (short c = _classes - 1; c >= 0; --c) {
+      for (int c = _classes - 1; c >= 0; --c) {
         if (_class_array[i][c]) {
           highest_class = c;
           break;
@@ -1025,7 +1025,7 @@ void TrafficManager::_NormalInject(){
     for (int i = 0; i < _duplicate_networks; ++i) {
       int highest_class = 0;
       // Now just find which is the highest_class.
-      for (short a = _classes - 1; a >= 0; --a) {
+      for (int a = _classes - 1; a >= 0; --a) {
 	if (_class_array[i][a]) {
 	  highest_class = a;
 	  break;

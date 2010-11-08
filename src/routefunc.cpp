@@ -282,12 +282,12 @@ void fattree_nca( const Router *r, const Flit *f,
   int out_port = 0;
   int dest     = f->dest;
   int router_id = r->GetID();
-  short router_depth, router_port;
+  int router_depth, router_port;
 
 
 
-  short routers_so_far = 0, routers;
-  for (short depth = gN - 1; depth >= 0; --depth) // We want to find out where the router is. At which level.
+  int routers_so_far = 0, routers;
+  for (int depth = gN - 1; depth >= 0; --depth) // We want to find out where the router is. At which level.
   {
     routers = powi(gK, depth);
     if (router_id - routers_so_far < routers) {
@@ -364,10 +364,10 @@ void fattree_anca( const Router *r, const Flit *f,
   int out_port = 0;
   int dest     = f->dest;
   int router_id = r->GetID();
-  short router_depth, router_port;
+  int router_depth, router_port;
 
-  short routers_so_far = 0, routers;
-  for (short depth = gN - 1; depth >= 0; --depth) // We want to find out where the router is. At which level.
+  int routers_so_far = 0, routers;
+  for (int depth = gN - 1; depth >= 0; --depth) // We want to find out where the router is. At which level.
   {
     routers = powi(gK, depth);
     if (router_id - routers_so_far < routers) {
@@ -457,8 +457,8 @@ void fattree_anca( const Router *r, const Flit *f,
   if (range > 1) {
     /*for (int i = 0; i < range; ++i)
       outputs->AddRange( out_port + i, vcBegin, vcEnd );*/
-    short random1 = RandomInt(range-1); // Chose two ports out of the possible at random, compare loads, choose one.
-    short random2 = RandomInt(range-1);
+    int random1 = RandomInt(range-1); // Chose two ports out of the possible at random, compare loads, choose one.
+    int random2 = RandomInt(range-1);
     if (r->GetCredit(out_port + random1, vcBegin, vcEnd) > r->GetCredit(out_port + random2, vcBegin, vcEnd))
       outputs->AddRange( out_port + random2, vcBegin, vcEnd );
     else

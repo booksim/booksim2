@@ -72,7 +72,7 @@ public:
 
   int  hops;
   bool watch;
-  short subnetwork;
+  int  subnetwork;
 
   //for credit tracking, last router visited
   mutable int from_router;

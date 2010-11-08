@@ -69,7 +69,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define PROGRESSIVE false
 
 // Used for UGAL and valiant. Half of the total VCs, to define two traffic classes.
-short FlatFlyOnChip::half_vcs = 0;
+int FlatFlyOnChip::half_vcs = 0;
 
 FlatFlyOnChip::FlatFlyOnChip( const Configuration &config, const string & name ) :
   Network( config, name )
@@ -87,7 +87,7 @@ void FlatFlyOnChip::_ComputeSize( const Configuration &config )
   _c = config.GetInt( "c" );    //concentration, may be different from k
   _r = _c + (_k-1)*_n ;		// total radix of the switch  ( # of inputs/outputs)
 
-  FlatFlyOnChip::half_vcs = (short)config.GetInt("num_vcs") / 2;
+  FlatFlyOnChip::half_vcs = config.GetInt("num_vcs") / 2;
 
   //how many routers in the x or y direction
   xcount = config.GetInt("x");
