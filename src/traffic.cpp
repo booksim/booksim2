@@ -332,7 +332,6 @@ int badperm_dflynew( int source, int total_nodes )
 
 int badperm_yarc(int source, int total_nodes){
   int row = (int)(source/realgk);
-  int col = (int)(source%realgk);
   
   return RandomInt(realgk-1)*realgk+row;
 }
