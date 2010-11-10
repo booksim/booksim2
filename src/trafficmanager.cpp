@@ -511,6 +511,7 @@ Flit *TrafficManager::_NewFlit( )
   _total_in_flight_flits[_cur_id] = f;
   f->watch = gWatchOut && (_flits_to_watch.count(_cur_id) > 0);
   ++_cur_id;
+  assert(_cur_id);
   return f;
 }
 
@@ -861,6 +862,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     _partial_packets[source][cl][_sub_network].push_back( f );
   }
   ++_cur_pid;
+  assert(_cur_pid);
 }
 
 void TrafficManager::_BatchInject(){
@@ -1176,6 +1178,7 @@ void TrafficManager::_Step( )
     }
   }
   ++_time;
+  assert(_time);
   if(gTrace){
     cout<<"TIME "<<_time<<endl;
   }
