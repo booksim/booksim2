@@ -262,6 +262,8 @@ BookSimConfig::BookSimConfig( )
 }
 
 
+#ifdef USE_GUI
+
 //A list of important simulator for the booksim gui, anything else not listed here is still included
 //but just not very organized
 vector< pair<string, vector< string> > > *BookSimConfig::GetImportantMap(){
@@ -314,6 +316,8 @@ vector< pair<string, vector< string> > > *BookSimConfig::GetImportantMap(){
 
   return important;
 }
+
+#endif
 
 vector<string> BookSimConfig::tokenize(string data) {
   const string separator = "{,}";
