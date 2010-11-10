@@ -1,7 +1,4 @@
-// $Id$
-
-/*    This program by D E Knuth is in the public domain and freely copyable
- *    AS LONG AS YOU MAKE ABSOLUTELY NO CHANGES!
+/*    This program by D E Knuth is in the public domain and freely copyable.
  *    It is explained in Seminumerical Algorithms, 3rd edition, Section 3.6
  *    (or in the errata to the 2nd edition --- see
  *        http://www-cs-faculty.stanford.edu/~knuth/taocp.html
@@ -92,7 +89,7 @@ long ran_arr_cycle()
   if (ran_arr_ptr==&ran_arr_dummy)
     ran_start(314159L); /* the user forgot to initialize */
   ran_array(ran_arr_buf,QUALITY);
-  ran_arr_buf[100]=-1;
+  ran_arr_buf[KK]=-1;
   ran_arr_ptr=ran_arr_buf+1;
   return ran_arr_buf[0];
 }
@@ -109,4 +106,3 @@ int main()
   printf("%ld\n", a[0]);             /* 995235265 */
   return 0;
 }
-

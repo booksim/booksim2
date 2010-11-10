@@ -28,10 +28,8 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "rng.hpp"
-
 #define main rng_double_main
-#include "rng_double.cpp"
+#include "rng-double.c"
 
 double ranf_next( )
 {

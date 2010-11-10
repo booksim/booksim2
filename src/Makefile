@@ -64,7 +64,6 @@ CPP_SRCS = main.cpp \
    outputset.cpp \
    flit.cpp \
    injection.cpp\
-   random_utils.cpp\
    misc_utils.cpp\
    rng_wrapper.cpp\
    rng_double_wrapper.cpp\
