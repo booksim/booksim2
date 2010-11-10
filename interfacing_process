@@ -1,0 +1,39 @@
+softlink to ruby/network
+
+add Makefile.include
+    add *.cpp from the entire source directory including files in the subdirectories 
+    make sure the vpath name is BOOKSIM_VPATH and src name is BOOKSIM_SRC_CPP
+    add the subfolder paths to booksim_vpath separated by ":"
+
+modified ruby/Makefile
+	 BOOKSIM=booksim
+	 include=booksim/Makefile.include 
+	 add booksim_vpath add booksim_src_cpp
+
+everything has to be .C not .cpp
+
+get rid of all the rng shit, 
+
+lex and yacc not working yet
+
+dont' for get a put a blank line at the end of Makefile.include
+
+comment out all the garnet/orion, you can keep the simple network, make sure Network::createNetwork still exist somwhere
+
+create a global variable for booksim in ruby/config/config.include
+
+comment out all the booksim main files
+
+rename main.C in booksim to booksim_main.C (object file conflict, lol)
+
+
+Code modifications
+
+
+create a new trafficmanager class
+
+need to change Newtork to BSNetwork due to naming conflicts
+
+added a gems net to flits
+
+Need a way to customize vc assignment. Instead of just the 5 packet type, open up the number ofpacket types. Also with xyyx and adaptive routing the vc assignment is complicated. 
