@@ -84,7 +84,6 @@ protected:
   map<int, Flit *> _total_in_flight_flits;
   multimap<int, Flit *> _total_in_flight_packets;
   bool                _empty_network;
-  bool _use_lagging;
 
   // ============ sub-networks and deadlock ==========
 

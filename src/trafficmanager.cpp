@@ -129,11 +129,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
 
   _voqing = config.GetInt( "voq" );
-  if ( _voqing ) {
-    _use_lagging = false;
-  } else {
-    _use_lagging = true;
-  }
 
   _use_read_write = (config.GetInt("use_read_write")==1);
   _read_request_size = config.GetInt("read_request_size");
