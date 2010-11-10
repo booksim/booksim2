@@ -42,7 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "packet_reply_info.hpp"
 
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
-: Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_counter(1), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _sub_network(0), _cur_id(0), _cur_pid(0), _time(0)
+: Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_counter(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _sub_network(0), _cur_id(0), _cur_pid(0), _time(0)
 {
 
   _sources = _net[0]->NumSources( );
@@ -517,7 +517,7 @@ Flit *TrafficManager::_NewFlit( )
 
 void TrafficManager::_RetireFlit( Flit *f, int dest )
 {
-  _deadlock_counter = 1;
+  _deadlock_counter = 0;
 
   assert(_total_in_flight_flits.count(f->id) > 0);
   _total_in_flight_flits.erase(f->id);
@@ -1108,7 +1108,7 @@ void TrafficManager::_NormalInject(){
 
 void TrafficManager::_Step( )
 {
-  if(_deadlock_counter++ == 0){
+  if(!_total_in_flight_flits.empty() && (++_deadlock_counter == 0)){
     cout << "WARNING: Possible network deadlock.\n";
   }
 
