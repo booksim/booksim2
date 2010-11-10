@@ -505,17 +505,6 @@ int TrafficManager::DivisionAlgorithm (int packet_type) {
   }
 }
 
-Flit *TrafficManager::_NewFlit( )
-{
-  Flit * f = Flit::New();
-  f->id    = _cur_id;
-  _total_in_flight_flits[_cur_id] = f;
-  f->watch = gWatchOut && (_flits_to_watch.count(_cur_id) > 0);
-  ++_cur_id;
-  assert(_cur_id);
-  return f;
-}
-
 void TrafficManager::_RetireFlit( Flit *f, int dest )
 {
   _deadlock_timer = 0;
@@ -787,9 +776,11 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   }
   
   for ( int i = 0; i < size; ++i ) {
-    Flit * f = _NewFlit( );
-    f->pid = _cur_pid;
-    f->watch |= watch;
+    Flit * f  = Flit::New();
+    f->id     = _cur_id++;
+    assert(_cur_id);
+    f->pid    = _cur_pid;
+    f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
     f->subnetwork = _sub_network;
     f->src    = source;
     f->time   = time;
@@ -797,6 +788,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     f->record = record;
     f->cl     = cl;
 
+    _total_in_flight_flits[f->id] = f;
     if(record) {
       _measured_in_flight_flits[f->id] = f;
     }
