@@ -88,7 +88,8 @@ protected:
   // ============ sub-networks and deadlock ==========
 
   short _duplicate_networks;
-  unsigned char _deadlock_counter;
+  int _deadlock_timer;
+  int _deadlock_warn_timeout;
 
   // ============ batch mode ==========================
   vector<int> _packets_sent;
