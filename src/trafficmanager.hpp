@@ -220,7 +220,7 @@ protected:
 
   // ============ Internal methods ============ 
 protected:
-  virtual void _RetireFlit( Flit *f, int dest );
+  void _RetireFlit( Flit *f, int dest );
 
   void _NormalInject();
   void _BatchInject();
@@ -228,14 +228,14 @@ protected:
 
   bool _PacketsOutstanding( ) const;
   
-  virtual int  _IssuePacket( int source, int cl );
-  virtual void _GeneratePacket( int source, int size, int cl, int time );
+  int  _IssuePacket( int source, int cl );
+  void _GeneratePacket( int source, int size, int cl, int time );
 
   void _ClearStats( );
 
   int  _ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const;
 
-  virtual bool _SingleSim( );
+  bool _SingleSim( );
 
   int DivisionAlgorithm(int packet_type);
 
