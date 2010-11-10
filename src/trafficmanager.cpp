@@ -182,6 +182,17 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_avg_frag.resize(_classes);
   _overall_max_frag.resize(_classes);
 
+  _pair_latency.resize(_classes);
+  _pair_tlat.resize(_classes);
+  
+  _hop_stats.resize(_classes);
+  
+  _sent_flits.resize(_classes);
+  _accepted_flits.resize(_classes);
+  
+  _overall_accepted.resize(_classes);
+  _overall_accepted_min.resize(_classes);
+
   for ( int c = 0; c < _classes; ++c ) {
     ostringstream tmp_name;
     tmp_name << "latency_stat_" << c;
@@ -236,61 +247,69 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _overall_max_frag[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
     _stats[tmp_name.str()] = _overall_max_frag[c];
     tmp_name.str("");
+
+    tmp_name << "hop_stat_" << c;
+    _hop_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 20 );
+    _stats[tmp_name.str()] = _hop_stats[c];
+    tmp_name.str("");
+
+    _pair_latency[c].resize(_sources*_dests);
+    _pair_tlat[c].resize(_sources*_dests);
+
+    _sent_flits[c].resize(_sources);
+    _accepted_flits[c].resize(_dests);
+    
+    for ( unsigned int i = 0; i < _sources; ++i ) {
+      tmp_name << "sent_stat_" << c << "_" << i;
+      _sent_flits[c][i] = new Stats( this, tmp_name.str( ) );
+      _stats[tmp_name.str()] = _sent_flits[c][i];
+      tmp_name.str("");    
+      
+      for ( unsigned int j = 0; j < _dests; ++j ) {
+	tmp_name << "pair_latency_stat_" << c << "_" << i << "_" << j;
+	_pair_latency[c][i*_dests+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+	_stats[tmp_name.str()] = _pair_latency[c][i*_dests+j];
+	tmp_name.str("");
+	
+	tmp_name << "pair_tlat_stat_" << c << "_" << i << "_" << j;
+	_pair_tlat[c][i*_dests+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+	_stats[tmp_name.str()] = _pair_tlat[c][i*_dests+j];
+	tmp_name.str("");
+      }
+    }
+    
+    for ( unsigned int i = 0; i < _dests; ++i ) {
+      tmp_name << "accepted_stat_" << c << "_" << i;
+      _accepted_flits[c][i] = new Stats( this, tmp_name.str( ) );
+      _stats[tmp_name.str()] = _accepted_flits[c][i];
+      tmp_name.str("");    
+    }
+    
+    tmp_name << "overall_acceptance_" << c;
+    _overall_accepted[c] = new Stats( this, tmp_name.str( ) );
+    _stats[tmp_name.str()] = _overall_accepted[c];
+    tmp_name.str("");
+
+    tmp_name << "overall_min_acceptance_" << c;
+    _overall_accepted_min[c] = new Stats( this, tmp_name.str( ) );
+    _stats[tmp_name.str()] = _overall_accepted_min[c];
+    tmp_name.str("");
+    
   }
 
-  _hop_stats    = new Stats( this, "hop_stats", 1.0, 20 );
-  _stats["hop_stats"] = _hop_stats;
-
-  _overall_accepted     = new Stats( this, "overall_acceptance" );
-  _stats["overall_acceptance"] = _overall_accepted;
-  
-  _overall_accepted_min = new Stats( this, "overall_min_acceptance" );
-  _stats["overall_min_acceptance"] = _overall_accepted_min;
-  
   _batch_time = new Stats( this, "batch_time" );
+  _stats["batch_time"] = _batch_time;
+  
   _overall_batch_time = new Stats( this, "overall_batch_time" );
-
-  _pair_latency.resize(_sources*_dests);
-  _pair_tlat.resize(_sources*_dests);
-  _sent_flits.resize(_sources);
-  _accepted_flits.resize(_dests);
+  _stats["overall_batch_time"] = _overall_batch_time;
   
   _injected_flow.resize(_sources, 0);
-
-  for ( unsigned int i = 0; i < _sources; ++i ) {
-    ostringstream tmp_name;
-    tmp_name << "sent_stat_" << i;
-    _sent_flits[i] = new Stats( this, tmp_name.str( ) );
-    _stats[tmp_name.str()] = _sent_flits[i];
-    tmp_name.str("");    
-
-    for ( unsigned int j = 0; j < _dests; ++j ) {
-      tmp_name << "pair_latency_stat_" << i << "_" << j;
-      _pair_latency[i*_dests+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-      _stats[tmp_name.str()] = _pair_latency[i*_dests+j];
-      tmp_name.str("");
-
-      tmp_name << "pair_tlat_stat_" << i << "_" << j;
-      _pair_tlat[i*_dests+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-      _stats[tmp_name.str()] = _pair_tlat[i*_dests+j];
-      tmp_name.str("");
-    }
-  }
-
   _ejected_flow.resize(_dests, 0);
 
-  for ( unsigned int i = 0; i < _dests; ++i ) {
-    ostringstream tmp_name;
-    tmp_name << "accepted_stat_" << i;
-    _accepted_flits[i] = new Stats( this, tmp_name.str( ) );
-    _stats[tmp_name.str()] = _accepted_flits[i];
-    tmp_name.str("");    
-  }
-  
   _received_flow.resize(_duplicate_networks*_routers, 0);
   _sent_flow.resize(_duplicate_networks*_routers, 0);
 
-  _slowest_flit.resize(_classes);
+  _slowest_flit.resize(_classes, -1);
 
   // ============ Simulation parameters ============ 
 
@@ -413,28 +432,29 @@ TrafficManager::~TrafficManager( )
     delete _overall_min_frag[c];
     delete _overall_avg_frag[c];
     delete _overall_max_frag[c];
+    
+    delete _hop_stats[c];
+    delete _overall_accepted[c];
+    delete _overall_accepted_min[c];
+    
+    for ( unsigned int i = 0; i < _sources; ++i ) {
+      delete _sent_flits[c][i];
+      
+      for ( unsigned int j = 0; j < _dests; ++j ) {
+	delete _pair_latency[c][i*_dests+j];
+	delete _pair_tlat[c][i*_dests+j];
+      }
+    }
+    
+    for ( unsigned int i = 0; i < _dests; ++i ) {
+      delete _accepted_flits[c][i];
+    }
+    
   }
-
-  delete _hop_stats;
-  delete _overall_accepted;
-  delete _overall_accepted_min;
-
+  
   delete _batch_time;
   delete _overall_batch_time;
-
-  for ( unsigned int i = 0; i < _sources; ++i ) {
-    delete _sent_flits[i];
-
-    for ( unsigned int j = 0; j < _dests; ++j ) {
-      delete _pair_latency[i*_dests+j];
-      delete _pair_tlat[i*_dests+j];
-    }
-  }
-
-  for ( unsigned int i = 0; i < _dests; ++i ) {
-    delete _accepted_flits[i];
-  }
-
+  
   if(gWatchOut && (gWatchOut != &cout)) delete gWatchOut;
   if(_stats_out && (_stats_out != &cout)) delete _stats_out;
   if(_flow_out && (_flow_out != &cout)) delete _flow_out;
@@ -581,31 +601,21 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     // and based on the simulation state
     if ( ( _sim_state == warming_up ) || f->record ) {
       
-      _hop_stats->AddSample( f->hops );
+      _hop_stats[f->cl]->AddSample( f->hops );
 
-      if( _pri_type  == class_based ) {
-	if((_slowest_flit[f->pri] < 0) ||
-	   (_latency_stats[f->pri]->Max() < (f->atime - f->time)))
-	  _slowest_flit[f->pri] = f->id;
-	_latency_stats[f->pri]->AddSample( f->atime - f->time );
-	_frag_stats[f->pri]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
-	if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
-	  _tlat_stats[f->pri]->AddSample( f->atime - f->ttime );
-      } else {
-	if((_slowest_flit[0] < 0) ||
-	   (_latency_stats[0]->Max() < (f->atime - f->time)))
-	   _slowest_flit[0] = f->id;
-	_latency_stats[0]->AddSample( f->atime - f->time);
-	_frag_stats[0]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
-	if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
-	  _tlat_stats[0]->AddSample( f->atime - f->ttime );
-      }
+      if((_slowest_flit[f->cl] < 0) ||
+	 (_latency_stats[f->cl]->Max() < (f->atime - f->time)))
+	_slowest_flit[f->cl] = f->id;
+      _latency_stats[f->cl]->AddSample( f->atime - f->time);
+      _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
+      if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
+	_tlat_stats[f->cl]->AddSample( f->atime - f->ttime );
    
-      _pair_latency[f->src*_dests+dest]->AddSample( f->atime - f->time );
+      _pair_latency[f->cl][f->src*_dests+dest]->AddSample( f->atime - f->time );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY)
-	_pair_tlat[dest*_dests+f->src]->AddSample( f->atime - f->ttime );
+	_pair_tlat[f->cl][dest*_dests+f->src]->AddSample( f->atime - f->ttime );
       else if(f->type == Flit::ANY_TYPE)
-	_pair_tlat[f->src*_dests+dest]->AddSample( f->atime - f->ttime );
+	_pair_tlat[f->cl][f->src*_dests+dest]->AddSample( f->atime - f->ttime );
       
       if ( f->record ) {
 	assert(_measured_in_flight_packets.count(f->pid) > 0);
@@ -788,7 +798,8 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     f->time   = time;
     f->ttime  = ttime;
     f->record = record;
-    
+    f->cl     = cl;
+
     if(record) {
       _measured_in_flight_flits[f->id] = f;
     }
@@ -960,7 +971,9 @@ void TrafficManager::_BatchInject(){
       }
       _net[i]->WriteFlit( f, input );
       if( _sim_state == running )
-	_sent_flits[input]->AddSample(f ? 1 : 0);
+	for(int c = 0; c < _classes; ++c) {
+	  _sent_flits[c][input]->AddSample((f && (f->cl == c)) ? 1 : 0);
+	}
       if (f && f->tail) // If a tail flit, reduce the number of packets of this class.
 	_class_array[i][highest_class]--;
     }
@@ -1087,7 +1100,9 @@ void TrafficManager::_NormalInject(){
       }
       _net[i]->WriteFlit( f, input );
       if( ( _sim_state == warming_up ) || ( _sim_state == running ) )
-	_sent_flits[input]->AddSample(f ? 1 : 0);
+	for(int c = 0; c < _classes; ++c) {
+	  _sent_flits[c][input]->AddSample((f && (f->cl == c)) ? 1 : 0);
+	}
       if (f && f->tail) // If a tail flit, reduce the number of packets of this class.
 	_class_array[i][highest_class]--;
     }
@@ -1142,14 +1157,20 @@ void TrafficManager::_Step( )
         cred->vc_cnt = 1;
 	cred->dest_router = f->from_router;
         _net[i]->WriteCredit( cred, output );
-        _RetireFlit( f, output );
       
         if( ( _sim_state == warming_up ) || ( _sim_state == running ) )
-	  _accepted_flits[output]->AddSample( 1 );
+	  for(int c = 0; c < _classes; ++c) {
+	    _accepted_flits[c][output]->AddSample( (f && (f->cl == c)) ? 1 : 0 );
+	  }
+
+        _RetireFlit( f, output );
+
       } else {
         _net[i]->WriteCredit( 0, output );
         if( ( _sim_state == warming_up ) || ( _sim_state == running ) )
-	  _accepted_flits[output]->AddSample( 0 );
+	  for(int c = 0; c < _classes; ++c) {
+	    _accepted_flits[c][output]->AddSample( 0 );
+	  }
       }
     }
 
@@ -1198,27 +1219,30 @@ bool TrafficManager::_PacketsOutstanding( ) const
 
 void TrafficManager::_ClearStats( )
 {
+
   for ( int c = 0; c < _classes; ++c ) {
+
     _latency_stats[c]->Clear( );
     _tlat_stats[c]->Clear( );
     _frag_stats[c]->Clear( );
     _slowest_flit[c] = -1;
-  }
   
-  for ( unsigned int i = 0; i < _sources; ++i ) {
-    _sent_flits[i]->Clear( );
-
-    for ( unsigned int j = 0; j < _dests; ++j ) {
-      _pair_latency[i*_dests+j]->Clear( );
-      _pair_tlat[i*_dests+j]->Clear( );
+    for ( unsigned int i = 0; i < _sources; ++i ) {
+      _sent_flits[c][i]->Clear( );
+      
+      for ( unsigned int j = 0; j < _dests; ++j ) {
+	_pair_latency[c][i*_dests+j]->Clear( );
+	_pair_tlat[c][i*_dests+j]->Clear( );
+      }
     }
-  }
 
-  for ( unsigned int i = 0; i < _dests; ++i ) {
-    _accepted_flits[i]->Clear( );
-  }
+    for ( unsigned int i = 0; i < _dests; ++i ) {
+      _accepted_flits[c][i]->Clear( );
+    }
   
-  _hop_stats->Clear();
+    _hop_stats[c]->Clear();
+
+  }
 
 }
 
@@ -1318,7 +1342,7 @@ bool TrafficManager::_SingleSim( )
 	  *_stats_out << "%=================================" << endl;
 	double cur_latency = _latency_stats[0]->Average( );
 	double min, avg;
-	int dmin = _ComputeStats( _accepted_flits, &avg, &min );
+	int dmin = _ComputeStats( _accepted_flits[0], &avg, &min );
 	
 	cout << "Minimum latency = " << _latency_stats[0]->Min( ) << endl;
 	cout << "Average latency = " << cur_latency << endl;
@@ -1396,7 +1420,7 @@ bool TrafficManager::_SingleSim( )
 	*_stats_out << "%=================================" << endl;
       double cur_latency = _latency_stats[0]->Average( );
       double min, avg;
-      int dmin = _ComputeStats( _accepted_flits, &avg, &min );
+      int dmin = _ComputeStats( _accepted_flits[0], &avg, &min );
       
       cout << "Batch duration = " << _time - start_time << endl;
       cout << "Minimum latency = " << _latency_stats[0]->Min( ) << endl;
@@ -1414,32 +1438,32 @@ bool TrafficManager::_SingleSim( )
 		    << "pair_sent(" << total_phases + 1 << ",:) = [ ";
 	for(unsigned int i = 0; i < _sources; ++i) {
 	  for(unsigned int j = 0; j < _dests; ++j) {
-	    *_stats_out << _pair_latency[i*_dests+j]->NumSamples( ) << " ";
+	    *_stats_out << _pair_latency[0][i*_dests+j]->NumSamples( ) << " ";
 	  }
 	}
 	*_stats_out << "];" << endl
 		    << "pair_lat(" << total_phases + 1 << ",:) = [ ";
 	for(unsigned int i = 0; i < _sources; ++i) {
 	  for(unsigned int j = 0; j < _dests; ++j) {
-	    *_stats_out << _pair_latency[i*_dests+j]->Average( ) << " ";
+	    *_stats_out << _pair_latency[0][i*_dests+j]->Average( ) << " ";
 	  }
 	}
 	*_stats_out << "];" << endl
 		    << "pair_tlat(" << total_phases + 1 << ",:) = [ ";
 	for(unsigned int i = 0; i < _sources; ++i) {
 	  for(unsigned int j = 0; j < _dests; ++j) {
-	    *_stats_out << _pair_tlat[i*_dests+j]->Average( ) << " ";
+	    *_stats_out << _pair_tlat[0][i*_dests+j]->Average( ) << " ";
 	  }
 	}
 	*_stats_out << "];" << endl
 		    << "sent(" << total_phases + 1 << ",:) = [ ";
 	for ( unsigned int d = 0; d < _dests; ++d ) {
-	  *_stats_out << _sent_flits[d]->Average( ) << " ";
+	  *_stats_out << _sent_flits[0][d]->Average( ) << " ";
 	}
 	*_stats_out << "];" << endl
 		    << "accepted(" << total_phases + 1 << ",:) = [ ";
 	for ( unsigned int d = 0; d < _dests; ++d ) {
-	  *_stats_out << _accepted_flits[d]->Average( ) << " ";
+	  *_stats_out << _accepted_flits[0][d]->Average( ) << " ";
 	}
 	*_stats_out << "];" << endl;
       }
@@ -1481,7 +1505,7 @@ bool TrafficManager::_SingleSim( )
       double cur_latency = _latency_stats[0]->Average( );
       int dmin;
       double min, avg;
-      dmin = _ComputeStats( _accepted_flits, &avg, &min );
+      dmin = _ComputeStats( _accepted_flits[0], &avg, &min );
       double cur_accepted = avg;
       cout << "Minimum latency = " << _latency_stats[0]->Min( ) << endl;
       cout << "Average latency = " << cur_latency << endl;
@@ -1498,32 +1522,32 @@ bool TrafficManager::_SingleSim( )
 		    << "pair_sent(" << total_phases + 1 << ",:) = [ ";
 	for(unsigned int i = 0; i < _sources; ++i) {
 	  for(unsigned int j = 0; j < _dests; ++j) {
-	    *_stats_out << _pair_latency[i*_dests+j]->NumSamples( ) << " ";
+	    *_stats_out << _pair_latency[0][i*_dests+j]->NumSamples( ) << " ";
 	  }
 	}
 	*_stats_out << "];" << endl
 		    << "pair_lat(" << total_phases + 1 << ",:) = [ ";
 	for(unsigned int i = 0; i < _sources; ++i) {
 	  for(unsigned int j = 0; j < _dests; ++j) {
-	    *_stats_out << _pair_latency[i*_dests+j]->Average( ) << " ";
+	    *_stats_out << _pair_latency[0][i*_dests+j]->Average( ) << " ";
 	  }
 	}
 	*_stats_out << "];" << endl
 		    << "pair_lat(" << total_phases + 1 << ",:) = [ ";
 	for(unsigned int i = 0; i < _sources; ++i) {
 	  for(unsigned int j = 0; j < _dests; ++j) {
-	    *_stats_out << _pair_tlat[i*_dests+j]->Average( ) << " ";
+	    *_stats_out << _pair_tlat[0][i*_dests+j]->Average( ) << " ";
 	  }
 	}
 	*_stats_out << "];" << endl
 		    << "sent(" << total_phases + 1 << ",:) = [ ";
 	for ( unsigned int d = 0; d < _dests; ++d ) {
-	  *_stats_out << _sent_flits[d]->Average( ) << " ";
+	  *_stats_out << _sent_flits[0][d]->Average( ) << " ";
 	}
 	*_stats_out << "];" << endl
 		    << "accepted(" << total_phases + 1 << ",:) = [ ";
 	for ( unsigned int d = 0; d < _dests; ++d ) {
-	  *_stats_out << _accepted_flits[d]->Average( ) << " ";
+	  *_stats_out << _accepted_flits[0][d]->Average( ) << " ";
 	}
 	*_stats_out << "];" << endl;
 	*_stats_out << "packets(" << total_phases + 1 << ") = " << _total_in_flight_packets.size() << ";" << endl;
@@ -1691,15 +1715,15 @@ bool TrafficManager::Run( )
       _overall_min_frag[c]->AddSample( _frag_stats[c]->Min( ) );
       _overall_avg_frag[c]->AddSample( _frag_stats[c]->Average( ) );
       _overall_max_frag[c]->AddSample( _frag_stats[c]->Max( ) );
-    }
-    
-    double min, avg;
-    _ComputeStats( _accepted_flits, &avg, &min );
-    _overall_accepted->AddSample( avg );
-    _overall_accepted_min->AddSample( min );
 
-    if(_sim_mode == batch)
-      _overall_batch_time->AddSample(_batch_time->Sum( ));
+      double min, avg;
+      _ComputeStats( _accepted_flits[c], &avg, &min );
+      _overall_accepted[c]->AddSample( avg );
+      _overall_accepted_min[c]->AddSample( min );
+
+      if(_sim_mode == batch)
+	_overall_batch_time->AddSample(_batch_time->Sum( ));
+    }
   }
   
   DisplayStats();
@@ -1736,9 +1760,9 @@ void TrafficManager::DisplayStats() {
 	   << "," << _overall_min_frag[c]->Average( )
 	   << "," << _overall_avg_frag[c]->Average( )
 	   << "," << _overall_max_frag[c]->Average( )
-	   << "," << _overall_accepted->Average( )
-	   << "," << _overall_accepted_min->Average( )
-	   << "," << _hop_stats->Average( )
+	   << "," << _overall_accepted[c]->Average( )
+	   << "," << _overall_accepted_min[c]->Average( )
+	   << "," << _hop_stats[c]->Average( )
 	   << endl;
     }
 
@@ -1764,21 +1788,22 @@ void TrafficManager::DisplayStats() {
     cout << "Overall maximum fragmentation = " << _overall_max_frag[c]->Average( )
 	 << " (" << _overall_max_frag[c]->NumSamples( ) << " samples)" << endl;
 
-    cout << "Overall average accepted rate = " << _overall_accepted->Average( )
-	 << " (" << _overall_accepted->NumSamples( ) << " samples)" << endl;
-    cout << "Overall min accepted rate = " << _overall_accepted_min->Average( )
-	 << " (" << _overall_accepted_min->NumSamples( ) << " samples)" << endl;
+    cout << "Overall average accepted rate = " << _overall_accepted[c]->Average( )
+	 << " (" << _overall_accepted[c]->NumSamples( ) << " samples)" << endl;
+    cout << "Overall min accepted rate = " << _overall_accepted_min[c]->Average( )
+	 << " (" << _overall_accepted_min[c]->NumSamples( ) << " samples)" << endl;
     
-    if(_sim_mode == batch)
-      cout << "Overall batch duration = " << _overall_batch_time->Average( )
-	   << " (" << _overall_batch_time->NumSamples( ) << " samples)" << endl;
+    cout << "Average hops = " << _hop_stats[c]->Average( )
+	 << " (" << _hop_stats[c]->NumSamples( ) << " samples)" << endl;
 
     cout << "Slowest flit = " << _slowest_flit[c] << endl;
+  
   }
-
-  cout << "Average hops = " << _hop_stats->Average( )
-       << " (" << _hop_stats->NumSamples( ) << " samples)" << endl;
-
+  
+  if(_sim_mode == batch)
+    cout << "Overall batch duration = " << _overall_batch_time->Average( )
+	 << " (" << _overall_batch_time->NumSamples( ) << " samples)" << endl;
+  
 }
 
 //read the watchlist

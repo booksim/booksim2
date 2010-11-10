@@ -50,6 +50,8 @@ public:
 
   int vc;
 
+  int cl;
+
   bool head;
   bool tail;
   bool true_tail;

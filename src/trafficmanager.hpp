@@ -126,14 +126,14 @@ protected:
   vector<Stats *> _overall_avg_frag;
   vector<Stats *> _overall_max_frag;
 
-  vector<Stats *> _pair_latency;
-  vector<Stats *> _pair_tlat;
-  Stats * _hop_stats;
+  vector<vector<Stats *> > _pair_latency;
+  vector<vector<Stats *> > _pair_tlat;
+  vector<Stats *> _hop_stats;
 
-  vector<Stats *> _sent_flits;
-  vector<Stats *> _accepted_flits;
-  Stats * _overall_accepted;
-  Stats * _overall_accepted_min;
+  vector<vector<Stats *> > _sent_flits;
+  vector<vector<Stats *> > _accepted_flits;
+  vector<Stats *> _overall_accepted;
+  vector<Stats *> _overall_accepted_min;
   
   Stats * _batch_time;
   Stats * _overall_batch_time;
@@ -252,10 +252,10 @@ public:
 
   void DisplayStats();
 
-  const Stats * GetOverallLatency(int c) { return _overall_avg_latency[c]; }
-  const Stats * GetAccepted() { return _overall_accepted; }
-  const Stats * GetAcceptedMin() { return _overall_accepted_min; }
-  const Stats * GetHops() { return _hop_stats; }
+  const Stats * GetOverallLatency(int c = 0) { return _overall_avg_latency[c]; }
+  const Stats * GetAccepted(int c = 0) { return _overall_accepted[c]; }
+  const Stats * GetAcceptedMin(int c = 0) { return _overall_accepted_min[c]; }
+  const Stats * GetHops(int c = 0) { return _hop_stats[c]; }
 
   inline int getTime() { return _time;}
   Stats * getStats(const string & name) { return _stats[name]; }
