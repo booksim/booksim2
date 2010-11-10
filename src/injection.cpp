@@ -49,10 +49,14 @@ extern map<string, tInjectionProcess> gInjectionProcessMap;
 
 //=============================================================
 
-int bernoulli( int /*source*/, double rate )
+int bernoulli( int source, double rate )
 {
+
+  assert( ( source >= 0 ) && ( source < gNodes ) );
+  assert( rate <= 1.0 );
+
   //this is the packet injection rate, not flit rate
-  return ( RandomFloat( ) < ( rate ) ) ? 
+  return ( RandomFloat( ) < rate ) ? 
     gConstPacketSize : 0;
 }
 
@@ -64,6 +68,7 @@ int on_off( int source, double rate )
   bool issue;
 
   assert( ( source >= 0 ) && ( source < gNodes ) );
+  assert( rate <= 1.0 );
 
   if ( gNodeStates.size() != gNodes ) {
     gNodeStates.resize(gNodes, 0);
