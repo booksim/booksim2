@@ -79,11 +79,10 @@ protected:
   vector<vector<bool> > _qdrained;
   vector<vector<vector<list<Flit *> > > > _partial_packets;
 
-  map<int, Flit *> _measured_in_flight_flits;
-  multimap<int, Flit *> _measured_in_flight_packets;
   map<int, Flit *> _total_in_flight_flits;
-  multimap<int, Flit *> _total_in_flight_packets;
-  bool                _empty_network;
+  map<int, Flit *> _measured_in_flight_flits;
+  map<int, Flit *> _retired_packets;
+  bool             _empty_network;
 
   // ============ sub-networks and deadlock ==========
 

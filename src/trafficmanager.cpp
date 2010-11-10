@@ -538,10 +538,17 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   }
 
   if ( f->tail ) {
-    assert(_total_in_flight_packets.count(f->pid) > 0);
-    Flit * head = _total_in_flight_packets.lower_bound(f->pid)->second;
-    assert(head->head);
-    assert(f->pid == head->pid);
+    Flit * head;
+    if(f->head) {
+      head = f;
+    } else {
+      map<int, Flit *>::iterator iter = _retired_packets.find(f->pid);
+      assert(iter != _retired_packets.end());
+      head = iter->second;
+      _retired_packets.erase(iter);
+      assert(head->head);
+      assert(f->pid == head->pid);
+    }
     if ( f->watch ) { 
       *gWatchOut << GetSimTime() << " | "
 		 << "node" << dest << " | "
@@ -603,22 +610,18 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       else if(f->type == Flit::ANY_TYPE)
 	_pair_tlat[f->cl][f->src*_dests+dest]->AddSample( f->atime - f->ttime );
       
-      if ( f->record ) {
-	assert(_measured_in_flight_packets.count(f->pid) > 0);
-	_measured_in_flight_packets.erase(f->pid);
-      }
     }
-
-    // free all flits associated with the current packet
-    int fpid = f->pid;
-    pair<multimap<int, Flit *>::iterator, multimap<int, Flit *>::iterator> res = _total_in_flight_packets.equal_range(fpid);
-    for(multimap<int, Flit *>::iterator iter = res.first; iter != res.second; ++iter) {
-      assert(iter->second->pid == fpid);
-      //reset the flit and back to the poool
-      iter->second->Free();
+    
+    if(f != head) {
+      head->Free();
     }
-    _total_in_flight_packets.erase(fpid);
-
+    
+  }
+  
+  if(f->head && !f->tail) {
+    _retired_packets.insert(make_pair(f->pid, f));
+  } else {
+    f->Free();
   }
 }
 
@@ -788,9 +791,9 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     f->record = record;
     f->cl     = cl;
 
-    _total_in_flight_flits[f->id] = f;
+    _total_in_flight_flits.insert(make_pair(f->id, f));
     if(record) {
-      _measured_in_flight_flits[f->id] = f;
+      _measured_in_flight_flits.insert(make_pair(f->id, f));
     }
     
     if(gTrace){
@@ -802,7 +805,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       f->head = true;
       //packets are only generated to nodes smaller or equal to limit
       f->dest = packet_destination;
-      _total_in_flight_packets.insert(make_pair(f->pid, f));
       //obliviously assign a packet to xy or yx route
       if(_use_xyyx){
 	if(RandomInt(1)){
@@ -811,11 +813,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 	  f->x_then_y = false;
 	}
       }
-      if(record) {
-	_measured_in_flight_packets.insert(make_pair(f->pid, f));
-      }
     } else {
-      _total_in_flight_packets.insert(make_pair(f->pid, f));
       f->head = false;
       f->dest = -1;
     }
@@ -1182,7 +1180,7 @@ bool TrafficManager::_PacketsOutstanding( ) const
 {
   bool outstanding;
 
-  if ( _measured_in_flight_packets.empty() ) {
+  if ( _measured_in_flight_flits.empty() ) {
     outstanding = false;
 
     for ( int c = 0; c < _classes; ++c ) {
@@ -1200,7 +1198,7 @@ bool TrafficManager::_PacketsOutstanding( ) const
     }
   } else {
 #ifdef DEBUG_DRAIN
-    cout << "in flight = " << _measured_in_flight_packets.size() << endl;
+    cout << "in flight = " << _measured_in_flight_flits.size() << endl;
 #endif
     outstanding = true;
   }
@@ -1272,9 +1270,7 @@ void TrafficManager::_DisplayRemaining( ) const
   if(_total_in_flight_flits.size() > 10)
     cout << "[...] ";
   
-  cout << "(" << _total_in_flight_flits.size() << " flits"
-       << ", " << _total_in_flight_packets.size() << " packets"
-       << ")" << endl;
+  cout << "(" << _total_in_flight_flits.size() << " flits)" << endl;
   
   cout << "Measured flits: ";
   for ( iter = _measured_in_flight_flits.begin( ), i = 0;
@@ -1285,9 +1281,7 @@ void TrafficManager::_DisplayRemaining( ) const
   if(_measured_in_flight_flits.size() > 10)
     cout << "[...] ";
   
-  cout << "(" << _measured_in_flight_flits.size() << " flits"
-       << ", " << _measured_in_flight_packets.size() << " packets"
-       << ")" << endl;
+  cout << "(" << _measured_in_flight_flits.size() << " flits)" << endl;
   
 }
 
@@ -1348,7 +1342,7 @@ bool TrafficManager::_SingleSim( )
 		      << *_frag_stats[0] << ";" << endl;
       } 
     }
-    cout << "Total inflight " << _total_in_flight_packets.size() << endl;
+    cout << "Total in-flight flits = " << _total_in_flight_flits.size() << " (" << _measured_in_flight_flits.size() << " measured)" << endl;
     converged = 1;
 
   } else if(_sim_mode == batch && !_timed_mode){//batch mode   
@@ -1384,7 +1378,7 @@ bool TrafficManager::_SingleSim( )
       _sim_state = draining;
       _drain_time = _time;
       int empty_steps = 0;
-      while( (_drain_measured_only ? _measured_in_flight_packets.size() : _total_in_flight_packets.size()) > 0 ) { 
+      while( (_drain_measured_only ? _measured_in_flight_flits.size() : _total_in_flight_flits.size()) > 0 ) { 
 	_Step( ); 
 	if(_flow_out) {
 	  *_flow_out << "injected_flow(" << _time << ",:) = " << _injected_flow << ";" << endl;
@@ -1503,7 +1497,7 @@ bool TrafficManager::_SingleSim( )
       cout << "Maximum latency = " << _latency_stats[0]->Max( ) << endl;
       cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
       cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
-      cout << "Packets in flight = " << _total_in_flight_packets.size() << " (" << _total_in_flight_flits.size() << " flits)" << endl;
+      cout << "Total in-flight flits = " << _total_in_flight_flits.size() << " (" << _measured_in_flight_flits.size() << " measured)" << endl;
       if(_stats_out) {
 	*_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
 		    << "lat_hist(" << total_phases + 1 << ",:) = "
@@ -1541,8 +1535,7 @@ bool TrafficManager::_SingleSim( )
 	  *_stats_out << _accepted_flits[0][d]->Average( ) << " ";
 	}
 	*_stats_out << "];" << endl;
-	*_stats_out << "packets(" << total_phases + 1 << ") = " << _total_in_flight_packets.size() << ";" << endl;
-	*_stats_out << "flits(" << total_phases + 1 << ") = " << _total_in_flight_flits.size() << ";" << endl;
+	*_stats_out << "inflight(" << total_phases + 1 << ") = " << _total_in_flight_flits.size() << ";" << endl;
       }
 
       // Fail safe for latency mode, throughput will ust continue
@@ -1661,7 +1654,7 @@ bool TrafficManager::_SingleSim( )
     cout << "Draining remaining packets ..." << endl;
     _empty_network = true;
     int empty_steps = 0;
-    while( (_drain_measured_only ? _measured_in_flight_packets.size() : _total_in_flight_packets.size()) > 0 ) { 
+    while( (_drain_measured_only ? _measured_in_flight_flits.size() : _total_in_flight_flits.size()) > 0 ) { 
       _Step( ); 
 
       if(_flow_out) {
