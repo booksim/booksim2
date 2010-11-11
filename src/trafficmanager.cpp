@@ -42,7 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "packet_reply_info.hpp"
 
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
-: Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _sub_network(0), _cur_id(0), _cur_pid(0), _time(0)
+: Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _time(0)
 {
 
   _sources = _net[0]->NumSources( );
@@ -323,10 +323,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _total_sims = config.GetInt( "sim_count" );
 
   _router_map.resize(_duplicate_networks);
-  _class_array.resize(_duplicate_networks);
   for (int i=0; i < _duplicate_networks; ++i) {
     _router_map[i] = _net[i]->GetRouters();
-    _class_array[i].resize(_classes, 0);
   }
 
   _traffic_function  = GetTrafficFunction( config );
@@ -770,7 +768,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     record = true;
   }
 
-  _sub_network = DivisionAlgorithm(packet_type);
+  int subnetwork = DivisionAlgorithm(packet_type);
   
   bool watch = gWatchOut && (_packets_to_watch.count(_cur_pid) > 0);
   
@@ -788,7 +786,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     assert(_cur_id);
     f->pid    = _cur_pid;
     f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
-    f->subnetwork = _sub_network;
+    f->subnetwork = subnetwork;
     f->src    = source;
     f->time   = time;
     f->ttime  = ttime;
@@ -854,7 +852,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 		  << "." << endl;
     }
 
-    _partial_packets[source][cl][_sub_network].push_back( f );
+    _partial_packets[source][cl][subnetwork].push_back( f );
   }
   ++_cur_pid;
   assert(_cur_pid);
@@ -897,10 +895,6 @@ void TrafficManager::_BatchInject(){
 	    _qdrained[input][c] = true;
 	  }
 	}
-	if ( generated ) {
-	  //highest_class = c;
-	  _class_array[_sub_network][c]++; // One more packet for this class.
-	}
       }
     }
 
@@ -910,7 +904,7 @@ void TrafficManager::_BatchInject(){
       int highest_class = 0;
       // Now just find which is the highest_class.
       for (int c = _classes - 1; c > 0; --c) {
-        if (_class_array[i][c]) {
+        if (!_partial_packets[input][c][i].empty()) {
           highest_class = c;
           break;
         }
@@ -966,8 +960,6 @@ void TrafficManager::_BatchInject(){
 	for(int c = 0; c < _classes; ++c) {
 	  _sent_flits[c][input]->AddSample((f && (f->cl == c)) ? 1 : 0);
 	}
-      if (f && f->tail) // If a tail flit, reduce the number of packets of this class.
-	_class_array[i][highest_class]--;
     }
   }
 }
@@ -1016,13 +1008,7 @@ void TrafficManager::_NormalInject(){
 	    _qdrained[input][c] = true;
 	  }
 	}
-	if ( generated ) {
-	  //highest_class = c;
-	  _class_array[_sub_network][c]++; // One more packet for this class.
-	}
-      } //else {
-	//highest_class = c;
-      //} This is not necessary with _class_array because it stays.
+      }
     }
 
     // Now, check partially issued packets to
@@ -1031,7 +1017,7 @@ void TrafficManager::_NormalInject(){
       int highest_class = 0;
       // Now just find which is the highest_class.
       for (int c = _classes - 1; c > 0; --c) {
-	if (_class_array[i][c]) {
+	if (!_partial_packets[input][c][i].empty()) {
 	  highest_class = c;
 	  break;
 	}
@@ -1095,8 +1081,6 @@ void TrafficManager::_NormalInject(){
 	for(int c = 0; c < _classes; ++c) {
 	  _sent_flits[c][input]->AddSample((f && (f->cl == c)) ? 1 : 0);
 	}
-      if (f && f->tail) // If a tail flit, reduce the number of packets of this class.
-	_class_array[i][highest_class]--;
     }
   }
 }

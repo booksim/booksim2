@@ -187,8 +187,6 @@ protected:
   int   _sample_period;
   int   _max_samples;
   int   _warmup_periods;
-  vector<vector<int> > _class_array;
-  int   _sub_network;
 
   int   _include_queuing;
 
