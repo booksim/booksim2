@@ -1340,24 +1340,30 @@ bool TrafficManager::_SingleSim( )
 	cout << _sim_state << endl;
 	if(_stats_out)
 	  *_stats_out << "%=================================" << endl;
-	double cur_latency = _latency_stats[0]->Average( );
-	double min, avg;
-	int dmin = _ComputeStats( _accepted_flits[0], &avg, &min );
 	
-	cout << "Minimum latency = " << _latency_stats[0]->Min( ) << endl;
-	cout << "Average latency = " << cur_latency << endl;
-	cout << "Maximum latency = " << _latency_stats[0]->Max( ) << endl;
-	cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
-	cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
-	if(_stats_out)
-	  *_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
-		      << "lat_hist(" << total_phases + 1 << ",:) = "
-		      << *_latency_stats[0] << ";" << endl
-		      << "frag_hist(" << total_phases + 1 << ",:) = "
-		      << *_frag_stats[0] << ";" << endl;
-      } 
+	for(int c = 0; c < _classes; ++c) {
+
+	  double cur_latency = _latency_stats[c]->Average( );
+	  double min, avg;
+	  int dmin = _ComputeStats( _accepted_flits[c], &avg, &min );
+	  
+	  cout << "Class " << c << ":" << endl;
+
+	  cout << "Minimum latency = " << _latency_stats[c]->Min( ) << endl;
+	  cout << "Average latency = " << cur_latency << endl;
+	  cout << "Maximum latency = " << _latency_stats[c]->Max( ) << endl;
+	  cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
+	  cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
+
+	  cout << "Total in-flight flits = " << _total_in_flight_flits[c].size() << " (" << _measured_in_flight_flits[c].size() << " measured)" << endl;
+
+	  if(_stats_out)
+	    *_stats_out << "lat(" << c << ") = " << cur_latency << ";" << endl
+			<< "lat_hist(" << c << ",:) = " << *_latency_stats[c] << ";" << endl
+			<< "frag_hist(" << c << ",:) = " << *_frag_stats[c] << ";" << endl;
+	} 
+      }
     }
-    cout << "Total in-flight flits = " << _total_in_flight_flits[0].size() << " (" << _measured_in_flight_flits[0].size() << " measured)" << endl;
     converged = 1;
 
   } else if(_sim_mode == batch && !_timed_mode){//batch mode   
@@ -1492,8 +1498,8 @@ bool TrafficManager::_SingleSim( )
   } else { 
     //once warmed up, we require 3 converging runs
     //to end the simulation 
-    double prev_latency = 0.0;
-    double prev_accepted = 0.0;
+    vector<double> prev_latency(_classes, 0.0);
+    vector<double> prev_accepted(_classes, 0.0);
     while( ( total_phases < _max_samples ) && 
 	   ( ( _sim_state != running ) || 
 	     ( converged < 3 ) ) ) {
@@ -1521,79 +1527,119 @@ bool TrafficManager::_SingleSim( )
       cout << _sim_state << endl;
       if(_stats_out)
 	*_stats_out << "%=================================" << endl;
-      double cur_latency = _latency_stats[0]->Average( );
-      int dmin;
-      double min, avg;
-      dmin = _ComputeStats( _accepted_flits[0], &avg, &min );
-      double cur_accepted = avg;
-      cout << "Minimum latency = " << _latency_stats[0]->Min( ) << endl;
-      cout << "Average latency = " << cur_latency << endl;
-      cout << "Maximum latency = " << _latency_stats[0]->Max( ) << endl;
-      cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
-      cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
-      cout << "Total in-flight flits = " << _total_in_flight_flits[0].size() << " (" << _measured_in_flight_flits[0].size() << " measured)" << endl;
-      if(_stats_out) {
-	*_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
-		    << "lat_hist(" << total_phases + 1 << ",:) = "
-		    << *_latency_stats[0] << ";" << endl
-		    << "frag_hist(" << total_phases + 1 << ",:) = "
-		    << *_frag_stats[0] << ";" << endl
-		    << "pair_sent(" << total_phases + 1 << ",:) = [ ";
-	for(unsigned int i = 0; i < _sources; ++i) {
-	  for(unsigned int j = 0; j < _dests; ++j) {
-	    *_stats_out << _pair_latency[0][i*_dests+j]->NumSamples( ) << " ";
+
+      double max_latency_change = 0.0;
+      double max_accepted_change = 0.0;
+
+      for(int c = 0; c < _classes; ++c) {
+
+	double cur_latency = _latency_stats[c]->Average( );
+	int dmin;
+	double min, avg;
+	dmin = _ComputeStats( _accepted_flits[c], &avg, &min );
+	double cur_accepted = avg;
+
+	cout << "Class " << c << ":" << endl;
+
+	cout << "Minimum latency = " << _latency_stats[c]->Min( ) << endl;
+	cout << "Average latency = " << cur_latency << endl;
+	cout << "Maximum latency = " << _latency_stats[c]->Max( ) << endl;
+	cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
+	cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
+	cout << "Total in-flight flits = " << _total_in_flight_flits[c].size() << " (" << _measured_in_flight_flits[c].size() << " measured)" << endl;
+	if(_stats_out) {
+	  *_stats_out << "lat(" << c << ") = " << cur_latency << ";" << endl
+		    << "lat_hist(" << c << ",:) = " << *_latency_stats[c] << ";" << endl
+		    << "frag_hist(" << c << ",:) = " << *_frag_stats[c] << ";" << endl
+		    << "pair_sent(" << c << ",:) = [ ";
+	  for(unsigned int i = 0; i < _sources; ++i) {
+	    for(unsigned int j = 0; j < _dests; ++j) {
+	      *_stats_out << _pair_latency[c][i*_dests+j]->NumSamples( ) << " ";
+	    }
 	  }
-	}
-	*_stats_out << "];" << endl
-		    << "pair_lat(" << total_phases + 1 << ",:) = [ ";
-	for(unsigned int i = 0; i < _sources; ++i) {
-	  for(unsigned int j = 0; j < _dests; ++j) {
-	    *_stats_out << _pair_latency[0][i*_dests+j]->Average( ) << " ";
+	  *_stats_out << "];" << endl
+		      << "pair_lat(" << c << ",:) = [ ";
+	  for(unsigned int i = 0; i < _sources; ++i) {
+	    for(unsigned int j = 0; j < _dests; ++j) {
+	      *_stats_out << _pair_latency[c][i*_dests+j]->Average( ) << " ";
+	    }
 	  }
-	}
-	*_stats_out << "];" << endl
-		    << "pair_lat(" << total_phases + 1 << ",:) = [ ";
-	for(unsigned int i = 0; i < _sources; ++i) {
-	  for(unsigned int j = 0; j < _dests; ++j) {
-	    *_stats_out << _pair_tlat[0][i*_dests+j]->Average( ) << " ";
+	  *_stats_out << "];" << endl
+		      << "pair_lat(" << c << ",:) = [ ";
+	  for(unsigned int i = 0; i < _sources; ++i) {
+	    for(unsigned int j = 0; j < _dests; ++j) {
+	      *_stats_out << _pair_tlat[c][i*_dests+j]->Average( ) << " ";
+	    }
 	  }
+	  *_stats_out << "];" << endl
+		      << "sent(" << c << ",:) = [ ";
+	  for ( unsigned int d = 0; d < _dests; ++d ) {
+	    *_stats_out << _sent_flits[c][d]->Average( ) << " ";
+	  }
+	  *_stats_out << "];" << endl
+		      << "accepted(" << c << ",:) = [ ";
+	  for ( unsigned int d = 0; d < _dests; ++d ) {
+	    *_stats_out << _accepted_flits[c][d]->Average( ) << " ";
+	  }
+	  *_stats_out << "];" << endl;
+	  *_stats_out << "inflight(" << c << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
 	}
-	*_stats_out << "];" << endl
-		    << "sent(" << total_phases + 1 << ",:) = [ ";
-	for ( unsigned int d = 0; d < _dests; ++d ) {
-	  *_stats_out << _sent_flits[0][d]->Average( ) << " ";
+	
+	double latency_change = fabs( ( cur_latency - prev_latency[c] ) / cur_latency );
+	prev_latency[c] = cur_latency;
+	cout << "latency change    = " << latency_change << endl;
+	if(latency_change > max_latency_change) {
+	  max_latency_change = latency_change;
 	}
-	*_stats_out << "];" << endl
-		    << "accepted(" << total_phases + 1 << ",:) = [ ";
-	for ( unsigned int d = 0; d < _dests; ++d ) {
-	  *_stats_out << _accepted_flits[0][d]->Average( ) << " ";
+	double accepted_change = fabs( ( cur_accepted - prev_accepted[c] ) / cur_accepted );
+	prev_accepted[c] = cur_accepted;
+	cout << "throughput change = " << accepted_change << endl;
+	if(accepted_change > max_accepted_change) {
+	  max_accepted_change = accepted_change;
 	}
-	*_stats_out << "];" << endl;
-	*_stats_out << "inflight(" << total_phases + 1 << ") = " << _total_in_flight_flits[0].size() << ";" << endl;
+	
       }
 
       // Fail safe for latency mode, throughput will ust continue
-      if ( ( _sim_mode == latency ) && ( cur_latency >_latency_thres ) ) {
-	cout << "Average latency exceeded " << _latency_thres << " cycles. Aborting simulation." << endl;
-	converged = 0; 
-	_sim_state = warming_up;
-	break;
-      }
+      if ( _sim_mode == latency ) {
 
-      cout << "latency change    = " << fabs( ( cur_latency - prev_latency ) / cur_latency ) << endl;
-      cout << "throughput change = " << fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) << endl;
+	double acc_latency = 0.0;
+	int acc_count = 0;
+	for(int c = 0; c < _classes; c++) {
+	  
+	  acc_latency += _latency_stats[c]->Sum();
+	  acc_count += _latency_stats[c]->NumSamples();
+	  
+	  map<int, Flit *>::const_iterator iter;
+	  for(iter = _total_in_flight_flits[c].begin(); 
+	      iter != _total_in_flight_flits[c].end(); 
+	      iter++) {
+	    acc_latency += _time - iter->second->time;
+	    acc_count++;
+	  }
+	  
+	}
+	
+	double avg_latency = (double)acc_latency / (double)acc_count;
+	if(avg_latency > _latency_thres) {
+	  cout << "Average latency " << avg_latency << " exceeded " << _latency_thres << " cycles. Aborting simulation." << endl;
+	  converged = 0; 
+	  _sim_state = warming_up;
+	  break;
+	}
+      }
 
       if ( _sim_state == warming_up ) {
 	if ( _warmup_periods == 0 ) {
 	  if ( _sim_mode == latency ) {
-	    if ( ( fabs( ( cur_latency - prev_latency ) / cur_latency ) < _warmup_threshold ) &&
-		 ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < _warmup_threshold ) ) {
+	    if ( ( max_latency_change < _warmup_threshold ) &&
+		 ( max_accepted_change < _warmup_threshold ) ) {
 	      cout << "Warmed up ..." <<  "Time used is " << _time << " cycles" <<endl;
 	      clear_last = true;
 	      _sim_state = running;
 	    }
 	  } else {
-	    if ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < _warmup_threshold ) {
+	    if ( max_accepted_change < _warmup_threshold ) {
 	      cout << "Warmed up ..." << "Time used is " << _time << " cycles" << endl;
 	      clear_last = true;
 	      _sim_state = running;
@@ -1608,22 +1654,20 @@ bool TrafficManager::_SingleSim( )
 	}
       } else if ( _sim_state == running ) {
 	if ( _sim_mode == latency ) {
-	  if ( ( fabs( ( cur_latency - prev_latency ) / cur_latency ) < _stopping_threshold ) &&
-	       ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < _acc_stopping_threshold ) ) {
+	  if ( ( max_latency_change < _stopping_threshold ) &&
+	       ( max_accepted_change < _acc_stopping_threshold ) ) {
 	    ++converged;
 	  } else {
 	    converged = 0;
 	  }
 	} else {
-	  if ( fabs( ( cur_accepted - prev_accepted ) / cur_accepted ) < _acc_stopping_threshold ) {
+	  if ( max_accepted_change < _acc_stopping_threshold ) {
 	    ++converged;
 	  } else {
 	    converged = 0;
 	  }
 	} 
       }
-      prev_latency  = cur_latency;
-      prev_accepted = cur_accepted;
       ++total_phases;
     }
   
