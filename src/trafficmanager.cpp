@@ -685,6 +685,8 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	  //coin toss to determine request type.
 	  result = (RandomFloat() < 0.5) ? -2 : -1;
 
+	} else {
+	  result = 0;
 	}
       } 
     } else { //normal mode
