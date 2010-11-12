@@ -41,7 +41,6 @@ public:
   virtual vector< pair<string, vector< string> > > *GetImportantMap();
 #endif
 
-  static vector<string> tokenize(string data);
 };
 
 #endif

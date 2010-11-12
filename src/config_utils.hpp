@@ -84,6 +84,8 @@ public:
 #endif
 
   static Configuration *GetTheConfig( );
+
+  static vector<string> tokenize(string data);
 };
 
 bool ParseArgs( Configuration *cf, int argc, char **argv );

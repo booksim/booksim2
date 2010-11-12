@@ -190,6 +190,19 @@ Configuration *Configuration::GetTheConfig( )
   return theConfig;
 }
 
+vector<string> Configuration::tokenize(string data) {
+  const string separator = "{,}";
+  vector<string> result;
+  size_t last_pos = data.find_first_not_of(separator);
+  size_t pos = data.find_first_of(separator, last_pos);
+  while(pos != string::npos || last_pos != string::npos) {
+    result.push_back(data.substr(last_pos, pos - last_pos));
+    last_pos = data.find_first_not_of(separator, pos);
+    pos = data.find_first_of(separator, last_pos);
+  }
+  return result;
+}
+
 //============================================================
 
 int config_input( char *line, int max_size )
