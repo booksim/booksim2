@@ -54,8 +54,8 @@ protected:
   int _input_speedup;
   int _output_speedup;
   
-  float _internal_speedup;
-  float _partial_internal_cycles;
+  double _internal_speedup;
+  double _partial_internal_cycles;
 
   int _crossbar_delay;
   int _credit_delay;
