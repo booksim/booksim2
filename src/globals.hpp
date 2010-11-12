@@ -41,7 +41,7 @@ int GetSimTime();
 class Stats;
 Stats * GetStats(const std::string & name);
 
-extern bool _print_activity;
+extern bool gPrintActivity;
 
 extern int gK;
 extern int gN;

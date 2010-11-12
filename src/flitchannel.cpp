@@ -57,7 +57,7 @@ FlitChannel::~FlitChannel() {
   // these statistics, so this should probably all be moved into a separate 
   // member function.
 
-  if(_print_activity){
+  if(gPrintActivity){
     cout << "FlitChannel: " 
 	 << "[" 
 	 << _routerSource

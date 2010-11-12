@@ -99,7 +99,7 @@ Stats * GetStats(const std::string & name) {
 }
 
 /* printing activity factor*/
-bool _print_activity = false;
+bool gPrintActivity;
 
 int gK = 0;//radix
 int gN = 0;//dimension
@@ -125,7 +125,7 @@ int xcount  = 0;
 int ycount  = 0;
 
 //generate nocviewer trace
-bool gTrace = false;
+bool gTrace;
 
 /*number of flits per packet, when _use_read_write is false*/
 int    gConstPacketSize;
@@ -290,7 +290,7 @@ int main( int argc, char **argv )
   InitializeTrafficMap( );
   InitializeInjectionMap( );
 
-  _print_activity = (config.GetInt("print_activity")==1);
+  gPrintActivity = (config.GetInt("print_activity")==1);
   gTrace = (config.GetInt("viewer trace")==1);
   
   string watch_out_file;

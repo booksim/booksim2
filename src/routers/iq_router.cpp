@@ -164,7 +164,7 @@ IQRouter::IQRouter( const Configuration& config, Module *parent,
 IQRouter::~IQRouter( )
 {
 
-  if(_print_activity){
+  if(gPrintActivity){
     cout << Name() << ".bufferMonitor:" << endl ; 
     cout << *_bufferMonitor << endl ;
     
