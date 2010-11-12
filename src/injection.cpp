@@ -88,9 +88,13 @@ bool on_off( int source, double rate )
 
   // generate packet
 
+  bool issue = false;
   if ( gNodeStates[source] ) { // on?
     double r1 = rate * (gBurstAlpha + gBurstBeta) / gBurstAlpha;
-    return (RandomFloat( ) < r1);
+
+    if ( RandomFloat( ) < r1 ) {
+      return true;
+    }
   }
 
   return false;
