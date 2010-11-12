@@ -634,7 +634,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
     if(_use_read_write){ //read write packets
       //check queue for waiting replies.
       //check to make sure it is on time yet
-      int pending_time = INT_MAX; //reset to maxtime+1
+      int pending_time = numeric_limits<int>::max(); //reset to maxtime+1
       if (!_repliesPending[source].empty()) {
 	result = _repliesPending[source].front();
 	pending_time = _repliesDetails.find(result)->second->time;
@@ -669,7 +669,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
     if(_use_read_write){ //use read and write
       //check queue for waiting replies.
       //check to make sure it is on time yet
-      int pending_time = INT_MAX; //reset to maxtime+1
+      int pending_time = numeric_limits<int>::max(); //reset to maxtime+1
       if (!_repliesPending[source].empty()) {
 	result = _repliesPending[source].front();
 	pending_time = _repliesDetails.find(result)->second->time;
