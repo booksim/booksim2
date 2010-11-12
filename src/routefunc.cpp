@@ -72,8 +72,6 @@ int gWriteReqBeginVC, gWriteReqEndVC;
 int gReadReplyBeginVC, gReadReplyEndVC;
 int gWriteReplyBeginVC, gWriteReplyEndVC;
 
-static int memo_log2gC = 0 ;
-
 // ----------------------------------------------------------------------
 //
 //   Crossbar Network 
@@ -89,7 +87,7 @@ void dest_tag_crossbar( const Router *r,
 
   // Output port determined by those bits of destination above 
   //  concentration bits
-  int out_port = f->dest >> memo_log2gC ;
+  int out_port = f->dest >> log_two( gC ) ;
   switch(f->type) {
   case Flit::READ_REQUEST:
     outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
@@ -1759,8 +1757,26 @@ void chaos_mesh( const Router *r, const Flit *f,
 
 //=============================================================
 
-void InitializeRoutingMap( )
+void InitializeRoutingMap( const Configuration & config )
 {
+
+  gNumVCS = config.GetInt( "num_vcs" );
+
+  //
+  // traffic class partitions
+  //
+  gReadReqBeginVC    = config.GetInt("read_request_begin_vc");
+  gReadReqEndVC      = config.GetInt("read_request_end_vc");
+
+  gWriteReqBeginVC   = config.GetInt("write_request_begin_vc");
+  gWriteReqEndVC     = config.GetInt("write_request_end_vc");
+
+  gReadReplyBeginVC  = config.GetInt("read_reply_begin_vc");
+  gReadReplyEndVC    = config.GetInt("read_reply_end_vc");
+
+  gWriteReplyBeginVC = config.GetInt("write_reply_begin_vc");
+  gWriteReplyEndVC   = config.GetInt("write_reply_end_vc");
+
   /* Register routing functions here */
 
   // ===================================================
@@ -1805,51 +1821,3 @@ void InitializeRoutingMap( )
   gRoutingFunctionMap["chaos_mesh"]  = &chaos_mesh;
   gRoutingFunctionMap["chaos_torus"] = &chaos_torus;
 }
-
-tRoutingFunction GetRoutingFunction( const Configuration& config )
-{
-  map<string, tRoutingFunction>::const_iterator match;
-  tRoutingFunction rf;
-
-  gNumVCS = config.GetInt( "num_vcs" );
-
-  // memoize 
-  memo_log2gC = log_two( gC ) ;
-  
-  //
-  // traffic class partitions
-  //
-  gReadReqBeginVC    = config.GetInt("read_request_begin_vc");
-  gReadReqEndVC      = config.GetInt("read_request_end_vc");
-
-  gWriteReqBeginVC   = config.GetInt("write_request_begin_vc");
-  gWriteReqEndVC     = config.GetInt("write_request_end_vc");
-
-  gReadReplyBeginVC  = config.GetInt("read_reply_begin_vc");
-  gReadReplyEndVC    = config.GetInt("read_reply_end_vc");
-
-  gWriteReplyBeginVC = config.GetInt("write_reply_begin_vc");
-  gWriteReplyEndVC   = config.GetInt("write_reply_end_vc");
-
-  string topo = config.GetStr( "topology" );
-
-  string fn = config.GetStr( "routing_function", "none" );
-  string fn_topo = fn + "_" + topo;
-  match = gRoutingFunctionMap.find( fn_topo );
-
-  if ( match != gRoutingFunctionMap.end( ) ) {
-    rf = match->second;
-  } else {
-    if ( fn == "none" ) {
-      cout << "Error: No routing function specified in configuration." << endl;
-    } else {
-      cout << "Error: Undefined routing function '" << fn << "' for the topology '" 
-	   << topo << "'." << endl;
-    }
-    exit(-1);
-  }
-
-  return rf;
-}
-
-

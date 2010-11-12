@@ -56,7 +56,12 @@ IQRouterBase::IQRouterBase( const Configuration& config,
   _sw_alloc_delay   = config.GetInt( "sw_alloc_delay" );
   
   // Routing
-  _rf = GetRoutingFunction( config );
+  string rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
+  map<string, tRoutingFunction>::iterator rf_iter = gRoutingFunctionMap.find(rf);
+  if(rf_iter == gRoutingFunctionMap.end()) {
+    Error("Invalid routing function: " + rf);
+  }
+  _rf = rf_iter->second;
 
   // Alloc VC's
   _buf.resize(_inputs);

@@ -281,7 +281,7 @@ int main( int argc, char **argv )
   
   /*initialize routing, traffic, injection functions
    */
-  InitializeRoutingMap( );
+  InitializeRoutingMap( config );
   InitializeTrafficMap( );
   InitializeInjectionMap( config );
 

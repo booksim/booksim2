@@ -325,7 +325,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
 
   _traffic_function  = GetTrafficFunction( config );
-  _routing_function  = GetRoutingFunction( config );
+  string rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
+  map<string, tRoutingFunction>::iterator rf_iter = gRoutingFunctionMap.find(rf);
+  if(rf_iter == gRoutingFunctionMap.end()) {
+    Error("Invalid routing function: " + rf);
+  }
+  _routing_function  = rf_iter->second;
   map<string, tInjectionProcess>::iterator inj_iter = gInjectionProcessMap.find(config.GetStr("injection_process"));
   if(inj_iter == gInjectionProcessMap.end()) {
     Error("Invalid injection process: " + config.GetStr("injection_process"));

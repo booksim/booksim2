@@ -60,7 +60,12 @@ ChaosRouter::ChaosRouter( const Configuration& config,
 
   // Routing
 
-  _rf = GetRoutingFunction( config );
+  string rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
+  map<string, tRoutingFunction>::iterator rf_iter = gRoutingFunctionMap.find(rf);
+  if(rf_iter == gRoutingFunctionMap.end()) {
+    Error("Invalid routing function: " + rf);
+  }
+  _rf = rf_iter->second;
 
   _input_route.resize(_inputs);
 

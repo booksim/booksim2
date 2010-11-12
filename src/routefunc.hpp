@@ -38,10 +38,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 typedef void (*tRoutingFunction)( const Router *, const Flit *, int in_channel, OutputSet *, bool );
 
-void InitializeRoutingMap( );
-tRoutingFunction GetRoutingFunction( const Configuration& config );
+void InitializeRoutingMap( const Configuration & config );
 
 extern map<string, tRoutingFunction> gRoutingFunctionMap;
+
 extern int gNumVCS;
 extern int gReadReqBeginVC, gReadReqEndVC;
 extern int gWriteReqBeginVC, gWriteReqEndVC;
