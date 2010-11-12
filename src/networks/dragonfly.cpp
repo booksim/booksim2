@@ -136,8 +136,7 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
   
 
 //   //are we using reservation?
-//   string fn;
-//   config.GetStr( "routing_function", fn, "none" );
+//   string fn = config.GetStr( "routing_function", "none" );
 //   if(fn.compare("res")==0){
 //     cout<<"USING RESERVATION\n";
 //     use_reservation = true;

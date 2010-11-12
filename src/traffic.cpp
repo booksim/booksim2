@@ -435,11 +435,9 @@ tTrafficFunction GetTrafficFunction( const Configuration& config )
     realgn = gN;
   }
 
-  string hotspot_nodes_str;
-  config.GetStr("hotspot_nodes", hotspot_nodes_str);
+  string hotspot_nodes_str = config.GetStr("hotspot_nodes");
   vector<string> hotspot_nodes = BookSimConfig::tokenize(hotspot_nodes_str);
-  string hotspot_rates_str;
-  config.GetStr("hotspot_rates", hotspot_rates_str);
+  string hotspot_rates_str = config.GetStr("hotspot_rates");
   vector<string> hotspot_rates = BookSimConfig::tokenize(hotspot_rates_str);
   _hs_max_val = -1;
   for(int i = 0; i < hotspot_nodes.size(); ++i) {
@@ -450,11 +448,9 @@ tTrafficFunction GetTrafficFunction( const Configuration& config )
   
   map<string, tTrafficFunction>::const_iterator match;
 
-  string combined_patterns_str;
-  config.GetStr("combined_patterns", combined_patterns_str);
+  string combined_patterns_str = config.GetStr("combined_patterns");
   vector<string> combined_patterns = BookSimConfig::tokenize(combined_patterns_str);
-  string combined_rates_str;
-  config.GetStr("combined_rates", combined_rates_str);
+  string combined_rates_str = config.GetStr("combined_rates");
   vector<string> combined_rates = BookSimConfig::tokenize(combined_rates_str);
   _cp_max_val = -1;
   for(int i = 0; i < combined_patterns.size(); ++i) {
@@ -468,10 +464,9 @@ tTrafficFunction GetTrafficFunction( const Configuration& config )
     _cp_max_val += rate;
   }
 
-  string fn;
   tTrafficFunction tf;
 
-  config.GetStr( "traffic", fn, "none" );
+  string fn = config.GetStr( "traffic", "none" );
   match = gTrafficFunctionMap.find( fn );
 
   if ( match != gTrafficFunctionMap.end( ) ) {

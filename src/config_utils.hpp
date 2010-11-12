@@ -56,7 +56,7 @@ public:
   void Assign( const string &field, int value );
   void Assign( const string &field, double value );
 
-  void GetStr( const string &field, string &value, const string &def = "" ) const;
+  const string & GetStr( const string &field, const string &def = "" ) const;
   int GetInt( const string &field, int def = 0 ) const;
   double GetFloat( const string &field, double def = 0.0 ) const;
 

@@ -49,10 +49,8 @@ IQRouterCombined::IQRouterCombined( const Configuration& config,
   : IQRouterBase( config, parent, name, id, inputs, outputs )
 {
   // Allocate the allocators
-  string alloc_type;
-  config.GetStr( "sw_allocator", alloc_type );
-  string arb_type;
-  config.GetStr( "sw_alloc_arb_type", arb_type );
+  string alloc_type = config.GetStr( "sw_allocator" );
+  string arb_type = config.GetStr( "sw_alloc_arb_type" );
   int iters = config.GetInt("sw_alloc_iters");
   if(iters == 0) iters = config.GetInt("alloc_iters");
   _sw_allocator = Allocator::NewAllocator( this, "sw_allocator",

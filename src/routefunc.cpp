@@ -1811,8 +1811,6 @@ tRoutingFunction GetRoutingFunction( const Configuration& config )
   map<string, tRoutingFunction>::const_iterator match;
   tRoutingFunction rf;
 
-  string fn, topo, fn_topo;
-
   gNumVCS = config.GetInt( "num_vcs" );
 
   // memoize 
@@ -1833,10 +1831,10 @@ tRoutingFunction GetRoutingFunction( const Configuration& config )
   gWriteReplyBeginVC = config.GetInt("write_reply_begin_vc");
   gWriteReplyEndVC   = config.GetInt("write_reply_end_vc");
 
-  config.GetStr( "topology", topo );
+  string topo = config.GetStr( "topology" );
 
-  config.GetStr( "routing_function", fn, "none" );
-  fn_topo = fn + "_" + topo;
+  string fn = config.GetStr( "routing_function", "none" );
+  string fn_topo = fn + "_" + topo;
   match = gRoutingFunctionMap.find( fn_topo );
 
   if ( match != gRoutingFunctionMap.end( ) ) {

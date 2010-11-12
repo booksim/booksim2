@@ -111,9 +111,7 @@ tInjectionProcess GetInjectionProcess( const Configuration& config )
   map<string, tInjectionProcess>::const_iterator match;
   tInjectionProcess ip;
 
-  string fn;
-
-  config.GetStr( "injection_process", fn );
+  string fn = config.GetStr( "injection_process" );
   match = gInjectionProcessMap.find( fn );
 
   if ( match != gInjectionProcessMap.end( ) ) {

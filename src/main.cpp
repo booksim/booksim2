@@ -138,9 +138,8 @@ bool gGUIMode = false;
 bool AllocatorSim( const Configuration& config )
 {
   vector<Network *> net;
-  string topo;
 
-  config.GetStr( "topology", topo );
+  string topo = config.GetStr( "topology" );
   int networks = config.GetInt("physical_subnetworks");
   /*To include a new network, must register the network here
    *add an else if statement with the name of the network
@@ -205,8 +204,7 @@ bool AllocatorSim( const Configuration& config )
   }
 
 
-  string traffic ;
-  config.GetStr( "traffic", traffic ) ;
+  string traffic = config.GetStr( "traffic" ) ;
 
   /*tcc and characterize are legacy
    *not sure how to use them 
@@ -290,8 +288,7 @@ int main( int argc, char **argv )
   gPrintActivity = (config.GetInt("print_activity")==1);
   gTrace = (config.GetInt("viewer trace")==1);
   
-  string watch_out_file;
-  config.GetStr( "watch_out", watch_out_file );
+  string watch_out_file = config.GetStr( "watch_out" );
   if(watch_out_file == "") {
     gWatchOut = NULL;
   } else if(watch_out_file == "-") {

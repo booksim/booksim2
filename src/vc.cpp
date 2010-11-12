@@ -69,8 +69,7 @@ VC::VC( const Configuration& config, int outputs,
 
   _route_set = new OutputSet( );
 
-  string priority;
-  config.GetStr( "priority", priority );
+  string priority = config.GetStr( "priority" );
   if ( priority == "local_age" ) {
     _pri_type = local_age_based;
   } else if ( priority == "queue_length" ) {

@@ -82,10 +82,8 @@ IQRouter::IQRouter( const Configuration& config, Module *parent,
   }
 
   // Alloc allocators
-  string alloc_type;
-  config.GetStr( "vc_allocator", alloc_type );
-  string arb_type;
-  config.GetStr( "vc_alloc_arb_type", arb_type );
+  string alloc_type = config.GetStr( "vc_allocator" );
+  string arb_type = config.GetStr( "vc_alloc_arb_type" );
   int iters = config.GetInt( "vc_alloc_iters" );
   if(iters == 0) iters = config.GetInt("alloc_iters");
   _vc_allocator = Allocator::NewAllocator( this, "vc_allocator",

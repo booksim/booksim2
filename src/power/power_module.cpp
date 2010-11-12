@@ -38,8 +38,7 @@ Power_Module::Power_Module(Network * n , TrafficManager* parent, const Configura
 
   
   PowerConfig pconfig;
-  string pfile;
-  config.GetStr("tech_file", pfile);
+  string pfile = config.GetStr("tech_file");
   char ** argv = (char**)malloc(sizeof(char*)*2);
   argv[1] = (char*)malloc(sizeof(char)*(pfile.length()+1));
   strcpy(argv[1],pfile.c_str());
@@ -51,7 +50,7 @@ Power_Module::Power_Module(Network * n , TrafficManager* parent, const Configura
 
   net = n;
   sim = parent;
-  config.GetStr( "power_output_file", output_file_name );
+  output_file_name = config.GetStr("power_output_file");
   channel_width = (double)config.GetInt("channel_width");
   channel_sweep = (double)config.GetInt("channel_sweep");
 

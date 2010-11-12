@@ -53,7 +53,7 @@ AnyNet::AnyNet( const Configuration &config, const string & name )
 
 
 void AnyNet::_ComputeSize( const Configuration &config ){
-  config.GetStr("network_file",file_name);
+  file_name = config.GetStr("network_file");
   if(file_name==""){
     cout<<"No network file name provided"<<endl;
     exit(-1);

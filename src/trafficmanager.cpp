@@ -62,8 +62,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
  
   // ============ Message priorities ============ 
 
-  string priority;
-  config.GetStr( "priority", priority );
+  string priority = config.GetStr( "priority" );
 
   if ( priority == "class" ) {
     _pri_type = class_based;
@@ -102,8 +101,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     tmp_name.str("");
   }
   
-  string fn;
-  config.GetStr( "routing_function", fn, "none" );
+  string fn = config.GetStr( "routing_function", "none" );
   if(fn.find("xyyx")!=string::npos || fn.find("xy_yx")!=string::npos ){
     _use_xyyx = true;
   } else {
@@ -331,8 +329,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _routing_function  = GetRoutingFunction( config );
   _injection_process = GetInjectionProcess( config );
 
-  string sim_type;
-  config.GetStr( "sim_type", sim_type );
+  string sim_type = config.GetStr( "sim_type" );
 
   if ( sim_type == "latency" ) {
     _sim_mode = latency;
@@ -360,30 +357,26 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _print_csv_results = config.GetInt( "print_csv_results" );
   _print_vc_stats = config.GetInt( "print_vc_stats" );
-  config.GetStr( "traffic", _traffic ) ;
+  _traffic = config.GetStr( "traffic" ) ;
   _deadlock_warn_timeout = config.GetInt( "deadlock_warn_timeout" );
   _drain_measured_only = config.GetInt( "drain_measured_only" );
 
-  string watch_file;
-  config.GetStr( "watch_file", watch_file );
+  string watch_file = config.GetStr( "watch_file" );
   _LoadWatchList(watch_file);
 
-  string watch_flits_str;
-  config.GetStr("watch_flits", watch_flits_str);
+  string watch_flits_str = config.GetStr("watch_flits");
   vector<string> watch_flits = BookSimConfig::tokenize(watch_flits_str);
   for(int i = 0; i < watch_flits.size(); ++i) {
     _flits_to_watch.insert(atoi(watch_flits[i].c_str()));
   }
   
-  string watch_packets_str;
-  config.GetStr("watch_packets", watch_packets_str);
+  string watch_packets_str = config.GetStr("watch_packets");
   vector<string> watch_packets = BookSimConfig::tokenize(watch_packets_str);
   for(int i = 0; i < watch_packets.size(); ++i) {
     _packets_to_watch.insert(atoi(watch_packets[i].c_str()));
   }
 
-  string stats_out_file;
-  config.GetStr( "stats_out", stats_out_file );
+  string stats_out_file = config.GetStr( "stats_out" );
   if(stats_out_file == "") {
     _stats_out = NULL;
   } else if(stats_out_file == "-") {
@@ -393,8 +386,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     config.WriteMatlabFile(_stats_out);
   }
   
-  string flow_out_file;
-  config.GetStr( "flow_out", flow_out_file );
+  string flow_out_file = config.GetStr( "flow_out" );
   if(flow_out_file == "") {
     _flow_out = NULL;
   } else if(flow_out_file == "-") {

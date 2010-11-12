@@ -132,11 +132,9 @@ Router *Router::NewRouter( const Configuration& config,
 			   int inputs, int outputs )
 {
   Router *r = NULL;
-  string type;
-  string topo;
 
-  config.GetStr( "router", type );
-  config.GetStr( "topology", topo);
+  string type = config.GetStr( "router" );
+  string topo = config.GetStr( "topology" );
 
   if ( type == "iq" ) {
     r = new IQRouter( config, parent, name, id, inputs, outputs );

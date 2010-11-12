@@ -100,15 +100,15 @@ void Configuration::Assign( const string &field, double value )
   }
 }
 
-void Configuration::GetStr( const string &field, string &value, const string &def ) const
+const string & Configuration::GetStr( const string &field, const string &def ) const
 {
   map<string,string>::const_iterator match;
 
   match = _str_map.find( field );
   if ( match != _str_map.end( ) ) {
-    value = match->second;
+    return match->second;
   } else {
-    value = def;
+    return def;
   }
 }
 
