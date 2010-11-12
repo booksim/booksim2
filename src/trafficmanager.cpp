@@ -65,10 +65,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   string priority;
   config.GetStr( "priority", priority );
 
-  _classes = 1;
-
   if ( priority == "class" ) {
-    _classes  = 2;
     _pri_type = class_based;
   } else if ( priority == "age" ) {
     _pri_type = age_based;
@@ -114,6 +111,29 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
 
 
+  // ============ Traffic ============ 
+
+  _classes = config.GetInt("classes");
+
+  _use_read_write = (config.GetInt("use_read_write") > 0);
+  _read_request_size = config.GetInt("read_request_size");
+  _read_reply_size = config.GetInt("read_reply_size");
+  _write_request_size = config.GetInt("write_request_size");
+  _write_reply_size = config.GetInt("write_reply_size");
+  if(_use_read_write) {
+    _packet_size = (_read_request_size + _read_reply_size +
+		    _write_request_size + _write_reply_size) / 2;
+  } else {
+    _packet_size = config.GetInt( "const_flits_per_packet" );
+  }
+
+  _load = config.GetFloat( "injection_rate" ); 
+  if(config.GetInt("injection_rate_uses_flits")) {
+    _load /= _packet_size;
+  }
+
+
+
   // ============ Injection queues ============ 
 
   _qtime.resize(_sources);
@@ -133,18 +153,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _retired_packets.resize(_classes);
 
   _voqing = config.GetInt( "voq" );
-
-  _use_read_write = (config.GetInt("use_read_write")==1);
-  _read_request_size = config.GetInt("read_request_size");
-  _read_reply_size = config.GetInt("read_reply_size");
-  _write_request_size = config.GetInt("write_request_size");
-  _write_reply_size = config.GetInt("write_reply_size");
-  if(_use_read_write) {
-    _packet_size = (_read_request_size + _read_reply_size +
-		    _write_request_size + _write_reply_size) / 2;
-  }
-  else
-    _packet_size = config.GetInt( "const_flits_per_packet" );
 
   _packets_sent.resize(_sources);
   _batch_size = config.GetInt( "batch_size" );
@@ -311,12 +319,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _slowest_flit.resize(_classes, -1);
 
   // ============ Simulation parameters ============ 
-
-  if(config.GetInt( "injection_rate_uses_flits" )) {
-    _load = config.GetFloat( "injection_rate" ) / _packet_size;
-  } else {
-    _load = config.GetFloat( "injection_rate" ); 
-  }
 
   _total_sims = config.GetInt( "sim_count" );
 

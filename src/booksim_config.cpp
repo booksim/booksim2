@@ -140,6 +140,8 @@ BookSimConfig::BookSimConfig( )
 
   //==== Traffic ========================================
 
+  _int_map["classes"] = 1;
+
   AddStrField( "traffic", "uniform" );
 
   AddStrField( "hotspot_nodes", "" );

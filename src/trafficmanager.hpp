@@ -60,12 +60,38 @@ protected:
   vector<Network *> _net;
   vector<vector<Router *> > _router_map;
 
+  // ============ Traffic ============ 
+
+  int    _classes;
+
+  double _load;
+
+  int    _packet_size;
+
+  /*false means all packet types are the same length "gConstantsize"
+   *All packets uses all VCS
+   *packet types are generated randomly, essentially making it only 1 type
+   *of packet in the network
+   *
+   *True means only request packets are generated and replies are generated
+   *as a response to the requests, packets are now difference length, correspond
+   *to "read_request_size" etc. 
+   */
+  bool _use_read_write;
+
+  int _read_request_size;
+  int _read_reply_size;
+  int _write_request_size;
+  int _write_reply_size;
+
+  tTrafficFunction  _traffic_function;
+  tInjectionProcess _injection_process;
+
   // ============ Message priorities ============ 
 
   enum ePriority { class_based, age_based, network_age_based, local_age_based, queue_length_based, hop_count_based, sequence_based, none };
 
   ePriority _pri_type;
-  int       _classes;
 
   // ============ Injection VC states  ============ 
 
@@ -162,26 +188,6 @@ protected:
   int   _warmup_time;
   int   _drain_time;
 
-  double _load;
-
-  int   _packet_size;
-
-  /*false means all packet types are the same length "gConstantsize"
-   *All packets uses all VCS
-   *packet types are generated randomly, essentially making it only 1 type
-   *of packet in the network
-   *
-   *True means only request packets are generated and replies are generated
-   *as a response to the requests, packets are now difference length, correspond
-   *to "read_request_size" etc. 
-   */
-  bool _use_read_write;
-
-  int _read_request_size;
-  int _read_reply_size;
-  int _write_request_size;
-  int _write_reply_size;
-
   int   _total_sims;
   int   _sample_period;
   int   _max_samples;
@@ -198,9 +204,7 @@ protected:
   int _cur_pid;
   int _time;
 
-  tTrafficFunction  _traffic_function;
   tRoutingFunction  _routing_function;
-  tInjectionProcess _injection_process;
 
   set<int> _flits_to_watch;
   set<int> _packets_to_watch;
