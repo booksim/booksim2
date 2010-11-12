@@ -901,59 +901,56 @@ void TrafficManager::_BatchInject(){
     // Now, check partially issued packets to
     // see if they can be issued
     for (int i = 0; i < _duplicate_networks; ++i) {
-      int highest_class = 0;
-      // Now just find which is the highest_class.
-      for (int c = _classes - 1; c > 0; --c) {
-        if (!_partial_packets[input][c][i].empty()) {
-          highest_class = c;
-          break;
-        }
-      } 
       Flit * f = NULL;
-      if ( !_partial_packets[input][highest_class][i].empty( ) ) {
-        f = _partial_packets[input][highest_class][i].front( );
-        if ( f->head && f->vc == -1) { // Find first available VC
-
-	  if(_use_xyyx){
-	    f->vc = _buf_states[input][i]->FindAvailable( f->type ,f->x_then_y);
-	  } else {
-	    f->vc = _buf_states[input][i]->FindAvailable( f->type );
-	  }
-	  if ( f->vc != -1 ) {
-	    _buf_states[input][i]->TakeBuffer( f->vc );
-	  }
-        }
-
-        if ( ( f->vc != -1 ) &&
-	     ( !_buf_states[input][i]->IsFullFor( f->vc ) ) ) {
-
-	  _partial_packets[input][highest_class][i].pop_front( );
-	  _buf_states[input][i]->SendingFlit( f );
-
-	  if(_pri_type == network_age_based) {
-	    f->pri = numeric_limits<int>::max() - _time;
-	    assert(f->pri >= 0);
-	  }
-
-	  if(f->watch) {
-	    *gWatchOut << GetSimTime() << " | "
-			<< "node" << input << " | "
-			<< "Injecting flit " << f->id
-			<< " at time " << _time
-			<< " with priority " << f->pri
-			<< "." << endl;
+      for (int c = _classes - 1; c >= 0; --c) {
+        if (!_partial_packets[input][c][i].empty()) {
+	  f = _partial_packets[input][c][i].front( );
+	  if ( f->head && f->vc == -1) { // Find first available VC
+	    
+	    if(_use_xyyx){
+	      f->vc = _buf_states[input][i]->FindAvailable( f->type ,f->x_then_y);
+	    } else {
+	      f->vc = _buf_states[input][i]->FindAvailable( f->type );
+	    }
+	    if ( f->vc != -1 ) {
+	      _buf_states[input][i]->TakeBuffer( f->vc );
+	    }
 	  }
 	  
-	  // Pass VC "back"
-	  if ( !_partial_packets[input][highest_class][i].empty( ) && !f->tail ) {
-	    Flit * nf = _partial_packets[input][highest_class][i].front( );
-	    nf->vc = f->vc;
-	  }
+	  if ( ( f->vc != -1 ) &&
+	       ( !_buf_states[input][i]->IsFullFor( f->vc ) ) ) {
+	    
+	    _partial_packets[input][c][i].pop_front( );
+	    _buf_states[input][i]->SendingFlit( f );
+	    
+	    if(_pri_type == network_age_based) {
+	      f->pri = numeric_limits<int>::max() - _time;
+	      assert(f->pri >= 0);
+	    }
+	    
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | "
+			 << "node" << input << " | "
+			 << "Injecting flit " << f->id
+			 << " at time " << _time
+			 << " with priority " << f->pri
+			 << "." << endl;
+	    }
+	    
+	    // Pass VC "back"
+	    if ( !_partial_packets[input][c][i].empty( ) && !f->tail ) {
+	      Flit * nf = _partial_packets[input][c][i].front( );
+	      nf->vc = f->vc;
+	    }
+	    
+	    ++_injected_flow[input];
 
-	  ++_injected_flow[input];
-	} else {
-	  f = NULL;
-        }
+	    break;
+
+	  } else {
+	    f = NULL;
+	  }
+	}
       }
       _net[i]->WriteFlit( f, input );
       if( _sim_state == running )
@@ -1014,66 +1011,63 @@ void TrafficManager::_NormalInject(){
     // Now, check partially issued packets to
     // see if they can be issued
     for (int i = 0; i < _duplicate_networks; ++i) {
-      int highest_class = 0;
-      // Now just find which is the highest_class.
-      for (int c = _classes - 1; c > 0; --c) {
-	if (!_partial_packets[input][c][i].empty()) {
-	  highest_class = c;
-	  break;
-	}
-      }
       Flit * f = NULL;
-      if ( !_partial_packets[input][highest_class][i].empty( ) ) {
-        f = _partial_packets[input][highest_class][i].front( );
-        if ( f->head && f->vc == -1) { // Find first available VC
-
-	  if ( _voqing ) {
-	    if ( _buf_states[input][i]->IsAvailableFor( f->dest ) ) {
-	      f->vc = f->dest;
-  	    }
-	  } else {
-
-	    if(_use_xyyx){
-	      f->vc = _buf_states[input][i]->FindAvailable( f->type ,f->x_then_y);
+      for (int c = _classes - 1; c >= 0; --c) {
+	if ( !_partial_packets[input][c][i].empty( ) ) {
+	  f = _partial_packets[input][c][i].front( );
+	  if ( f->head && f->vc == -1) { // Find first available VC
+	    
+	    if ( _voqing ) {
+	      if ( _buf_states[input][i]->IsAvailableFor( f->dest ) ) {
+		f->vc = f->dest;
+	      }
 	    } else {
-	      f->vc = _buf_states[input][i]->FindAvailable( f->type );
+	      
+	      if(_use_xyyx){
+		f->vc = _buf_states[input][i]->FindAvailable( f->type ,f->x_then_y);
+	      } else {
+		f->vc = _buf_states[input][i]->FindAvailable( f->type );
+	      }
+	    }
+	    
+	    if ( f->vc != -1 ) {
+	      _buf_states[input][i]->TakeBuffer( f->vc );
 	    }
 	  }
 	  
-	  if ( f->vc != -1 ) {
-	    _buf_states[input][i]->TakeBuffer( f->vc );
+	  if ( ( f->vc != -1 ) &&
+	       ( !_buf_states[input][i]->IsFullFor( f->vc ) ) ) {
+	    
+	    _partial_packets[input][c][i].pop_front( );
+	    _buf_states[input][i]->SendingFlit( f );
+	    
+	    if(_pri_type == network_age_based) {
+	      f->pri = numeric_limits<int>::max() - _time;
+	      assert(f->pri >= 0);
+	    }
+	    
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | "
+			 << "node" << input << " | "
+			 << "Injecting flit " << f->id
+			 << " at time " << _time
+			 << " with priority " << f->pri
+			 << "." << endl;
+	    }
+	    
+	    // Pass VC "back"
+	    if ( !_partial_packets[input][c][i].empty( ) && !f->tail ) {
+	      Flit * nf = _partial_packets[input][c][i].front( );
+	      nf->vc = f->vc;
+	    }
+	    
+	    ++_injected_flow[input];
+
+	    break;
+
+	  } else {
+	    f = NULL;
 	  }
-        }
-
-        if ( ( f->vc != -1 ) &&
-	     ( !_buf_states[input][i]->IsFullFor( f->vc ) ) ) {
-
-	  _partial_packets[input][highest_class][i].pop_front( );
-	  _buf_states[input][i]->SendingFlit( f );
-
-	  if(_pri_type == network_age_based) {
-	    f->pri = numeric_limits<int>::max() - _time;
-	    assert(f->pri >= 0);
-	  }
-
-	  if(f->watch) {
-	    *gWatchOut << GetSimTime() << " | "
-			<< "node" << input << " | "
-			<< "Injecting flit " << f->id
-			<< " at time " << _time
-			<< " with priority " << f->pri
-			<< "." << endl;
-	  }
-	  
-	  // Pass VC "back"
-	  if ( !_partial_packets[input][highest_class][i].empty( ) && !f->tail ) {
-	    Flit * nf = _partial_packets[input][highest_class][i].front( );
-	    nf->vc = f->vc;
-	  }
-
-	  ++_injected_flow[input];
-        } else {
-	  f = NULL;
 	}
       }
       _net[i]->WriteFlit( f, input );
