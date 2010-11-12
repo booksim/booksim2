@@ -47,33 +47,8 @@ BookSimConfig::BookSimConfig( )
   // Channel length listing file
   AddStrField( "channel_file", "" ) ;
 
-  // Use read/write request reply scheme
-  
-  _int_map["use_read_write"] = 0;
-
-  _int_map["read_request_begin_vc"] = 0;
-  _int_map["read_request_end_vc"] = 5;
-
-  _int_map["write_request_begin_vc"] = 2;
-  _int_map["write_request_end_vc"] = 7;
-
-  _int_map["read_reply_begin_vc"] = 8;
-  _int_map["read_reply_end_vc"] = 13;
-
-  _int_map["write_reply_begin_vc"] = 10;
-  _int_map["write_reply_end_vc"] = 15;
-
   // Physical sub-networks
   _int_map["physical_subnetworks"] = 1;
-
-  // Control Injection of Packets into Replicated Networks
-  _int_map["read_request_subnet"] = 0;
-
-  _int_map["read_reply_subnet"] = 0;
-
-  _int_map["write_request_subnet"] = 0;
-
-  _int_map["write_reply_subnet"] = 0;
 
   //==== Topology options =======================
   //important
@@ -191,10 +166,30 @@ BookSimConfig::BookSimConfig( )
   _int_map["batch_count"] = 1;
   _int_map["max_outstanding_requests"] = 4;
 
-  _int_map["read_request_size"]  = 1; //flit per packet
-  _int_map["write_request_size"] = 1; //flit per packet
-  _int_map["read_reply_size"]    = 1; //flit per packet
-  _int_map["write_reply_size"]   = 1; //flit per packet
+  // Use read/write request reply scheme
+  _int_map["use_read_write"] = 0;
+
+  // Control assignment of packets to VCs
+  _int_map["read_request_begin_vc"] = 0;
+  _int_map["read_request_end_vc"] = 5;
+  _int_map["write_request_begin_vc"] = 2;
+  _int_map["write_request_end_vc"] = 7;
+  _int_map["read_reply_begin_vc"] = 8;
+  _int_map["read_reply_end_vc"] = 13;
+  _int_map["write_reply_begin_vc"] = 10;
+  _int_map["write_reply_end_vc"] = 15;
+
+  // Control Injection of Packets into Replicated Networks
+  _int_map["read_request_subnet"] = 0;
+  _int_map["read_reply_subnet"] = 0;
+  _int_map["write_request_subnet"] = 0;
+  _int_map["write_reply_subnet"] = 0;
+
+  // Set packet length in flits
+  _int_map["read_request_size"]  = 1;
+  _int_map["write_request_size"] = 1;
+  _int_map["read_reply_size"]    = 1;
+  _int_map["write_reply_size"]   = 1;
 
   //==== Simulation parameters ==========================
 
