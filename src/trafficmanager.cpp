@@ -327,7 +327,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _traffic_function  = GetTrafficFunction( config );
   _routing_function  = GetRoutingFunction( config );
-  _injection_process = GetInjectionProcess( config );
+  map<string, tInjectionProcess>::iterator inj_iter = gInjectionProcessMap.find(config.GetStr("injection_process"));
+  if(inj_iter == gInjectionProcessMap.end()) {
+    Error("Invalid injection process: " + config.GetStr("injection_process"));
+  }
+  _injection_process = inj_iter->second;
 
   string sim_type = config.GetStr( "sim_type" );
 
