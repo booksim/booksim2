@@ -283,7 +283,7 @@ int main( int argc, char **argv )
    */
   InitializeRoutingMap( );
   InitializeTrafficMap( );
-  InitializeInjectionMap( );
+  InitializeInjectionMap( config );
 
   gPrintActivity = (config.GetInt("print_activity")==1);
   gTrace = (config.GetInt("viewer trace")==1);

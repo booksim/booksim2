@@ -45,7 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
 
-static map<string, tInjectionProcess> gInjectionProcessMap;
+map<string, tInjectionProcess> gInjectionProcessMap;
 
 //=============================================================
 
@@ -98,31 +98,15 @@ bool on_off( int source, double rate )
 
 //=============================================================
 
-void InitializeInjectionMap( )
+void InitializeInjectionMap( const Configuration & config )
 {
+
+  gBurstAlpha = config.GetFloat( "burst_alpha" );
+  gBurstBeta  = config.GetFloat( "burst_beta" );
+
   /* Register injection processes functions here */
 
   gInjectionProcessMap["bernoulli"] = &bernoulli;
   gInjectionProcessMap["on_off"]    = &on_off;
-}
 
-tInjectionProcess GetInjectionProcess( const Configuration& config )
-{
-  map<string, tInjectionProcess>::const_iterator match;
-  tInjectionProcess ip;
-
-  string fn = config.GetStr( "injection_process" );
-  match = gInjectionProcessMap.find( fn );
-
-  if ( match != gInjectionProcessMap.end( ) ) {
-    ip = match->second;
-  } else {
-    cout << "Error: Undefined injection process '" << fn << "'." << endl;
-    exit(-1);
-  }
-
-  gBurstAlpha      = config.GetFloat( "burst_alpha" );
-  gBurstBeta       = config.GetFloat( "burst_beta" );
-
-  return ip;
 }

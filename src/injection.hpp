@@ -35,8 +35,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 typedef bool (*tInjectionProcess)( int, double );
 
-void InitializeInjectionMap( );
+void InitializeInjectionMap( const Configuration & config );
 
-tInjectionProcess GetInjectionProcess( const Configuration& config );
+extern map<string, tInjectionProcess> gInjectionProcessMap;
 
 #endif 
