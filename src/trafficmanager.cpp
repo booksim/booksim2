@@ -709,7 +709,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   Flit::FlitType packet_type = Flit::ANY_TYPE;
   int size = _packet_size; //input size 
   int ttime = time;
-  int packet_destination;
+  int packet_destination = _traffic_function(source, _limit);
   bool record = false;
   if(_use_read_write){
     if(stype < 0) {
@@ -723,7 +723,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 	cerr << "Invalid packet type: " << packet_type << "!" << endl;
 	Error( "" );
       }
-      packet_destination = _traffic_function( source, _limit );
     } else  {
       map<int, PacketReplyInfo*>::iterator iter = _repliesDetails.find(stype);
       PacketReplyInfo* rinfo = iter->second;
@@ -745,12 +744,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       _repliesDetails.erase(iter);
       rinfo->Free();
     }
-  } else {
-    //use uniform packet size
-    packet_destination = _traffic_function( source, _limit );
   }
-
-
 
   if ((packet_destination <0) || (packet_destination >= _dests)) {
     cerr << "Incorrect packet destination " << packet_destination
