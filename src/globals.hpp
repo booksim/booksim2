@@ -61,13 +61,8 @@ extern int ycount;
 
 extern bool gTrace;
 
-extern double gBurstAlpha;
-extern double gBurstBeta;
-
 /*number of flits per packet, set by the configuration file*/
 extern int    gConstPacketSize;
-
-extern std::vector<int> gNodeStates;
 
 extern std::ostream * gWatchOut;
 

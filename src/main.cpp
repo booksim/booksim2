@@ -127,18 +127,8 @@ int ycount  = 0;
 //generate nocviewer trace
 bool gTrace = false;
 
-//injection functions
-map<string, tInjectionProcess> gInjectionProcessMap;
-
-//burst rates
-double gBurstAlpha;
-double gBurstBeta;
-
 /*number of flits per packet, when _use_read_write is false*/
 int    gConstPacketSize;
-
-//for on_off injections
-vector<int> gNodeStates;
 
 ostream * gWatchOut;
 

@@ -45,7 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
 
-extern map<string, tInjectionProcess> gInjectionProcessMap;
+static map<string, tInjectionProcess> gInjectionProcessMap;
 
 //=============================================================
 
@@ -61,6 +61,12 @@ int bernoulli( int source, double rate )
 }
 
 //=============================================================
+
+//burst rates
+static double gBurstAlpha;
+static double gBurstBeta;
+
+static std::vector<int> gNodeStates;
 
 int on_off( int source, double rate )
 {
