@@ -258,7 +258,7 @@ bool ChaosRouter::_InputReady( int input ) const
 
 bool ChaosRouter::_OutputFull( int out ) const
 {
-  return ( _output_frame[out].size( ) >= (unsigned int)_buffer_size );
+  return ( _output_frame[out].size( ) >= (size_t)_buffer_size );
 }
 
 bool ChaosRouter::_OutputAvail( int out ) const
@@ -270,7 +270,7 @@ bool ChaosRouter::_OutputAvail( int out ) const
 
 bool ChaosRouter::_MultiQueueFull( int mq ) const
 {
-  return ( _multi_queue[mq].size( ) >= (unsigned int)_buffer_size );
+  return ( _multi_queue[mq].size( ) >= (size_t)_buffer_size );
 }
 
 int ChaosRouter::_InputForOutput( int output ) const

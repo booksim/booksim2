@@ -93,7 +93,7 @@ void configTab::setup( Configuration* cf){
   map<string, int> not_advanced_list;
   //data directly from booksim config
   map<string, string> *str_map = cf->GetStrMap();
-  map<string, unsigned int> *int_map = cf->GetIntMap();
+  map<string, int> *int_map = cf->GetIntMap();
   map<string, double> *float_map = cf->GetFloatMap();
   //gui display data from booksim config
   vector< pair<string, vector< string> > > *important_map = cf->GetImportantMap(); 
@@ -122,7 +122,7 @@ void configTab::setup( Configuration* cf){
   stringstream numtochar;
   int_map_obj.clear();
   int_map_label.clear();
-  for( map<string, unsigned int>::const_iterator i = int_map->begin();
+  for( map<string, int>::const_iterator i = int_map->begin();
        i!=int_map->end();
        i++){
     QLabel* tlabel = new QLabel(i->first.c_str());

@@ -114,14 +114,14 @@ int Router::GetID( ) const
 
 void Router::OutChannelFault( int c, bool fault )
 {
-  assert( ( c >= 0 ) && ( (unsigned int)c < _channel_faults.size( ) ) );
+  assert( ( c >= 0 ) && ( (size_t)c < _channel_faults.size( ) ) );
 
   _channel_faults[c] = fault;
 }
 
 bool Router::IsFaultyOutput( int c ) const
 {
-  assert( ( c >= 0 ) && ( (unsigned int)c < _channel_faults.size( ) ) );
+  assert( ( c >= 0 ) && ( (size_t)c < _channel_faults.size( ) ) );
 
   return _channel_faults[c];
 }

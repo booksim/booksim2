@@ -53,9 +53,9 @@ class PacketReplyInfo;
 
 class TrafficManager : public Module {
 protected:
-  unsigned int _sources;
-  unsigned int _dests;
-  unsigned int _routers;
+  int _sources;
+  int _dests;
+  int _routers;
 
   vector<Network *> _net;
   vector<vector<Router *> > _router_map;
@@ -163,10 +163,10 @@ protected:
   Stats * _batch_time;
   Stats * _overall_batch_time;
 
-  vector<unsigned int> _injected_flow;
-  vector<unsigned int> _ejected_flow;
-  vector<unsigned int> _received_flow;
-  vector<unsigned int> _sent_flow;
+  vector<int> _injected_flow;
+  vector<int> _ejected_flow;
+  vector<int> _received_flow;
+  vector<int> _sent_flow;
 
   vector<int> _slowest_flit;
 

@@ -70,9 +70,9 @@ void Configuration::Assign( const string &field, const string &value )
   }
 }
 
-void Configuration::Assign( const string &field, unsigned int value )
+void Configuration::Assign( const string &field, int value )
 {
-  map<string,unsigned int>::const_iterator match;
+  map<string,int>::const_iterator match;
   
   match = _int_map.find( field );
   if ( match != _int_map.end( ) ) {
@@ -112,10 +112,10 @@ void Configuration::GetStr( const string &field, string &value, const string &de
   }
 }
 
-unsigned int Configuration::GetInt( const string &field, unsigned int def ) const
+int Configuration::GetInt( const string &field, int def ) const
 {
-  map<string,unsigned int>::const_iterator match;
-  unsigned int r = def;
+  map<string,int>::const_iterator match;
+  int r = def;
 
   match = _int_map.find( field );
   if ( match != _int_map.end( ) ) {
@@ -246,7 +246,7 @@ void Configuration::WriteFile( const string& filename){
     }
   }
   
-  for(map<string, unsigned int>::const_iterator i = _int_map.begin(); 
+  for(map<string, int>::const_iterator i = _int_map.begin(); 
       i!=_int_map.end();
       i++){
     *config_out<<i->first<<" = "<<i->second<<";"<<endl;
@@ -279,7 +279,7 @@ void  Configuration::WriteMatlabFile(ostream *config_out) const {
     }
   }
   
-  for(map<string, unsigned int>::const_iterator i = _int_map.begin(); 
+  for(map<string, int>::const_iterator i = _int_map.begin(); 
       i!=_int_map.end();
       i++){
     *config_out<<"%"<<i->first<<" = "<<i->second<<";"<<endl;

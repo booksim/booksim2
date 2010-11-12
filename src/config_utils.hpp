@@ -43,9 +43,9 @@ class Configuration {
   string _config_string;
 
 protected:
-  map<string,string>       _str_map;
-  map<string,unsigned int> _int_map;
-  map<string,double>       _float_map;
+  map<string,string> _str_map;
+  map<string,int>    _int_map;
+  map<string,double> _float_map;
   
 public:
   Configuration( );
@@ -53,11 +53,11 @@ public:
   void AddStrField( const string &field, const string &value );
 
   void Assign( const string &field, const string &value );
-  void Assign( const string &field, unsigned int value );
+  void Assign( const string &field, int value );
   void Assign( const string &field, double value );
 
   void GetStr( const string &field, string &value, const string &def = "" ) const;
-  unsigned int GetInt( const string &field, unsigned int def = 0 ) const;
+  int GetInt( const string &field, int def = 0 ) const;
   double GetFloat( const string &field, double def = 0.0 ) const;
 
   void ParseFile( const string& filename );
@@ -69,13 +69,13 @@ public:
   void WriteMatlabFile(ostream *o) const;
   //These Get functions are for the GUI to display all the options of booksim
   //const something maybe?
-  map<string,string>* GetStrMap(){
+  map<string, string>* GetStrMap(){
     return &_str_map;
   }
-  map<string,unsigned int>* GetIntMap(){
+  map<string, int>* GetIntMap(){
     return &_int_map;
   }
-  map<string,double>* GetFloatMap(){
+  map<string, double>* GetFloatMap(){
     return &_float_map;
   }
 
