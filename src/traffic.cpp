@@ -38,10 +38,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
 
-map<string, tTrafficFunction> gTrafficFunctionMap;
+static map<string, tTrafficFunction> gTrafficFunctionMap;
 
-int gResetTraffic = 0;
-int gStepTraffic  = 0;
+static int gResetTraffic = 0;
+static int gStepTraffic  = 0;
 
 void src_dest_bin( int source, int dest, int lg )
 {
@@ -194,8 +194,8 @@ int neighbor( int source, int total_nodes )
 
 //=============================================================
 
-int *gPerm = 0;
-int gPermSeed;
+static int *gPerm = 0;
+static int gPermSeed;
 
 void GenerateRandomPerm( int total_nodes )
 {
