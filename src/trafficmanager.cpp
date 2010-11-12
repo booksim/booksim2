@@ -685,6 +685,8 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	  //coin toss to determine request type.
 	  result = (RandomFloat() < 0.5) ? -2 : -1;
 
+	} else {
+	  result = 0;
 	}
       } 
     } else { //normal mode
@@ -707,7 +709,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   Flit::FlitType packet_type = Flit::ANY_TYPE;
   int size = _packet_size; //input size 
   int ttime = time;
-  int packet_destination;
+  int packet_destination = _traffic_function(source, _limit);
   bool record = false;
   if(_use_read_write){
     if(stype < 0) {
@@ -721,7 +723,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 	cerr << "Invalid packet type: " << packet_type << "!" << endl;
 	Error( "" );
       }
-      packet_destination = _traffic_function( source, _limit );
     } else  {
       map<int, PacketReplyInfo*>::iterator iter = _repliesDetails.find(stype);
       PacketReplyInfo* rinfo = iter->second;
@@ -743,12 +744,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       _repliesDetails.erase(iter);
       rinfo->Free();
     }
-  } else {
-    //use uniform packet size
-    packet_destination = _traffic_function( source, _limit );
   }
-
-
 
   if ((packet_destination <0) || (packet_destination >= _dests)) {
     cerr << "Incorrect packet destination " << packet_destination
@@ -873,10 +869,10 @@ void TrafficManager::_BatchInject(){
 	  
 	if ( !_empty_network ) {
 	  while( !generated && ( _qtime[input][c] <= _time ) ) {
-	    int psize = _IssuePacket( input, c );
+	    int stype = _IssuePacket( input, c );
 
-	    if ( psize ) {
-	      _GeneratePacket( input, psize, c, 
+	    if ( stype != 0 ) {
+	      _GeneratePacket( input, stype, c, 
 			       _include_queuing==1 ? 
 			       _qtime[input][c] : _time );
 	      generated = true;
@@ -977,17 +973,17 @@ void TrafficManager::_NormalInject(){
 	  
 	if ( !_empty_network ) {
 	  while( !generated && ( _qtime[input][c] <= _time ) ) {
-	    int psize = _IssuePacket( input, c );
+	    int stype = _IssuePacket( input, c );
 
-	    if ( psize ) { //generate a packet
-	      _GeneratePacket( input, psize, c, 
+	    if ( stype != 0 ) { //generate a packet
+	      _GeneratePacket( input, stype, c, 
 			       _include_queuing==1 ? 
 			       _qtime[input][c] : _time );
 	      generated = true;
 	    }
 	    //this is not a request packet
 	    //don't advance time
-	    if(_use_read_write && psize>0){
+	    if(_use_read_write && (stype > 0)){
 	      
 	    } else {
 	      ++_qtime[input][c];
