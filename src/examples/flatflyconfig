@@ -61,7 +61,7 @@ internal_speedup  = 1.0;
 
 warmup_periods = 3;
 
-sample_period  = 1000;  
+sample_period  = 100000;  
 
 sim_count          = 1;
 
@@ -101,7 +101,7 @@ routing_function = ran_min;
 use_read_write = 0;
 
 //for injection mode
-const_flits_per_packet = 1;
+const_flits_per_packet = 10;
 injection_rate = 1.4;
 
 //for batch mode
