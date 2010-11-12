@@ -69,7 +69,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "kncube.hpp"
 #include "fly.hpp"
 #include "isolated_mesh.hpp"
-#include "cmo.hpp"
 #include "cmesh.hpp"
 #include "cmeshx2.hpp"
 #include "flatfly_onchip.hpp"
@@ -181,9 +180,6 @@ bool AllocatorSim( const Configuration& config )
     } else if ( topo == "flatfly" ) {
       FlatFlyOnChip::RegisterRoutingFunctions() ;
       net[i] = new FlatFlyOnChip( config, name.str() );
-    } else if ( topo == "cmo"){
-      CMO::RegisterRoutingFunctions() ;
-      net[i] = new CMO(config, name.str());
     } else if ( topo == "anynet"){
       AnyNet::RegisterRoutingFunctions() ;
       net[i] = new AnyNet(config, name.str());
