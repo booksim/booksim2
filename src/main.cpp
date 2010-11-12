@@ -127,9 +127,6 @@ int ycount  = 0;
 //generate nocviewer trace
 bool gTrace;
 
-/*number of flits per packet, when _use_read_write is false*/
-int    gConstPacketSize;
-
 ostream * gWatchOut;
 
 #ifdef USE_GUI

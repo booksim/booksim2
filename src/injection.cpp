@@ -32,8 +32,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *Class of injection methods, bernouli and on_off
  *
- *The rate is packet rate not flit rate. Each time a packet is generated
- *gConstPacketSize number of flits are generated
+ *The rate is packet rate not flit rate.
+ *
  */
 
 #include "booksim.hpp"
@@ -49,15 +49,14 @@ static map<string, tInjectionProcess> gInjectionProcessMap;
 
 //=============================================================
 
-int bernoulli( int source, double rate )
+bool bernoulli( int source, double rate )
 {
 
   assert( ( source >= 0 ) && ( source < gNodes ) );
   assert( rate <= 1.0 );
 
   //this is the packet injection rate, not flit rate
-  return ( RandomFloat( ) < rate ) ? 
-    gConstPacketSize : 0;
+  return (RandomFloat( ) < rate);
 }
 
 //=============================================================
@@ -68,11 +67,8 @@ static double gBurstBeta;
 
 static std::vector<int> gNodeStates;
 
-int on_off( int source, double rate )
+bool on_off( int source, double rate )
 {
-  double r1;
-  bool issue;
-
   assert( ( source >= 0 ) && ( source < gNodes ) );
   assert( rate <= 1.0 );
 
@@ -92,16 +88,16 @@ int on_off( int source, double rate )
 
   // generate packet
 
-  issue = false;
+  bool issue = false;
   if ( gNodeStates[source] ) { // on?
-    r1 = rate * ( 1.0 + gBurstBeta / gBurstAlpha );
+    double r1 = rate * (gBurstAlpha + gBurstBeta) / gBurstAlpha;
 
     if ( RandomFloat( ) < r1 ) {
-      issue = true;
+      return true;
     }
   }
 
-  return issue ? gConstPacketSize : 0;
+  return false;
 }
 
 //=============================================================
@@ -131,7 +127,6 @@ tInjectionProcess GetInjectionProcess( const Configuration& config )
     exit(-1);
   }
 
-  gConstPacketSize = config.GetInt( "const_flits_per_packet" );
   gBurstAlpha      = config.GetFloat( "burst_alpha" );
   gBurstBeta       = config.GetFloat( "burst_beta" );
 

@@ -649,11 +649,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
       } else {
 	
 	//coin toss to determine request type.
-	result = -1;
-	
-	if (RandomFloat() < 0.5) {
-	  result = -2;
-	}
+	result = (RandomFloat() < 0.5) ? -2 : -1;
 	
 	_packets_sent[source]++;
 	_requestsOutstanding[source]++;
@@ -663,7 +659,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
 		 (_requestsOutstanding[source] >= _maxOutstanding)) {
 	result = 0;
       } else {
-	result = gConstPacketSize;
+	result = _packet_size;
 	_packets_sent[source]++;
 	//here is means, how many flits can be waiting in the queue
 	_requestsOutstanding[source]++;
@@ -682,19 +678,17 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	result = _repliesPending[source].front();
 	_repliesPending[source].pop_front();
       } else {
-	result = _injection_process( source, _load );
+
 	//produce a packet
-	if(result){
-	  //coin toss to determine request type.
-	  result = -1;
+	if(_injection_process( source, _load )){
 	
-	  if (RandomFloat() < 0.5) {
-	    result = -2;
-	  }
+	  //coin toss to determine request type.
+	  result = (RandomFloat() < 0.5) ? -2 : -1;
+
 	}
       } 
     } else { //normal mode
-      return _injection_process( source, _load );
+      return _injection_process( source, _load ) ? 1 : 0;
     } 
   }
   return result;
@@ -711,7 +705,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   }
 
   Flit::FlitType packet_type = Flit::ANY_TYPE;
-  int size = gConstPacketSize; //input size 
+  int size = _packet_size; //input size 
   int ttime = time;
   int packet_destination;
   bool record = false;

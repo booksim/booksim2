@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "config_utils.hpp"
 
-typedef int (*tInjectionProcess)( int, double );
+typedef bool (*tInjectionProcess)( int, double );
 
 void InitializeInjectionMap( );
 

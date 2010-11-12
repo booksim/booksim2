@@ -61,9 +61,6 @@ extern int ycount;
 
 extern bool gTrace;
 
-/*number of flits per packet, set by the configuration file*/
-extern int    gConstPacketSize;
-
 extern std::ostream * gWatchOut;
 
 #endif
