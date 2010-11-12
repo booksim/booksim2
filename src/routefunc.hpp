@@ -39,7 +39,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 typedef void (*tRoutingFunction)( const Router *, const Flit *, int in_channel, OutputSet *, bool );
 
 void InitializeRoutingMap( );
-int fattree_transformation(int dest);
 tRoutingFunction GetRoutingFunction( const Configuration& config );
 
 extern map<string, tRoutingFunction> gRoutingFunctionMap;
