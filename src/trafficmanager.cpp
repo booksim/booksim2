@@ -875,10 +875,10 @@ void TrafficManager::_BatchInject(){
 	  
 	if ( !_empty_network ) {
 	  while( !generated && ( _qtime[input][c] <= _time ) ) {
-	    int psize = _IssuePacket( input, c );
+	    int stype = _IssuePacket( input, c );
 
-	    if ( psize ) {
-	      _GeneratePacket( input, psize, c, 
+	    if ( stype != 0 ) {
+	      _GeneratePacket( input, stype, c, 
 			       _include_queuing==1 ? 
 			       _qtime[input][c] : _time );
 	      generated = true;
@@ -979,17 +979,17 @@ void TrafficManager::_NormalInject(){
 	  
 	if ( !_empty_network ) {
 	  while( !generated && ( _qtime[input][c] <= _time ) ) {
-	    int psize = _IssuePacket( input, c );
+	    int stype = _IssuePacket( input, c );
 
-	    if ( psize ) { //generate a packet
-	      _GeneratePacket( input, psize, c, 
+	    if ( stype != 0 ) { //generate a packet
+	      _GeneratePacket( input, stype, c, 
 			       _include_queuing==1 ? 
 			       _qtime[input][c] : _time );
 	      generated = true;
 	    }
 	    //this is not a request packet
 	    //don't advance time
-	    if(_use_read_write && psize>0){
+	    if(_use_read_write && (stype > 0)){
 	      
 	    } else {
 	      ++_qtime[input][c];
