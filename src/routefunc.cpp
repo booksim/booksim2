@@ -71,7 +71,8 @@ int gReadReqBeginVC, gReadReqEndVC;
 int gWriteReqBeginVC, gWriteReqEndVC;
 int gReadReplyBeginVC, gReadReplyEndVC;
 int gWriteReplyBeginVC, gWriteReplyEndVC;
-int memo_log2gC = 0 ;
+
+static int memo_log2gC = 0 ;
 
 // ----------------------------------------------------------------------
 //
