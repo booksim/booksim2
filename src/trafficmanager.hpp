@@ -162,8 +162,8 @@ protected:
   int   _warmup_time;
   int   _drain_time;
 
-  float _load;
-  float _flit_rate;
+  double _load;
+  double _flit_rate;
 
   int   _packet_size;
 

@@ -271,14 +271,14 @@ void VC::DisplayStats( bool print_csv )
 {
   if(print_csv) {
     for(eVCState state = state_min; state <= state_max; state = eVCState(state+1)) {
-      cout << (float)state_info[state].cycles/(float)total_cycles << ",";
+      cout << (double)state_info[state].cycles/(double)total_cycles << ",";
     }
-    cout << (float)occupancy/(float)total_cycles << endl;
+    cout << (double)occupancy/(double)total_cycles << endl;
   }
   cout << "VC state breakdown:" << endl;
   for(eVCState state = state_min; state <= state_max; state = eVCState(state+1)) {
     cout << "  " << VCSTATE[state]
-	 << ": " << (float)state_info[state].cycles/(float)total_cycles << endl;
+	 << ": " << (double)state_info[state].cycles/(double)total_cycles << endl;
   }
-  cout << "  occupancy: " << (float)occupancy/(float)total_cycles << endl;
+  cout << "  occupancy: " << (double)occupancy/(double)total_cycles << endl;
 }
