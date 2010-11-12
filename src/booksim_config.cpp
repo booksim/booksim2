@@ -75,9 +75,6 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["write_reply_subnet"] = 0;
 
-  // TCC Simulation Traffic Trace
-  AddStrField( "trace_file", "trace-file.txt" ) ;
-
   //==== Topology options =======================
   //important
   AddStrField( "topology", "torus" );
