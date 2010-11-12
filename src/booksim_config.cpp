@@ -201,7 +201,7 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField( "sim_type", "latency" );
 
-  _int_map["warmup_periods"] = 3; // number of samples periods to "warm-up" the simulation
+  _int_map["warmup_periods"] = 0; // number of samples periods to "warm-up" the simulation
 
   _int_map["sample_period"] = 1000; // how long between measurements
   _int_map["max_samples"]   = 10;   // maximum number of sample periods in a simulation
