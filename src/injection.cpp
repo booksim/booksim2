@@ -94,8 +94,7 @@ int on_off( int source, double rate )
 
   issue = false;
   if ( gNodeStates[source] ) { // on?
-    r1 = rate * ( 1.0 + gBurstBeta / gBurstAlpha ) / 
-      (double)gConstPacketSize;
+    r1 = rate * ( 1.0 + gBurstBeta / gBurstAlpha );
 
     if ( RandomFloat( ) < r1 ) {
       issue = true;
