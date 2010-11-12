@@ -313,11 +313,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   // ============ Simulation parameters ============ 
 
   if(config.GetInt( "injection_rate_uses_flits" )) {
-    _flit_rate = config.GetFloat( "injection_rate" ); 
-    _load = _flit_rate / _packet_size;
+    _load = config.GetFloat( "injection_rate" ) / _packet_size;
   } else {
     _load = config.GetFloat( "injection_rate" ); 
-    _flit_rate = _load * _packet_size;
   }
 
   _total_sims = config.GetInt( "sim_count" );
@@ -1793,7 +1791,7 @@ bool TrafficManager::Run( )
 	   << _traffic
 	   << "," << _packet_size
 	   << "," << _load
-	   << "," << _flit_rate << ",";
+	   << ",";
     }
     VC::DisplayStats(_print_csv_results);
   }
@@ -1810,7 +1808,6 @@ void TrafficManager::DisplayStats() {
 	   << "," << _use_read_write
 	   << "," << _packet_size
 	   << "," << _load
-	   << "," << _flit_rate
 	   << "," << _overall_min_latency[c]->Average( )
 	   << "," << _overall_avg_latency[c]->Average( )
 	   << "," << _overall_max_latency[c]->Average( )

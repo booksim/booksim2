@@ -163,7 +163,6 @@ protected:
   int   _drain_time;
 
   double _load;
-  double _flit_rate;
 
   int   _packet_size;
 
