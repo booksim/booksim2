@@ -81,8 +81,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   } else if ( priority == "none" ) {
     _pri_type = none;
   } else {
-    cerr << "Unkown priority value: " << priority << "!" << endl;
-    Error( "" );
+    Error( "Unkown priority value: " + priority );
   }
 
   _replies_inherit_priority = config.GetInt("replies_inherit_priority");
@@ -346,8 +345,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _timed_mode = true;
   }
   else {
-    cerr << "Unknown sim_type value : " << sim_type << "!" << endl;
-    Error( "" );
+    Error( "Unknown sim_type value : " + sim_type );
   }
 
   _sample_period = config.GetInt( "sample_period" );
@@ -530,9 +528,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   _last_pid = f->pid;
 
   if ( f->head && ( f->dest != dest ) ) {
-    cerr << "Flit " << f->id << " arrived at incorrect output " << dest << endl
-	 << *f;
-    Error( "" );
+    ostringstream err;
+    err << "Flit " << f->id << " arrived at incorrect output " << dest;
+    Error( err.str( ) );
   }
 
   if ( f->tail ) {
@@ -716,8 +714,9 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 	packet_type = Flit::WRITE_REQUEST;
 	size = _write_request_size;
       } else {
-	cerr << "Invalid packet type: " << packet_type << "!" << endl;
-	Error( "" );
+	ostringstream err;
+	err << "Invalid packet type: " << packet_type;
+	Error( err.str( ) );
       }
     } else  {
       map<int, PacketReplyInfo*>::iterator iter = _repliesDetails.find(stype);
@@ -730,8 +729,9 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 	size = _write_reply_size;
 	packet_type = Flit::WRITE_REPLY;
       } else {
-	cerr << "Invalid packet type: " << rinfo->type << "!" << endl;
-	Error( "" );
+	ostringstream err;
+	err << "Invalid packet type: " << rinfo->type;
+	Error( err.str( ) );
       }
       packet_destination = rinfo->source;
       time = rinfo->time;
@@ -743,10 +743,10 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   }
 
   if ((packet_destination <0) || (packet_destination >= _dests)) {
-    cerr << "Incorrect packet destination " << packet_destination
-	 << " for stype " << packet_type
-	 << "!" << endl;
-    Error( "" );
+    ostringstream err;
+    err << "Incorrect packet destination " << packet_destination
+	<< " for stype " << packet_type;
+    Error( err.str( ) );
   }
 
   if ( ( _sim_state == running ) ||
