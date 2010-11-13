@@ -194,7 +194,7 @@ int neighbor( int source, int total_nodes )
 
 //=============================================================
 
-static int *gPerm = 0;
+static vector<int> gPerm;
 static int gPermSeed;
 
 void GenerateRandomPerm( int total_nodes )
@@ -205,15 +205,8 @@ void GenerateRandomPerm( int total_nodes )
   unsigned long prev_rand;
   
   prev_rand = RandomIntLong( );
-  RandomSeed( gPermSeed );
-
-  if ( !gPerm ) {
-    gPerm = new int [total_nodes];
-  }
-
-  for ( i = 0; i < total_nodes; ++i ) {
-    gPerm[i] = -1;
-  }
+  gPerm.resize(total_nodes);
+  gPerm.assign(total_nodes, -1);
 
   for ( i = 0; i < total_nodes; ++i ) {
     ind = RandomInt( total_nodes - 1 - i );
@@ -239,7 +232,7 @@ void GenerateRandomPerm( int total_nodes )
 
 int randperm( int source, int total_nodes )
 {
-  if ( gResetTraffic || !gPerm ) {
+  if ( gResetTraffic || gPerm.empty() ) {
     GenerateRandomPerm( total_nodes );
     gResetTraffic = 0;
   }
