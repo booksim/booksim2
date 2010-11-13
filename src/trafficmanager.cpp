@@ -324,6 +324,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _router_map[i] = _net[i]->GetRouters();
   }
 
+  //seed the network
+  RandomSeed(config.GetInt("seed"));
+
   _traffic_function  = GetTrafficFunction( config );
   string rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
   map<string, tRoutingFunction>::iterator rf_iter = gRoutingFunctionMap.find(rf);

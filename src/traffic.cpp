@@ -471,8 +471,6 @@ tTrafficFunction GetTrafficFunction( const Configuration& config )
 
   gPermSeed = config.GetInt( "perm_seed" );
 
-  //seed the network
-  RandomSeed(config.GetInt("seed"));
   return tf;
 }
 
