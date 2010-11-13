@@ -73,6 +73,10 @@ private:
   int _k ;
   int _n ;
   int _c ;
+  int _xcount;
+  int _ycount;
+  int _xrouter;
+  int _yrouter;
   bool _express_channels;
 };
 

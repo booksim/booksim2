@@ -71,6 +71,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Used for UGAL and valiant. Half of the total VCs, to define two traffic classes.
 int FlatFlyOnChip::half_vcs = 0;
 
+static int _xcount;
+static int _ycount;
+static int _xrouter;
+static int _yrouter;
+
 FlatFlyOnChip::FlatFlyOnChip( const Configuration &config, const string & name ) :
   Network( config, name )
 {
@@ -90,16 +95,18 @@ void FlatFlyOnChip::_ComputeSize( const Configuration &config )
   FlatFlyOnChip::half_vcs = config.GetInt("num_vcs") / 2;
 
   //how many routers in the x or y direction
-  xcount = config.GetInt("x");
-  ycount = config.GetInt("y");
+  _xcount = config.GetInt("x");
+  _ycount = config.GetInt("y");
+  assert(_xcount == _ycount);
   //configuration of hohw many clients in X and Y per router
-  xrouter = config.GetInt("xr");
-  yrouter = config.GetInt("yr");
+  _xrouter = config.GetInt("xr");
+  _yrouter = config.GetInt("yr");
+  assert(_xrouter == _yrouter);
   gK = _k; 
   gN = _n;
   gC = _c;
   
-  assert(_c == xrouter*yrouter);
+  assert(_c == _xrouter*_yrouter);
 
   _sources = powi( _k, _n )*_c;   //network size
   _dests   = powi( _k, _n )*_c;
@@ -155,16 +162,16 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
     //******************************************************************
     
     //as accurately model the length of these channels as possible
-    int yleng = -yrouter/2;
-    int xleng = -xrouter/2;
-    bool yodd = yrouter%2==1;
-    bool xodd = xrouter%2==1;
+    int yleng = -_yrouter/2;
+    int xleng = -_xrouter/2;
+    bool yodd = _yrouter%2==1;
+    bool xodd = _xrouter%2==1;
     
-    int y_index = node/(xcount);
-    int x_index = node%(xcount);
+    int y_index = node/(_xcount);
+    int x_index = node%(_xcount);
     //estimating distance from client to router
-    for (int y = 0; y < yrouter ; y++) {
-      for (int x = 0; x < xrouter ; x++) {
+    for (int y = 0; y < _yrouter ; y++) {
+      for (int x = 0; x < _xrouter ; x++) {
 	//Zero is a naughty number
 	if(yleng == 0 && !yodd){
 	  yleng++;
@@ -183,12 +190,12 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 	}
 	//increment for the next client, add Y, if full, reset y add x
 	yleng++;
-	if(yleng>yrouter/2){
-	  yleng= -yrouter/2;
+	if(yleng>_yrouter/2){
+	  yleng= -_yrouter/2;
 	  xleng++;
 	}
 	//adopted from the CMESH, the first node has 0,1,8,9 (as an example)
-	int link = (xcount * xrouter) * (yrouter * y_index + y) + (xrouter * x_index + x) ;
+	int link = (_xcount * _xrouter) * (_yrouter * y_index + y) + (_xrouter * x_index + x) ;
 
 	if(use_noc_latency){
 	  _inject[link]->SetLatency(ileng);
@@ -262,9 +269,9 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 	}
 	//calculate channel length
 	int length = 0;
-	int oned = abs((node%xcount)-(other%xcount));
-	int twod = abs(node/xcount-other/xcount);
-	length = xrouter*oned + yrouter *twod;
+	int oned = abs((node%_xcount)-(other%_xcount));
+	int twod = abs(node/_xcount-other/_xcount);
+	length = _xrouter*oned + _yrouter *twod;
 	//oh the node<other silly ness
 	if(node<other){
 	  offset = -1;
@@ -1010,14 +1017,14 @@ int flatfly_transformation(int dest){
   //cout<<"ORiginal destination "<<dest<<endl;
   //router in the x direction = find which column, and then mod by cY to find 
   //which horizontal router
-  int horizontal = (dest%(xcount*xrouter))/(xrouter);
-  int horizontal_rem = (dest%(xcount*xrouter))%(xrouter);
+  int horizontal = (dest%(_xcount*_xrouter))/(_xrouter);
+  int horizontal_rem = (dest%(_xcount*_xrouter))%(_xrouter);
   //router in the y direction = find which row, and then divided by cX to find 
   //vertical router
-  int vertical = (dest/(xcount*xrouter))/(yrouter);
-  int vertical_rem = (dest/(xcount*xrouter))%(yrouter);
+  int vertical = (dest/(_xcount*_xrouter))/(_yrouter);
+  int vertical_rem = (dest/(_xcount*_xrouter))%(_yrouter);
   //transform the destination to as if node0 was 0,1,2,3 and so forth
-  dest = (vertical*xcount + horizontal)*gC+xrouter*vertical_rem+horizontal_rem;
+  dest = (vertical*_xcount + horizontal)*gC+_xrouter*vertical_rem+horizontal_rem;
   //cout<<"Transformed destination "<<dest<<endl<<endl;
   return dest;
 }

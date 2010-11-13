@@ -35,11 +35,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 typedef int (*tTrafficFunction)( int, int );
 
-void InitializeTrafficMap( );
+void InitializeTrafficMap( const Configuration & config );
 
 void ResetTraffic( );
 void StepTrafficFunctions( );
 
-tTrafficFunction GetTrafficFunction( const Configuration& config );
+extern map<string, tTrafficFunction> gTrafficFunctionMap;
 
 #endif

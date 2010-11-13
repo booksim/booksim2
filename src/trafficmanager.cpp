@@ -327,18 +327,25 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   //seed the network
   RandomSeed(config.GetInt("seed"));
 
-  _traffic_function  = GetTrafficFunction( config );
+  string tf = config.GetStr("traffic");
+  map<string, tTrafficFunction>::iterator tf_iter = gTrafficFunctionMap.find(tf);
+  if(tf_iter == gTrafficFunctionMap.end()) {
+    Error("Invalid traffic function: " + tf);
+  }
+  _traffic_function = tf_iter->second;
+
   string rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
   map<string, tRoutingFunction>::iterator rf_iter = gRoutingFunctionMap.find(rf);
   if(rf_iter == gRoutingFunctionMap.end()) {
     Error("Invalid routing function: " + rf);
   }
   _routing_function  = rf_iter->second;
-  map<string, tInjectionProcess>::iterator inj_iter = gInjectionProcessMap.find(config.GetStr("injection_process"));
-  if(inj_iter == gInjectionProcessMap.end()) {
+
+  map<string, tInjectionProcess>::iterator ip_iter = gInjectionProcessMap.find(config.GetStr("injection_process"));
+  if(ip_iter == gInjectionProcessMap.end()) {
     Error("Invalid injection process: " + config.GetStr("injection_process"));
   }
-  _injection_process = inj_iter->second;
+  _injection_process = ip_iter->second;
 
   string sim_type = config.GetStr( "sim_type" );
 

@@ -51,6 +51,9 @@ class FatTree : public Network {
   int _k;
   int _n;
 
+  int _xrouter;
+  int _yrouter;
+
   int _layout;
   int _channelWidth;
 

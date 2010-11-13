@@ -79,11 +79,13 @@ void CMesh::_ComputeSize( const Configuration &config ) {
   
   ostringstream router_name;
   //how many routers in the x or y direction
-  xcount = config.GetInt("x");
-  ycount = config.GetInt("y");
+  _xcount = config.GetInt("x");
+  _ycount = config.GetInt("y");
+  assert(_xcount == _ycount);
   //configuration of hohw many clients in X and Y per router
-  xrouter = config.GetInt("xr");
-  yrouter = config.GetInt("yr");
+  _xrouter = config.GetInt("xr");
+  _yrouter = config.GetInt("yr");
+  assert(_xrouter == _yrouter);
 
   _express_channels = (config.GetInt("express_channels") == 1);
 
@@ -91,7 +93,7 @@ void CMesh::_ComputeSize( const Configuration &config ) {
   gN = _n = n ;
   gC = _c = c ;
 
-  assert(c == xrouter*yrouter);
+  assert(c == _xrouter*_yrouter);
   
   _sources  = _c * powi( _k, _n); // Source nodes in network
   _dests    = _c * powi( _k, _n); // Destination nodes in network

@@ -74,8 +74,8 @@ void FatTree::_ComputeSize( const Configuration& config )
 
   _k = config.GetInt( "k" );
   _n = config.GetInt( "n" );
-  yrouter = config.GetInt( "yr" );
-  xrouter = config.GetInt( "xr" );
+  _yrouter = config.GetInt( "yr" );
+  _xrouter = config.GetInt( "xr" );
 
   /*in case that we are using fattree other than 64 nodes*/
   //latency_correction = (double)_k/4;
@@ -143,8 +143,8 @@ void FatTree::_BuildNet( const Configuration& config )
   //  placement and power consumption
   //
   
-  int _cY =  yrouter;
-  int _cX =  xrouter;
+  int _cY =  _yrouter;
+  int _cX =  _xrouter;
 
   for ( pos = 0 ; pos < nPos ; ++pos ) {
 

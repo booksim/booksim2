@@ -59,8 +59,6 @@ void KNCube::_ComputeSize( const Configuration &config )
   _n = config.GetInt( "n" );
 
   gK = _k; gN = _n;
-  realgk = _k;
-  realgn = _n;
   _size     = powi( _k, _n );
   _channels = 2*_n*_size;
 
