@@ -100,7 +100,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     tmp_name.str("");
   }
   
-  string fn = config.GetStr( "routing_function", "none" );
+  string fn = config.GetStr( "routing_function" );
   if(fn.find("xyyx")!=string::npos || fn.find("xy_yx")!=string::npos ){
     _use_xyyx = true;
   } else {

@@ -102,8 +102,8 @@ IQRouter::IQRouter( const Configuration& config, Module *parent,
     exit(-1);
   }
 
-  config.GetStr( "sw_allocator", alloc_type );
-  config.GetStr( "sw_alloc_arb_type", arb_type );
+  alloc_type = config.GetStr( "sw_allocator" );
+  arb_type = config.GetStr( "sw_alloc_arb_type" );
   iters = config.GetInt("sw_alloc_iters");
   if(iters == 0) iters = config.GetInt("alloc_iters");
   _sw_allocator = Allocator::NewAllocator( this, "sw_allocator",
@@ -119,8 +119,7 @@ IQRouter::IQRouter( const Configuration& config, Module *parent,
   
   if ( _speculative >= 2 ) {
     
-    string filter_spec_grants;
-    config.GetStr("filter_spec_grants", filter_spec_grants);
+    string filter_spec_grants = config.GetStr("filter_spec_grants");
     if(filter_spec_grants == "any_nonspec_gnts") {
       _filter_spec_grants = 0;
     } else if(filter_spec_grants == "confl_nonspec_reqs") {
