@@ -1,4 +1,4 @@
-// $Id$
+// $Id: main.cpp 2844 2010-11-12 05:44:16Z qtedq $
 
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
@@ -252,74 +252,3 @@ bool AllocatorSim( const Configuration& config )
   return result;
 }
 
-
-int main( int argc, char **argv )
-{
-
-  BookSimConfig config;
-
-#ifdef USE_GUI
-  for(int i = 1; i < argc; ++i) {
-    string arg(argv[i]);
-    if(arg=="-g"){
-      gGUIMode = true;
-      break;
-    }
-  }
-#endif
-  if ( !ParseArgs( &config, argc, argv ) ) {
-#ifdef USE_GUI
-    if(gGUIMode){
-      cout<< "No config file found"<<endl;
-      cout<< "Usage: " << argv[0] << " configfile... [param=value...]" << endl;
-      cout<< "GUI is using default parameters instead"<<endl;
-    } else {
-#endif
-    cerr << "Usage: " << argv[0] << " configfile... [param=value...]" << endl;
-    return 0;
- 
-#ifdef USE_GUI
-    }
-#endif
- } 
-
-  
-  /*initialize routing, traffic, injection functions
-   */
-  InitializeRoutingMap( );
-  InitializeTrafficMap( );
-  InitializeInjectionMap( );
-
-  gPrintActivity = (config.GetInt("print_activity")==1);
-  gTrace = (config.GetInt("viewer trace")==1);
-  
-  string watch_out_file;
-  config.GetStr( "watch_out", watch_out_file );
-  if(watch_out_file == "") {
-    gWatchOut = NULL;
-  } else if(watch_out_file == "-") {
-    gWatchOut = &cout;
-  } else {
-    gWatchOut = new ofstream(watch_out_file.c_str());
-  }
-  
-
-  /*configure and run the simulator
-   */
-
-#ifdef USE_GUI
-  if(gGUIMode){
-    cout<<"GUI Mode\n";
-    QApplication app(argc, argv);
-    BooksimGUI * bs = new BooksimGUI();
-    //transfer all the contorl and data to the gui, go to bgui.cpp for the rest
-    bs->RegisterAllocSim(&AllocatorSim,&config);
-    bs->setGeometry(100, 100, 1200, 355);
-    bs->show();
-    return app.exec();
-  }
-#endif
-
-  bool result = AllocatorSim( config );
-  return result ? -1 : 0;
-}
