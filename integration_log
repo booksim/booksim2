@@ -1,0 +1,28 @@
+Makefile.include
+
+soft link into the network directory
+
+VPATH_include in makefile.include in systemsim directory:
+network/booksim/:network/booksim/routers/:network/booksim/allocators/:network/booksim/arbiters/:network/booksim/networks/:network/booksim/power/
+
+create directories in the systemsim/obj:
+obj/network/booksim
+obj/network/booksim/allocators
+obj/network/booksim/routers
+obj/network/booksim/arbiters
+obj/network/booksim/newtorks
+obj/network/booksim/power
+Ok dear god, the directory structure convoluted
+
+remove QT shit from booksim, comment out bgui.cpp
+
+added a boosim_main.cpp file which replaces the old main file. Needed for all the global variables
+
+source files needs to be cpp. rng files are c, and they include other .c files
+
+need to integrate the lex and yacc generation into the makefile, in the maintime the pregenerated files are added to svn.
+
+
+Booksim network class conflicts with the remnant ruby code =\
+
+GetSimTime is a bitch

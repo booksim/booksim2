@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
-TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
+TrafficManager::TrafficManager( const Configuration &config, const vector<BSNetwork *> & net )
 : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _time(0)
 {
 

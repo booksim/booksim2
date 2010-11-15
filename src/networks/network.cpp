@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-Network::Network( const Configuration &config, const string & name ) :
+BSNetwork::BSNetwork( const Configuration &config, const string & name ) :
   Module( 0, name )
 {
   _size     = -1; 
@@ -50,7 +50,7 @@ Network::Network( const Configuration &config, const string & name ) :
   _channels = -1;
 }
 
-Network::~Network( )
+BSNetwork::~BSNetwork( )
 {
   for ( int r = 0; r < _size; ++r ) {
     if ( _routers[r] ) delete _routers[r];
@@ -69,7 +69,7 @@ Network::~Network( )
   }
 }
 
-void Network::_Alloc( )
+void BSNetwork::_Alloc( )
 {
   assert( ( _size != -1 ) && 
 	  ( _sources != -1 ) && 
@@ -109,24 +109,24 @@ void Network::_Alloc( )
   _chan_use_cycles = 0;
 }
 
-int Network::NumSources( ) const
+int BSNetwork::NumSources( ) const
 {
   return _sources;
 }
 
-int Network::NumDests( ) const
+int BSNetwork::NumDests( ) const
 {
   return _dests;
 }
 
-void Network::Evaluate( )
+void BSNetwork::Evaluate( )
 {
   for ( int r = 0; r < _size; ++r ) {
     _routers[r]->Evaluate( );
   }
 }
 
-void Network::Update( )
+void BSNetwork::Update( )
 {
   for ( int r = 0; r < _size; ++r ) {
     _routers[r]->Update( );
@@ -140,13 +140,13 @@ void Network::Update( )
   _chan_use_cycles++;
 }
 
-void Network::WriteFlit( Flit *f, int source )
+void BSNetwork::WriteFlit( Flit *f, int source )
 {
   assert( ( source >= 0 ) && ( source < _sources ) );
   _inject[source]->Send(f);
 }
 
-Flit *Network::ReadFlit( int dest )
+Flit *BSNetwork::ReadFlit( int dest )
 {
   assert( ( dest >= 0 ) && ( dest < _dests ) );
   return _eject[dest]->Receive();
@@ -154,19 +154,19 @@ Flit *Network::ReadFlit( int dest )
 
 /* new functions added for NOC
  */
-Flit* Network::PeekFlit( int dest ) 
+Flit* BSNetwork::PeekFlit( int dest ) 
 {
   assert( ( dest >= 0 ) && ( dest < _dests ) );
   return _eject[dest]->Peek( );
 }
 
-void Network::WriteCredit( Credit *c, int dest )
+void BSNetwork::WriteCredit( Credit *c, int dest )
 {
   assert( ( dest >= 0 ) && ( dest < _dests ) );
   _eject_cred[dest]->Send(c);
 }
 
-Credit *Network::ReadCredit( int source )
+Credit *BSNetwork::ReadCredit( int source )
 {
   assert( ( source >= 0 ) && ( source < _sources ) );
   return _inject_cred[source]->Receive();
@@ -174,24 +174,24 @@ Credit *Network::ReadCredit( int source )
 
 /* new functions added for NOC
  */
-Credit *Network::PeekCredit( int source ) 
+Credit *BSNetwork::PeekCredit( int source ) 
 {
   assert( ( source >= 0 ) && ( source < _sources ) );
   return _inject_cred[source]->Peek( );
 }
 
-void Network::InsertRandomFaults( const Configuration &config )
+void BSNetwork::InsertRandomFaults( const Configuration &config )
 {
   Error( "InsertRandomFaults not implemented for this topology!" );
 }
 
-void Network::OutChannelFault( int r, int c, bool fault )
+void BSNetwork::OutChannelFault( int r, int c, bool fault )
 {
   assert( ( r >= 0 ) && ( r < _size ) );
   _routers[r]->OutChannelFault( c, fault );
 }
 
-double Network::Capacity( ) const
+double BSNetwork::Capacity( ) const
 {
   return 1.0;
 }
@@ -200,7 +200,7 @@ double Network::Capacity( ) const
  * neceesary of the network, by default, call display on each router
  * and display the channel utilization rate
  */
-void Network::Display( ) const
+void BSNetwork::Display( ) const
 {
   for ( int r = 0; r < _size; ++r ) {
     _routers[r]->Display( );

@@ -1,6 +1,7 @@
 SOURCES := $(SOURCES) network/booksim/vc.cpp \
 network/booksim/BooksimWrapper.cpp \
 network/booksim/trafficmanager.cpp \
+network/booksim/sstrafficmanager.cpp \
 network/booksim/traffic.cpp \
 network/booksim/stats.cpp \
 network/booksim/routefunc.cpp \

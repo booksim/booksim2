@@ -53,7 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 CMO::CMO( const Configuration &config, const string & name ) :
-Network( config, name )
+BSNetwork( config, name )
 {
   _ComputeSize( config );
   _Alloc( );

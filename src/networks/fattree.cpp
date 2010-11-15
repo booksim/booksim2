@@ -59,7 +59,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 FatTree::FatTree( const Configuration& config,const string & name )
-  : Network( config ,name)
+  : BSNetwork( config ,name)
 {
   
 

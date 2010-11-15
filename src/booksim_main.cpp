@@ -1,4 +1,4 @@
-// $Id: main.cpp 2844 2010-11-12 05:44:16Z qtedq $
+// $Id: main.cpp 2842 2010-11-12 03:13:28Z dub $
 
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
@@ -140,7 +140,7 @@ bool gGUIMode = false;
 
 bool AllocatorSim( const Configuration& config )
 {
-  vector<Network *> net;
+  vector<BSNetwork *> net;
   string topo;
 
   config.GetStr( "topology", topo );

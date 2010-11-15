@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "network.hpp"
 #include "routefunc.hpp"
 
-class CMO : public Network {
+class CMO : public BSNetwork {
 
   int _c;    
   // concentration degree --> must be perfectly divisible by this

@@ -14,6 +14,11 @@
 
 #include "network/network.h"
 #include "network/networkSim.h"
+
+#include "booksim_config.hpp"
+#include "network.hpp"
+#include "sstrafficmanager.hpp"
+
 using namespace SS_Network;
 
 class BooksimWrapper;
@@ -21,6 +26,8 @@ class BooksimWrapper;
 class BooksimInterface: public Interface{
 public:
   BooksimInterface(string name, SystemConfig* sysCon, Fwk::Log* log, int id);
+  ~BooksimInterface();
+
   //Enqueue a message from a link, source is a pointer to the object that is enqueing the message
   virtual void messageIs(SS_Network::Message *msg, const Link *source){}
   //return the top message from a virtual channel, returns null if no message
@@ -33,9 +40,10 @@ public:
   virtual void route();
   //If this returns zero, that means something happens next cycle
   //If it returns Time::Future, it means the interface is idle
-  virtual Time nextEventTime(){return Time::Future();}
+
+  virtual Time nextEventTime();
   virtual int id() const {return _id;}
-  void setParent(BooksimWrapper* a){parent = a;}
+  void setParent(BooksimWrapper* a);
 
   
   //stats
@@ -43,23 +51,32 @@ public:
   virtual void report(Fwk::Log* log) const {}
   virtual void report(Fwk::Log* log, Stats &s) const {report(log);}
   virtual void clearStats(){}
+
+  void  setActivity(  Activity::Ptr  a){mainbooksima=a;}
 private:
   BooksimWrapper* parent;
+  vector<BSNetwork *> net;
+  SSTrafficManager* manager;
+  Configuration* booksimconfig;
+  Activity::Ptr mainbooksima;
 };
 
 
 
 class BooksimCoreInterface : public CoreInterface{
 public:
-  BooksimCoreInterface(string name, SystemConfig* sysCon, Fwk::Log* log, int id, Activity::Ptr a);
-
- 
-
+  BooksimCoreInterface(string name, SystemConfig* sysCon, Fwk::Log* log, int id, Activity::Ptr a,NetworkSim * p);
   //Enqueue a message from the core
   virtual void messageIs(SS_Network::Message *msg);
-  //return the top message from a virtual channel, returns null if no message
+  //enqueue a message from the network
+  virtual void messageIs(SS_Network::Message *msg, const Link *source);
+  //identical to coreinterface, except for -1 vc, which indicate inbuffer
+  virtual SS_Network::Message* message(int virtualChannel) const;
+  //identical to coreinterface, except for -1 vc, which indicate inbuffer
+  virtual void pop(int virtualChannel);
 private:
   Activity::Ptr mainbooksima;
+  NetworkSim * parent;
 };
 
 

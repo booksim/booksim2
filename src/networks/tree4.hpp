@@ -47,7 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cassert>
 #include "network.hpp"
 
-class Tree4 : public Network {
+class Tree4 : public BSNetwork {
 
   int _k;
   int _n;

@@ -52,7 +52,7 @@ class Power_Module : public Module {
 
 protected:
   //network undersimulation
-  Network * net;
+  BSNetwork * net;
   TrafficManager* sim;
   //all channels are this width
   double channel_width;
@@ -180,7 +180,7 @@ protected:
   double areaOutputModule(double Outputs);
 
 public:
-  Power_Module(Network * net, TrafficManager* parent, const Configuration &config);
+  Power_Module(BSNetwork * net, TrafficManager* parent, const Configuration &config);
   ~Power_Module();
 
   void run();

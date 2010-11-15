@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "network.hpp"
 
-class FatTree : public Network {
+class FatTree : public BSNetwork {
 
   int _k;
   int _n;

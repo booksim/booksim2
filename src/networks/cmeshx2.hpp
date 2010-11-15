@@ -47,7 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cmesh.hpp"
 #include <cassert>
 
-class CMeshX2 : public Network {
+class CMeshX2 : public BSNetwork {
 
   int _k ;
   int _n ;

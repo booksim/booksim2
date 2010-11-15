@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "singlenet.hpp"
 
 SingleNet::SingleNet( const Configuration &config, const string & name ) :
-Network( config, name )
+BSNetwork( config, name )
 {
   _ComputeSize( config );
   _Alloc( );

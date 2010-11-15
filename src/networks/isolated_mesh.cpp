@@ -49,7 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "misc_utils.hpp"
 
 IsolatedMesh::IsolatedMesh( const Configuration &config, const string & name ) 
-: Network( config, name ) 
+: BSNetwork( config, name ) 
 {
 
   _subMesh[0] = new KNCube( config, name, true );

@@ -57,7 +57,7 @@ protected:
   unsigned int _dests;
   unsigned int _routers;
 
-  vector<Network *> _net;
+  vector<BSNetwork *> _net;
   vector<vector<Router *> > _router_map;
 
   // ============ Traffic ============ 
@@ -244,7 +244,7 @@ protected:
   void _LoadWatchList(const string & filename);
 
 public:
-  TrafficManager( const Configuration &config, const vector<Network *> & net );
+  TrafficManager( const Configuration &config, const vector<BSNetwork *> & net );
   ~TrafficManager( );
 
   bool Run( );

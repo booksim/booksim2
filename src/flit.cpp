@@ -90,6 +90,7 @@ void Flit::Reset()
   x_then_y = -1;
   data = 0;
   from_router = -1;
+  
 }  
 
 Flit * Flit::New() {
