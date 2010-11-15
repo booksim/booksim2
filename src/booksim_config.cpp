@@ -250,7 +250,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["sim_power"] = 0;
   AddStrField("power_output_file","pwr_tmp");
   AddStrField("tech_file", "../utils/temp");
-  _int_map["channel_width"] = 128;
+  _int_map["channel_width"] = 32;
   _int_map["channel_sweep"] = 0;
 
   //==================Network file===========================
