@@ -71,11 +71,6 @@ Router::Router( const Configuration& config,
   _partial_internal_cycles = 0.0;
 }
 
-Credit *Router::_NewCredit( int vcs )
-{
-  return Credit::New(vcs);
-}
-
 void Router::_RetireCredit( Credit *c )
 {
   c->Free();

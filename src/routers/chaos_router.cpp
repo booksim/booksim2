@@ -581,9 +581,8 @@ void ChaosRouter::_OutputAdvance( )
 	  _input_mq_match[i]     = -1;
 	}
 	
-	c = _NewCredit( 1 );
-	c->vc[0]  = 0;
-	c->vc_cnt = 1;
+	c = Credit::New( );
+	c->vc.insert(0);
 	_credit_queue[i].push( c );
       }
     }

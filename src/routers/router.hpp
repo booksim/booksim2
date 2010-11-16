@@ -66,7 +66,6 @@ protected:
   vector<CreditChannel *> _output_credits;
   vector<bool>            _channel_faults;
 
-  Credit *_NewCredit( int vcs = 1 );
   void    _RetireCredit( Credit *c );
 
 public:

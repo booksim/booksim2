@@ -311,13 +311,12 @@ void IQRouterCombined::_Alloc( )
 			<< ")." << endl;
 	  
 	  if (c == NULL) {
-	    c = _NewCredit(_vcs);
+	    c = Credit::New();
 	  }
 
 	  assert(vc == f->vc);
 
-	  c->vc[c->vc_cnt] = f->vc;
-	  c->vc_cnt++;
+	  c->vc.insert(f->vc);
 	  c->dest_router = f->from_router;
 	  f->vc = cur_buf->GetOutputVC(vc);
 	  dest_buf->SendingFlit(f);

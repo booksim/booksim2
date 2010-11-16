@@ -1128,9 +1128,8 @@ void TrafficManager::_Step( )
 		      << "Injecting credit for VC " << f->vc << "." << endl;
         }
       
-        Credit * cred = Credit::New(1);
-        cred->vc[0] = f->vc;
-        cred->vc_cnt = 1;
+        Credit * cred = Credit::New();
+        cred->vc.insert(f->vc);
 	cred->dest_router = f->from_router;
         _net[i]->WriteCredit( cred, output );
       

@@ -39,29 +39,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 stack<Credit *> Credit::_all;
 stack<Credit *> Credit::_free;
 
-Credit::Credit(int max_vcs)
+Credit::Credit()
 {
-  Reset(max_vcs);
+  Reset();
 }
 
-void Credit::Reset(int max_vcs)
+void Credit::Reset()
 {
-  vc.resize(max_vcs);
-  vc_cnt = 0;
+  vc.clear();
   head = false;
   tail = false;
   id   = -1;
   dest_router = -1;
 }
 
-Credit * Credit::New(int max_vcs) {
+Credit * Credit::New() {
   Credit * c;
   if(_free.empty()) {
-    c = new Credit(max_vcs);
+    c = new Credit();
     _all.push(c);
   } else {
     c = _free.top();
-    c->Reset(max_vcs);
+    c->Reset();
     _free.pop();
   }
   return c;
