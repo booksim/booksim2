@@ -153,9 +153,8 @@ void VC::SetState( eVCState s )
 		<< "Changing state from " << VC::VCSTATE[_state]
 		<< " to " << VC::VCSTATE[s] << "." << endl;
   
-  // do not reset state time for speculation-related pseudo state transitions
-  if(((_state == vc_alloc) && (s == vc_spec)) ||
-     ((_state == vc_spec) && (s == vc_spec_grant))) {
+  // do not reset state time for speculation-related pseudo state transition
+  if((_state == vc_spec) && (s == vc_spec_grant)) {
     assert(f);
     if(f->watch)
       *gWatchOut << GetSimTime() << " | " << FullName() << " | "
