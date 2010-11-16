@@ -138,7 +138,9 @@ void BufferState::SendingFlit( Flit *f )
 
   if ( ( _shared_occupied >= _shared_buf_size ) &&
        ( _cur_occupied[f->vc] >= _vc_buf_size ) ) {
-    Error( "Flit sent to full buffer" );
+    ostringstream err;
+    err << "Flit " << f->id << " sent to full buffer.";
+    Error( err.str( ) );
   } else {
     if ( _cur_occupied[f->vc] >= _vc_buf_size ) {
       ++_shared_occupied;
