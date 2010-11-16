@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <limits>
+#include <sstream>
 
 #include "globals.hpp"
 #include "booksim.hpp"
@@ -96,7 +97,10 @@ bool VC::AddFlit( Flit *f )
 
   if(_expected_pid >= 0) {
     if(f->pid != _expected_pid) {
-      Error("Received flit with unexpected packet ID.");
+      ostringstream err;
+      err << "Received flit " << f->id << " with unexpected packet ID: " << f->pid 
+	  << " (expected: " << _expected_pid << ")";
+      Error(err.str());
       return false;
     } else if(f->tail) {
       _expected_pid = -1;
