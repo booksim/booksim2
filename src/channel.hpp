@@ -37,8 +37,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //   an integer number of simulator cycles.
 //
 /////
-#ifndef CHANNEL_HPP
-#define CHANNEL_HPP
+#ifndef _CHANNEL_HPP
+#define _CHANNEL_HPP
 
 #include <queue>
 #include <cassert>
