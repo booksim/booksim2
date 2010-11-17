@@ -61,8 +61,8 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _sw_alloc_delay   = config.GetInt( "sw_alloc_delay" );
   
   // Routing
-  string rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
-  map<string, tRoutingFunction>::iterator rf_iter = gRoutingFunctionMap.find(rf);
+  string const rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
+  map<string, tRoutingFunction>::const_iterator rf_iter = gRoutingFunctionMap.find(rf);
   if(rf_iter == gRoutingFunctionMap.end()) {
     Error("Invalid routing function: " + rf);
   }
@@ -119,7 +119,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   
   if ( _speculative >= 2 ) {
     
-    string filter_spec_grants = config.GetStr("filter_spec_grants");
+    string const filter_spec_grants = config.GetStr("filter_spec_grants");
     if(filter_spec_grants == "any_nonspec_gnts") {
       _filter_spec_grants = 0;
     } else if(filter_spec_grants == "confl_nonspec_reqs") {
