@@ -670,11 +670,6 @@ void IQRouter::_SWAlloc( )
 
   // Winning flits cross the switch
 
-  //////////////////////////////
-  // Switch Power Modelling
-  //  - Record Total Cycles
-  //
-
   for ( int input = 0; input < _inputs; ++input ) {
     Credit * c = 0;
     
@@ -816,9 +811,6 @@ void IQRouter::_SWAlloc( )
 	  
 	  f->hops++;
 	  
-	  //
-	  // Switch Power Modelling
-	  //
 	  _bufferMonitor->read(input, f) ;
 	  
 	  if(f->watch)
