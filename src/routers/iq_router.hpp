@@ -68,8 +68,8 @@ class IQRouter : public Router {
   queue<pair<int, pair<int, int> > > _route_waiting_vcs;
   queue<pair<int, pair<int, int> > > _vc_alloc_waiting_vcs;  
   list<pair<int, int> > _vc_alloc_pending_vcs;
-  queue<pair<int, pair<int, Flit *> > > _crossbar_waiting_flits;
-  queue<pair<int, pair<int, Credit *> > > _proc_waiting_credits;
+  queue<pair<int, pair<Flit *, int> > > _crossbar_waiting_flits;
+  queue<pair<int, pair<Credit *, int> > > _proc_waiting_credits;
 
   vector<Buffer *> _buf;
   vector<BufferState *> _next_buf;

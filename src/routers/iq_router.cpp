@@ -266,18 +266,19 @@ void IQRouter::_ReceiveCredits( )
     Credit * c = _output_credits[output]->Receive();
     if(c) {
       _proc_waiting_credits.push(make_pair(GetSimTime() + _credit_delay,
-					   make_pair(output, c)));
+					   make_pair(c, output)));
     }
   }
   
   while(!_proc_waiting_credits.empty()) {
-    pair<int, pair<int, Credit *> > & item = _proc_waiting_credits.front();
+    pair<int, pair<Credit *, int> > & item = _proc_waiting_credits.front();
     int & time = item.first;
     if(GetSimTime() < time) {
       return;
     }
-    const int & output = item.second.first;
-    Credit * c = item.second.second;
+    Credit * c = item.second.first;
+    assert(c);
+    const int & output = item.second.second;
     _next_buf[output]->ProcessCredit(c);
     _RetireCredit(c);
     _proc_waiting_credits.pop();
@@ -832,7 +833,7 @@ void IQRouter::_SWAlloc( )
 	  
 	  _switchMonitor->traversal( input, output, f) ;
 	  _crossbar_waiting_flits.push(make_pair(GetSimTime() + _routing_delay, 
-						 make_pair(expanded_output, f)));
+						 make_pair(f, expanded_output)));
 	  
 	  if(f->tail) {
 	    cur_buf->SetState(vc, VC::idle);
@@ -876,15 +877,15 @@ void IQRouter::_SWAlloc( )
 void IQRouter::_OutputQueuing( )
 {
   while(!_crossbar_waiting_flits.empty()) {
-    const pair<int, pair<int, Flit *> > & item = _crossbar_waiting_flits.front();
+    const pair<int, pair<Flit *, int> > & item = _crossbar_waiting_flits.front();
     const int & time = item.first;
     if(GetSimTime() < time) {
       break;
     }
-    const int & expanded_output = item.second.first;
-    const int output = expanded_output % _outputs;
-    Flit * f = item.second.second;
+    Flit * f = item.second.first;
     assert(f);
+    const int & expanded_output = item.second.second;
+    const int output = expanded_output % _outputs;
     _output_buffer[output].push(f);
     if(f->watch)
       *gWatchOut << GetSimTime() << " | " << FullName() << " | "
