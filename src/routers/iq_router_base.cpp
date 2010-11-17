@@ -291,7 +291,6 @@ void IQRouterBase::_SendFlits( )
     Flit *f = NULL;
     if ( !_output_buffer[output].empty( ) ) {
       f = _output_buffer[output].front( );
-      f->from_router = this->GetID();
       _output_buffer[output].pop( );
       ++_sent_flits[output];
       if(f->watch)

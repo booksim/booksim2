@@ -1130,7 +1130,6 @@ void TrafficManager::_Step( )
       
         Credit * cred = Credit::New();
         cred->vc.insert(f->vc);
-	cred->dest_router = f->from_router;
         _net[i]->WriteCredit( cred, output );
       
         if( ( _sim_state == warming_up ) || ( _sim_state == running ) )

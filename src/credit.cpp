@@ -50,7 +50,6 @@ void Credit::Reset()
   head = false;
   tail = false;
   id   = -1;
-  dest_router = -1;
 }
 
 Credit * Credit::New() {

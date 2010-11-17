@@ -51,7 +51,7 @@ ostream& operator<<( ostream& os, const Flit& f )
      << " Head: " << f.head << " Tail: " << f.tail << endl;
   os << "  Source: " << f.src << "  Dest: " << f.dest << " Intm: "<<f.intm<<endl;
   os << "  Injection time: " << f.time << " Transaction start: " << f.ttime << "Arrival time: " << f.atime << " Phase: "<<f.ph<< endl;
-  os << "  From router "<<f.from_router<< " VC: " << f.vc << endl;
+  os << "  VC: " << f.vc << endl;
   return os;
 }
 
@@ -89,7 +89,6 @@ void Flit::Reset()
   ring_par = -1;
   x_then_y = -1;
   data = 0;
-  from_router = -1;
 }  
 
 Flit * Flit::New() {

@@ -76,9 +76,6 @@ public:
   bool watch;
   int  subnetwork;
 
-  //for credit tracking, last router visited
-  mutable int from_router;
-
   // Fields for multi-phase algorithms
   mutable int intm;
   mutable int ph;

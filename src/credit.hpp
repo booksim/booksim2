@@ -44,9 +44,6 @@ public:
   bool head, tail;
   int  id;
 
-  //where this credit should be processed
-  int dest_router;
-
   void Reset();
   
   static Credit * New();

@@ -835,7 +835,6 @@ void IQRouter::_SWAlloc( )
 	  assert(vc == f->vc);
 
 	  c->vc.insert(f->vc);
-	  c->dest_router = f->from_router;
 	  f->vc = cur_buf->GetOutputVC(vc);
 	  dest_buf->SendingFlit( f );
 	  
@@ -909,7 +908,6 @@ void IQRouter::_SendFlits( )
     Flit *f = NULL;
     if ( !_output_buffer[output].empty( ) ) {
       f = _output_buffer[output].front( );
-      f->from_router = this->GetID();
       _output_buffer[output].pop( );
       ++_sent_flits[output];
       if(f->watch)

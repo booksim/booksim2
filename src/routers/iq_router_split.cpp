@@ -592,7 +592,6 @@ void IQRouterSplit::_Alloc( )
 	  assert(vc == f->vc);
 	  
 	  c->vc.insert(f->vc);
-	  c->dest_router = f->from_router;
 	  f->vc = cur_buf->GetOutputVC(vc);
 	  dest_buf->SendingFlit(f);
 	  
