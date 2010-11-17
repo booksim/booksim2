@@ -114,8 +114,8 @@ class IQRouter : public Router {
   
 public:
 
-  IQRouter( const Configuration& config,
-	    Module *parent, const string & name, int id,
+  IQRouter( Configuration const & config,
+	    Module *parent, string const & name, int id,
 	    int inputs, int outputs );
   
   virtual ~IQRouter( );
@@ -132,8 +132,8 @@ public:
   virtual int GetSentFlits(int o = -1) const;
   virtual void ResetFlitStats();
 
-  const SwitchMonitor* GetSwitchMonitor() const {return _switchMonitor;}
-  const BufferMonitor* GetBufferMonitor() const {return _bufferMonitor;}
+  SwitchMonitor const * const & GetSwitchMonitor() const {return _switchMonitor;}
+  BufferMonitor const * const & GetBufferMonitor() const {return _bufferMonitor;}
 
 };
 
