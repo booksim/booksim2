@@ -818,7 +818,6 @@ void IQRouter::_SWAlloc( )
 	  //
 	  // Switch Power Modelling
 	  //
-	  _switchMonitor->traversal( input, output, f) ;
 	  _bufferMonitor->read(input, f) ;
 	  
 	  if(f->watch)
@@ -838,6 +837,7 @@ void IQRouter::_SWAlloc( )
 	  f->vc = cur_buf->GetOutputVC(vc);
 	  dest_buf->SendingFlit( f );
 	  
+	  _switchMonitor->traversal( input, output, f) ;
 	  _crossbar_waiting_flits.push(make_pair(GetSimTime() + _routing_delay, 
 						 make_pair(expanded_output, f)));
 	  
