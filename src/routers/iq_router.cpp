@@ -199,6 +199,9 @@ void IQRouter::ReadInputs( )
 
 void IQRouter::InternalStep( )
 {
+  _bufferMonitor->cycle( );
+  _switchMonitor->cycle( );
+
   _InputQueuing( );
   _Route( );
   _VCAlloc( );
@@ -219,7 +222,6 @@ void IQRouter::WriteOutputs( )
 
 void IQRouter::_ReceiveFlits( )
 {
-  _bufferMonitor->cycle() ;
   for ( int input = 0; input < _inputs; ++input ) { 
     Flit * f = _input_channels[input]->Receive();
     if ( f ) {
@@ -672,7 +674,6 @@ void IQRouter::_SWAlloc( )
   // Switch Power Modelling
   //  - Record Total Cycles
   //
-  _switchMonitor->cycle() ;
 
   for ( int input = 0; input < _inputs; ++input ) {
     Credit * c = 0;
