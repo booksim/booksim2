@@ -924,7 +924,9 @@ void IQRouter::Display( ) const
 int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
 {
   assert((out >= 0) && (out < _outputs));
-  
+  assert(vc_begin < _vcs);
+  assert(vc_end < _vcs);
+
   BufferState const * const dest_buf = _next_buf[out];
   
   int const start = (vc_begin >= 0) ? vc_begin : 0;
@@ -938,7 +940,7 @@ int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
 }
 
 int IQRouter::GetBuffer(int i) const {
-  assert((i >= 0) && (i < _inputs));
+  assert(i < _inputs);
 
   int size = 0;
   int const i_start = (i >= 0) ? i : 0;
@@ -952,7 +954,7 @@ int IQRouter::GetBuffer(int i) const {
 }
 
 int IQRouter::GetReceivedFlits(int i) const {
-  assert((i >= 0) && (i < _inputs));
+  assert(i < _inputs);
 
   int count = 0;
   int const i_start = (i >= 0) ? i : 0;
@@ -963,7 +965,7 @@ int IQRouter::GetReceivedFlits(int i) const {
 }
 
 int IQRouter::GetSentFlits(int o) const {
-  assert((o >= 0) && (o < _outputs));
+  assert(o < _outputs);
 
   int count = 0;
   int const o_start = (o >= 0) ? o : 0;
