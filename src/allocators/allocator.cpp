@@ -151,7 +151,7 @@ bool DenseAllocator::ReadRequest( sRequest &req, int in, int out ) const
 
   req = _request[in][out];
 
-  return ( req.label != -1 );
+  return ( req.label >= 0 );
 }
 
 void DenseAllocator::AddRequest( int in, int out, int label, 
@@ -159,7 +159,7 @@ void DenseAllocator::AddRequest( int in, int out, int label,
 {
   Allocator::AddRequest(in, out, label, in_pri, out_pri);
 
-  if((_request[in][out].label == -1) || (_request[in][out].in_pri < in_pri)) {
+  if((_request[in][out].label < 0) || (_request[in][out].in_pri < in_pri)) {
     _request[in][out].label   = label;
     _request[in][out].in_pri  = in_pri;
     _request[in][out].out_pri = out_pri;
@@ -174,6 +174,26 @@ void DenseAllocator::RemoveRequest( int in, int out, int label )
   _request[in][out].label = -1;
 }
 
+bool DenseAllocator::InputHasRequests( int in ) const
+{
+  for(int out = 0; out < _outputs; ++out) {
+    if(_request[in][out].label >= 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool DenseAllocator::OutputHasRequests( int out ) const
+{
+  for(int in = 0; in < _inputs; ++in) {
+    if(_request[in][out].label >= 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void DenseAllocator::PrintRequests( ostream * os ) const
 {
   if(!os) os = &cout;
@@ -184,7 +204,7 @@ void DenseAllocator::PrintRequests( ostream * os ) const
     ostringstream ss;
     for ( int output = 0; output < _outputs; ++output ) {
       const sRequest & req = _request[input][output];
-      if ( req.label != -1 ) {
+      if ( req.label >= 0 ) {
 	print = true;
 	ss << req.port << "@" << req.in_pri << " ";
       }
@@ -199,7 +219,7 @@ void DenseAllocator::PrintRequests( ostream * os ) const
     ostringstream ss;
     for ( int input = 0; input < _inputs; ++input ) {
       const sRequest & req = _request[input][output];
-      if ( req.label != -1 ) {
+      if ( req.label >= 0 ) {
 	print = true;
 	ss << req.port << "@" << req.out_pri << " ";
       }
@@ -325,6 +345,16 @@ void SparseAllocator::RemoveRequest( int in, int out, int label )
   if ( _out_req[out].empty( ) ) {
     _out_occ.erase(out);
   }
+}
+
+bool SparseAllocator::InputHasRequests( int in ) const
+{
+  return _in_occ.count(in) > 0;
+}
+
+bool SparseAllocator::OutputHasRequests( int out ) const
+{
+  return _out_occ.count(out) > 0;
 }
 
 void SparseAllocator::PrintRequests( ostream * os ) const
