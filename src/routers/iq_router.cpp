@@ -926,10 +926,7 @@ void IQRouter::Display( ) const
 
 int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
 {
-  if (out >= _outputs ) {
-    cout << " ERROR  - big output  GetCredit : " << out << endl;
-    exit(-1);
-  }
+  assert((out >= 0) && (out < _outputs));
   
   BufferState const * const dest_buf = _next_buf[out];
   
