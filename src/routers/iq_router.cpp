@@ -100,8 +100,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 					   iters, arb_type );
 
   if ( !_vc_allocator ) {
-    cout << "ERROR: Unknown vc_allocator type " << alloc_type << endl;
-    exit(-1);
+    Error("Unknown vc_allocator type: " + alloc_type);
   }
 
   alloc_type = config.GetStr( "sw_allocator" );
@@ -115,8 +114,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 					   iters, arb_type );
 
   if ( !_sw_allocator ) {
-    cout << "ERROR: Unknown sw_allocator type " << alloc_type << endl;
-    exit(-1);
+    Error("Unknown sw_allocator type: " + alloc_type);
   }
   
   if ( _speculative && !_spec_use_prio ) {
@@ -136,8 +134,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 						  _outputs*_output_speedup,
 						  iters, arb_type );
     if ( !_spec_sw_allocator ) {
-      cout << "ERROR: Unknown sw_allocator type " << alloc_type << endl;
-      exit(-1);
+      Error("Unknown spec_sw_allocator type: " + alloc_type);
     }
 
   }
