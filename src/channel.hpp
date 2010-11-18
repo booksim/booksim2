@@ -45,7 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace std;
 
-template<class T>
+template<typename T>
 class Channel {
 public:
   Channel( int cycles = 1 );
@@ -69,12 +69,12 @@ protected:
 
 };
 
-template<class T>
+template<typename T>
 Channel<T>::Channel( int cycles ) {
   SetLatency(cycles);
 }
 
-template<class T>
+template<typename T>
 void Channel<T>::SetLatency( int cycles ) {
 
   _delay = cycles ;
@@ -84,7 +84,7 @@ void Channel<T>::SetLatency( int cycles ) {
     _queue.push(0);
 }
 
-template<class T>
+template<typename T>
 void Channel<T>::Send( T* data ) {
 
   assert(!((_queue.size() > (unsigned int)_delay) && (_queue.front() == 0)));
@@ -92,7 +92,7 @@ void Channel<T>::Send( T* data ) {
   _queue.push(data);
 }
 
-template<class T>
+template<typename T>
 T* Channel<T>::Receive() {
 
   assert(!_queue.empty());
@@ -102,7 +102,7 @@ T* Channel<T>::Receive() {
   return data;
 }
 
-template<class T>
+template<typename T>
 T* Channel<T>::Peek( ) const {
 
   assert(!_queue.empty());
