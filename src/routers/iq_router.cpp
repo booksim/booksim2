@@ -54,8 +54,10 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   : Router( config, parent, name, id, inputs, outputs )
 {
   _vcs         = config.GetInt( "num_vcs" );
-  _speculative = config.GetInt( "speculative" ) ;
-  
+  _speculative = (config.GetInt("speculative") > 0);
+  _spec_use_prio = (config.GetInt("spec_use_prio") > 0);
+  _spec_check_cred = (config.GetInt("spec_check_cred") > 0);
+
   _routing_delay    = config.GetInt( "routing_delay" );
   _vc_alloc_delay   = config.GetInt( "vc_alloc_delay" );
   _sw_alloc_delay   = config.GetInt( "sw_alloc_delay" );
@@ -117,7 +119,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     exit(-1);
   }
   
-  if ( _speculative >= 2 ) {
+  if ( _speculative && !_spec_use_prio ) {
     
     string const filter_spec_grants = config.GetStr("filter_spec_grants");
     if(filter_spec_grants == "any_nonspec_gnts") {
@@ -149,7 +151,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _credit_buffer.resize(_inputs); 
 
   // Switch configuration (when held for multiple cycles)
-  _hold_switch_for_packet = config.GetInt( "hold_switch_for_packet" );
+  _hold_switch_for_packet = (config.GetInt("hold_switch_for_packet") > 0);
   _switch_hold_in.resize(_inputs*_input_speedup, -1);
   _switch_hold_out.resize(_outputs*_output_speedup, -1);
   _switch_hold_vc.resize(_inputs*_input_speedup, -1);
@@ -184,7 +186,7 @@ IQRouter::~IQRouter( )
 
   delete _vc_allocator;
   delete _sw_allocator;
-  if ( _speculative >= 2 )
+  if ( _speculative && !_spec_use_prio )
     delete _spec_sw_allocator;
 
   delete _bufferMonitor;
@@ -322,11 +324,7 @@ void IQRouter::_Route( )
     cur_buf->Route(vc, _rf, this, f, input);
     time += _vc_alloc_delay;
     _vc_alloc_waiting_vcs.push(item);
-    if(_speculative == 0) {
-      cur_buf->SetState(vc, VC::vc_alloc);
-    } else {
-      cur_buf->SetState(vc, VC::vc_spec) ;
-    }
+    cur_buf->SetState(vc, _speculative ? VC::vc_spec : VC::vc_alloc);
     _route_waiting_vcs.pop();
   }
 }
@@ -449,12 +447,7 @@ void IQRouter::_VCAlloc( )
       // match -- update state and remove request from pending list
 
       Buffer * const cur_buf = _buf[input];
-      if(_speculative == 0) {
-	cur_buf->SetState(vc, VC::active);
-      } else {
-	cur_buf->SetState(vc, VC::vc_spec_grant);
-      }
-      
+      cur_buf->SetState(vc, _speculative ? VC::vc_spec_grant : VC::active);
       cur_buf->SetOutput(vc, match_output, match_vc);
 
       BufferState * const dest_buf = _next_buf[match_output];
@@ -480,7 +473,7 @@ void IQRouter::_SWAlloc( )
   set<int> outputs_with_nonspec_reqs;
   
   _sw_allocator->Clear();
-  if (_speculative > 1)
+  if (_speculative && !_spec_use_prio)
     _spec_sw_allocator->Clear();
   
   for ( int input = 0; input < _inputs; ++input ) {
@@ -549,7 +542,7 @@ void IQRouter::_SWAlloc( )
 					  cur_buf->GetPriority(vc), 
 					  cur_buf->GetPriority(vc));
 
-		if(_speculative > 1) {
+		if(_speculative && !_spec_use_prio) {
 		  outputs_with_nonspec_reqs.insert(expanded_output);
 		}
 
@@ -580,7 +573,7 @@ void IQRouter::_SWAlloc( )
 	    // as to prevent them from interfering with non-speculative bids
 	    //
 
-	    assert( _speculative > 0 );
+	    assert( _speculative );
 	    assert( expanded_input == input * _input_speedup + vc % _input_speedup );
 	    
 	    OutputSet const * const route_set = cur_buf->GetRouteSet(vc);
@@ -588,10 +581,12 @@ void IQRouter::_SWAlloc( )
 	    set<OutputSet::sSetElement>::const_iterator iset = setlist.begin( );
 	    while(iset!=setlist.end( )){
 	      
-	      bool do_request = (_speculative < 3);
+	      bool do_request;
 	      
-	      if(_speculative >= 3) {
+	      if(_spec_check_cred) {
 		
+		do_request = false;
+
 		BufferState * const dest_buf = _next_buf[iset->output_port];
 		
 		// check if at least one suitable VC is available at this output
@@ -602,14 +597,16 @@ void IQRouter::_SWAlloc( )
 		    break;
 		  }
 		}
+	      } else {
+		do_request = true;
 	      }
-	      
+
 	      if(do_request) { 
 		int const expanded_output = iset->output_port * _output_speedup + input % _output_speedup;
 		if ( ( _switch_hold_in[expanded_input] == -1 ) && 
 		     ( _switch_hold_out[expanded_output] == -1 ) ) {
 		  
-		  int const prio = ((_speculative == 1) ? numeric_limits<int>::min() : 0) + cur_buf->GetPriority(vc);
+		  int const prio = (_spec_use_prio ? numeric_limits<int>::min() : 0) + cur_buf->GetPriority(vc);
 		  
 		  Flit const * const f = cur_buf->FrontFlit(vc);
 		  assert(f);
@@ -625,16 +622,9 @@ void IQRouter::_SWAlloc( )
 		    watched = true;
 		  }
 		  
-		  // dub: for the old-style speculation implementation, we 
-		  // overload the packet priorities to prioritize non-
-		  // speculative requests over speculative ones
-		  if( _speculative == 1 )
-		    _sw_allocator->AddRequest(expanded_input, expanded_output,
-					      vc, prio, prio);
-		  else
-		    _spec_sw_allocator->AddRequest(expanded_input, 
-						   expanded_output, vc,
-						   prio, prio);
+		  Allocator * const alloc = _spec_use_prio ? _sw_allocator : _spec_sw_allocator;
+		  alloc->AddRequest(expanded_input, expanded_output, vc, prio, prio);
+		
 		}
 	      }
 	      iset++;
@@ -650,20 +640,20 @@ void IQRouter::_SWAlloc( )
   if(watched) {
     *gWatchOut << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
     _sw_allocator->PrintRequests( gWatchOut );
-    if(_speculative >= 2) {
+    if(_speculative && !_spec_use_prio) {
       *gWatchOut << GetSimTime() << " | " << _spec_sw_allocator->FullName() << " | ";
       _spec_sw_allocator->PrintRequests( gWatchOut );
     }
   }
   
   _sw_allocator->Allocate();
-  if(_speculative >= 2)
+  if(_speculative && !_spec_use_prio)
     _spec_sw_allocator->Allocate();
   
   if(watched) {
     *gWatchOut << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
     _sw_allocator->PrintGrants( gWatchOut );
-    if(_speculative >= 2) {
+    if(_speculative && !_spec_use_prio) {
       *gWatchOut << GetSimTime() << " | " << _spec_sw_allocator->FullName() << " | ";
       _spec_sw_allocator->PrintGrants( gWatchOut );
     }
@@ -710,7 +700,7 @@ void IQRouter::_SWAlloc( )
 	}
       } else {
 	expanded_output = _sw_allocator->OutputAssigned( expanded_input );
-	if ( ( _speculative > 1 ) && ( expanded_output < 0 ) ) {
+	if ( ( _speculative && !_spec_use_prio ) && ( expanded_output < 0 ) ) {
 	  expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
 	  if ( expanded_output >= 0 ) {
 	    assert(_spec_sw_allocator->InputAssigned(expanded_output) >= 0);

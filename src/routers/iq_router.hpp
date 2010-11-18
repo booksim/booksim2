@@ -53,7 +53,10 @@ class BufferMonitor;
 class IQRouter : public Router {
 
   int  _vcs ;
-  int  _speculative ;
+
+  bool _speculative;
+  bool _spec_use_prio;
+  bool _spec_check_cred;
 
   int  _filter_spec_grants ;
   
@@ -86,7 +89,7 @@ class IQRouter : public Router {
 
   vector<queue<Credit *> > _credit_buffer;
 
-  int _hold_switch_for_packet;
+  bool _hold_switch_for_packet;
   vector<int> _switch_hold_in;
   vector<int> _switch_hold_out;
   vector<int> _switch_hold_vc;
