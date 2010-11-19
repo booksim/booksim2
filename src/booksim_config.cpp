@@ -96,9 +96,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["speculative"] = 0 ;
   _int_map["spec_use_prio"] = 1 ;
   _int_map["spec_check_cred"] = 0 ;
-
-  // what to use to inhibit speculative allocator grants?
-  AddStrField("filter_spec_grants", "confl_nonspec_gnts");
+  _int_map["spec_mask_by_reqs"] = 0 ;
 
   _int_map["num_vcs"]         = 16;  
   _int_map["vc_buf_size"]     = 8;  

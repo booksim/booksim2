@@ -57,6 +57,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _speculative = (config.GetInt("speculative") > 0);
   _spec_use_prio = (config.GetInt("spec_use_prio") > 0);
   _spec_check_cred = (config.GetInt("spec_check_cred") > 0);
+  _spec_mask_by_reqs = (config.GetInt("spec_mask_by_reqs") > 0);
 
   _routing_delay    = config.GetInt( "routing_delay" );
   _vc_alloc_delay   = config.GetInt( "vc_alloc_delay" );
@@ -117,17 +118,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     Error("Unknown sw_allocator type: " + alloc_type);
   }
   
-  if ( _speculative && !_spec_use_prio ) {
-    
-    string const filter_spec_grants = config.GetStr("filter_spec_grants");
-    if(filter_spec_grants == "any_nonspec_gnts") {
-      _filter_spec_grants = 0;
-    } else if(filter_spec_grants == "confl_nonspec_reqs") {
-      _filter_spec_grants = 1;
-    } else if(filter_spec_grants == "confl_nonspec_gnts") {
-      _filter_spec_grants = 2;
-    } else assert(false);
-    
+  if ( _speculative && !_spec_use_prio ) {    
     _spec_sw_allocator = Allocator::NewAllocator( this, "spec_sw_allocator",
 						  alloc_type,
 						  _inputs*_input_speedup, 
@@ -136,7 +127,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     if ( !_spec_sw_allocator ) {
       Error("Unknown spec_sw_allocator type: " + alloc_type);
     }
-
   }
 
   _sw_rr_offset.resize(_inputs*_input_speedup);
@@ -467,8 +457,6 @@ void IQRouter::_SWAlloc( )
 {
   bool watched = false;
 
-  set<int> outputs_with_nonspec_reqs;
-  
   _sw_allocator->Clear();
   if (_speculative && !_spec_use_prio)
     _spec_sw_allocator->Clear();
@@ -538,10 +526,6 @@ void IQRouter::_SWAlloc( )
 					  vc, 
 					  cur_buf->GetPriority(vc), 
 					  cur_buf->GetPriority(vc));
-
-		if(_speculative && !_spec_use_prio) {
-		  outputs_with_nonspec_reqs.insert(expanded_output);
-		}
 
 	      }
 	    } else {
@@ -670,24 +654,24 @@ void IQRouter::_SWAlloc( )
 
       bool use_spec_grant = false;
       
-      int const expanded_input  = input * _input_speedup + s;
-      int expanded_output;
-      int vc;
+      int const expanded_input = input * _input_speedup + s;
+      int expanded_output = _switch_hold_in[expanded_input];
+      int vc = _switch_hold_vc[expanded_input];
 
-      if ( _switch_hold_in[expanded_input] != -1 ) {
-	assert(_switch_hold_in[expanded_input] >= 0);
-	expanded_output = _switch_hold_in[expanded_input];
-	vc = _switch_hold_vc[expanded_input];
+      if ( expanded_output >= 0 ) {
+
+	// grant through held switch
+
+	assert(vc >= 0);
 
 	if(watched) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		     << "Switch allocation held exp. output " << expanded_output
-		     << " for VC " << vc << " at input " << input
+		     << "Switch held for VC " << vc
+		     << " at input " << input
 		     << " (exp. input " << expanded_input
+		     << ", exp. output: " << expanded_output
 		     << ")." << endl;
 	}
-
-	assert(vc >= 0);
 	
 	if ( cur_buf->Empty(vc) ) { // Cancel held match if VC is empty
 	  _switch_hold_in[expanded_input]   = -1;
@@ -695,60 +679,71 @@ void IQRouter::_SWAlloc( )
 	  _switch_hold_out[expanded_output] = -1;
 	  expanded_output = -1;
 	}
+
       } else {
+
+	assert(vc < 0);
+
 	expanded_output = _sw_allocator->OutputAssigned( expanded_input );
-	if ( ( _speculative && !_spec_use_prio ) && ( expanded_output < 0 ) ) {
-	  expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
-	  if ( expanded_output >= 0 ) {
-	    assert(_spec_sw_allocator->InputAssigned(expanded_output) >= 0);
-	    assert(_spec_sw_allocator->ReadRequest(expanded_input, expanded_output) >= 0);
-	    switch ( _filter_spec_grants ) {
-	    case 0:
-	      if ( outputs_with_nonspec_reqs.size() > 0 )
-		expanded_output = -1;
-	      break;
-	    case 1:
-	      if ( outputs_with_nonspec_reqs.count(expanded_output) > 0 )
-		expanded_output = -1;
-	      break;
-	    case 2:
-	      if ( _sw_allocator->InputAssigned(expanded_output) >= 0 )
-		expanded_output = -1;
-	      break;
-	    default:
-	      assert(false);
-	    }
-	  }
-	  use_spec_grant = (expanded_output >= 0);
-	}
-      }
-
-      if ( expanded_output >= 0 ) {
-	int const output = expanded_output / _output_speedup;
-
-	if ( _switch_hold_in[expanded_input] == -1 ) {
-	  if(use_spec_grant) {
-	    assert(_spec_sw_allocator->OutputAssigned(expanded_input) >= 0);
-	    assert(_spec_sw_allocator->InputAssigned(expanded_output) >= 0);
-	    vc = _spec_sw_allocator->ReadRequest(expanded_input, 
-						 expanded_output);
-	  } else {
-	    assert(_sw_allocator->OutputAssigned(expanded_input) >= 0);
-	    assert(_sw_allocator->InputAssigned(expanded_output) >= 0);
-	    vc = _sw_allocator->ReadRequest(expanded_input, expanded_output);
-	  }
+	
+	if(expanded_output >= 0) {
 	  
+	  // grant through main allocator
+
+	  assert(_sw_allocator->InputAssigned(expanded_output) == expanded_input);
+	  assert(_sw_allocator->OutputHasRequests(expanded_output));
+
+	  vc = _sw_allocator->ReadRequest(expanded_input, expanded_output);
+	  assert(vc >= 0);
+
 	  if(watched) {
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		       << "Switch allocation grants exp. output " << expanded_output
+		       << "Switch allocator grants exp. output " << expanded_output
 		       << " to VC " << vc
 		       << " at input " << input
 		       << " (exp. input " << expanded_input
 		       << ")." << endl;
 	  }
 
-	  assert(vc >= 0);
+	} else if ( _speculative && !_spec_use_prio ) {
+
+	  expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
+	  
+	  if ( expanded_output >= 0 ) {
+	    
+	    // grant through dedicated speculative allocator
+
+	    assert(_spec_sw_allocator->InputAssigned(expanded_output) == expanded_input);
+	    assert(_spec_sw_allocator->OutputHasRequests(expanded_output));
+	    
+	    if(_spec_mask_by_reqs ? 
+	       _sw_allocator->OutputHasRequests(expanded_output) : 
+	       (_sw_allocator->InputAssigned(expanded_output) >= 0)) {
+	      
+	      expanded_output = -1;
+	      
+	    } else {
+	      
+	      vc = _spec_sw_allocator->ReadRequest(expanded_input, expanded_output);
+	      assert(vc >= 0);
+
+	      if(watched) {
+		*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			   << "Speculative switch allocator grants exp. output " << expanded_output
+			   << " to VC " << vc
+			   << " at input " << input
+			   << " (exp. input " << expanded_input
+			   << ")." << endl;
+	      }
+
+	    }
+	    
+	  }
 	}
+      }
+
+      if ( expanded_output >= 0 ) {
+	int const output = expanded_output / _output_speedup;
 
 	// Detect speculative switch requests which succeeded when VC 
 	// allocation failed and prevenet the switch from forwarding;
