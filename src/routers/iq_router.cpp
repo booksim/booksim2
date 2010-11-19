@@ -56,7 +56,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _vcs         = config.GetInt( "num_vcs" );
   _speculative = (config.GetInt("speculative") > 0);
   _spec_use_prio = (config.GetInt("spec_use_prio") > 0);
-  _spec_check_cred = (config.GetInt("spec_check_cred") > 0);
+  _spec_check_elig = (config.GetInt("spec_check_elig") > 0);
   _spec_mask_by_reqs = (config.GetInt("spec_mask_by_reqs") > 0);
 
   _routing_delay    = config.GetInt( "routing_delay" );
@@ -564,7 +564,7 @@ void IQRouter::_SWAlloc( )
 	      
 	      bool do_request;
 	      
-	      if(_spec_check_cred) {
+	      if(_spec_check_elig) {
 		
 		do_request = false;
 

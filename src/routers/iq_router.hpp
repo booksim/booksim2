@@ -56,7 +56,7 @@ class IQRouter : public Router {
 
   bool _speculative;
   bool _spec_use_prio;
-  bool _spec_check_cred;
+  bool _spec_check_elig;
   bool _spec_mask_by_reqs;
   
   int _routing_delay;
