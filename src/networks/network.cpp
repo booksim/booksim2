@@ -119,6 +119,13 @@ int Network::NumDests( ) const
   return _dests;
 }
 
+void Network::ReadInputs( )
+{
+  for ( int r = 0; r < _size; ++r ) {
+    _routers[r]->ReadInputs( );
+  }
+}
+
 void Network::Evaluate( )
 {
   for ( int r = 0; r < _size; ++r ) {
@@ -126,10 +133,10 @@ void Network::Evaluate( )
   }
 }
 
-void Network::Update( )
+void Network::WriteOutputs( )
 {
   for ( int r = 0; r < _size; ++r ) {
-    _routers[r]->Update( );
+    _routers[r]->WriteOutputs( );
   }
 
   for ( int c = 0; c < _channels; ++c ) {

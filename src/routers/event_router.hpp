@@ -161,6 +161,8 @@ class EventRouter : public Router {
   void _SendFlits( );
   void _SendCredits( );
 
+  virtual void _InternalStep( );
+
 public:
   EventRouter( const Configuration& config,
 	       Module *parent, const string & name, int id,
@@ -168,7 +170,6 @@ public:
   virtual ~EventRouter( );
 
   virtual void ReadInputs( );
-  virtual void InternalStep( );
   virtual void WriteOutputs( );
 
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const {return 0;}

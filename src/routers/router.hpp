@@ -66,6 +66,8 @@ protected:
   vector<CreditChannel *> _output_credits;
   vector<bool>            _channel_faults;
 
+  virtual void _InternalStep() = 0;
+
 public:
   Router( const Configuration& config,
 	  Module *parent, const string & name, int id,
@@ -78,13 +80,8 @@ public:
   void AddInputChannel( FlitChannel *channel, CreditChannel *backchannel );
   void AddOutputChannel( FlitChannel *channel, CreditChannel *backchannel );
  
-  void Evaluate( );
-  inline void Update( ) {
-    WriteOutputs( );
-  }
-
   virtual void ReadInputs( ) = 0;
-  virtual void InternalStep( ) = 0;
+  virtual void Evaluate( );
   virtual void WriteOutputs( ) = 0;
 
   void OutChannelFault( int c, bool fault = true );

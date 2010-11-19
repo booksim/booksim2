@@ -218,14 +218,20 @@ Credit* CMeshX2::ReadCredit( int source )
   return c;
 } 
 
-void CMeshX2::Evaluate( )
+void CMeshX2::ReadInputs( )
+{
+  _subMesh[0]->ReadInputs( );
+  _subMesh[1]->ReadInputs( );
+}
+
+void CMeshX2::Evaluate( ) 
 {
   _subMesh[0]->Evaluate( );
   _subMesh[1]->Evaluate( );
 }
 
-void CMeshX2::Update( ) 
+void CMeshX2::WriteOutputs( )
 {
-  _subMesh[0]->Update( );
-  _subMesh[1]->Update( );
+  _subMesh[0]->WriteOutputs( );
+  _subMesh[1]->WriteOutputs( );
 }

@@ -142,7 +142,7 @@ void IQRouterBase::ReadInputs( )
   _ReceiveCredits( );
 }
 
-void IQRouterBase::InternalStep( )
+void IQRouterBase::_InternalStep( )
 {
   _InputQueuing( );
   _Route( );

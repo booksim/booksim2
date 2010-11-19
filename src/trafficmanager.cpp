@@ -1099,11 +1099,15 @@ void TrafficManager::_Step( )
 
   //advance networks
   for (int i = 0; i < _duplicate_networks; ++i) {
+    _net[i]->ReadInputs( );
+  }
+  
+  for (int i = 0; i < _duplicate_networks; ++i) {
     _net[i]->Evaluate( );
   }
 
   for (int i = 0; i < _duplicate_networks; ++i) {
-    _net[i]->Update( );
+    _net[i]->WriteOutputs( );
   }
   
 

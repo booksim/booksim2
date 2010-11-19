@@ -96,6 +96,8 @@ class IQRouter : public Router {
   void _ReceiveFlits( );
   void _ReceiveCredits( );
 
+  virtual void _InternalStep( );
+
   void _InputQueuing( );
   void _Route( );
   void _VCAlloc( );
@@ -123,7 +125,6 @@ public:
   virtual ~IQRouter( );
   
   virtual void ReadInputs( );
-  virtual void InternalStep( );
   virtual void WriteOutputs( );
   
   void Display( ) const;

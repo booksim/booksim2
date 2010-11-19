@@ -186,7 +186,7 @@ void IQRouter::ReadInputs( )
   _ReceiveCredits( );
 }
 
-void IQRouter::InternalStep( )
+void IQRouter::_InternalStep( )
 {
   _bufferMonitor->cycle( );
   _switchMonitor->cycle( );

@@ -225,7 +225,7 @@ void ChaosRouter::ReadInputs( )
   }
 }
 
-void ChaosRouter::InternalStep( )
+void ChaosRouter::_InternalStep( )
 {
   _NextInterestingChannel( );
   _OutputAdvance( );

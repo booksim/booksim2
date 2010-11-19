@@ -74,8 +74,9 @@ public:
   void    WriteCredit( Credit *c, int dest );
   Credit* ReadCredit( int source );
   
+  void ReadInputs( );
   void Evaluate( );
-  void Update( );
+  void WriteOutputs( );
 
   int GetN( ) const;
   int GetK( ) const;

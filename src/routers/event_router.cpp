@@ -167,7 +167,7 @@ void EventRouter::ReadInputs( )
   _ReceiveCredits( );
 }
 
-void EventRouter::InternalStep( )
+void EventRouter::_InternalStep( )
 {
   // Receive incoming flits
   _IncomingFlits( );

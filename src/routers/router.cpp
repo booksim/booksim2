@@ -88,10 +88,9 @@ void Router::AddOutputChannel( FlitChannel *channel, CreditChannel *backchannel 
 
 void Router::Evaluate( )
 {
-  ReadInputs( );
   _partial_internal_cycles += _internal_speedup;
   while( _partial_internal_cycles >= 1.0 ) {
-    InternalStep( );
+    _InternalStep( );
     _partial_internal_cycles -= 1.0;
   }
 }

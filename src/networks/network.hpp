@@ -93,8 +93,9 @@ public:
 
   virtual double Capacity( ) const;
 
+  virtual void ReadInputs( );
   virtual void Evaluate( );
-  virtual void Update( );
+  virtual void WriteOutputs( );
 
   void Display( ) const;
 
