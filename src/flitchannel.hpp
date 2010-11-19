@@ -65,9 +65,6 @@ public:
 
   inline const vector<int> & GetActivity() const {return _active;}
 
-  // Check for flit on input. Used for tracking channel use
-  bool InUse() const;
-
   // Send flit 
   virtual void Send( Flit* flit );
 

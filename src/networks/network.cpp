@@ -103,10 +103,6 @@ void Network::_Alloc( )
     _chan[c] = new FlitChannel;
     _chan_cred[c] = new CreditChannel;
   }
-
-  _chan_use.resize(_channels, 0);
-
-  _chan_use_cycles = 0;
 }
 
 int Network::NumSources( ) const
@@ -138,13 +134,6 @@ void Network::WriteOutputs( )
   for ( int r = 0; r < _size; ++r ) {
     _routers[r]->WriteOutputs( );
   }
-
-  for ( int c = 0; c < _channels; ++c ) {
-    if ( _chan[c]->InUse() ) {
-      _chan_use[c]++;
-    }
-  }
-  _chan_use_cycles++;
 }
 
 void Network::WriteFlit( Flit *f, int source )
@@ -212,13 +201,4 @@ void Network::Display( ) const
   for ( int r = 0; r < _size; ++r ) {
     _routers[r]->Display( );
   }
-  double average = 0;
-  for ( int c = 0; c < _channels; ++c ) {
-    cout << "channel " << c << " used " 
-	 << 100.0 * (double)_chan_use[c] / (double)_chan_use_cycles 
-	 << "% of the time" << endl;
-    average += 100.0 * (double)_chan_use[c] / (double)_chan_use_cycles ;
-  }
-  average = average/_channels;
-  cout<<"Average channel: "<<average<<endl;
 }

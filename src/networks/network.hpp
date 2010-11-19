@@ -65,9 +65,6 @@ protected:
   vector<FlitChannel *> _chan;
   vector<CreditChannel *> _chan_cred;
 
-  vector<int> _chan_use;
-  int _chan_use_cycles;
-
   virtual void _ComputeSize( const Configuration &config ) = 0;
   virtual void _BuildNet( const Configuration &config ) = 0;
 

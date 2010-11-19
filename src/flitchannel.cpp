@@ -81,12 +81,6 @@ void FlitChannel::SetSink( Router* router ) {
   _routerSink = router->GetID() ;
 }
 
-bool FlitChannel::InUse() const {
-  if ( _queue.empty() )
-    return false;
-  return ( _queue.back() != 0 );
-}
-
 void FlitChannel::Send( Flit* flit ) {
 
   if ( flit )
