@@ -269,7 +269,7 @@ void IQRouter::_ReceiveCredits( )
     assert(c);
     int const & output = item.second.second;
     _next_buf[output]->ProcessCredit(c);
-    _RetireCredit(c);
+    c->Free();
     _proc_waiting_credits.pop();
   }
 }

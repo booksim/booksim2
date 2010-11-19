@@ -212,7 +212,7 @@ void IQRouterBase::_ReceiveCredits( )
     Credit * c = _output_credits[output]->Receive();
     if ( c ) {
       _next_buf[output]->ProcessCredit( c );
-      _RetireCredit(c);
+      c->Free();
     }
   }
 }

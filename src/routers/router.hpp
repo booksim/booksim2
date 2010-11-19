@@ -66,8 +66,6 @@ protected:
   vector<CreditChannel *> _output_credits;
   vector<bool>            _channel_faults;
 
-  void    _RetireCredit( Credit *c );
-
 public:
   Router( const Configuration& config,
 	  Module *parent, const string & name, int id,

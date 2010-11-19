@@ -220,7 +220,7 @@ void ChaosRouter::ReadInputs( )
 	Error( "Next queue count fell below zero!" );
       }
 
-      _RetireCredit(c);
+      c->Free();
     }
   }
 }
