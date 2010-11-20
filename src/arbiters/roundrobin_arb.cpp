@@ -42,7 +42,7 @@ using namespace std ;
 
 RoundRobinArbiter::RoundRobinArbiter( Module *parent, const string &name,
 				      int size ) 
-  : Arbiter( parent, name, size ), _pointer( -1 ) {
+  : Arbiter( parent, name, size ), _pointer( 0 ) {
 }
 
 void RoundRobinArbiter::PrintState() const  {
@@ -53,7 +53,7 @@ void RoundRobinArbiter::PrintState() const  {
 void RoundRobinArbiter::UpdateState() {
   // update priority matrix using last grant
   if ( _selected > -1 ) 
-    _pointer = _selected ;
+    _pointer = ( _selected + 1 ) % _size ;
 }
 
 void RoundRobinArbiter::AddRequest( int input, int id, int pri )
@@ -63,8 +63,8 @@ void RoundRobinArbiter::AddRequest( int input, int id, int pri )
       _highest_pri = pri;
       _best_input = input;
     } else if(_highest_pri == pri) {
-      int a = (input <= _pointer) ? (input + _size) : input;
-      int b = (_best_input <= _pointer) ? (_best_input + _size) : _best_input;
+      int a = (input < _pointer) ? (input + _size) : input;
+      int b = (_best_input < _pointer) ? (_best_input + _size) : _best_input;
       _best_input = (a < b) ? input : _best_input;
     }
   }
