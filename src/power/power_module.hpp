@@ -67,7 +67,7 @@ protected:
   double numVC;
 
   //store the property of wires based on length
-  map<double, wire*> wire_map;
+  map<double, wire> wire_map;
 
   //////////////////////////////////Constants/////////////////////////////
   //wire length in (mm)
@@ -150,7 +150,7 @@ protected:
 
   //channels
   void calcChannel(const FlitChannel * f);
-  wire* wireOptimize(double l);
+  wire const & wireOptimize(double l);
   double powerRepeatedWire(double L, double K, double M, double N);
   double powerRepeatedWireLeak (double K, double M, double N);
   double powerWireClk (double M, double W);

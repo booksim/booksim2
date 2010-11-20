@@ -249,7 +249,7 @@ BookSimConfig::BookSimConfig( )
   //==================Power model params=====================
   _int_map["sim_power"] = 0;
   AddStrField("power_output_file","pwr_tmp");
-  AddStrField("tech_file", "../utils/temp");
+  AddStrField("tech_file", "");
   _int_map["channel_width"] = 128;
   _int_map["channel_sweep"] = 0;
 

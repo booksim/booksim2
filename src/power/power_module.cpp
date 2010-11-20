@@ -37,16 +37,9 @@ Power_Module::Power_Module(Network * n , TrafficManager* parent, const Configura
   : Module( 0, "power_module" ){
 
   
-  PowerConfig pconfig;
   string pfile = config.GetStr("tech_file");
-  char ** argv = (char**)malloc(sizeof(char*)*2);
-  argv[1] = (char*)malloc(sizeof(char)*(pfile.length()+1));
-  strcpy(argv[1],pfile.c_str());
-
-  if ( !ParseArgs( &pconfig,2,argv) )  {
-    cout<<"cant locate technology file  "<<argv[1]<<endl;
-  }
-  
+  PowerConfig pconfig;
+  pconfig.ParseFile(pfile);
 
   net = n;
   sim = parent;
@@ -125,23 +118,23 @@ Power_Module::~Power_Module(){
 
 void Power_Module::calcChannel(const FlitChannel* f){
   double channelLength = f->GetLatency()* wire_length;
-  wire * this_wire = wireOptimize(channelLength);
-  double K = this_wire->K;
-  double N = this_wire->N;
-  double M = this_wire->M;
+  wire const this_wire = wireOptimize(channelLength);
+  double const & K = this_wire.K;
+  double const & N = this_wire.N;
+  double const & M = this_wire.M;
   //area
   channelArea += areaChannel(K,N,M);
 
   //activity factor;
   const vector<int> temp = f->GetActivity();
-  double* a = (double*)malloc(sizeof(double)* Flit::NUM_FLIT_TYPES);
+  vector<double> a(Flit::NUM_FLIT_TYPES);
   for(int i = 0; i< Flit::NUM_FLIT_TYPES; i++){
 
     a[i] = ((double)temp[i])/totalTime;
   }
 
   //power calculation
-  double bitPower = powerRepeatedWire(channelLength, K,M,N);
+  double const bitPower = powerRepeatedWire(channelLength, K,M,N);
 
   channelClkPower += powerWireClk(M,channel_width);
   for(int i = 0; i< Flit::NUM_FLIT_TYPES; i++){
@@ -151,50 +144,44 @@ void Power_Module::calcChannel(const FlitChannel* f){
   channelLeakPower+= powerRepeatedWireLeak(K,M,N)*channel_width;
 }
 
-wire* Power_Module::wireOptimize(double L){
-  double W,K,M,N,bestMetric;
-  if(wire_map.find(L)!=wire_map.end()){
-    return wire_map.find(L)->second;
-  } 
-  
-  W = 64;
-  bestMetric =  100000000 ;
-  double bestK = -1;
-  double bestM = -1;
-  double bestN = -1;
-  for ( K = 1.0 ; K < 10 ; K+=0.1 ) {
-    for (N = 1.0 ; N < 40 ; N += 1.0 ) {
-      for (M = 1.0 ; M < 40.0 ; M +=1.0 ) {
-	double l = 1.0 * L/( N * M) ;
-	
-	double k0 = R * (Co_delay + Ci_delay) ;
-	double k1 = R/K * Cw + K * Rw * Ci_delay ;
-	double k2 = 0.5 * Rw * Cw ;
-	double Tw = k0 + (k1 * l) + k2 * (l * l) ;
-	double alpha = 0.2 ;
-	double power = alpha * W * powerRepeatedWire( L, K, M, N) + powerWireDFF( M, W, alpha ) ;
-	double metric = M * M * M * M * power ;
-	if ( (N*Tw) < (0.8 * tCLK) ) {
-	  if ( metric < bestMetric ) {
-	    bestMetric = metric ;
-	    bestK = K ;
-	    bestM = M ;
-	    bestN = N ;
+wire const & Power_Module::wireOptimize(double L){
+  map<double, wire>::iterator iter = wire_map.find(L);
+  if(iter == wire_map.end()){
+    
+    double W = 64;
+    double bestMetric =  100000000 ;
+    double bestK = -1;
+    double bestM = -1;
+    double bestN = -1;
+    for (double K = 1.0 ; K < 10 ; K+=0.1 ) {
+      for (double N = 1.0 ; N < 40 ; N += 1.0 ) {
+	for (double M = 1.0 ; M < 40.0 ; M +=1.0 ) {
+	  double l = 1.0 * L/( N * M) ;
+	  
+	  double k0 = R * (Co_delay + Ci_delay) ;
+	  double k1 = R/K * Cw + K * Rw * Ci_delay ;
+	  double k2 = 0.5 * Rw * Cw ;
+	  double Tw = k0 + (k1 * l) + k2 * (l * l) ;
+	  double alpha = 0.2 ;
+	  double power = alpha * W * powerRepeatedWire( L, K, M, N) + powerWireDFF( M, W, alpha ) ;
+	  double metric = M * M * M * M * power ;
+	  if ( (N*Tw) < (0.8 * tCLK) ) {
+	    if ( metric < bestMetric ) {
+	      bestMetric = metric ;
+	      bestK = K ;
+	      bestM = M ;
+	      bestN = N ;
+	    }
 	  }
 	}
       }
     }
+    cout<<"L = "<<L<<" K = "<<bestK<<" M = "<<bestM<<" N = "<<bestN<<endl;
+    
+    wire const temp = {L, bestK, bestM, bestN};
+    iter = wire_map.insert(make_pair(L, temp)).first;
   }
-  cout<<"L = "<<L<<" K = "<<bestK<<" M = "<<bestM<<" N = "<<bestN<<endl;
-  
-  wire * temp = new wire;
-  temp->L = L;
-  temp->K = bestK;
-  temp->M = bestM;
-  temp->N = bestN;
-  wire_map[L] = temp;
-  return temp;
-
+  return iter->second;
 }
 
 double Power_Module::powerRepeatedWire(double L, double K, double M, double N){
@@ -321,7 +308,7 @@ void Power_Module::calcSwitch(const SwitchMonitor* sm){
   switchPowerLeak += powerCrossbarLeak(channel_width, sm->NumInputs(), sm->NumOutputs());
 
   const vector<int> activity = sm->GetActivity();
-  double * type_activity = (double*)malloc(sizeof(double)*Flit::NUM_FLIT_TYPES);
+  vector<double> type_activity(Flit::NUM_FLIT_TYPES);
 
   for(int i = 0; i<sm->NumOutputs(); i++){
     for(int k = 0; k<Flit::NUM_FLIT_TYPES; k++){
