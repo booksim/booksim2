@@ -846,111 +846,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   assert(_cur_pid);
 }
 
-void TrafficManager::_BatchInject(){
-  
-  // Receive credits and inject new traffic
-  for ( int input = 0; input < _sources; ++input ) {
-    for (int i = 0; i < _duplicate_networks; ++i) {
-      Credit * cred = _net[i]->ReadCredit( input );
-      if ( cred ) {
-        _buf_states[input][i]->ProcessCredit( cred );
-        cred->Free();
-      }
-    }
-    
-    for ( int c = 0; c < _classes; ++c ) {
-      // Potentially generate packets for any (input,class)
-      // that is currently empty
-      if ( (_duplicate_networks > 1) || _partial_packets[input][c][0].empty() ) {
-	// For multiple networks, always try. Hard to check for empty queue - many subnetworks potentially.
-	bool generated = false;
-	  
-	if ( !_empty_network ) {
-	  while( !generated && ( _qtime[input][c] <= _time ) ) {
-	    int stype = _IssuePacket( input, c );
-
-	    if ( stype != 0 ) {
-	      _GeneratePacket( input, stype, c, 
-			       _include_queuing==1 ? 
-			       _qtime[input][c] : _time );
-	      generated = true;
-	    }
-	    ++_qtime[input][c];
-	  }
-	  
-	  if ( ( _sim_state == draining ) && 
-	       ( _qtime[input][c] > _drain_time ) ) {
-	    _qdrained[input][c] = true;
-	  }
-	}
-      }
-    }
-
-    // Now, check partially issued packets to
-    // see if they can be issued
-    for (int i = 0; i < _duplicate_networks; ++i) {
-      Flit * f = NULL;
-      for (int c = _classes - 1; c >= 0; --c) {
-        if (!_partial_packets[input][c][i].empty()) {
-	  f = _partial_packets[input][c][i].front( );
-	  if ( f->head && f->vc == -1) { // Find first available VC
-	    
-	    if(_use_xyyx){
-	      f->vc = _buf_states[input][i]->FindAvailable( f->type ,f->x_then_y);
-	    } else {
-	      f->vc = _buf_states[input][i]->FindAvailable( f->type );
-	    }
-	    if ( f->vc != -1 ) {
-	      _buf_states[input][i]->TakeBuffer( f->vc );
-	    }
-	  }
-	  
-	  if ( ( f->vc != -1 ) &&
-	       ( !_buf_states[input][i]->IsFullFor( f->vc ) ) ) {
-	    
-	    _partial_packets[input][c][i].pop_front( );
-	    _buf_states[input][i]->SendingFlit( f );
-	    
-	    if(_pri_type == network_age_based) {
-	      f->pri = numeric_limits<int>::max() - _time;
-	      assert(f->pri >= 0);
-	    }
-	    
-	    if(f->watch) {
-	      *gWatchOut << GetSimTime() << " | "
-			 << "node" << input << " | "
-			 << "Injecting flit " << f->id
-			 << " at time " << _time
-			 << " with priority " << f->pri
-			 << "." << endl;
-	    }
-	    
-	    // Pass VC "back"
-	    if ( !_partial_packets[input][c][i].empty( ) && !f->tail ) {
-	      Flit * nf = _partial_packets[input][c][i].front( );
-	      nf->vc = f->vc;
-	    }
-	    
-	    ++_injected_flow[input];
-
-	    break;
-
-	  } else {
-	    f = NULL;
-	  }
-	}
-      }
-      _net[i]->WriteFlit( f, input );
-      if( _sim_state == running )
-	for(int c = 0; c < _classes; ++c) {
-	  _sent_flits[c][input]->AddSample((f && (f->cl == c)) ? 1 : 0);
-	}
-    }
-  }
-}
-
-
-void TrafficManager::_NormalInject(){
+void TrafficManager::_Inject(){
 
   // Receive credits and inject new traffic
   for ( int input = 0; input < _sources; ++input ) {
@@ -981,9 +877,7 @@ void TrafficManager::_NormalInject(){
 	    }
 	    //this is not a request packet
 	    //don't advance time
-	    if(_use_read_write && (stype > 0)){
-	      
-	    } else {
+	    if(!_use_read_write || (stype <= 0)){
 	      ++_qtime[input][c];
 	    }
 	  }
@@ -1051,7 +945,7 @@ void TrafficManager::_NormalInject(){
 	}
       }
       _net[i]->WriteFlit( f, input );
-      if( ( _sim_state == warming_up ) || ( _sim_state == running ) )
+      if( ( ( _sim_mode != batch ) && ( _sim_state == warming_up ) ) || ( _sim_state == running ) )
 	for(int c = 0; c < _classes; ++c) {
 	  _sent_flits[c][input]->AddSample((f && (f->cl == c)) ? 1 : 0);
 	}
@@ -1070,11 +964,7 @@ void TrafficManager::_Step( )
     cout << "WARNING: Possible network deadlock.\n";
   }
 
-  if(_sim_mode == batch){
-    _BatchInject();
-  } else {
-    _NormalInject();
-  }
+  _Inject();
 
   //advance networks
   for (int i = 0; i < _duplicate_networks; ++i) {

@@ -222,8 +222,7 @@ protected:
 protected:
   void _RetireFlit( Flit *f, int dest );
 
-  void _NormalInject();
-  void _BatchInject();
+  void _Inject();
   void _Step( );
 
   bool _PacketsOutstanding( ) const;
