@@ -849,16 +849,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 
 void TrafficManager::_Inject(){
 
-  // Receive credits and inject new traffic
   for ( int input = 0; input < _sources; ++input ) {
-    for (int i = 0; i < _duplicate_networks; ++i) {
-      Credit * cred = _net[i]->ReadCredit( input );
-      if ( cred ) {
-        _buf_states[input][i]->ProcessCredit( cred );
-        cred->Free();
-      }
-    }
-    
     for ( int c = 0; c < _classes; ++c ) {
       // Potentially generate packets for any (input,class)
       // that is currently empty
@@ -890,31 +881,76 @@ void TrafficManager::_Inject(){
 	}
       }
     }
+  }
+}
 
-    // Now, check partially issued packets to
-    // see if they can be issued
-    for (int i = 0; i < _duplicate_networks; ++i) {
+void TrafficManager::_Step( )
+{
+  bool flits_in_flight = false;
+  for(int c = 0; c < _classes; ++c) {
+    flits_in_flight |= !_total_in_flight_flits[c].empty();
+  }
+  if(flits_in_flight && (_deadlock_timer++ >= _deadlock_warn_timeout)){
+    _deadlock_timer = 0;
+    cout << "WARNING: Possible network deadlock.\n";
+  }
+
+  vector<map<int, Flit *> > flits(_duplicate_networks);
+  
+  for ( int i = 0; i < _duplicate_networks; ++i ) {
+    for ( int input = 0; input < _sources; ++input ) {
+      Credit * const c = _net[i]->ReadCredit( input );
+      if ( c ) {
+	_buf_states[input][i]->ProcessCredit(c);
+	c->Free();
+      }
+    }
+    for ( int output = 0; output < _dests; ++output ) {
+      Flit * const f = _net[i]->ReadFlit( output );
+      if ( f ) {
+	if(f->watch) {
+	  *gWatchOut << GetSimTime() << " | "
+		     << "node" << output << " | "
+		     << "Ejecting flit " << f->id
+		     << " (packet " << f->pid << ")"
+		     << " from VC " << f->vc
+		     << "." << endl;
+	}
+	flits[i].insert(make_pair(output, f));
+      }
+      if( ( _sim_state == warming_up ) || ( _sim_state == running ) ) {
+	for(int c = 0; c < _classes; ++c) {
+	  _accepted_flits[c][output]->AddSample( (f && (f->cl == c)) ? 1 : 0 );
+	}
+      }
+    }
+    _net[i]->ReadInputs( );
+  }
+  
+  _Inject();
+
+  for(int i = 0; i < _duplicate_networks; ++i) {
+    for(int input = 0; input < _sources; ++input) {
       Flit * f = NULL;
-      for (int c = _classes - 1; c >= 0; --c) {
-	if ( !_partial_packets[input][c][i].empty( ) ) {
-	  f = _partial_packets[input][c][i].front( );
-	  if ( f->head && f->vc == -1) { // Find first available VC
+      for(int c = _classes - 1; c >= 0; --c) {
+	if(!_partial_packets[input][c][i].empty()) {
+	  f = _partial_packets[input][c][i].front();
+	  if(f->head && f->vc == -1) { // Find first available VC
 	    
 	    if(_use_xyyx){
-	      f->vc = _buf_states[input][i]->FindAvailable( f->type ,f->x_then_y);
+	      f->vc = _buf_states[input][i]->FindAvailable(f->type ,f->x_then_y);
 	    } else {
-	      f->vc = _buf_states[input][i]->FindAvailable( f->type );
+	      f->vc = _buf_states[input][i]->FindAvailable(f->type);
 	    }
-	    if ( f->vc != -1 ) {
-	      _buf_states[input][i]->TakeBuffer( f->vc );
+	    if(f->vc != -1) {
+	      _buf_states[input][i]->TakeBuffer(f->vc);
 	    }
 	  }
 	  
-	  if ( ( f->vc != -1 ) &&
-	       ( !_buf_states[input][i]->IsFullFor( f->vc ) ) ) {
+	  if((f->vc != -1) && (!_buf_states[input][i]->IsFullFor(f->vc))) {
 	    
-	    _partial_packets[input][c][i].pop_front( );
-	    _buf_states[input][i]->SendingFlit( f );
+	    _partial_packets[input][c][i].pop_front();
+	    _buf_states[input][i]->SendingFlit(f);
 	    
 	    if(_pri_type == network_age_based) {
 	      f->pri = numeric_limits<int>::max() - _time;
@@ -931,13 +967,13 @@ void TrafficManager::_Inject(){
 	    }
 	    
 	    // Pass VC "back"
-	    if ( !_partial_packets[input][c][i].empty( ) && !f->tail ) {
-	      Flit * nf = _partial_packets[input][c][i].front( );
+	    if(!_partial_packets[input][c][i].empty() && !f->tail) {
+	      Flit * nf = _partial_packets[input][c][i].front();
 	      nf->vc = f->vc;
 	    }
 	    
 	    ++_injected_flow[input];
-
+	    
 	    break;
 
 	  } else {
@@ -945,80 +981,44 @@ void TrafficManager::_Inject(){
 	  }
 	}
       }
-      _net[i]->WriteFlit( f, input );
-      if( ( ( _sim_mode != batch ) && ( _sim_state == warming_up ) ) || ( _sim_state == running ) )
+      _net[i]->WriteFlit(f, input);
+      if(((_sim_mode != batch) && (_sim_state == warming_up)) || (_sim_state == running)) {
 	for(int c = 0; c < _classes; ++c) {
 	  _sent_flits[c][input]->AddSample((f && (f->cl == c)) ? 1 : 0);
 	}
+      }
     }
-  }
-}
-
-void TrafficManager::_Step( )
-{
-  bool flits_in_flight = false;
-  for(int c = 0; c < _classes; ++c) {
-    flits_in_flight |= !_total_in_flight_flits[c].empty();
-  }
-  if(flits_in_flight && (_deadlock_timer++ >= _deadlock_warn_timeout)){
-    _deadlock_timer = 0;
-    cout << "WARNING: Possible network deadlock.\n";
-  }
-
-  _Inject();
-
-  //advance networks
-  for (int i = 0; i < _duplicate_networks; ++i) {
-    _net[i]->ReadInputs( );
-  }
-  
-  for (int i = 0; i < _duplicate_networks; ++i) {
+    for(int output = 0; output < _dests; ++output) {
+      Credit * c = 0;
+      map<int, Flit *>::const_iterator iter = flits[i].find(output);
+      if(iter != flits[i].end()) {
+	Flit * const & f = iter->second;
+	++_ejected_flow[output];
+	f->atime = _time;
+	if(f->watch) {
+	  *gWatchOut << GetSimTime() << " | "
+		     << "node" << output << " | "
+		     << "Injecting credit for VC " << f->vc << "." << endl;
+	}
+	c = Credit::New();
+	c->vc.insert(f->vc);
+	_RetireFlit(f, output);
+      }
+      _net[i]->WriteCredit(c, output);
+    }
+    flits[i].clear();
     _net[i]->Evaluate( );
-  }
-
-  for (int i = 0; i < _duplicate_networks; ++i) {
     _net[i]->WriteOutputs( );
   }
   
-
-
   for (int i = 0; i < _duplicate_networks; ++i) {
-    // Eject traffic and send credits
-    for ( int output = 0; output < _dests; ++output ) {
-      Flit * f = _net[i]->ReadFlit( output );
-      Credit * c = 0;
-      if ( f ) {
-	++_ejected_flow[output];
-	f->atime = _time;
-        if ( f->watch ) {
-	  *gWatchOut << GetSimTime() << " | "
-		      << "node" << output << " | "
-		      << "Ejecting flit " << f->id
-		      << " (packet " << f->pid << ")"
-		      << " from VC " << f->vc
-		      << "." << endl;
-	  *gWatchOut << GetSimTime() << " | "
-		      << "node" << output << " | "
-		      << "Injecting credit for VC " << f->vc << "." << endl;
-        }
-        c = Credit::New();
-        c->vc.insert(f->vc);
-	_RetireFlit( f, output );
-      }
-      _net[i]->WriteCredit(c, output);
-      if( ( _sim_state == warming_up ) || ( _sim_state == running ) ) {
-	for(int c = 0; c < _classes; ++c) {
-	  _accepted_flits[c][output]->AddSample( (f && (f->cl == c)) ? 1 : 0 );
-	}
-      }
-    }
-
     for(int j = 0; j < _routers; ++j) {
       _received_flow[i*_routers+j] += _router_map[i][j]->GetReceivedFlits();
       _sent_flow[i*_routers+j] += _router_map[i][j]->GetSentFlits();
       _router_map[i][j]->ResetFlitStats();
     }
   }
+
   ++_time;
   assert(_time);
   if(gTrace){
