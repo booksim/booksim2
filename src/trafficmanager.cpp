@@ -1144,13 +1144,11 @@ void TrafficManager::_DisplayRemaining( ) const
 bool TrafficManager::_SingleSim( )
 {
   _time = 0;
+
   //remove any pending request from the previous simulations
   for (int i=0;i<_sources;i++) {
     _requestsOutstanding[i] = 0;
-
-    while (!_repliesPending[i].empty()) {
-      _repliesPending[i].pop_front();
-    }
+    _repliesPending[i].clear();
   }
 
   //reset queuetime for all sources
