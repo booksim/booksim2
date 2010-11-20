@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <vector>
 
-#include "module.hpp"
+#include "timed_module.hpp"
 #include "flit.hpp"
 #include "credit.hpp"
 #include "flitchannel.hpp"
@@ -43,7 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 typedef Channel<Credit> CreditChannel;
 
-class Router : public Module {
+class Router : public TimedModule {
 
 protected:
   int _id;

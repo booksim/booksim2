@@ -57,7 +57,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Router::Router( const Configuration& config,
 		Module *parent, const string & name, int id,
 		int inputs, int outputs ) :
-  Module( parent, name ),
+  TimedModule( parent, name ),
   _id( id ),
   _inputs( inputs ),
   _outputs( outputs )
