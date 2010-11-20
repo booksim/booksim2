@@ -35,8 +35,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
-#include "booksim.hpp"
 #include <cassert>
+#include <sstream>
+
+#include "booksim.hpp"
 #include "network.hpp"
 
 
@@ -88,20 +90,35 @@ void Network::_Alloc( )
   _inject.resize(_sources);
   _inject_cred.resize(_sources);
   for ( int s = 0; s < _sources; ++s ) {
-    _inject[s] = new FlitChannel;
-    _inject_cred[s] = new CreditChannel;
+    ostringstream name;
+    name.str(_name + "_fchan_ingress");
+    name << s;
+    _inject[s] = new FlitChannel(this, name.str());
+    name.str(_name + "_cchan_ingress");
+    name << s;
+    _inject_cred[s] = new CreditChannel(this, name.str());
   }
   _eject.resize(_dests);
   _eject_cred.resize(_dests);
   for ( int d = 0; d < _dests; ++d ) {
-    _eject[d] = new FlitChannel;
-    _eject_cred[d] = new CreditChannel;
+    ostringstream name;
+    name.str(_name + "_fchan_egress");
+    name << d;
+    _eject[d] = new FlitChannel(this, name.str());
+    name.str(_name + "_cchan_egress");
+    name << d;
+    _eject_cred[d] = new CreditChannel(this, name.str());
   }
   _chan.resize(_channels);
   _chan_cred.resize(_channels);
   for ( int c = 0; c < _channels; ++c ) {
-    _chan[c] = new FlitChannel;
-    _chan_cred[c] = new CreditChannel;
+    ostringstream name;
+    name.str(_name + "_fchan_");
+    name << c;
+    _chan[c] = new FlitChannel(this, name.str());
+    name.str(_name + "_cchan_");
+    name << c;
+    _chan_cred[c] = new CreditChannel(this, name.str());
   }
 }
 

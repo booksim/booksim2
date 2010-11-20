@@ -55,7 +55,7 @@ class Router ;
 
 class FlitChannel : public Channel<Flit> {
 public:
-  FlitChannel( int cycles = 1 );
+  FlitChannel( Module * parent, string const & name, int cycles = 1 );
 
   void SetSource( Router* router ) ;
   inline int GetSource() const {return _routerSource;}

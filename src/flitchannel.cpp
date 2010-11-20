@@ -47,7 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //  $Date: 2007/06/27 23:10:17 $
 //  $Id$
 // ----------------------------------------------------------------------
-FlitChannel::FlitChannel( int cycles ) : Channel<Flit>(cycles), _idle(0) {
+FlitChannel::FlitChannel( Module * parent, string const & name, int cycles ) : Channel<Flit>(parent, name, cycles), _idle(0) {
   _active.resize(Flit::NUM_FLIT_TYPES, 0);
 }
 

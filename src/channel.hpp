@@ -43,12 +43,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <queue>
 #include <cassert>
 
+#include "module.hpp"
+
 using namespace std;
 
 template<typename T>
-class Channel {
+class Channel : Module {
 public:
-  Channel( int cycles = 1 );
+  Channel( Module * parent, string const & name, int cycles = 1 );
+  virtual ~Channel() {}
 
   // Physical Parameters
   void SetLatency( int cycles );
@@ -59,7 +62,7 @@ public:
   
   // Receive data
   T* Receive( ); 
-
+  
   // Peek at data
   T* Peek( ) const;
 
@@ -70,7 +73,11 @@ protected:
 };
 
 template<typename T>
-Channel<T>::Channel( int cycles ) {
+Channel<T>::Channel( Module * parent, string const & name, int cycles )
+  : Module(parent, name) {
+  if(cycles <= 0) {
+    Error("Channel must have positive length.");
+  }
   SetLatency(cycles);
 }
 
