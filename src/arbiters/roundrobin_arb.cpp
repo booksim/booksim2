@@ -42,7 +42,7 @@ using namespace std ;
 
 RoundRobinArbiter::RoundRobinArbiter( Module *parent, const string &name,
 				      int size ) 
-  : Arbiter( parent, name, size ), _pointer( 0 ) {
+  : Arbiter( parent, name, size ), _pointer( -1 ) {
 }
 
 void RoundRobinArbiter::PrintState() const  {
