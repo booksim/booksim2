@@ -1765,8 +1765,6 @@ bool TrafficManager::Run( )
       cout << "Simulation unstable, ending ..." << endl;
       return false;
     }
-    //for the love of god don't ever say "Time taken" anywhere else
-    //the power script depend on it
     cout << "Time taken is " << _time << " cycles" <<endl; 
     for ( int c = 0; c < _classes; ++c ) {
       _overall_min_latency[c]->AddSample( _latency_stats[c]->Min( ) );
