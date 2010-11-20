@@ -94,7 +94,7 @@ void Channel<T>::SetLatency( int cycles ) {
 template<typename T>
 void Channel<T>::Send( T* data ) {
 
-  assert(!((_queue.size() > (unsigned int)_delay) && (_queue.front() == 0)));
+  assert(_queue.size() <= (size_t)_delay);
 
   _queue.push(data);
 }
@@ -102,6 +102,7 @@ void Channel<T>::Send( T* data ) {
 template<typename T>
 T* Channel<T>::Receive() {
 
+  assert(_queue.size() >= (size_t)_delay);
   assert(!_queue.empty());
 
   T* data = _queue.front();
