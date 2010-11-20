@@ -51,28 +51,6 @@ FlitChannel::FlitChannel( int cycles ) : Channel<Flit>(cycles), _idle(0) {
   _active.resize(Flit::NUM_FLIT_TYPES, 0);
 }
 
-FlitChannel::~FlitChannel() {
-
-  // FIXME: The destructor hardly seems like the appropriate place to print out 
-  // these statistics, so this should probably all be moved into a separate 
-  // member function.
-
-  if(gPrintActivity){
-    cout << "FlitChannel: " 
-	 << "[" 
-	 << _routerSource
-	 <<  " -> " 
-	 << _routerSink
-	 << "] " 
-	 << "[Latency: " << _delay << "] "
-	 << "(" << _active[0];
-    for(int i = 1; i < Flit::NUM_FLIT_TYPES; ++i) {
-      cout << "," << _active[i];
-    }
-    cout << ") (I#" << _idle << ")" << endl ;
-  }
-}
-
 void FlitChannel::SetSource( Router* router ) {
   _routerSource = router->GetID() ;
 }
