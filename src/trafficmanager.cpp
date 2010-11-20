@@ -517,13 +517,14 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
   if ( f->watch ) { 
     *gWatchOut << GetSimTime() << " | "
-		<< "node" << dest << " | "
-		<< "Retiring flit " << f->id 
-		<< " (packet " << f->pid
-		<< ", lat = " << f->atime - f->time
-		<< ", src = " << f->src 
-		<< ", dest = " << f->dest
-		<< ")." << endl;
+	       << "node" << dest << " | "
+	       << "Retiring flit " << f->id 
+	       << " (packet " << f->pid
+	       << ", src = " << f->src 
+	       << ", dest = " << f->dest
+	       << ", hops = " << f->hops
+	       << ", lat = " << f->atime - f->time
+	       << ")." << endl;
   }
 
   _last_id = f->id;
