@@ -149,25 +149,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _measured_in_flight_flits.resize(_classes);
   _retired_packets.resize(_classes);
 
-  _voqing = config.GetInt( "voq" );
-
   _packets_sent.resize(_sources);
   _batch_size = config.GetInt( "batch_size" );
   _batch_count = config.GetInt( "batch_count" );
   _repliesPending.resize(_sources);
   _requestsOutstanding.resize(_sources);
   _maxOutstanding = config.GetInt ("max_outstanding_requests");  
-
-  if ( _voqing ) {
-    _voq.resize(_sources);
-    _active_list.resize(_sources);
-    _active_vc.resize(_sources);
-
-    for ( int s = 0; s < _sources; ++s ) {
-      _voq[s].resize(_dests);
-      _active_vc[s].resize(_dests);
-    }
-  }
 
   // ============ Statistics ============ 
 
@@ -1018,19 +1005,11 @@ void TrafficManager::_NormalInject(){
 	  f = _partial_packets[input][c][i].front( );
 	  if ( f->head && f->vc == -1) { // Find first available VC
 	    
-	    if ( _voqing ) {
-	      if ( _buf_states[input][i]->IsAvailableFor( f->dest ) ) {
-		f->vc = f->dest;
-	      }
+	    if(_use_xyyx){
+	      f->vc = _buf_states[input][i]->FindAvailable( f->type ,f->x_then_y);
 	    } else {
-	      
-	      if(_use_xyyx){
-		f->vc = _buf_states[input][i]->FindAvailable( f->type ,f->x_then_y);
-	      } else {
-		f->vc = _buf_states[input][i]->FindAvailable( f->type );
-	      }
+	      f->vc = _buf_states[input][i]->FindAvailable( f->type );
 	    }
-	    
 	    if ( f->vc != -1 ) {
 	      _buf_states[input][i]->TakeBuffer( f->vc );
 	    }
@@ -1765,6 +1744,8 @@ bool TrafficManager::Run( )
       cout << "Simulation unstable, ending ..." << endl;
       return false;
     }
+    //for the love of god don't ever say "Time taken" anywhere else
+    //the power script depend on it
     cout << "Time taken is " << _time << " cycles" <<endl; 
     for ( int c = 0; c < _classes; ++c ) {
       _overall_min_latency[c]->AddSample( _latency_stats[c]->Min( ) );

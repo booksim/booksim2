@@ -76,7 +76,6 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["in_ports"]  = 5;
   _int_map["out_ports"] = 5;
-  _int_map["voq"] = 0; //output queuing
 
   //========================================================
   // Router options
