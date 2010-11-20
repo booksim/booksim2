@@ -985,7 +985,7 @@ void TrafficManager::_Step( )
     // Eject traffic and send credits
     for ( int output = 0; output < _dests; ++output ) {
       Flit * f = _net[i]->ReadFlit( output );
-
+      Credit * c = 0;
       if ( f ) {
 	++_ejected_flow[output];
 	f->atime = _time;
@@ -1000,24 +1000,15 @@ void TrafficManager::_Step( )
 		      << "node" << output << " | "
 		      << "Injecting credit for VC " << f->vc << "." << endl;
         }
-      
-        Credit * cred = Credit::New();
-        cred->vc.insert(f->vc);
-        _net[i]->WriteCredit( cred, output );
-      
-        if( ( _sim_state == warming_up ) || ( _sim_state == running ) )
-	  for(int c = 0; c < _classes; ++c) {
-	    _accepted_flits[c][output]->AddSample( (f && (f->cl == c)) ? 1 : 0 );
-	  }
-
-        _RetireFlit( f, output );
-
-      } else {
-        _net[i]->WriteCredit( 0, output );
-        if( ( _sim_state == warming_up ) || ( _sim_state == running ) )
-	  for(int c = 0; c < _classes; ++c) {
-	    _accepted_flits[c][output]->AddSample( 0 );
-	  }
+        c = Credit::New();
+        c->vc.insert(f->vc);
+	_RetireFlit( f, output );
+      }
+      _net[i]->WriteCredit(c, output);
+      if( ( _sim_state == warming_up ) || ( _sim_state == running ) ) {
+	for(int c = 0; c < _classes; ++c) {
+	  _accepted_flits[c][output]->AddSample( (f && (f->cl == c)) ? 1 : 0 );
+	}
       }
     }
 
