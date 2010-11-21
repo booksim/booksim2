@@ -58,7 +58,7 @@ public:
 
   Flit *RemoveFlit( int vc );
   
-  inline Flit *FrontFlit( int vc )
+  inline Flit *FrontFlit( int vc ) const
   {
     return _vc[vc]->FrontFlit( );
   }

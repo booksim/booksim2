@@ -363,7 +363,7 @@ void IQRouter::_VCAlloc( )
     assert(!cur_buf->Empty(vc));
     assert(cur_buf->GetState(vc) == (_speculative ? VC::vc_spec : VC::vc_alloc));
 
-    Flit * const f = cur_buf->FrontFlit(vc);
+    Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
     assert(f->head);
     
@@ -382,7 +382,7 @@ void IQRouter::_VCAlloc( )
     set<OutputSet::sSetElement> const setlist = route_set ->GetSet();
     set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
     while(iset != setlist.end()){
-      BufferState * const dest_buf = _next_buf[iset->output_port];
+      BufferState const * const dest_buf = _next_buf[iset->output_port];
       for(int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc) {
 	assert((out_vc >= 0) && (out_vc < _vcs));
 
@@ -517,7 +517,7 @@ void IQRouter::_SWAlloc( )
 
       for ( int v = 0; v < _vcs / _input_speedup; ++v ) {
 
-	Buffer * const cur_buf = _buf[input];
+	Buffer const * const cur_buf = _buf[input];
 
 	if(!cur_buf->Empty(vc) &&
 	   (cur_buf->GetStateTime(vc) >= _sw_alloc_delay)) {
@@ -527,7 +527,7 @@ void IQRouter::_SWAlloc( )
 	    int const output = cur_buf->GetOutputPort(vc);
 	    assert((output >= 0) && (output < _outputs));
 
-	    BufferState * const dest_buf = _next_buf[output];
+	    BufferState const * const dest_buf = _next_buf[output];
 	    
 	    if ( !dest_buf->IsFullFor( cur_buf->GetOutputVC(vc) ) ) {
 	      
@@ -612,7 +612,7 @@ void IQRouter::_SWAlloc( )
 		
 		do_request = false;
 
-		BufferState * const dest_buf = _next_buf[iset->output_port];
+		BufferState const * const dest_buf = _next_buf[iset->output_port];
 		
 		// check if at least one suitable VC is available at this output
 		

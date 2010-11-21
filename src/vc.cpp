@@ -128,11 +128,6 @@ bool VC::AddFlit( Flit *f )
   return true;
 }
 
-Flit *VC::FrontFlit( )
-{
-  return _buffer.empty() ? NULL : _buffer.front();
-}
-
 Flit *VC::RemoveFlit( )
 {
   Flit *f = NULL;

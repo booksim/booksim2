@@ -87,7 +87,11 @@ public:
   ~VC();
 
   bool AddFlit( Flit *f );
-  Flit *FrontFlit( );
+  inline Flit *FrontFlit( ) const
+  {
+    return _buffer.empty() ? NULL : _buffer.front();
+  }
+  
   Flit *RemoveFlit( );
   
   
