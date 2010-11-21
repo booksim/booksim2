@@ -62,8 +62,8 @@ public:
   BufferState( const Configuration& config, 
 	       Module *parent, const string& name );
 
-  void ProcessCredit( Credit *c );
-  void SendingFlit( Flit *f );
+  void ProcessCredit( Credit const * c );
+  void SendingFlit( Flit const * f );
 
   void TakeBuffer( int vc = 0 );
 

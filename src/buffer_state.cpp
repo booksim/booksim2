@@ -99,7 +99,7 @@ Module( parent, name ), _shared_occupied(0), _active_vcs(0)
   _vc_sel_last[Flit::ANY_TYPE] = _vcs - 1 ;
 }
 
-void BufferState::ProcessCredit( Credit *c )
+void BufferState::ProcessCredit( Credit const * c )
 {
   assert( c );
 
@@ -136,7 +136,7 @@ void BufferState::ProcessCredit( Credit *c )
 }
 
 
-void BufferState::SendingFlit( Flit *f )
+void BufferState::SendingFlit( Flit const * f )
 {
   assert( f && ( f->vc >= 0 ) && ( f->vc < _vcs ) );
 
