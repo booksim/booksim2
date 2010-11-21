@@ -245,7 +245,7 @@ void IQRouter::_ReceiveFlits( )
       }
       _bufferMonitor->write( input, f ) ;
 
-      _in_queue_vcs.insert(make_pair(input, vc));
+      _in_queue_vcs.push_back(make_pair(input, vc));
     }
   }
 }
