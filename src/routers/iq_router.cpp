@@ -211,12 +211,11 @@ void IQRouter::WriteOutputs( )
 
 void IQRouter::_ReceiveFlits( )
 {
-  for ( int input = 0; input < _inputs; ++input ) { 
+  for(int input = 0; input < _inputs; ++input) { 
     Flit * const f = _input_channels[input]->Receive();
-    if ( f ) {
-
+    if(f) {
       ++_received_flits[input];
-      if ( f->watch ) {
+      if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "Received flit " << f->id
 		   << " from channel at input " << input
@@ -244,8 +243,9 @@ void IQRouter::_ReceiveFlits( )
       if ( !cur_buf->AddFlit( vc, f ) ) {
 	Error( "VC buffer overflow" );
       }
-      _in_queue_vcs.push_back(make_pair(input, vc));
       _bufferMonitor->write( input, f ) ;
+
+      _in_queue_vcs.insert(make_pair(input, vc));
     }
   }
 }
