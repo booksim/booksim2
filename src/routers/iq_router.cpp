@@ -361,9 +361,8 @@ void IQRouter::_VCAlloc( )
 
     Buffer * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
-    assert((cur_buf->GetState(vc) == VC::vc_alloc) ||
-	   (_speculative && (cur_buf->GetState(vc) == VC::vc_spec)));
-    
+    assert(cur_buf->GetState(vc) == (_speculative ? VC::vc_spec : VC::vc_alloc));
+
     Flit * const f = cur_buf->FrontFlit(vc);
     assert(f);
     assert(f->head);
