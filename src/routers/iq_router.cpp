@@ -397,12 +397,14 @@ void IQRouter::_VCAlloc( )
     set<OutputSet::sSetElement> const setlist = route_set ->GetSet();
     set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
     while(iset != setlist.end()){
-      BufferState const * const dest_buf = _next_buf[iset->output_port];
+
+      int const & out_port = iset->output_port;
+      assert((out_port >= 0) && (out_port < _outputs));
+
+      BufferState const * const dest_buf = _next_buf[out_port];
+
       for(int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc) {
 	assert((out_vc >= 0) && (out_vc < _vcs));
-
-	int const out_port = iset->output_port;
-	assert((out_port >= 0) && (out_port < _outputs));
 
 	int const in_priority = iset->pri;
 	// On the input input side, a VC might request several output 
@@ -421,13 +423,12 @@ void IQRouter::_VCAlloc( )
 		       << " and " << out_priority
 		       << "." << endl;
 	  }
-	  _vc_allocator->AddRequest(input * _vcs + vc, 
-				    iset->output_port * _vcs + out_vc, 0, 
+	  _vc_allocator->AddRequest(input*_vcs + vc, out_port*_vcs + out_vc, 0, 
 				    in_priority, out_priority);
 	} else {
 	  if(f->watch)
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		       << "VC " << out_vc << " at output " << iset->output_port 
+		       << "VC " << out_vc << " at output " << out_port 
 		       << " is unavailable." << endl;
 	}
       }
@@ -626,17 +627,22 @@ void IQRouter::_SWAlloc( )
 	    set<OutputSet::sSetElement>::const_iterator iset = setlist.begin( );
 	    while(iset!=setlist.end( )){
 	      
+	      int const & out_port = iset->output_port;
+	      assert((out_port >= 0) && (out_port < _outputs));
+	      
 	      bool do_request;
 	      
 	      if(_spec_check_elig) {
 		
 		do_request = false;
 
-		BufferState const * const dest_buf = _next_buf[iset->output_port];
+		BufferState const * const dest_buf = _next_buf[out_port];
 		
 		// check if at least one suitable VC is available at this output
 		
 		for ( int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc ) {
+		  assert((out_vc >= 0) && (out_vc < _vcs));
+
 		  if(dest_buf->IsAvailableFor(out_vc)) {
 		    do_request = true;
 		    break;
@@ -647,7 +653,7 @@ void IQRouter::_SWAlloc( )
 	      }
 
 	      if(do_request) { 
-		int const expanded_output = iset->output_port * _output_speedup + input % _output_speedup;
+		int const expanded_output = out_port * _output_speedup + input % _output_speedup;
 		if ( ( _switch_hold_in[expanded_input] == -1 ) && 
 		     ( _switch_hold_out[expanded_output] == -1 ) ) {
 		  
@@ -658,7 +664,7 @@ void IQRouter::_SWAlloc( )
 		  if(f->watch) {
 		    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 			       << "VC " << vc << " at input " << input 
-			       << " requested output " << iset->output_port
+			       << " requested output " << out_port
 			       << " (spec., exp. input: " << expanded_input
 			       << ", exp. output: " << expanded_output
 			       << ", flit: " << f->id
