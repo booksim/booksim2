@@ -941,12 +941,13 @@ void IQRouter::_OutputQueuing( )
     int const output = expanded_output % _outputs;
     assert((output >= 0) && (output < _outputs));
 
-    _output_buffer[output].push(f);
-    if(f->watch)
+    if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		 << "Buffering flit " << f->id
 		 << " at output " << output
 		 << "." << endl;
+    }
+    _output_buffer[output].push(f);
     _crossbar_waiting_flits.pop();
   }
 }
