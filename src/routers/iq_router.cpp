@@ -944,7 +944,7 @@ void IQRouter::_OutputQueuing( )
     assert(f);
 
     int const & expanded_output = item.second.second;
-    int const output = expanded_output % _outputs;
+    int const output = expanded_output / _output_speedup;
     assert((output >= 0) && (output < _outputs));
 
     if(f->watch) {
