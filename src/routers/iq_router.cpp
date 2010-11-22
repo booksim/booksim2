@@ -260,27 +260,8 @@ void IQRouter::_ReceiveCredits( )
   for(int output = 0; output < _outputs; ++output) {  
     Credit * const c = _output_credits[output]->Receive();
     if(c) {
-      _proc_waiting_credits.push(make_pair(GetSimTime() + _credit_delay,
-					   make_pair(c, output)));
+      _in_queue_credits.push_back(make_pair(c, output));
     }
-  }
-  
-  while(!_proc_waiting_credits.empty()) {
-    pair<int, pair<Credit *, int> > const & item = _proc_waiting_credits.front();
-    int const & time = item.first;
-    if(GetSimTime() < time) {
-      return;
-    }
-
-    Credit * const & c = item.second.first;
-    assert(c);
-
-    int const & output = item.second.second;
-    assert((output >= 0) && (output < _outputs));
-
-    _next_buf[output]->ProcessCredit(c);
-    c->Free();
-    _proc_waiting_credits.pop();
   }
 }
 
@@ -309,6 +290,33 @@ void IQRouter::_InputQueuing( )
     }
 
     _in_queue_vcs.pop_front();
+  }
+
+  while(!_in_queue_credits.empty()) {
+    pair<Credit *, int> const & item = _in_queue_credits.front();
+    _proc_waiting_credits.push(make_pair(GetSimTime() + _credit_delay, item));
+
+    _in_queue_credits.pop_front();
+  }
+
+  while(!_proc_waiting_credits.empty()) {
+    pair<int, pair<Credit *, int> > const & item = _proc_waiting_credits.front();
+    int const & time = item.first;
+    if(GetSimTime() < time) {
+      return;
+    }
+
+    Credit * const & c = item.second.first;
+    assert(c);
+
+    int const & output = item.second.second;
+    assert((output >= 0) && (output < _outputs));
+    
+    BufferState * const dest_buf = _next_buf[output];
+    
+    dest_buf->ProcessCredit(c);
+    c->Free();
+    _proc_waiting_credits.pop();
   }
 }
 
