@@ -973,7 +973,9 @@ void TrafficManager::_Step( )
 	    }
 	    
 	    ++_injected_flow[input];
-	    
+
+	    _net[i]->WriteFlit(f, input);
+
 	    break;
 
 	  } else {
@@ -981,7 +983,6 @@ void TrafficManager::_Step( )
 	  }
 	}
       }
-      _net[i]->WriteFlit(f, input);
       if(((_sim_mode != batch) && (_sim_state == warming_up)) || (_sim_state == running)) {
 	for(int c = 0; c < _classes; ++c) {
 	  _sent_flits[c][input]->AddSample((f && (f->cl == c)) ? 1 : 0);
@@ -989,7 +990,6 @@ void TrafficManager::_Step( )
       }
     }
     for(int output = 0; output < _dests; ++output) {
-      Credit * c = 0;
       map<int, Flit *>::const_iterator iter = flits[i].find(output);
       if(iter != flits[i].end()) {
 	Flit * const & f = iter->second;
@@ -1000,11 +1000,11 @@ void TrafficManager::_Step( )
 		     << "node" << output << " | "
 		     << "Injecting credit for VC " << f->vc << "." << endl;
 	}
-	c = Credit::New();
+	Credit * const c = Credit::New();
 	c->vc.insert(f->vc);
+	_net[i]->WriteCredit(c, output);
 	_RetireFlit(f, output);
       }
-      _net[i]->WriteCredit(c, output);
     }
     flits[i].clear();
     _net[i]->Evaluate( );

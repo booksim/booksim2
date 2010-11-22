@@ -140,8 +140,6 @@ Flit* IsolatedMesh::ReadFlit( int dest )
     f = _subMesh[0]->ReadFlit( dest );
     if ( f ) {
       _f_read_history[dest] = 0;
-      if ( _subMesh[1]->PeekFlit( dest ) == 0 )
-	_subMesh[1]->ReadFlit( dest );
       return f;
     } 
     f = _subMesh[1]->ReadFlit( dest );
@@ -153,8 +151,6 @@ Flit* IsolatedMesh::ReadFlit( int dest )
     f = _subMesh[1]->ReadFlit( dest );
     if ( f ) {
       _f_read_history[dest] = 1;
-      if ( _subMesh[0]->PeekFlit( dest ) == 0 )
-	_subMesh[0]->ReadFlit( dest );
       return f;
     } 
     f = _subMesh[0]->ReadFlit( dest );
@@ -187,8 +183,6 @@ Credit* IsolatedMesh::ReadCredit( int source )
     c = _subMesh[0]->ReadCredit( source );
     if ( c ) {
       _c_read_history[source] = 0;
-      if ( _subMesh[1]->PeekCredit( source) == 0 )
-	_subMesh[1]->ReadCredit(source);
       return c;
     }
     c = _subMesh[1]->ReadCredit( source );
@@ -200,8 +194,6 @@ Credit* IsolatedMesh::ReadCredit( int source )
     c = _subMesh[1]->ReadCredit( source );
     if ( c ) {
       _c_read_history[source] = 1;
-      if ( _subMesh[0]->PeekCredit( source ) == 0 )
-	_subMesh[0]->ReadCredit( source );
       return c;
     }
     c = _subMesh[0]->ReadCredit( source );

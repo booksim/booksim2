@@ -96,6 +96,7 @@ void KNCube::_BuildNet( const Configuration &config )
 
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
 					node, 2*_n + 1, 2*_n + 1 );
+    _timed_modules.push_back(_routers[node]);
 
     router_name.str("");
 

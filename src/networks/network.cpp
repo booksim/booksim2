@@ -44,7 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 Network::Network( const Configuration &config, const string & name ) :
-  Module( 0, name )
+  TimedModule( 0, name )
 {
   _size     = -1; 
   _sources  = -1; 
@@ -93,9 +93,11 @@ void Network::_Alloc( )
     ostringstream name;
     name << _name << "_fchan_ingress" << s;
     _inject[s] = new FlitChannel(this, name.str());
+    _timed_modules.push_back(_inject[s]);
     name.str("");
     name << _name << "_cchan_ingress" << s;
     _inject_cred[s] = new CreditChannel(this, name.str());
+    _timed_modules.push_back(_inject_cred[s]);
   }
   _eject.resize(_dests);
   _eject_cred.resize(_dests);
@@ -103,9 +105,11 @@ void Network::_Alloc( )
     ostringstream name;
     name << _name << "_fchan_egress" << d;
     _eject[d] = new FlitChannel(this, name.str());
+    _timed_modules.push_back(_eject[d]);
     name.str("");
     name << _name << "_cchan_egress" << d;
     _eject_cred[d] = new CreditChannel(this, name.str());
+    _timed_modules.push_back(_eject_cred[d]);
   }
   _chan.resize(_channels);
   _chan_cred.resize(_channels);
@@ -113,9 +117,11 @@ void Network::_Alloc( )
     ostringstream name;
     name << _name << "_fchan_" << c;
     _chan[c] = new FlitChannel(this, name.str());
+    _timed_modules.push_back(_chan[c]);
     name.str("");
     name << _name << "_cchan_" << c;
     _chan_cred[c] = new CreditChannel(this, name.str());
+    _timed_modules.push_back(_chan_cred[c]);
   }
 }
 
@@ -131,22 +137,28 @@ int Network::NumDests( ) const
 
 void Network::ReadInputs( )
 {
-  for ( int r = 0; r < _size; ++r ) {
-    _routers[r]->ReadInputs( );
+  for(deque<TimedModule *>::const_iterator iter = _timed_modules.begin();
+      iter != _timed_modules.end();
+      ++iter) {
+    (*iter)->ReadInputs( );
   }
 }
 
 void Network::Evaluate( )
 {
-  for ( int r = 0; r < _size; ++r ) {
-    _routers[r]->Evaluate( );
+  for(deque<TimedModule *>::const_iterator iter = _timed_modules.begin();
+      iter != _timed_modules.end();
+      ++iter) {
+    (*iter)->Evaluate( );
   }
 }
 
 void Network::WriteOutputs( )
 {
-  for ( int r = 0; r < _size; ++r ) {
-    _routers[r]->WriteOutputs( );
+  for(deque<TimedModule *>::const_iterator iter = _timed_modules.begin();
+      iter != _timed_modules.end();
+      ++iter) {
+    (*iter)->WriteOutputs( );
   }
 }
 
@@ -162,14 +174,6 @@ Flit *Network::ReadFlit( int dest )
   return _eject[dest]->Receive();
 }
 
-/* new functions added for NOC
- */
-Flit* Network::PeekFlit( int dest ) 
-{
-  assert( ( dest >= 0 ) && ( dest < _dests ) );
-  return _eject[dest]->Peek( );
-}
-
 void Network::WriteCredit( Credit *c, int dest )
 {
   assert( ( dest >= 0 ) && ( dest < _dests ) );
@@ -180,14 +184,6 @@ Credit *Network::ReadCredit( int source )
 {
   assert( ( source >= 0 ) && ( source < _sources ) );
   return _inject_cred[source]->Receive();
-}
-
-/* new functions added for NOC
- */
-Credit *Network::PeekCredit( int source ) 
-{
-  assert( ( source >= 0 ) && ( source < _sources ) );
-  return _inject_cred[source]->Peek( );
 }
 
 void Network::InsertRandomFaults( const Configuration &config )

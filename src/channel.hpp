@@ -43,79 +43,86 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <queue>
 #include <cassert>
 
+#include "globals.hpp"
 #include "module.hpp"
+#include "timed_module.hpp"
 
 using namespace std;
 
 template<typename T>
-class Channel : Module {
+class Channel : TimedModule {
 public:
-  Channel( Module * parent, string const & name, int cycles = 1 );
+  Channel(Module * parent, string const & name, int cycles = 1);
   virtual ~Channel() {}
 
   // Physical Parameters
-  void SetLatency( int cycles );
+  void SetLatency(int cycles);
   int GetLatency() const { return _delay ; }
   
   // Send data 
-  virtual void Send( T* data );
+  virtual void Send(T * data);
   
   // Receive data
-  T* Receive( ); 
+  virtual T * Receive(); 
   
-  // Peek at data
-  T* Peek( ) const;
+  virtual void ReadInputs();
+  virtual void Evaluate() {}
+  virtual void WriteOutputs();
 
 protected:
-  int       _delay;
-  queue<T*> _queue;
+  int _delay;
+  T * _input;
+  T * _output;
+  queue<pair<int, T *> > _wait_queue;
 
 };
 
 template<typename T>
-Channel<T>::Channel( Module * parent, string const & name, int cycles )
-  : Module(parent, name) {
-  if(cycles <= 0) {
-    Error("Channel must have positive length.");
+Channel<T>::Channel(Module * parent, string const & name, int cycles)
+  : TimedModule(parent, name), _delay(cycles), _input(0), _output(0) {
+  if(!cycles) {
+    Error("Channel must have positive delay.");
   }
-  SetLatency(cycles);
 }
 
 template<typename T>
-void Channel<T>::SetLatency( int cycles ) {
-
+void Channel<T>::SetLatency(int cycles) {
   _delay = cycles ;
-  while ( !_queue.empty() )
-    _queue.pop( );
-  for (int i = 0; i < _delay; i++)
-    _queue.push(0);
 }
 
 template<typename T>
-void Channel<T>::Send( T* data ) {
-
-  assert(_queue.size() <= (size_t)_delay);
-
-  _queue.push(data);
+void Channel<T>::Send(T * data) {
+  _input = data;
 }
 
 template<typename T>
-T* Channel<T>::Receive() {
-
-  assert(_queue.size() >= (size_t)_delay);
-  assert(!_queue.empty());
-
-  T* data = _queue.front();
-  _queue.pop();
-  return data;
+T * Channel<T>::Receive() {
+  return _output;
 }
 
 template<typename T>
-T* Channel<T>::Peek( ) const {
+void Channel<T>::ReadInputs() {
+  if(_input) {
+    _wait_queue.push(make_pair(GetSimTime() + _delay - 1, _input));
+    _input = 0;
+  }
+}
 
-  assert(!_queue.empty());
-
-  return _queue.front( );
+template<typename T>
+void Channel<T>::WriteOutputs() {
+  _output = 0;
+  if(_wait_queue.empty()) {
+    return;
+  }
+  pair<int, T *> const & item = _wait_queue.front();
+  int const & time = item.first;
+  if(GetSimTime() < time) {
+    return;
+  }
+  assert(GetSimTime() == time);
+  _wait_queue.pop();
+  _output = item.second;
+  assert(_output);
 }
 
 #endif

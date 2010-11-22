@@ -726,33 +726,23 @@ void EventRouter::_OutputQueuing( )
 
 void EventRouter::_SendFlits( )
 {
-  Flit *f;
-
   for ( int output = 0; output < _outputs; ++output ) {
     if ( !_output_buffer[output].empty( ) ) {
-      f = _output_buffer[output].front( );
+      Flit *f = _output_buffer[output].front( );
       _output_buffer[output].pop( );
-    } else {
-      f = 0;
+      _output_channels[output]->Send( f );
     }
-	
-    _output_channels[output]->Send( f );
   }
 }
 
 void EventRouter::_SendCredits( )
 {
-  Credit *c;
-
   for ( int input = 0; input < _inputs; ++input ) {
     if ( !_in_cred_buffer[input].empty( ) ) {
-      c = _in_cred_buffer[input].front( );
+      Credit *c = _in_cred_buffer[input].front( );
       _in_cred_buffer[input].pop( );
-    } else {
-      c = 0;
+      _input_credits[input]->Send( c );
     }
-
-    _input_credits[input]->Send( c );
   }
 }
 

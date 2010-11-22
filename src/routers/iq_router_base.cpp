@@ -288,9 +288,8 @@ void IQRouterBase::_OutputQueuing( )
 void IQRouterBase::_SendFlits( )
 {
   for ( int output = 0; output < _outputs; ++output ) {
-    Flit *f = NULL;
     if ( !_output_buffer[output].empty( ) ) {
-      f = _output_buffer[output].front( );
+      Flit *f = _output_buffer[output].front( );
       _output_buffer[output].pop( );
       ++_sent_flits[output];
       if(f->watch)
@@ -299,20 +298,19 @@ void IQRouterBase::_SendFlits( )
 		    << " to channel at output " << output
 		    << "." << endl;
       if(gTrace){cout<<"Outport "<<output<<endl;cout<<"Stop Mark"<<endl;}
+      _output_channels[output]->Send( f );
     }
-    _output_channels[output]->Send( f );
   }
 }
 
 void IQRouterBase::_SendCredits( )
 {
   for ( int input = 0; input < _inputs; ++input ) {
-    Credit * c = NULL;
     if ( !_in_cred_buffer[input].empty( ) ) {
-      c = _in_cred_buffer[input].front( );
+      Credit * c = _in_cred_buffer[input].front( );
       _in_cred_buffer[input].pop( );
+      _input_credits[input]->Send( c );
     }
-    _input_credits[input]->Send( c );
   }
 }
 

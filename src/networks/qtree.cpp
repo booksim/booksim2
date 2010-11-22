@@ -102,6 +102,7 @@ void QTree::_BuildNet( const Configuration& config )
       _routers[r] = Router::NewRouter( config, this,
 				       routerName.str( ),
 				       id, d, d);
+      _timed_modules.push_back(_routers[r]);
       routerName.str("");
     }
   }

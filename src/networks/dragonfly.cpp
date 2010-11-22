@@ -236,6 +236,7 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
 
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
 					node, _k, _k );
+    _timed_modules.push_back(_routers[node]);
 
 #ifdef DEBUG_DRAGONFLYNEW
     cout << " ======== router node : " << node << " ======== " << " router_" << router_name.str() << " router node # : " << node<< endl;

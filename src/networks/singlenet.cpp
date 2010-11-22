@@ -65,6 +65,7 @@ void SingleNet::_BuildNet( const Configuration &config )
 
   _routers[0] = Router::NewRouter( config, this, "router", 0, 
 				   _sources, _dests );
+  _timed_modules.push_back(_routers[0]);
 
   for ( i = 0; i < _sources; ++i ) {
     _routers[0]->AddInputChannel( _inject[i], _inject_cred[i] );

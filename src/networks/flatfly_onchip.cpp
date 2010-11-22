@@ -148,7 +148,7 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
 					node, _r, _r );
-
+    _timed_modules.push_back(_routers[node]);
 
 
 #ifdef DEBUG_FATFLY

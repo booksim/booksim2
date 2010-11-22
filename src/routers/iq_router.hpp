@@ -73,10 +73,11 @@ class IQRouter : public Router {
 
   deque<pair<int, pair<int, int> > > _route_waiting_vcs;
 
-  list<pair<int, int> > _vc_alloc_pending_vcs;
-  deque<pair<int, pair<int, int> > > _vc_alloc_waiting_vcs;  
+  deque<pair<int, int> > _vc_alloc_pending_vcs;
+  deque<pair<int, pair<pair<int, int>, int> > > _vc_alloc_waiting_vcs;  
 
-  deque<pair<int, pair<Flit *, int> > > _crossbar_waiting_flits;
+  deque<pair<Flit *, pair<int, int> > > _crossbar_pending_flits;
+  deque<pair<int, pair<Flit *, pair<int, int> > > > _crossbar_waiting_flits;
 
   vector<Buffer *> _buf;
   vector<BufferState *> _next_buf;
@@ -104,10 +105,15 @@ class IQRouter : public Router {
   virtual void _InternalStep( );
 
   void _InputQueuing( );
-  void _Route( );
-  void _VCAlloc( );
+
+  void _VCAllocEvaluate( );
+  void _SwitchEvaluate( );
+
   void _SWAlloc( );
-  void _OutputQueuing( );
+
+  void _RouteUpdate( );
+  void _VCAllocUpdate( );
+  void _SwitchUpdate( );
 
   void _SendFlits( );
   void _SendCredits( );

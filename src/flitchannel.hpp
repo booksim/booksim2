@@ -55,17 +55,26 @@ class Router ;
 
 class FlitChannel : public Channel<Flit> {
 public:
-  FlitChannel( Module * parent, string const & name, int cycles = 1 );
+  FlitChannel(Module * parent, string const & name, int cycles = 1);
 
-  void SetSource( Router* router ) ;
-  inline int GetSource() const {return _routerSource;}
-  void SetSink( Router* router ) ;
-  inline int GetSink() const {return _routerSink;}
+  void SetSource(Router * router) ;
+  inline int GetSource() const {
+    return _routerSource;
+  }
+  void SetSink(Router * router) ;
+  inline int GetSink() const {
+    return _routerSink;
+  }
 
-  inline const vector<int> & GetActivity() const {return _active;}
+  inline const vector<int> & GetActivity() const {
+    return _active;
+  }
 
   // Send flit 
-  virtual void Send( Flit* flit );
+  virtual void Send(Flit * flit);
+
+  virtual void ReadInputs();
+  virtual void WriteOutputs();
 
 private:
   
@@ -75,13 +84,13 @@ private:
   //
   ////////////////////////////////////////
 
-  int _routerSource ;
-  int _routerSink ;
+  int _routerSource;
+  int _routerSink;
   
 
   // Statistics for Activity Factors
-  vector<int>  _active;
-  int          _idle;
+  vector<int> _active;
+  int _idle;
 
 };
 

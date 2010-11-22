@@ -150,6 +150,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
 					node,
 					degree_in,
 					degree_out);
+    _timed_modules.push_back(_routers[node]);
     name.str("");
 
     //

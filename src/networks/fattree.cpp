@@ -121,9 +121,10 @@ void FatTree::_BuildNet( const Configuration& config )
 
       name.str("");
       name << "router_" << d << "_" << pos;
-      _Router( d, pos ) = Router::NewRouter( config, this,
-					     name.str( ), id,
-					     degree, degree );
+      Router * r = Router::NewRouter( config, this, name.str( ), id,
+				      degree, degree );
+      _Router( d, pos ) = r;
+      _timed_modules.push_back(r);
     }
   }
 

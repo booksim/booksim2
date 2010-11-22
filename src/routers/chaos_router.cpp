@@ -641,10 +641,8 @@ void ChaosRouter::_OutputAdvance( )
 
 void ChaosRouter::_SendFlits( )
 {
-  Flit *f;
-
   for ( int output = 0; output < _outputs; ++output ) {
-    f = _crossbar_pipe->Read( output );
+    Flit *f = _crossbar_pipe->Read( output );
 
     if ( f ) {
       _output_frame[output].push( f );
@@ -656,25 +654,18 @@ void ChaosRouter::_SendFlits( )
       _output_channels[output]->Send( _output_frame[output].front( ) );
       _output_frame[output].pop( );
       ++_next_queue_cnt[output];
-    } else {
-      _output_channels[output]->Send(0);
     }
   }
 }
 
 void ChaosRouter::_SendCredits( )
 {
-  Credit *c;
-
   for ( int input = 0; input < _inputs; ++input ) {
     if ( !_credit_queue[input].empty( ) ) {
-      c = _credit_queue[input].front( );
+      Credit *c = _credit_queue[input].front( );
       _credit_queue[input].pop( );
-    } else {
-      c = 0;
+      _input_credits[input]->Send( c );
     }
-    _input_credits[input]->Send( c );
-
   }
 }
 

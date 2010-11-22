@@ -47,24 +47,45 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //  $Date: 2007/06/27 23:10:17 $
 //  $Id$
 // ----------------------------------------------------------------------
-FlitChannel::FlitChannel( Module * parent, string const & name, int cycles ) : Channel<Flit>(parent, name, cycles), _idle(0) {
+FlitChannel::FlitChannel(Module * parent, string const & name, int cycles)
+: Channel<Flit>(parent, name, cycles), _idle(0) {
   _active.resize(Flit::NUM_FLIT_TYPES, 0);
 }
 
-void FlitChannel::SetSource( Router* router ) {
-  _routerSource = router->GetID() ;
+void FlitChannel::SetSource(Router * router) {
+  _routerSource = router->GetID();
 }
 
-void FlitChannel::SetSink( Router* router ) {
-  _routerSink = router->GetID() ;
+void FlitChannel::SetSink(Router * router) {
+  _routerSink = router->GetID();
 }
 
-void FlitChannel::Send( Flit* flit ) {
-
-  if ( flit )
-    ++_active[flit->type];
-  else 
+void FlitChannel::Send(Flit * f) {
+  if(f) {
+    ++_active[f->type];
+  } else {
     ++_idle;
+  }
+  Channel<Flit>::Send(f);
+}
 
-  Channel<Flit>::Send(flit);
+void FlitChannel::ReadInputs() {
+  Flit const * const & f = _input;
+  if(f && f->watch) {
+    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+	       << "Beginning channel traversal for flit " << f->id
+	       << " with delay " << _delay
+	       << "." << endl;
+  }
+  Channel<Flit>::ReadInputs();
+}
+
+void FlitChannel::WriteOutputs() {
+  Channel<Flit>::WriteOutputs();
+  Flit const * const & f = _output;
+  if(f && f->watch) {
+    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+	       << "Completed channel traversal for flit " << f->id
+	       << "." << endl;
+  }
 }

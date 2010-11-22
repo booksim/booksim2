@@ -126,6 +126,7 @@ void AnyNet::_BuildNet( const Configuration &config ){
     router_name << "_" <<  node ;
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
     					node, radix, radix );
+    _timed_modules.push_back(_routers[node]);
     //add injeciton ejection channels
     map<int, int >::const_iterator nniter;
     for(nniter = niter->second->begin();nniter!=niter->second->end(); nniter++){

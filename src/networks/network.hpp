@@ -32,12 +32,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _NETWORK_HPP_
 
 #include <vector>
+#include <deque>
 
 #include "module.hpp"
 #include "flit.hpp"
 #include "credit.hpp"
 #include "router.hpp"
 #include "module.hpp"
+#include "timed_module.hpp"
 #include "flitchannel.hpp"
 #include "channel.hpp"
 #include "config_utils.hpp"
@@ -46,7 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 typedef Channel<Credit> CreditChannel;
 
 
-class Network : public Module {
+class Network : public TimedModule {
 protected:
 
   int _size;
@@ -65,6 +67,8 @@ protected:
   vector<FlitChannel *> _chan;
   vector<CreditChannel *> _chan_cred;
 
+  deque<TimedModule *> _timed_modules;
+
   virtual void _ComputeSize( const Configuration &config ) = 0;
   virtual void _BuildNet( const Configuration &config ) = 0;
 
@@ -76,11 +80,9 @@ public:
 
   virtual void WriteFlit( Flit *f, int source );
   virtual Flit *ReadFlit( int dest );
-  virtual Flit *PeekFlit( int dest );
 
   virtual void    WriteCredit( Credit *c, int dest );
   virtual Credit *ReadCredit( int source );
-  virtual Credit *PeekCredit( int source );
 
   int  NumSources( ) const;
   int  NumDests( ) const;
