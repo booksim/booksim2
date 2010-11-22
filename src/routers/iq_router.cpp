@@ -286,7 +286,7 @@ void IQRouter::_InputQueuing( )
     if (cur_buf->GetState(vc) == VC::idle) {
       
       cur_buf->SetState(vc, VC::routing);
-      _route_waiting_vcs.push(make_pair(GetSimTime() + _routing_delay, item));
+      _route_waiting_vcs.push_back(make_pair(GetSimTime() + _routing_delay, item));
     }
 
     _in_queue_vcs.pop_front();
@@ -294,7 +294,7 @@ void IQRouter::_InputQueuing( )
 
   while(!_in_queue_credits.empty()) {
     pair<Credit *, int> const & item = _in_queue_credits.front();
-    _proc_waiting_credits.push(make_pair(GetSimTime() + _credit_delay, item));
+    _proc_waiting_credits.push_back(make_pair(GetSimTime() + _credit_delay, item));
 
     _in_queue_credits.pop_front();
   }
@@ -316,7 +316,7 @@ void IQRouter::_InputQueuing( )
     
     dest_buf->ProcessCredit(c);
     c->Free();
-    _proc_waiting_credits.pop();
+    _proc_waiting_credits.pop_front();
   }
 }
 
@@ -349,9 +349,9 @@ void IQRouter::_Route( )
 
     cur_buf->Route(vc, _rf, this, f, input);
     time += _vc_alloc_delay;
-    _vc_alloc_waiting_vcs.push(item);
+    _vc_alloc_waiting_vcs.push_back(item);
     cur_buf->SetState(vc, _speculative ? VC::vc_spec : VC::vc_alloc);
-    _route_waiting_vcs.pop();
+    _route_waiting_vcs.pop_front();
   }
 }
 
@@ -368,7 +368,7 @@ void IQRouter::_VCAlloc( )
       break;
     }
     _vc_alloc_pending_vcs.push_back(item.second);
-    _vc_alloc_waiting_vcs.pop();
+    _vc_alloc_waiting_vcs.pop_front();
   }
 
   if(_vc_alloc_pending_vcs.empty()) {
@@ -379,7 +379,7 @@ void IQRouter::_VCAlloc( )
 
   _vc_allocator->Clear();
 
-  list<pair<int, int> >::iterator iter = _vc_alloc_pending_vcs.begin();
+  deque<pair<int, int> >::iterator iter = _vc_alloc_pending_vcs.begin();
   while(iter != _vc_alloc_pending_vcs.end()) {
     
     int const & input = iter->first;
@@ -898,7 +898,7 @@ void IQRouter::_SWAlloc( )
 	  dest_buf->SendingFlit( f );
 	  
 	  _switchMonitor->traversal( input, output, f) ;
-	  _crossbar_waiting_flits.push(make_pair(GetSimTime() + _routing_delay, 
+	  _crossbar_waiting_flits.push_back(make_pair(GetSimTime() + _routing_delay, 
 						 make_pair(f, expanded_output)));
 	  
 	  if(f->tail) {
@@ -967,7 +967,7 @@ void IQRouter::_OutputQueuing( )
 		 << "." << endl;
     }
     _output_buffer[output].push(f);
-    _crossbar_waiting_flits.pop();
+    _crossbar_waiting_flits.pop_front();
   }
 }
 

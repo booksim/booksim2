@@ -32,8 +32,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _IQ_ROUTER_HPP_
 
 #include <string>
+#include <deque>
 #include <queue>
-#include <list>
 
 #include "router.hpp"
 #include "routefunc.hpp"
@@ -66,17 +66,17 @@ class IQRouter : public Router {
   vector<int> _received_flits;
   vector<int> _sent_flits;
 
-  list<pair<Credit *, int> > _in_queue_credits;
-  queue<pair<int, pair<Credit *, int> > > _proc_waiting_credits;
+  deque<pair<Credit *, int> > _in_queue_credits;
+  deque<pair<int, pair<Credit *, int> > > _proc_waiting_credits;
 
-  list<pair<int, int> > _in_queue_vcs;
+  deque<pair<int, int> > _in_queue_vcs;
 
-  queue<pair<int, pair<int, int> > > _route_waiting_vcs;
+  deque<pair<int, pair<int, int> > > _route_waiting_vcs;
 
-  list<pair<int, int> > _vc_alloc_pending_vcs;
-  queue<pair<int, pair<int, int> > > _vc_alloc_waiting_vcs;  
+  deque<pair<int, int> > _vc_alloc_pending_vcs;
+  deque<pair<int, pair<int, int> > > _vc_alloc_waiting_vcs;  
 
-  queue<pair<int, pair<Flit *, int> > > _crossbar_waiting_flits;
+  deque<pair<int, pair<Flit *, int> > > _crossbar_waiting_flits;
 
   vector<Buffer *> _buf;
   vector<BufferState *> _next_buf;
