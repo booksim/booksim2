@@ -373,7 +373,7 @@ void IQRouter::_VCAlloc( )
 
   _vc_allocator->Clear();
 
-  deque<pair<int, int> >::iterator iter = _vc_alloc_pending_vcs.begin();
+  list<pair<int, int> >::iterator iter = _vc_alloc_pending_vcs.begin();
   while(iter != _vc_alloc_pending_vcs.end()) {
     
     int const & input = iter->first;

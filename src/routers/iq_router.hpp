@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <deque>
 #include <queue>
+#include <list>
 
 #include "router.hpp"
 #include "routefunc.hpp"
@@ -72,7 +73,7 @@ class IQRouter : public Router {
 
   deque<pair<int, pair<int, int> > > _route_waiting_vcs;
 
-  deque<pair<int, int> > _vc_alloc_pending_vcs;
+  list<pair<int, int> > _vc_alloc_pending_vcs;
   deque<pair<int, pair<int, int> > > _vc_alloc_waiting_vcs;  
 
   deque<pair<int, pair<Flit *, int> > > _crossbar_waiting_flits;
