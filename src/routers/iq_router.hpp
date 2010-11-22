@@ -66,10 +66,9 @@ class IQRouter : public Router {
   vector<int> _received_flits;
   vector<int> _sent_flits;
 
-  deque<pair<Credit *, int> > _in_queue_credits;
-  deque<pair<int, pair<Credit *, int> > > _proc_waiting_credits;
-
   deque<pair<int, int> > _in_queue_vcs;
+
+  deque<pair<int, pair<Credit *, int> > > _proc_waiting_credits;
 
   deque<pair<int, pair<int, int> > > _route_waiting_vcs;
 

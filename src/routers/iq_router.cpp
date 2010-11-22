@@ -260,7 +260,8 @@ void IQRouter::_ReceiveCredits( )
   for(int output = 0; output < _outputs; ++output) {  
     Credit * const c = _output_credits[output]->Receive();
     if(c) {
-      _in_queue_credits.push_back(make_pair(c, output));
+      _proc_waiting_credits.push_back(make_pair(GetSimTime() + _credit_delay, 
+						make_pair(c, output)));
     }
   }
 }
@@ -290,13 +291,6 @@ void IQRouter::_InputQueuing( )
     }
 
     _in_queue_vcs.pop_front();
-  }
-
-  while(!_in_queue_credits.empty()) {
-    pair<Credit *, int> const & item = _in_queue_credits.front();
-    _proc_waiting_credits.push_back(make_pair(GetSimTime() + _credit_delay, item));
-
-    _in_queue_credits.pop_front();
   }
 
   while(!_proc_waiting_credits.empty()) {
