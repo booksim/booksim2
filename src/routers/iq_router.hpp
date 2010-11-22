@@ -34,7 +34,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <deque>
 #include <queue>
-#include <list>
 
 #include "router.hpp"
 #include "routefunc.hpp"
