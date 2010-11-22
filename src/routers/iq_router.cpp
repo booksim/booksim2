@@ -1040,7 +1040,7 @@ void IQRouter::_SwitchEvaluate( )
 
     pair<Flit *, pair<int, int> > const & item = _crossbar_pending_flits.front();
 
-    Flit * const & f = item.first;
+    Flit const * const & f = item.first;
     assert(f);
 
     int const & expanded_input = item.second.first;
