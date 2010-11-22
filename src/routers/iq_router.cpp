@@ -381,7 +381,7 @@ void IQRouter::_VCAlloc( )
     int const & vc = iter->second;
     assert((vc >= 0) && (vc < _vcs));
 
-    Buffer * const cur_buf = _buf[input];
+    Buffer const * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
     assert(cur_buf->GetState(vc) == (_speculative ? VC::vc_spec : VC::vc_alloc));
 
