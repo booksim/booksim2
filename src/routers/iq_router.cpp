@@ -578,6 +578,59 @@ void IQRouter::_VCAllocEvaluate( )
     }
   }
   _vc_allocator->Clear();
+
+  if(_vc_alloc_delay <= 1) {
+    return;
+  }
+
+  for(deque<pair<int, pair<pair<int, int>, int> > >::iterator iter = _vc_alloc_vcs.begin();
+      iter != _vc_alloc_vcs.end();
+      ++iter) {
+    
+    int const & time = iter->first;
+    assert(time >= 0);
+    if(GetSimTime() < time) {
+      break;
+    }
+    
+    int const & output_and_vc = iter->second.second;
+    
+    if(output_and_vc >= 0) {
+      
+      int const match_output = output_and_vc / _vcs;
+      assert((match_output >= 0) && (match_output < _outputs));
+      int const match_vc = output_and_vc % _vcs;
+      assert((match_vc >= 0) && (match_vc < _vcs));
+      
+      BufferState const * const dest_buf = _next_buf[match_output];
+      
+      if(!dest_buf->IsAvailableFor(match_vc)) {
+	
+	int const & input = iter->second.first.first;
+	assert((input >= 0) && (input < _inputs));
+	int const & vc = iter->second.first.second;
+	assert((vc >= 0) && (vc < _vcs));
+	
+	Buffer const * const cur_buf = _buf[input];
+	assert(!cur_buf->Empty(vc));
+	assert(cur_buf->GetState(vc) == (_speculative ? VC::vc_spec : VC::vc_alloc));
+	
+	Flit const * const f = cur_buf->FrontFlit(vc);
+	assert(f);
+	assert(f->head);
+	
+	if(f->watch) {
+	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		     << "  Discarding previously generated grant for VC " << vc
+		     << " at input " << input
+		     << ": VC " << match_vc
+		     << " at output " << match_output
+		     << " is no longer available." << endl;
+	}
+	iter->second.second = -1;
+      }
+    }
+  }
 }
 
 void IQRouter::_VCAllocUpdate( )
@@ -621,33 +674,23 @@ void IQRouter::_VCAllocUpdate( )
       int const match_vc = output_and_vc % _vcs;
       assert((match_vc >= 0) && (match_vc < _vcs));
       
+      if(f->watch) {
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		   << "  Acquiring assigned VC " << match_vc
+		   << " at output " << match_output
+		   << "." << endl;
+      }
+	
       BufferState * const dest_buf = _next_buf[match_output];
+      assert(dest_buf->IsAvailableFor(match_vc));
       
-      if(dest_buf->IsAvailableFor(match_vc)) {
-	if(f->watch) {
-	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		     << "  Acquiring assigned VC " << match_vc
-		     << " at output " << match_output
-		     << "." << endl;
-	}
+      dest_buf->TakeBuffer(match_vc);
 	
-	dest_buf->TakeBuffer(match_vc);
-	
-	cur_buf->SetOutput(vc, match_output, match_vc);
-	if(_speculative) {
-	  cur_buf->SetState(vc, VC::vc_spec_grant);
-	} else {
-	  cur_buf->SetState(vc, VC::active);
-	}
+      cur_buf->SetOutput(vc, match_output, match_vc);
+      if(_speculative) {
+	cur_buf->SetState(vc, VC::vc_spec_grant);
       } else {
-	assert(_vc_alloc_delay > 1);
-	if(f->watch) {
-	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		     << "  Unable to acquire assigned VC " << match_vc
-		     << " at output " << match_output
-		     << ": VC is already in use." << endl;
-	}
-	_vc_alloc_vcs.push_back(make_pair(-1, item.second));
+	cur_buf->SetState(vc, VC::active);
       }
     } else {
       if(f->watch) {
