@@ -53,12 +53,12 @@ void BufferMonitor::cycle() {
   _cycles++ ;
 }
 
-void BufferMonitor::write( int input, Flit* flit ) {
-  _writes[ index(input, flit->type) ]++ ;
+void BufferMonitor::write( int input, Flit const * f ) {
+  _writes[ index(input, f->type) ]++ ;
 }
 
-void BufferMonitor::read( int input, Flit* flit ) {
-  _reads[ index(input, flit->type) ]++ ;
+void BufferMonitor::read( int input, Flit const * f ) {
+  _reads[ index(input, f->type) ]++ ;
 }
 
 ostream& operator<<( ostream& os, const BufferMonitor& obj ) {

@@ -50,7 +50,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace std;
 
 template<typename T>
-class Channel : TimedModule {
+class Channel : public TimedModule {
 public:
   Channel(Module * parent, string const & name, int cycles = 1);
   virtual ~Channel() {}

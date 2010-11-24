@@ -47,11 +47,17 @@ class BufferMonitor {
 public:
   BufferMonitor( int inputs ) ;
   void cycle() ;
-  void write( int input, Flit* flit ) ;
-  void read( int input, Flit* flit ) ;
-  const vector<int> & GetReads() const {return _reads;}
-  const vector<int> & GetWrites() const {return _writes;}
-  int NumInputs() const {return _inputs;}
+  void write( int input, Flit const * f ) ;
+  void read( int input, Flit const * f ) ;
+  inline const vector<int> & GetReads() const {
+    return _reads;
+  }
+  inline const vector<int> & GetWrites() const {
+    return _writes;
+  }
+  inline int NumInputs() const {
+    return _inputs;
+  }
   friend ostream& operator<<( ostream& os, const BufferMonitor& obj ) ;
 } ;
 

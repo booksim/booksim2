@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "module.hpp"
 
-class TimedModule : Module {
+class TimedModule : public Module {
 
 public:
   TimedModule(Module * parent, string const & name) : Module(parent, name) {}

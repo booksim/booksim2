@@ -91,11 +91,11 @@ void Network::_Alloc( )
   _inject_cred.resize(_sources);
   for ( int s = 0; s < _sources; ++s ) {
     ostringstream name;
-    name << _name << "_fchan_ingress" << s;
+    name << Name() << "_fchan_ingress" << s;
     _inject[s] = new FlitChannel(this, name.str());
     _timed_modules.push_back(_inject[s]);
     name.str("");
-    name << _name << "_cchan_ingress" << s;
+    name << Name() << "_cchan_ingress" << s;
     _inject_cred[s] = new CreditChannel(this, name.str());
     _timed_modules.push_back(_inject_cred[s]);
   }
@@ -103,11 +103,11 @@ void Network::_Alloc( )
   _eject_cred.resize(_dests);
   for ( int d = 0; d < _dests; ++d ) {
     ostringstream name;
-    name << _name << "_fchan_egress" << d;
+    name << Name() << "_fchan_egress" << d;
     _eject[d] = new FlitChannel(this, name.str());
     _timed_modules.push_back(_eject[d]);
     name.str("");
-    name << _name << "_cchan_egress" << d;
+    name << Name() << "_cchan_egress" << d;
     _eject_cred[d] = new CreditChannel(this, name.str());
     _timed_modules.push_back(_eject_cred[d]);
   }
@@ -115,11 +115,11 @@ void Network::_Alloc( )
   _chan_cred.resize(_channels);
   for ( int c = 0; c < _channels; ++c ) {
     ostringstream name;
-    name << _name << "_fchan_" << c;
+    name << Name() << "_fchan_" << c;
     _chan[c] = new FlitChannel(this, name.str());
     _timed_modules.push_back(_chan[c]);
     name.str("");
-    name << _name << "_cchan_" << c;
+    name << Name() << "_cchan_" << c;
     _chan_cred[c] = new CreditChannel(this, name.str());
     _timed_modules.push_back(_chan_cred[c]);
   }

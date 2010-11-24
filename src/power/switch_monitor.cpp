@@ -48,8 +48,8 @@ void SwitchMonitor::cycle() {
   _cycles++ ;
 }
 
-void SwitchMonitor::traversal( int input, int output, Flit* flit ) {
-  _event[ index( input, output, flit->type) ]++ ;
+void SwitchMonitor::traversal( int input, int output, Flit const * f ) {
+  _event[ index( input, output, f->type) ]++ ;
 }
 
 ostream& operator<<( ostream& os, const SwitchMonitor& obj ) {

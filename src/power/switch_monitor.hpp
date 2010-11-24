@@ -50,7 +50,7 @@ public:
   const vector<int> & GetActivity() const {return _event;}
   int NumInputs() const {return _inputs;}
   int NumOutputs() const {return _outputs;}
-  void traversal( int input, int output, Flit* flit ) ;
+  void traversal( int input, int output, Flit const * f ) ;
   friend ostream& operator<<( ostream& os, const SwitchMonitor& obj ) ;
   
 } ;

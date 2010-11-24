@@ -145,8 +145,8 @@ public:
   virtual int GetSentFlits(int o = -1) const;
   virtual void ResetFlitStats();
 
-  SwitchMonitor const * const & GetSwitchMonitor() const {return _switchMonitor;}
-  BufferMonitor const * const & GetBufferMonitor() const {return _bufferMonitor;}
+  SwitchMonitor const * const GetSwitchMonitor() const {return _switchMonitor;}
+  BufferMonitor const * const GetBufferMonitor() const {return _bufferMonitor;}
 
 };
 
