@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class VC : public Module {
 public:
   enum eVCState { state_min = 0, idle = state_min, routing, vc_alloc, active, 
-		  vc_spec, vc_spec_grant, state_max = vc_spec_grant };
+		  vc_spec, state_max = vc_spec };
   struct state_info_t {
     int cycles;
   };

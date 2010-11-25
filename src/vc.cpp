@@ -48,11 +48,9 @@ const char * const VC::VCSTATE[] = {"idle",
 				    "routing",
 				    "vc_alloc",
 				    "active",
-				    "vc_spec",
-				    "vc_spec_grant"};
+				    "vc_spec"};
 
 VC::state_info_t VC::state_info[] = {{0},
-				     {0},
 				     {0},
 				     {0},
 				     {0},
@@ -154,20 +152,8 @@ void VC::SetState( eVCState s )
 		<< "Changing state from " << VC::VCSTATE[_state]
 		<< " to " << VC::VCSTATE[s] << "." << endl;
   
-  // do not reset state time for speculation-related pseudo state transition
-  if((_state == vc_spec) && (s == vc_spec_grant)) {
-    assert(f);
-    if(f->watch)
-      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		  << "Keeping state time at " << _state_time << "." << endl;
-  } else {
-    if(f && f->watch)
-      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		  << "Resetting state time." << endl;
-    _state_time = 0;
-  }
-  
   _state = s;
+  _state_time = 0;
 }
 
 const OutputSet *VC::GetRouteSet( ) const
@@ -229,7 +215,6 @@ void VC::AdvanceTime( )
   switch( _state ) {
   case idle          : _idle_cycles++; break;
   case active        : _active_cycles++; break;
-  case vc_spec_grant : _active_cycles++; break;
   case vc_alloc      : _vc_alloc_cycles++; break;
   case vc_spec       : _vc_alloc_cycles++; break;
   case routing       : _routing_cycles++; break;
@@ -255,7 +240,7 @@ void VC::Display( ) const
   if ( _state != VC::idle ) {
     cout << FullName() << ": "
 	 << " state: " << VCSTATE[_state];
-    if((_state == VC::vc_spec_grant) || (_state == VC::active)) {
+    if(_state == VC::active) {
       cout << " out_port: " << _out_port
 	   << " out_vc: " << _out_vc;
     }
