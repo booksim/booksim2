@@ -319,8 +319,6 @@ void IQRouter::_InputQueuing( )
 	}
 	_vc_alloc_vcs.push_back(make_pair(-1, make_pair(item, -1)));
       }
-    } else if(cur_buf->Empty(vc)) {
-      assert(cur_buf->GetState(vc) == VC::active);
     }
 
     _in_queue_vcs.pop_front();
