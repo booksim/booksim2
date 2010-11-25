@@ -34,6 +34,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <deque>
 #include <queue>
+#include <set>
+#include <map>
 
 #include "router.hpp"
 #include "routefunc.hpp"
@@ -66,11 +68,17 @@ class IQRouter : public Router {
   vector<int> _received_flits;
   vector<int> _sent_flits;
 
-  deque<pair<int, int> > _in_queue_vcs;
-  deque<pair<int, pair<Credit *, int> > > _in_queue_credits;
+  map<int, Flit *> _in_queue_flits;
+
+  deque<pair<int, pair<Credit *, int> > > _proc_credits;
+
   deque<pair<int, pair<int, int> > > _route_vcs;
   deque<pair<int, pair<pair<int, int>, int> > > _vc_alloc_vcs;  
+  deque<pair<int, pair<pair<int, int>, int> > > _sw_alloc_vcs;
+
   deque<pair<int, pair<Flit *, pair<int, int> > > > _crossbar_flits;
+
+  map<int, Credit *> _out_queue_credits;
 
   vector<Buffer *> _buf;
   vector<BufferState *> _next_buf;
@@ -97,17 +105,21 @@ class IQRouter : public Router {
 
   virtual void _InternalStep( );
 
+  bool _SWAllocAddReq(int input, int vc, int output);
+
   void _InputQueuing( );
 
   void _RouteEvaluate( );
   void _VCAllocEvaluate( );
+  void _SWAllocEvaluate( );
   void _SwitchEvaluate( );
-
-  void _SWAlloc( );
 
   void _RouteUpdate( );
   void _VCAllocUpdate( );
+  void _SWAllocUpdate( );
   void _SwitchUpdate( );
+
+  void _OutputQueuing( );
 
   void _SendFlits( );
   void _SendCredits( );
