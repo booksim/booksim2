@@ -47,11 +47,9 @@ int VC::total_cycles = 0;
 const char * const VC::VCSTATE[] = {"idle",
 				    "routing",
 				    "vc_alloc",
-				    "active",
-				    "vc_spec"};
+				    "active"};
 
 VC::state_info_t VC::state_info[] = {{0},
-				     {0},
 				     {0},
 				     {0},
 				     {0}};
@@ -216,7 +214,6 @@ void VC::AdvanceTime( )
   case idle          : _idle_cycles++; break;
   case active        : _active_cycles++; break;
   case vc_alloc      : _vc_alloc_cycles++; break;
-  case vc_spec       : _vc_alloc_cycles++; break;
   case routing       : _routing_cycles++; break;
   }
   state_info[_state].cycles++;

@@ -308,12 +308,10 @@ void IQRouter::_InputQueuing( )
 		     << ")." << endl;
 	}
 	cur_buf->Route(vc, _rf, this, f, input);
+	cur_buf->SetState(vc, VC::vc_alloc);
 	if(_speculative) {
-	  cur_buf->SetState(vc, VC::vc_spec);
 	  _sw_alloc_vcs.push_back(make_pair(-1, make_pair(make_pair(input, vc),
 							  -1)));
-	} else {
-	  cur_buf->SetState(vc, VC::vc_alloc);
 	}
 	_vc_alloc_vcs.push_back(make_pair(-1, make_pair(make_pair(input, vc), 
 							-1)));
@@ -422,12 +420,9 @@ void IQRouter::_RouteUpdate( )
     }
 
     cur_buf->Route(vc, _rf, this, f, input);
-
+    cur_buf->SetState(vc, VC::vc_alloc);
     if(_speculative) {
-      cur_buf->SetState(vc, VC::vc_spec);
       _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second, -1)));
-    } else {
-      cur_buf->SetState(vc, VC::vc_alloc);
     }
     _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second, -1)));
 
@@ -462,7 +457,7 @@ void IQRouter::_VCAllocEvaluate( )
 
     Buffer const * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
-    assert(cur_buf->GetState(vc) == (_speculative ? VC::vc_spec : VC::vc_alloc));
+    assert(cur_buf->GetState(vc) == VC::vc_alloc);
 
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
@@ -564,7 +559,7 @@ void IQRouter::_VCAllocEvaluate( )
 
       Buffer const * const cur_buf = _buf[input];
       assert(!cur_buf->Empty(vc));
-      assert(cur_buf->GetState(vc) == (_speculative ? VC::vc_spec : VC::vc_alloc));
+      assert(cur_buf->GetState(vc) == VC::vc_alloc);
 
       Flit const * const f = cur_buf->FrontFlit(vc);
       assert(f);
@@ -615,7 +610,7 @@ void IQRouter::_VCAllocEvaluate( )
 	
 	Buffer const * const cur_buf = _buf[input];
 	assert(!cur_buf->Empty(vc));
-	assert(cur_buf->GetState(vc) == (_speculative ? VC::vc_spec : VC::vc_alloc));
+	assert(cur_buf->GetState(vc) == VC::vc_alloc);
 	
 	Flit const * const f = cur_buf->FrontFlit(vc);
 	assert(f);
@@ -668,7 +663,7 @@ void IQRouter::_VCAllocEvaluate( )
 	
 	Buffer const * const cur_buf = _buf[input];
 	assert(!cur_buf->Empty(vc));
-	assert(cur_buf->GetState(vc) == (_speculative ? VC::vc_spec : VC::vc_alloc));
+	assert(cur_buf->GetState(vc) == VC::vc_alloc);
 	
 	Flit const * const f = cur_buf->FrontFlit(vc);
 	assert(f);
@@ -706,7 +701,7 @@ void IQRouter::_VCAllocUpdate( )
     
     Buffer * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
-    assert(cur_buf->GetState(vc) == (_speculative ? VC::vc_spec : VC::vc_alloc));
+    assert(cur_buf->GetState(vc) == VC::vc_alloc);
     
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
@@ -775,7 +770,7 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
   Buffer const * const cur_buf = _buf[input];
   assert(!cur_buf->Empty(vc));
   assert((cur_buf->GetState(vc) == VC::active) || 
-	 (_speculative && (cur_buf->GetState(vc) == VC::vc_spec)));
+	 (_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)));
   
   Flit const * const f = cur_buf->FrontFlit(vc);
   assert(f);
@@ -786,7 +781,7 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
     Allocator * allocator = _sw_allocator;
     int prio = cur_buf->GetPriority(vc);
     
-    if(_speculative && (cur_buf->GetState(vc) == VC::vc_spec)) {
+    if(_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)) {
       if(!_spec_use_prio) {
 	allocator = _spec_sw_allocator;
       } else {
@@ -885,7 +880,7 @@ void IQRouter::_SWAllocEvaluate( )
     Buffer const * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
     assert((cur_buf->GetState(vc) == VC::active) || 
-	   (_speculative && (cur_buf->GetState(vc) == VC::vc_spec)));
+	   (_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)));
     
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
@@ -923,7 +918,7 @@ void IQRouter::_SWAllocEvaluate( )
       watched |= requested && f->watch;
       continue;
     }
-    assert(cur_buf->GetState(vc) == VC::vc_spec);
+    assert(_speculative && (cur_buf->GetState(vc) == VC::vc_alloc));
     assert(f->head);
     assert(_switch_hold_vc[input*_input_speedup + vc%_input_speedup] != vc);
       
@@ -1023,7 +1018,7 @@ void IQRouter::_SWAllocEvaluate( )
     Buffer const * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
     assert((cur_buf->GetState(vc) == VC::active) || 
-	   (_speculative && (cur_buf->GetState(vc) == VC::vc_spec)));
+	   (_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)));
     
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
@@ -1131,7 +1126,7 @@ void IQRouter::_SWAllocEvaluate( )
       Buffer const * const cur_buf = _buf[input];
       assert(!cur_buf->Empty(vc));
       assert((cur_buf->GetState(vc) == VC::active) ||
-	     (_speculative && (cur_buf->GetState(vc) == VC::vc_spec)));
+	     (_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)));
       
       Flit const * const f = cur_buf->FrontFlit(vc);
       assert(f);
@@ -1158,8 +1153,7 @@ void IQRouter::_SWAllocEvaluate( )
 	  *gWatchOut << "." << endl;
 	}
 	iter->second.second = -1;
-      } else if(cur_buf->GetState(vc) == VC::vc_spec) {
-	assert(_speculative);
+      } else if(_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)) {
 
 	int const output_and_vc = _vc_allocator->OutputAssigned(input*_vcs+vc);
 
@@ -1237,7 +1231,7 @@ void IQRouter::_SWAllocUpdate( )
     Buffer * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
     assert((cur_buf->GetState(vc) == VC::active) ||
-	   (_speculative && (cur_buf->GetState(vc) == VC::vc_spec)));
+	   (_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)));
     
     Flit * const f = cur_buf->FrontFlit(vc);
     assert(f);
@@ -1312,13 +1306,13 @@ void IQRouter::_SWAllocUpdate( )
 			 << ")." << endl;
 	    }
 	    cur_buf->Route(vc, _rf, this, nf, input);
+	    cur_buf->SetState(vc, VC::vc_alloc);
 	    if(_speculative) {
-	      cur_buf->SetState(vc, VC::vc_spec);
-	      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first, -1)));
-	    } else {
-	      cur_buf->SetState(vc, VC::vc_alloc);
+	      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
+							      -1)));
 	    }
-	    _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first, -1)));
+	    _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
+							    -1)));
 	  }
 	} else {
 	  if(_hold_switch_for_packet) {
