@@ -64,7 +64,7 @@ VC::VC( const Configuration& config, int outputs,
   : Module( parent, name ), 
     _state(idle), _state_time(0), _out_port(-1), _out_vc(-1), _total_cycles(0),
     _vc_alloc_cycles(0), _active_cycles(0), _idle_cycles(0), _routing_cycles(0),
-    _pri(0), _watched(false), _expected_pid(-1)
+    _pri(0), _watched(false), _expected_pid(-1), _last_id(-1), _last_pid(-1)
 {
   _size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
 
@@ -134,6 +134,8 @@ Flit *VC::RemoveFlit( )
   if ( !_buffer.empty( ) ) {
     f = _buffer.front( );
     _buffer.pop_front( );
+    _last_id = f->id;
+    _last_pid = f->pid;
     UpdatePriority();
   } else {
     Error("Trying to remove flit from empty buffer.");

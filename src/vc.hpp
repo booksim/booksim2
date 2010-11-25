@@ -80,6 +80,9 @@ private:
 
   int _expected_pid;
 
+  int _last_id;
+  int _last_pid;
+
 public:
   
   VC( const Configuration& config, int outputs,
