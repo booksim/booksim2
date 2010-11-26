@@ -30,16 +30,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef _CONFIG_UTILS_HPP_
 #define _CONFIG_UTILS_HPP_
+
 #include "booksim.hpp"
-#include<stdio.h>
+
+#include<cstdio>
 #include<string>
 #include<map>
 #include<vector>
-extern int configparse( );
+
+extern int configparse();
 
 class Configuration {
-  static Configuration *theConfig;
-  FILE *_config_file;
+  static Configuration * theConfig;
+  FILE * _config_file;
   string _config_string;
 
 protected:
@@ -48,44 +51,41 @@ protected:
   map<string,double> _float_map;
   
 public:
-  Configuration( );
+  Configuration();
 
-  void AddStrField( const string &field, const string &value );
+  void AddStrField(string const & field, string const & value);
 
-  void Assign( const string &field, const string &value );
-  void Assign( const string &field, int value );
-  void Assign( const string &field, double value );
+  void Assign(string const & field, string const & value);
+  void Assign(string const & field, int value);
+  void Assign(string const & field, double value);
 
-  const string & GetStr( const string &field, const string &def = "" ) const;
-  int GetInt( const string &field, int def = 0 ) const;
-  double GetFloat( const string &field, double def = 0.0 ) const;
+  string GetStr(string const & field) const;
+  int GetInt(string const & field) const;
+  double GetFloat(string const & field) const;
 
-  void ParseFile( const string& filename );
-  void ParseString( const string& str );
-  int  Input( char *line, int max_size );
-  void ParseError( const string &msg, unsigned int lineno ) const;
+  void ParseFile(string const & filename);
+  void ParseString(string const & str);
+  int  Input(char * line, int max_size);
+  void ParseError(string const & msg, unsigned int lineno = 0) const;
   
-  void WriteFile( const string& filename);
-  void WriteMatlabFile(ostream *o) const;
-  //These Get functions are for the GUI to display all the options of booksim
-  //const something maybe?
-  map<string, string>* GetStrMap(){
-    return &_str_map;
+  void WriteFile(string const & filename);
+  void WriteMatlabFile(ostream * o) const;
+
+  inline const map<string, string> & GetStrMap() const {
+    return _str_map;
   }
-  map<string, int>* GetIntMap(){
-    return &_int_map;
+  inline const map<string, int> & GetIntMap() const {
+    return _int_map;
   }
-  map<string, double>* GetFloatMap(){
-    return &_float_map;
+  inline const map<string, double> & GetFloatMap() const {
+    return _float_map;
   }
 
-  static Configuration *GetTheConfig( );
+  static Configuration * GetTheConfig();
 
   static vector<string> tokenize(string data);
 };
 
-bool ParseArgs( Configuration *cf, int argc, char **argv );
+bool ParseArgs(Configuration * cf, int argc, char **argv);
 
 #endif
-
-

@@ -38,7 +38,7 @@ public:
   BookSimConfig( );
 
 #ifdef USE_GUI
-  vector< pair<string, vector< string> > > *GetImportantMap();
+  vector<pair<string, vector<string> > > GetImportantMap();
 #endif
 
 };

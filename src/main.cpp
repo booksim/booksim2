@@ -177,7 +177,7 @@ bool AllocatorSim( BookSimConfig const & config )
   /*legacy code that insert random faults in the networks
    *not sure how to use this
    */
-  if ( config.GetInt( "link_failures" ) ) {
+  if ( config.GetInt( "link_failures" ) > 0 ) {
       net[i]->InsertRandomFaults( config );
     }
   }
@@ -208,7 +208,7 @@ bool AllocatorSim( BookSimConfig const & config )
 
 
   ///Power analysis
-  if(config.GetInt("sim_power")==1){
+  if(config.GetInt("sim_power") > 0){
     Power_Module * pnet = new Power_Module(net[0], trafficManager, config);
     pnet->run();
     delete pnet;
@@ -261,8 +261,8 @@ int main( int argc, char **argv )
   InitializeTrafficMap( config );
   InitializeInjectionMap( config );
 
-  gPrintActivity = (config.GetInt("print_activity")==1);
-  gTrace = (config.GetInt("viewer_trace")==1);
+  gPrintActivity = (config.GetInt("print_activity") > 0);
+  gTrace = (config.GetInt("viewer_trace") > 0);
   
   string watch_out_file = config.GetStr( "watch_out" );
   if(watch_out_file == "") {
