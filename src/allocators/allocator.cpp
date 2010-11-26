@@ -339,8 +339,8 @@ void SparseAllocator::RemoveRequest( int in, int out, int label )
   }
 
   // similarly for the output
-  assert( _out_req[out].count( out ) > 0 );
-  _out_req[out].erase( out );
+  assert( _out_req[out].count( in ) > 0 );
+  _out_req[out].erase( in );
 
   if ( _out_req[out].empty( ) ) {
     _out_occ.erase(out);
