@@ -75,6 +75,7 @@ class IQRouter : public Router {
   deque<pair<int, pair<int, int> > > _route_vcs;
   deque<pair<int, pair<pair<int, int>, int> > > _vc_alloc_vcs;  
   deque<pair<int, pair<pair<int, int>, int> > > _sw_alloc_vcs;
+  deque<pair<int, pair<pair<int, int>, int> > > _sw_hold_vcs;
 
   deque<pair<int, pair<Flit *, pair<int, int> > > > _crossbar_flits;
 
