@@ -182,9 +182,6 @@ bool AllocatorSim( BookSimConfig const & config )
     }
   }
 
-
-  string traffic = config.GetStr( "traffic" ) ;
-
   /*tcc and characterize are legacy
    *not sure how to use them 
    */
