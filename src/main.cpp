@@ -117,7 +117,7 @@ bool gGUIMode = false;
 
 /////////////////////////////////////////////////////////////////////////////
 
-bool AllocatorSim( const Configuration& config )
+bool AllocatorSim( BookSimConfig const & config )
 {
   vector<Network *> net;
 

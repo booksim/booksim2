@@ -79,10 +79,6 @@ public:
     return &_float_map;
   }
 
-#ifdef USE_GUI
-  virtual vector< pair<string, vector< string> > > *GetImportantMap() = 0; 
-#endif
-
   static Configuration *GetTheConfig( );
 
   static vector<string> tokenize(string data);

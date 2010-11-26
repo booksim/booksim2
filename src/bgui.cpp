@@ -46,7 +46,7 @@ BooksimGUI::BooksimGUI(QWidget *parent)
 }
 
 //transfer all the control and data from main.cpp
-void BooksimGUI::RegisterAllocSim(booksimfunc wut, Configuration * cf){
+void BooksimGUI::RegisterAllocSim(booksimfunc wut, BookSimConfig * cf){
   arbeit.bs = wut;
   arbeit.config = cf;
   configtab->setup(cf);
@@ -85,7 +85,7 @@ configTab::configTab(QWidget *parent)
   
 }
 
-void configTab::setup( Configuration* cf){
+void configTab::setup( BookSimConfig * cf){
   
   config = cf;
 

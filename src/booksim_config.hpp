@@ -38,7 +38,7 @@ public:
   BookSimConfig( );
 
 #ifdef USE_GUI
-  virtual vector< pair<string, vector< string> > > *GetImportantMap();
+  vector< pair<string, vector< string> > > *GetImportantMap();
 #endif
 
 };
@@ -53,10 +53,6 @@ public:
 class PowerConfig : public Configuration {
 public:
   PowerConfig( );
-
-#ifdef USE_GUI
-    virtual vector< pair<string, vector< string> > > *GetImportantMap() { return NULL; }
-#endif
 
 };
 
