@@ -262,7 +262,7 @@ int main( int argc, char **argv )
   InitializeInjectionMap( config );
 
   gPrintActivity = (config.GetInt("print_activity")==1);
-  gTrace = (config.GetInt("viewer trace")==1);
+  gTrace = (config.GetInt("viewer_trace")==1);
   
   string watch_out_file = config.GetStr( "watch_out" );
   if(watch_out_file == "") {
