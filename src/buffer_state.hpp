@@ -52,6 +52,8 @@ class BufferState : public Module {
   vector<bool> _in_use;
   vector<bool> _tail_sent;
   vector<int> _cur_occupied;
+  vector<int> _last_id;
+  vector<int> _last_pid;
 
   vector<int> _vc_range_begin;
   vector<int> _vc_range_size;

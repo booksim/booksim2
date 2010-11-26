@@ -58,6 +58,8 @@ Module( parent, name ), _shared_occupied(0), _active_vcs(0)
   _in_use.resize(_vcs, false);
   _tail_sent.resize(_vcs, false);
   _cur_occupied.resize(_vcs, 0);
+  _last_id.resize(_vcs, -1);
+  _last_pid.resize(_vcs, -1);
 
   /* each flit is given a type and these types can only exists in 
    * specific virtual channels
@@ -161,6 +163,8 @@ void BufferState::SendingFlit( Flit const * f )
 	--_active_vcs;
       }
     }
+    _last_id[f->vc] = f->id;
+    _last_pid[f->vc] = f->pid;
   }
 }
 
