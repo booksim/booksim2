@@ -50,15 +50,10 @@ DenseAllocator( parent, name, inputs, outputs ),
 void Wavefront::AddRequest( int in, int out, int label, 
 			    int in_pri, int out_pri )
 {
-  // count unique requests
-  sRequest req;
-  bool overwrite = ReadRequest(req, in, out);
-  if(!overwrite || (req.in_pri < in_pri)) {
-    _num_requests++;
-    _last_in = in;
-    _last_out = out;
-  }
   DenseAllocator::AddRequest(in, out, label, in_pri, out_pri);
+  _num_requests++;
+  _last_in = in;
+  _last_out = out;
 }
 
 void Wavefront::Allocate( )

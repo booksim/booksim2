@@ -51,18 +51,13 @@ DenseAllocator( parent, name, inputs, outputs ),
 void PrioWavefront::AddRequest( int in, int out, int label, 
 				int in_pri, int out_pri )
 {
-  // count unique requests
-  sRequest req;
-  bool overwrite = ReadRequest(req, in, out);
-  if(!overwrite || (req.in_pri < in_pri)) {
-    _num_requests++;
-    _last_in = in;
-    _last_out = out;
-    if(in_pri > _max_prio) {
-      _max_prio = in_pri;
-    }
-  }
   DenseAllocator::AddRequest(in, out, label, in_pri, out_pri);
+  _num_requests++;
+  _last_in = in;
+  _last_out = out;
+  if(in_pri > _max_prio) {
+    _max_prio = in_pri;
+  }
 }
 
 void PrioWavefront::Allocate( )

@@ -158,12 +158,11 @@ void DenseAllocator::AddRequest( int in, int out, int label,
 				 int in_pri, int out_pri )
 {
   Allocator::AddRequest(in, out, label, in_pri, out_pri);
+  assert( _request[in][out].label == -1 );
 
-  if((_request[in][out].label < 0) || (_request[in][out].in_pri < in_pri)) {
-    _request[in][out].label   = label;
-    _request[in][out].in_pri  = in_pri;
-    _request[in][out].out_pri = out_pri;
-  }
+  _request[in][out].label   = label;
+  _request[in][out].in_pri  = in_pri;
+  _request[in][out].out_pri = out_pri;
 }
 
 void DenseAllocator::RemoveRequest( int in, int out, int label )
@@ -293,6 +292,8 @@ void SparseAllocator::AddRequest( int in, int out, int label,
 				  int in_pri, int out_pri )
 {
   Allocator::AddRequest(in, out, label, in_pri, out_pri);
+  assert( _in_req[in].count(out) == 0 );
+  assert( _out_req[out].count(in) == 0 );
 
   // insert into occupied inputs set if
   // input is currently empty
@@ -311,25 +312,20 @@ void SparseAllocator::AddRequest( int in, int out, int label,
   req.in_pri  = in_pri;
   req.out_pri = out_pri;
 
-  if((_in_req[in].count(out) == 0) || 
-     (_in_req[in][out].in_pri < req.in_pri)) {
-    _in_req[in][out] = req;
-  }
+  _in_req[in][out] = req;
 
   req.port  = in;
 
-  if((_out_req[out].count(in) == 0) ||
-     (_out_req[out][in].in_pri < req.in_pri)) {
-    _out_req[out][in] = req;
-  }
+  _out_req[out][in] = req;
 }
 
 void SparseAllocator::RemoveRequest( int in, int out, int label )
 {
   assert( ( in >= 0 ) && ( in < _inputs ) );
   assert( ( out >= 0 ) && ( out < _outputs ) ); 
-				 
+  
   assert( _in_req[in].count( out ) > 0 );
+  assert( _in_req[in][out].label == label );
   _in_req[in].erase( out );
 
   // remove from occupied inputs list if
@@ -340,6 +336,7 @@ void SparseAllocator::RemoveRequest( int in, int out, int label )
 
   // similarly for the output
   assert( _out_req[out].count( in ) > 0 );
+  assert( _out_req[out][in].label == label );
   _out_req[out].erase( in );
 
   if ( _out_req[out].empty( ) ) {

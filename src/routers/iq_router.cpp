@@ -806,6 +806,7 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 		     << ", pri: " << prio
 		     << ")." << endl;
 	}
+	allocator->RemoveRequest(expanded_input, expanded_output, req.label);
 	allocator->AddRequest(expanded_input, expanded_output, vc, prio, prio);
 	return true;
       }

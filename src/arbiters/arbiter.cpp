@@ -56,14 +56,12 @@ Arbiter::Arbiter( Module *parent, const string &name, int size )
 void Arbiter::AddRequest( int input, int id, int pri )
 {
   assert( 0 <= input && input < _size ) ;
-  if(!_request[input].valid || (_request[input].pri < pri)) {
-    if(!_request[input].valid) {
-      _num_reqs++ ;
-      _request[input].valid = true ;
-    }
-    _request[input].id = id ;
-    _request[input].pri = pri ;
-  }
+  assert( !_request[input].valid );
+
+  _num_reqs++ ;
+  _request[input].valid = true ;
+  _request[input].id = id ;
+  _request[input].pri = pri ;
 }
 
 int Arbiter::Arbitrate( int* id, int* pri )
