@@ -397,6 +397,7 @@ void IQRouter::_RouteUpdate( )
     if((time < 0) || (GetSimTime() < time)) {
       break;
     }
+    assert(GetSimTime() == time);
 
     int const & input = item.second.first;
     assert((input >= 0) && (input < _inputs));
@@ -693,7 +694,8 @@ void IQRouter::_VCAllocUpdate( )
     if((time < 0) || (GetSimTime() < time)) {
       break;
     }
-    
+    assert(GetSimTime() == time);
+
     int const & input = item.second.first.first;
     assert((input >= 0) && (input < _inputs));
     int const & vc = item.second.first.second;
@@ -1223,7 +1225,8 @@ void IQRouter::_SWAllocUpdate( )
     if((time < 0) || (GetSimTime() < time)) {
       break;
     }
-    
+    assert(GetSimTime() == time);
+
     int const & input = item.second.first.first;
     assert((input >= 0) && (input < _inputs));
     int const & vc = item.second.first.second;
@@ -1393,6 +1396,7 @@ void IQRouter::_SwitchUpdate( )
     if((time < 0) || (GetSimTime() < time)) {
       break;
     }
+    assert(GetSimTime() == time);
 
     Flit * const & f = item.second.first;
     assert(f);
