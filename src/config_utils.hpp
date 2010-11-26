@@ -50,6 +50,8 @@ protected:
   map<string,int>    _int_map;
   map<string,double> _float_map;
   
+  static vector<string> tokenize(string data);
+
 public:
   Configuration();
 
@@ -62,6 +64,10 @@ public:
   string GetStr(string const & field) const;
   int GetInt(string const & field) const;
   double GetFloat(string const & field) const;
+
+  vector<string> GetStrArray(const string & field) const;
+  vector<int> GetIntArray(const string & field) const;
+  vector<double> GetFloatArray(const string & field) const;
 
   void ParseFile(string const & filename);
   void ParseString(string const & str);
@@ -83,7 +89,6 @@ public:
 
   static Configuration * GetTheConfig();
 
-  static vector<string> tokenize(string data);
 };
 
 bool ParseArgs(Configuration * cf, int argc, char **argv);

@@ -127,6 +127,42 @@ double Configuration::GetFloat(string const & field) const
   }
 }
 
+vector<string> Configuration::GetStrArray(string const & field) const
+{
+  string const param_str = GetStr(field);
+  return tokenize(param_str);
+}
+
+vector<int> Configuration::GetIntArray(string const & field) const
+{
+  vector<string> param_tokens = GetStrArray(field);
+  vector<int> values;
+  assert(values.empty());
+  for(size_t i = 0; i < param_tokens.size(); ++i) {
+    char const * const token = param_tokens[i].c_str();
+    int const value = atoi(token);
+    values.push_back(value);
+    assert(values[i] == value);
+  }
+  assert(values.size() == param_tokens.size());
+  return values;
+}
+
+vector<double> Configuration::GetFloatArray(string const & field) const
+{
+  vector<string> param_tokens = GetStrArray(field);
+  vector<double> values;
+  assert(values.empty());
+  for(size_t i = 0; i < param_tokens.size(); ++i) {
+    char const * const token = param_tokens[i].c_str();
+    double const value = atof(token);
+    values.push_back(value);
+    assert(values[i] == value);
+  }
+  assert(values.size() == param_tokens.size());
+  return values;
+}
+
 void Configuration::ParseFile(string const & filename)
 {
   if((_config_file = fopen(filename.c_str(), "r")) == 0) {
@@ -182,15 +218,16 @@ Configuration * Configuration::GetTheConfig()
 vector<string> Configuration::tokenize(string data)
 {
   string const separator = "{,}";
-  vector<string> result;
+  vector<string> values;
   size_t last_pos = data.find_first_not_of(separator);
   size_t pos = data.find_first_of(separator, last_pos);
   while(pos != string::npos || last_pos != string::npos) {
-    result.push_back(data.substr(last_pos, pos - last_pos));
+    string const value = data.substr(last_pos, pos - last_pos);
+    values.push_back(value);
     last_pos = data.find_first_not_of(separator, pos);
     pos = data.find_first_of(separator, last_pos);
   }
-  return result;
+  return values;
 }
 
 //============================================================

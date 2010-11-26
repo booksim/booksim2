@@ -64,11 +64,11 @@ protected:
 
   int    _classes;
 
-  double _load;
+  vector<double> _load;
 
-  int    _packet_size;
+  vector<int>    _packet_size;
 
-  /*false means all packet types are the same length "gConstantsize"
+  /*false means all packet types are the same length "const_flits_per_packet"
    *All packets uses all VCS
    *packet types are generated randomly, essentially making it only 1 type
    *of packet in the network
@@ -77,15 +77,17 @@ protected:
    *as a response to the requests, packets are now difference length, correspond
    *to "read_request_size" etc. 
    */
-  bool _use_read_write;
+  vector<int> _use_read_write;
 
-  int _read_request_size;
-  int _read_reply_size;
-  int _write_request_size;
-  int _write_reply_size;
+  vector<int> _read_request_size;
+  vector<int> _read_reply_size;
+  vector<int> _write_request_size;
+  vector<int> _write_reply_size;
 
-  tTrafficFunction  _traffic_function;
-  tInjectionProcess _injection_process;
+  vector<string> _traffic;
+
+  vector<tTrafficFunction> _traffic_function;
+  vector<tInjectionProcess> _injection_process;
 
   // ============ Message priorities ============ 
 
@@ -97,7 +99,10 @@ protected:
 
   vector<vector<BufferState *> > _buf_states;
 
+  // ============ Routing ============ 
+
   bool _use_xyyx;
+
   // ============ Injection queues ============ 
 
   int          _voqing;
@@ -117,6 +122,7 @@ protected:
   int _deadlock_warn_timeout;
 
   // ============ batch mode ==========================
+
   vector<int> _packets_sent;
   int _batch_size;
   int _batch_count;
@@ -130,6 +136,7 @@ protected:
   int _last_pid;
 
   // ============voq mode =============================
+
   vector<vector<list<Flit*> > > _voq;
   vector<list<int> > _active_list;
   vector<vector<bool> > _active_vc;
@@ -204,14 +211,11 @@ protected:
   int _cur_pid;
   int _time;
 
-  tRoutingFunction  _routing_function;
-
   set<int> _flits_to_watch;
   set<int> _packets_to_watch;
 
   bool _print_csv_results;
   bool _print_vc_stats;
-  string _traffic;
   bool _drain_measured_only;
 
   //flits to watch

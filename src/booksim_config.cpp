@@ -152,9 +152,12 @@ BookSimConfig::BookSimConfig( )
   _int_map["perm_seed"] = 0;         // seed value for random permuation trafficpattern generator
 
   _float_map["injection_rate"]       = 0.1; //if 0.0 assumes it is batch mode
+  AddStrField("injection_rate", ""); // workaraound to allow for vector specification
+  
   _int_map["injection_rate_uses_flits"] = 0;
 
   _int_map["const_flits_per_packet"] = 1; //use  read_request_size etc insted
+  AddStrField("const_flits_per_packet", ""); // workaraound to allow for vector specification
 
   AddStrField( "injection_process", "bernoulli" );
 
@@ -169,6 +172,7 @@ BookSimConfig::BookSimConfig( )
 
   // Use read/write request reply scheme
   _int_map["use_read_write"] = 0;
+  AddStrField("use_read_write", ""); // workaraound to allow for vector specification
 
   // Control assignment of packets to VCs
   _int_map["read_request_begin_vc"] = 0;
@@ -188,9 +192,13 @@ BookSimConfig::BookSimConfig( )
 
   // Set packet length in flits
   _int_map["read_request_size"]  = 1;
+  AddStrField("read_request_size", ""); // workaraound to allow for vector specification
   _int_map["write_request_size"] = 1;
+  AddStrField("write_request_size", ""); // workaraound to allow for vector specification
   _int_map["read_reply_size"]    = 1;
+  AddStrField("read_reply_size", ""); // workaraound to allow for vector specification
   _int_map["write_reply_size"]   = 1;
+  AddStrField("write_reply_size", ""); // workaraound to allow for vector specification
 
   //==== Simulation parameters ==========================
 

@@ -99,37 +99,92 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     }
     tmp_name.str("");
   }
-  
-  string fn = config.GetStr( "routing_function" );
-  if(fn.find("xyyx")!=string::npos || fn.find("xy_yx")!=string::npos ){
-    _use_xyyx = true;
-  } else {
-    _use_xyyx = false;
-  }
 
+  // ============ Routing ============ 
+
+  string rf = config.GetStr("routing_function");
+  _use_xyyx = ((rf.find("xyyx") != string::npos) || 
+	       (rf.find("xy_yx") != string::npos));
 
   // ============ Traffic ============ 
 
   _classes = config.GetInt("classes");
 
-  _use_read_write = (config.GetInt("use_read_write") > 0);
-  _read_request_size = config.GetInt("read_request_size");
-  _read_reply_size = config.GetInt("read_reply_size");
-  _write_request_size = config.GetInt("write_request_size");
-  _write_reply_size = config.GetInt("write_reply_size");
-  if(_use_read_write) {
-    _packet_size = (_read_request_size + _read_reply_size +
-		    _write_request_size + _write_reply_size) / 2;
-  } else {
-    _packet_size = config.GetInt( "const_flits_per_packet" );
+  _use_read_write = config.GetIntArray("use_read_write");
+  if(_use_read_write.empty()) {
+    _use_read_write.push_back(config.GetInt("use_read_write"));
   }
+  _use_read_write.resize(_classes, _use_read_write.back());
 
-  _load = config.GetFloat( "injection_rate" ); 
+  _read_request_size = config.GetIntArray("read_request_size");
+  if(_read_request_size.empty()) {
+    _read_request_size.push_back(config.GetInt("read_request_size"));
+  }
+  _read_request_size.resize(_classes, _read_request_size.back());
+
+  _read_reply_size = config.GetIntArray("read_reply_size");
+  if(_read_reply_size.empty()) {
+    _read_reply_size.push_back(config.GetInt("read_reply_size"));
+  }
+  _read_reply_size.resize(_classes, _read_reply_size.back());
+
+  _write_request_size = config.GetIntArray("write_request_size");
+  if(_write_request_size.empty()) {
+    _write_request_size.push_back(config.GetInt("write_request_size"));
+  }
+  _write_request_size.resize(_classes, _write_request_size.back());
+
+  _write_reply_size = config.GetIntArray("write_reply_size");
+  if(_write_reply_size.empty()) {
+    _write_reply_size.push_back(config.GetInt("write_reply_size"));
+  }
+  _write_reply_size.resize(_classes, _write_reply_size.back());
+
+  _packet_size = config.GetIntArray( "const_flits_per_packet" );
+  if(_packet_size.empty()) {
+    _packet_size.push_back(config.GetInt("const_flits_per_packet"));
+  }
+  _packet_size.resize(_classes, _packet_size.back());
+  
+  for(int c = 0; c < _classes; ++c)
+    if(_use_read_write[c])
+      _packet_size[c] = (_read_request_size[c] + _read_reply_size[c] +
+			 _write_request_size[c] + _write_reply_size[c]) / 2;
+
+  _load = config.GetFloatArray("injection_rate"); 
+  if(_load.empty()) {
+    _load.push_back(config.GetFloat("injection_rate"));
+  }
+  _load.resize(_classes, _load.back());
+
   if(config.GetInt("injection_rate_uses_flits")) {
-    _load /= _packet_size;
+    for(int c = 0; c < _classes; ++c)
+      _load[c] /= (double)_packet_size[c];
   }
 
+  _traffic = config.GetStrArray("traffic");
+  _traffic.resize(_classes, _traffic.back());
 
+  _traffic_function.clear();
+  for(int c = 0; c < _classes; ++c) {
+    map<string, tTrafficFunction>::const_iterator iter = gTrafficFunctionMap.find(_traffic[c]);
+    if(iter == gTrafficFunctionMap.end()) {
+      Error("Invalid traffic function: " + _traffic[c]);
+    }
+    _traffic_function.push_back(iter->second);
+  }
+
+  vector<string> inject = config.GetStrArray("injection_process");
+  inject.resize(_classes, inject.back());
+
+  _injection_process.clear();
+  for(int c = 0; c < _classes; ++c) {
+    map<string, tInjectionProcess>::iterator iter = gInjectionProcessMap.find(inject[c]);
+    if(iter == gInjectionProcessMap.end()) {
+      Error("Invalid injection process: " + inject[c]);
+    }
+    _injection_process.push_back(iter->second);
+  }
 
   // ============ Injection queues ============ 
 
@@ -314,26 +369,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   //seed the network
   RandomSeed(config.GetInt("seed"));
 
-  string tf = config.GetStr("traffic");
-  map<string, tTrafficFunction>::iterator tf_iter = gTrafficFunctionMap.find(tf);
-  if(tf_iter == gTrafficFunctionMap.end()) {
-    Error("Invalid traffic function: " + tf);
-  }
-  _traffic_function = tf_iter->second;
-
-  string rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
-  map<string, tRoutingFunction>::iterator rf_iter = gRoutingFunctionMap.find(rf);
-  if(rf_iter == gRoutingFunctionMap.end()) {
-    Error("Invalid routing function: " + rf);
-  }
-  _routing_function  = rf_iter->second;
-
-  map<string, tInjectionProcess>::iterator ip_iter = gInjectionProcessMap.find(config.GetStr("injection_process"));
-  if(ip_iter == gInjectionProcessMap.end()) {
-    Error("Invalid injection process: " + config.GetStr("injection_process"));
-  }
-  _injection_process = ip_iter->second;
-
   string sim_type = config.GetStr( "sim_type" );
 
   if ( sim_type == "latency" ) {
@@ -361,23 +396,20 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _print_csv_results = config.GetInt( "print_csv_results" );
   _print_vc_stats = config.GetInt( "print_vc_stats" );
-  _traffic = config.GetStr( "traffic" ) ;
   _deadlock_warn_timeout = config.GetInt( "deadlock_warn_timeout" );
   _drain_measured_only = config.GetInt( "drain_measured_only" );
 
   string watch_file = config.GetStr( "watch_file" );
   _LoadWatchList(watch_file);
 
-  string watch_flits_str = config.GetStr("watch_flits");
-  vector<string> watch_flits = BookSimConfig::tokenize(watch_flits_str);
+  vector<int> watch_flits = config.GetIntArray("watch_flits");
   for(int i = 0; i < watch_flits.size(); ++i) {
-    _flits_to_watch.insert(atoi(watch_flits[i].c_str()));
+    _flits_to_watch.insert(watch_flits[i]);
   }
   
-  string watch_packets_str = config.GetStr("watch_packets");
-  vector<string> watch_packets = BookSimConfig::tokenize(watch_packets_str);
+  vector<int> watch_packets = config.GetIntArray("watch_packets");
   for(int i = 0; i < watch_packets.size(); ++i) {
-    _packets_to_watch.insert(atoi(watch_packets[i].c_str()));
+    _packets_to_watch.insert(watch_packets[i]);
   }
 
   string stats_out_file = config.GetStr( "stats_out" );
@@ -628,7 +660,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
 {
   int result;
   if(_sim_mode == batch){ //batch mode
-    if(_use_read_write){ //read write packets
+    if(_use_read_write[cl]){ //read write packets
       //check queue for waiting replies.
       //check to make sure it is on time yet
       int pending_time = numeric_limits<int>::max(); //reset to maxtime+1
@@ -656,14 +688,14 @@ int TrafficManager::_IssuePacket( int source, int cl )
 		 (_requestsOutstanding[source] >= _maxOutstanding)) {
 	result = 0;
       } else {
-	result = _packet_size;
+	result = _packet_size[cl];
 	_packets_sent[source]++;
 	//here is means, how many flits can be waiting in the queue
 	_requestsOutstanding[source]++;
       } 
     } 
   } else { //injection rate mode
-    if(_use_read_write){ //use read and write
+    if(_use_read_write[cl]){ //use read and write
       //check queue for waiting replies.
       //check to make sure it is on time yet
       int pending_time = numeric_limits<int>::max(); //reset to maxtime+1
@@ -677,7 +709,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
       } else {
 
 	//produce a packet
-	if(_injection_process( source, _load )){
+	if(_injection_process[cl]( source, _load[cl] )){
 	
 	  //coin toss to determine request type.
 	  result = (RandomFloat() < 0.5) ? -2 : -1;
@@ -687,7 +719,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	}
       } 
     } else { //normal mode
-      return _injection_process( source, _load ) ? 1 : 0;
+      return _injection_process[cl]( source, _load[cl] ) ? 1 : 0;
     } 
   }
   return result;
@@ -704,18 +736,18 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   }
 
   Flit::FlitType packet_type = Flit::ANY_TYPE;
-  int size = _packet_size; //input size 
+  int size = _packet_size[cl]; //input size 
   int ttime = time;
-  int packet_destination = _traffic_function(source, _limit);
+  int packet_destination = _traffic_function[cl](source, _limit);
   bool record = false;
-  if(_use_read_write){
+  if(_use_read_write[cl]){
     if(stype < 0) {
       if (stype ==-1) {
 	packet_type = Flit::READ_REQUEST;
-	size = _read_request_size;
+	size = _read_request_size[cl];
       } else if (stype == -2) {
 	packet_type = Flit::WRITE_REQUEST;
-	size = _write_request_size;
+	size = _write_request_size[cl];
       } else {
 	ostringstream err;
 	err << "Invalid packet type: " << packet_type;
@@ -726,10 +758,10 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       PacketReplyInfo* rinfo = iter->second;
       
       if (rinfo->type == Flit::READ_REQUEST) {//read reply
-	size = _read_reply_size;
+	size = _read_reply_size[cl];
 	packet_type = Flit::READ_REPLY;
       } else if(rinfo->type == Flit::WRITE_REQUEST) {  //write reply
-	size = _write_reply_size;
+	size = _write_reply_size[cl];
 	packet_type = Flit::WRITE_REPLY;
       } else {
 	ostringstream err;
@@ -869,7 +901,7 @@ void TrafficManager::_Inject(){
 	    }
 	    //this is not a request packet
 	    //don't advance time
-	    if(!_use_read_write || (stype <= 0)){
+	    if(!_use_read_write[c] || (stype <= 0)){
 	      ++_qtime[input][c];
 	    }
 	  }
@@ -1651,11 +1683,7 @@ bool TrafficManager::Run( )
   DisplayStats();
   if(_print_vc_stats) {
     if(_print_csv_results) {
-      cout << "vc_stats:"
-	   << _traffic
-	   << "," << _packet_size
-	   << "," << _load
-	   << ",";
+      cout << "vc_stats:";
     }
     VC::DisplayStats(_print_csv_results);
   }
@@ -1668,10 +1696,10 @@ void TrafficManager::DisplayStats() {
     if(_print_csv_results) {
       cout << "results:"
 	   << c
-	   << "," << _traffic
-	   << "," << _use_read_write
-	   << "," << _packet_size
-	   << "," << _load
+	   << "," << _traffic[c]
+	   << "," << _use_read_write[c]
+	   << "," << _packet_size[c]
+	   << "," << _load[c]
 	   << "," << _overall_min_latency[c]->Average( )
 	   << "," << _overall_avg_latency[c]->Average( )
 	   << "," << _overall_max_latency[c]->Average( )
