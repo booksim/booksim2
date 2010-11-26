@@ -1337,6 +1337,10 @@ void IQRouter::_SWAllocUpdate( )
 	}
       }
     } else {
+      if(f->watch) {
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		   << "  No output port allocated." << endl;
+      }
       _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first, -1)));
     }
     _sw_alloc_vcs.pop_front();
