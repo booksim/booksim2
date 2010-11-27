@@ -214,7 +214,10 @@ BookSimConfig::BookSimConfig( )
   _int_map["max_samples"]   = 10;   // maximum number of sample periods in a simulation
 
   _float_map["latency_thres"] = 500.0; // if avg. latency exceeds the threshold, assume unstable
-  _float_map["warmup_thres"] = 0.05; // consider warmed up once relative change in latency and throughput between successive iterations is smaller than this
+
+  // consider warmed up once relative change in latency / throughput between successive iterations is smaller than this
+  _float_map["warmup_thres"] = 0.05;
+  _float_map["acc_warmup_thres"] = 0.05;
 
   // consider converged once relative change in latency / throughput between successive iterations is smaller than this
   _float_map["stopping_thres"] = 0.05;

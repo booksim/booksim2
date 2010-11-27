@@ -206,6 +206,7 @@ protected:
   double _stopping_threshold;
   double _acc_stopping_threshold;
   double _warmup_threshold;
+  double _acc_warmup_threshold;
 
   int _cur_id;
   int _cur_pid;

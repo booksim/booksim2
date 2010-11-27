@@ -390,6 +390,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _warmup_periods = config.GetInt( "warmup_periods" );
   _latency_thres = config.GetFloat( "latency_thres" );
   _warmup_threshold = config.GetFloat( "warmup_thres" );
+  _acc_warmup_threshold = config.GetFloat( "acc_warmup_thres" );
   _stopping_threshold = config.GetFloat( "stopping_thres" );
   _acc_stopping_threshold = config.GetFloat( "acc_stopping_thres" );
   _include_queuing = config.GetInt( "include_queuing" );
@@ -1502,43 +1503,21 @@ bool TrafficManager::_SingleSim( )
       }
 
       if ( _sim_state == warming_up ) {
-	if ( _warmup_periods == 0 ) {
-	  if ( _sim_mode == latency ) {
-	    if ( ( max_latency_change < _warmup_threshold ) &&
-		 ( max_accepted_change < _warmup_threshold ) ) {
-	      cout << "Warmed up ..." <<  "Time used is " << _time << " cycles" <<endl;
-	      clear_last = true;
-	      _sim_state = running;
-	    }
-	  } else {
-	    if ( max_accepted_change < _warmup_threshold ) {
-	      cout << "Warmed up ..." << "Time used is " << _time << " cycles" << endl;
-	      clear_last = true;
-	      _sim_state = running;
-	    }
-	  }
-	} else {
-	  if ( total_phases + 1 >= _warmup_periods ) {
-	    cout << "Warmed up ..." <<  "Time used is " << _time << " cycles" <<endl;
-	    clear_last = true;
-	    _sim_state = running;
-	  }
+	if ( ( _warmup_periods > 0 ) ? 
+	     ( total_phases + 1 >= _warmup_periods ) :
+	     ( ( ( _sim_mode != latency ) || ( max_latency_change < _warmup_threshold ) ) &&
+	       ( max_accepted_change < _acc_warmup_threshold ) ) ) {
+	  cout << "Warmed up ..." <<  "Time used is " << _time << " cycles" <<endl;
+	  clear_last = true;
+	  _sim_state = running;
 	}
       } else if ( _sim_state == running ) {
-	if ( _sim_mode == latency ) {
-	  if ( ( max_latency_change < _stopping_threshold ) &&
-	       ( max_accepted_change < _acc_stopping_threshold ) ) {
-	    ++converged;
-	  } else {
-	    converged = 0;
-	  }
+	if ( ( ( _sim_mode != latency ) || ( max_latency_change < _stopping_threshold ) ) &&
+	     ( max_accepted_change < _acc_stopping_threshold ) ) {
+	  ++converged;
 	} else {
-	  if ( max_accepted_change < _acc_stopping_threshold ) {
-	    ++converged;
-	  } else {
-	    converged = 0;
-	  }
-	} 
+	  converged = 0;
+	}
       }
       ++total_phases;
     }
