@@ -202,11 +202,13 @@ protected:
 
   int   _include_queuing;
 
-  double _latency_thres;
-  double _stopping_threshold;
-  double _acc_stopping_threshold;
-  double _warmup_threshold;
-  double _acc_warmup_threshold;
+  vector<double> _latency_thres;
+
+  vector<double> _stopping_threshold;
+  vector<double> _acc_stopping_threshold;
+
+  vector<double> _warmup_threshold;
+  vector<double> _acc_warmup_threshold;
 
   int _cur_id;
   int _cur_pid;

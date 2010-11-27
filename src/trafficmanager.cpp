@@ -388,11 +388,37 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _sample_period = config.GetInt( "sample_period" );
   _max_samples    = config.GetInt( "max_samples" );
   _warmup_periods = config.GetInt( "warmup_periods" );
-  _latency_thres = config.GetFloat( "latency_thres" );
-  _warmup_threshold = config.GetFloat( "warmup_thres" );
-  _acc_warmup_threshold = config.GetFloat( "acc_warmup_thres" );
-  _stopping_threshold = config.GetFloat( "stopping_thres" );
-  _acc_stopping_threshold = config.GetFloat( "acc_stopping_thres" );
+
+  _latency_thres = config.GetFloatArray( "latency_thres" );
+  if(_latency_thres.empty()) {
+    _latency_thres.push_back(config.GetFloat("latency_thres"));
+  }
+  _latency_thres.resize(_classes, _latency_thres.back());
+
+  _warmup_threshold = config.GetFloatArray( "warmup_thres" );
+  if(_warmup_threshold.empty()) {
+    _warmup_threshold.push_back(config.GetFloat("warmup_thres"));
+  }
+  _warmup_threshold.resize(_classes, _warmup_threshold.back());
+
+  _acc_warmup_threshold = config.GetFloatArray( "acc_warmup_thres" );
+  if(_acc_warmup_threshold.empty()) {
+    _acc_warmup_threshold.push_back(config.GetFloat("acc_warmup_thres"));
+  }
+  _acc_warmup_threshold.resize(_classes, _acc_warmup_threshold.back());
+
+  _stopping_threshold = config.GetFloatArray( "stopping_thres" );
+  if(_stopping_threshold.empty()) {
+    _stopping_threshold.push_back(config.GetFloat("stopping_thres"));
+  }
+  _stopping_threshold.resize(_classes, _stopping_threshold.back());
+
+  _acc_stopping_threshold = config.GetFloatArray( "acc_stopping_thres" );
+  if(_acc_stopping_threshold.empty()) {
+    _acc_stopping_threshold.push_back(config.GetFloat("acc_stopping_thres"));
+  }
+  _acc_stopping_threshold.resize(_classes, _acc_stopping_threshold.back());
+
   _include_queuing = config.GetInt( "include_queuing" );
 
   _print_csv_results = config.GetInt( "print_csv_results" );
@@ -1475,17 +1501,21 @@ bool TrafficManager::_SingleSim( )
 	  count++;
 	}
 	
-	if((lat_exc_class < 0) && ((latency / count) > _latency_thres)) {
+	if((lat_exc_class < 0) &&
+	   (_latency_thres[c] >= 0.0) &&
+	   ((latency / count) > _latency_thres[c])) {
 	  lat_exc_class = c;
 	}
 	
 	cout << "latency change    = " << latency_change << endl;
 	if(lat_chg_exc_class < 0) {
 	  if((_sim_state == warming_up) &&
-	     (latency_change > _warmup_threshold)) {
+	     (_warmup_threshold[c] >= 0.0) &&
+	     (latency_change > _warmup_threshold[c])) {
 	    lat_chg_exc_class = c;
 	  } else if((_sim_state == running) &&
-		    (latency_change > _stopping_threshold)) {
+		    (_stopping_threshold[c] >= 0.0) &&
+		    (latency_change > _stopping_threshold[c])) {
 	    lat_chg_exc_class = c;
 	  }
 	}
@@ -1493,10 +1523,12 @@ bool TrafficManager::_SingleSim( )
 	cout << "throughput change = " << accepted_change << endl;
 	if(acc_chg_exc_class < 0) {
 	  if((_sim_state == warming_up) &&
-	     (accepted_change > _acc_warmup_threshold)) {
+	     (_acc_warmup_threshold[c] >= 0.0) &&
+	     (accepted_change > _acc_warmup_threshold[c])) {
 	    acc_chg_exc_class = c;
-	  } else if((_sim_state == running) && 
-		    (accepted_change > _acc_stopping_threshold)) {
+	  } else if((_sim_state == running) &&
+		    (_acc_stopping_threshold[c] >= 0.0) &&
+		    (accepted_change > _acc_stopping_threshold[c])) {
 	    acc_chg_exc_class = c;
 	  }
 	}
@@ -1506,10 +1538,11 @@ bool TrafficManager::_SingleSim( )
       // Fail safe for latency mode, throughput will ust continue
       if ( ( _sim_mode == latency ) && ( lat_exc_class >= 0 ) ) {
 
-	cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres << " cycles. Aborting simulation." << endl;
+	cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
 	converged = 0; 
 	_sim_state = warming_up;
 	break;
+
       }
 
       if ( _sim_state == warming_up ) {
@@ -1553,34 +1586,43 @@ bool TrafficManager::_SingleSim( )
 	  _received_flow.assign(_duplicate_networks*_routers, 0);
 	  _sent_flow.assign(_duplicate_networks*_routers, 0);
 	  ++empty_steps;
-	
+	  
 	  if ( empty_steps % 1000 == 0 ) {
 	    
-	    double acc_latency = 0.0;
-	    int acc_count = 0;
+	    int lat_exc_class = -1;
+	    
 	    for(int c = 0; c < _classes; c++) {
 
-	      acc_latency += _latency_stats[c]->Sum();
-	      acc_count += (double)_latency_stats[c]->NumSamples();
+	      double threshold = _latency_thres[c];
+
+	      if(threshold < 0.0) {
+		continue;
+	      }
+
+	      double acc_latency = _latency_stats[c]->Sum();
+	      double acc_count = (double)_latency_stats[c]->NumSamples();
 
 	      map<int, Flit *>::const_iterator iter;
-	      for(iter = _measured_in_flight_flits[c].begin(); 
-		  iter != _measured_in_flight_flits[c].end(); 
+	      for(iter = _total_in_flight_flits[c].begin(); 
+		  iter != _total_in_flight_flits[c].end(); 
 		  iter++) {
 		acc_latency += (double)(_time - iter->second->time);
 		acc_count++;
 	      }
-
+	      
+	      if((acc_latency / acc_count) > threshold) {
+		lat_exc_class = c;
+		break;
+	      }
 	    }
 	    
-	    double avg_latency = (double)acc_latency / (double)acc_count;
-	    if(avg_latency > _latency_thres) {
-	      cout << "Average latency " << avg_latency << " exceeded " << _latency_thres << " cycles. Aborting simulation." << endl;
+	    if(lat_exc_class >= 0) {
+	      cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
 	      converged = 0; 
 	      _sim_state = warming_up;
 	      break;
 	    }
-
+	    
 	    _DisplayRemaining( ); 
 	    
 	  }
