@@ -56,7 +56,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 {
   _vcs         = config.GetInt( "num_vcs" );
   _speculative = (config.GetInt("speculative") > 0);
-  _spec_use_prio = (config.GetInt("spec_use_prio") > 0);
   _spec_check_elig = (config.GetInt("spec_check_elig") > 0);
   _spec_mask_by_reqs = (config.GetInt("spec_mask_by_reqs") > 0);
 
@@ -125,7 +124,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     Error("Unknown sw_allocator type: " + alloc_type);
   }
   
-  if ( _speculative && !_spec_use_prio ) {    
+  if ( _speculative && ( config.GetInt("spec_use_prio") > 0 ) ) {    
     _spec_sw_allocator = Allocator::NewAllocator( this, "spec_sw_allocator",
 						  alloc_type,
 						  _inputs*_input_speedup, 
@@ -134,6 +133,8 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     if ( !_spec_sw_allocator ) {
       Error("Unknown spec_sw_allocator type: " + alloc_type);
     }
+  } else {
+    _spec_sw_allocator = NULL;
   }
 
   _sw_rr_offset.resize(_inputs*_input_speedup);
@@ -162,7 +163,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 IQRouter::~IQRouter( )
 {
 
-  if(gPrintActivity){
+  if(gPrintActivity) {
     cout << Name() << ".bufferMonitor:" << endl ; 
     cout << *_bufferMonitor << endl ;
     
@@ -172,15 +173,15 @@ IQRouter::~IQRouter( )
     cout << *_switchMonitor << endl ;
   }
 
-  for (int i = 0; i < _inputs; ++i)
+  for(int i = 0; i < _inputs; ++i)
     delete _buf[i];
   
-  for (int j = 0; j < _outputs; ++j)
+  for(int j = 0; j < _outputs; ++j)
     delete _next_buf[j];
 
   delete _vc_allocator;
   delete _sw_allocator;
-  if ( _speculative && !_spec_use_prio )
+  if(_spec_sw_allocator)
     delete _spec_sw_allocator;
 
   delete _bufferMonitor;
@@ -790,7 +791,7 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
     int prio = cur_buf->GetPriority(vc);
     
     if(_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)) {
-      if(!_spec_use_prio) {
+      if(_spec_sw_allocator) {
 	allocator = _spec_sw_allocator;
       } else {
 	prio += numeric_limits<int>::min();
@@ -934,7 +935,7 @@ void IQRouter::_SWAllocEvaluate( )
   }
 
   _sw_allocator->Clear();
-  if (_speculative && !_spec_use_prio)
+  if(_spec_sw_allocator)
     _spec_sw_allocator->Clear();
 
   bool watched = false;
@@ -1055,20 +1056,20 @@ void IQRouter::_SWAllocEvaluate( )
   if(watched) {
     *gWatchOut << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
     _sw_allocator->PrintRequests(gWatchOut);
-    if(_speculative && !_spec_use_prio) {
+    if(_spec_sw_allocator) {
       *gWatchOut << GetSimTime() << " | " << _spec_sw_allocator->FullName() << " | ";
       _spec_sw_allocator->PrintRequests(gWatchOut);
     }
   }
   
   _sw_allocator->Allocate();
-  if(_speculative && !_spec_use_prio)
+  if(_spec_sw_allocator)
     _spec_sw_allocator->Allocate();
   
   if(watched) {
     *gWatchOut << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
     _sw_allocator->PrintGrants(gWatchOut);
-    if(_speculative && !_spec_use_prio) {
+    if(_spec_sw_allocator) {
       *gWatchOut << GetSimTime() << " | " << _spec_sw_allocator->FullName() << " | ";
       _spec_sw_allocator->PrintGrants(gWatchOut);
     }
@@ -1118,7 +1119,7 @@ void IQRouter::_SWAllocEvaluate( )
       } else {
 	expanded_output = -1;
       }
-    } else if(_speculative && !_spec_use_prio) {
+    } else if(_spec_sw_allocator) {
       expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
       if(expanded_output >= 0) {
 	assert((expanded_output % _output_speedup) == (input % _output_speedup));
