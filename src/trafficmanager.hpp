@@ -121,6 +121,8 @@ protected:
   int _deadlock_timer;
   int _deadlock_warn_timeout;
 
+  vector<int> _subnet_map;
+
   // ============ batch mode ==========================
 
   vector<int> _packets_sent;
@@ -242,8 +244,6 @@ protected:
   int  _ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const;
 
   bool _SingleSim( );
-
-  int DivisionAlgorithm(int packet_type);
 
   void _DisplayRemaining( ) const;
   

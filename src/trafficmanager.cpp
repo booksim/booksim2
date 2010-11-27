@@ -60,6 +60,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
  
   _duplicate_networks = config.GetInt("physical_subnetworks");
  
+  _subnet_map.resize(Flit::NUM_FLIT_TYPES);
+  _subnet_map[Flit::READ_REQUEST] = config.GetInt("read_request_subnet");
+  _subnet_map[Flit::READ_REPLY] = config.GetInt("read_reply_subnet");
+  _subnet_map[Flit::WRITE_REQUEST] = config.GetInt("write_request_subnet");
+  _subnet_map[Flit::WRITE_REPLY] = config.GetInt("write_reply_subnet");
+
   // ============ Message priorities ============ 
 
   string priority = config.GetStr( "priority" );
@@ -518,50 +524,6 @@ TrafficManager::~TrafficManager( )
 }
 
 
-// Decides which subnetwork the flit should go to.
-// Is now called once per packet.
-// This should change according to number of duplicate networks
-int TrafficManager::DivisionAlgorithm (int packet_type) {
-
-  if(packet_type == Flit::ANY_TYPE) {
-    return RandomInt(_duplicate_networks-1); // Even distribution.
-  } else {
-    switch(_duplicate_networks) {
-    case 1:
-      return 0;
-    case 2:
-      switch(packet_type) {
-      case Flit::WRITE_REQUEST:
-      case Flit::READ_REQUEST:
-        return 1;
-      case Flit::WRITE_REPLY:
-      case Flit::READ_REPLY:
-        return 0;
-      default:
-	assert(false);
-	return -1;
-      }
-    case 4:
-      switch(packet_type) {
-      case Flit::WRITE_REQUEST:
-        return 0;
-      case Flit::READ_REQUEST:
-        return 1;
-      case Flit::WRITE_REPLY:
-        return 2;
-      case Flit::READ_REPLY:
-        return 3;
-      default:
-	assert(false);
-	return -1;
-      }
-    default:
-      assert(false);
-      return -1;
-    }
-  }
-}
-
 void TrafficManager::_RetireFlit( Flit *f, int dest )
 {
   _deadlock_timer = 0;
@@ -816,7 +778,9 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     record = true;
   }
 
-  int subnetwork = DivisionAlgorithm(packet_type);
+  int subnetwork = ((packet_type == Flit::ANY_TYPE) ? 
+		    RandomInt(_duplicate_networks-1) :
+		    _subnet_map[packet_type]);
   
   bool watch = gWatchOut && (_packets_to_watch.count(_cur_pid) > 0);
   
