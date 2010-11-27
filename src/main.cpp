@@ -68,9 +68,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "singlenet.hpp"
 #include "kncube.hpp"
 #include "fly.hpp"
-#include "isolated_mesh.hpp"
 #include "cmesh.hpp"
-#include "cmeshx2.hpp"
 #include "flatfly_onchip.hpp"
 #include "qtree.hpp"
 #include "tree4.hpp"
@@ -139,18 +137,12 @@ bool AllocatorSim( BookSimConfig const & config )
     } else if ( topo == "cmesh" ) {
       CMesh::RegisterRoutingFunctions() ;
       net[i] = new CMesh( config, name.str() );
-    } else if ( topo == "cmeshx2" ) {
-      CMeshX2::RegisterRoutingFunctions() ;
-      net[i] = new CMeshX2( config, name.str() );
     } else if ( topo == "fly" ) {
       KNFly::RegisterRoutingFunctions() ;
       net[i] = new KNFly( config, name.str() );
     } else if ( topo == "single" ) {
       SingleNet::RegisterRoutingFunctions() ;
       net[i] = new SingleNet( config, name.str() );
-    } else if ( topo == "isolated_mesh" ) {
-      IsolatedMesh::RegisterRoutingFunctions() ;
-      net[i] = new IsolatedMesh( config, name.str() );
     } else if ( topo == "qtree" ) {
       QTree::RegisterRoutingFunctions() ;
       net[i] = new QTree( config, name.str() );
