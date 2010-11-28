@@ -52,7 +52,9 @@ ChaosRouter::ChaosRouter( const Configuration& config,
     Error( "Chaos router must have equal number of input and output ports" );
   }
 
-  _buffer_size      = config.GetInt( "const_flits_per_packet" );
+  _buffer_size      = config.GetInt( "vc_buf_size" );
+  assert(_buffer_size >= config.GetInt( "const_flits_per_packet" );
+
   _multi_queue_size = config.GetInt( "multi_queue_size" );
   
   _cur_channel = 0;
