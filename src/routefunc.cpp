@@ -1367,13 +1367,13 @@ void dim_order_torus( const Router *r, const Flit *f, int in_channel,
     vc_class_max = gNumVCs-1;
   }
   
-  int vc_class_size = vc_class_max - vc_class_min ;
+  int vc_class_size = vc_class_max - vc_class_min + 1 ;
   if ( f->ring_par == 0 ) {
     vc_min = vc_class_min ;
-    vc_max = vc_class_min + vc_class_size/2 ;
+    vc_max = vc_class_min + vc_class_size/2 - 1 ;
   } else {
-    vc_min = vc_class_min + vc_class_size/2 + 1 ;
-    vc_max = vc_class_min + vc_class_size ;
+    vc_min = vc_class_min + vc_class_size/2 ;
+    vc_max = vc_class_min + vc_class_size - 1 ;
   } 
   
   if ( f->watch ) {
@@ -1470,13 +1470,13 @@ void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel,
     vc_class_max = gNumVCs-1;
   }
 
-  int vc_class_size = vc_class_max - vc_class_min ;
+  int vc_class_size = vc_class_max - vc_class_min + 1 ;
   if ( f->ring_par == 0 ) {
     vc_min = vc_class_min ;
-    vc_max = vc_class_min + vc_class_size/2 ;
+    vc_max = vc_class_min + vc_class_size/2 - 1 ;
   } else {
-    vc_min = vc_class_min + vc_class_size/2 + 1 ;
-    vc_max = vc_class_min + vc_class_size ;
+    vc_min = vc_class_min + vc_class_size/2 ;
+    vc_max = vc_class_min + vc_class_size - 1 ;
   } 
   
   if ( f->watch ) {
