@@ -862,7 +862,6 @@ void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
     // Forward to neighbouring router
     out_port = cmesh_next_no_express( cur_router, dest_router );
   }
-  outputs->AddRange( out_port, 0, gNumVCs - 1 );
   if (f->type == Flit::READ_REQUEST)
     outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
   if (f->type == Flit::WRITE_REQUEST)
