@@ -1415,7 +1415,7 @@ void dim_order_ni_torus( const Router *r, const Flit *f, int in_channel,
       *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		  << "Adding VC range [" 
 		  << f->dest*vcs_per_dest << "," 
-		  << (f->dest+1)*vcs_per_dest << "]"
+		  << (f->dest+1)*vcs_per_dest - 1 << "]"
 		  << " at output port " << out_port
 		  << " for flit " << f->id
 		  << " (input port " << in_channel
