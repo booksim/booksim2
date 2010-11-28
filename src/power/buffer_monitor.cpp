@@ -36,15 +36,15 @@ BufferMonitor::BufferMonitor( int inputs ) {
   _cycles = 0 ;
   _inputs = inputs ;
 
-  const int n = 4 * inputs  * Flit::NUM_FLIT_TYPES ;
+  const int n = inputs  * Flit::NUM_FLIT_TYPES ;
   _reads.resize(n, 0) ;
   _writes.resize(n, 0) ;
 }
 
 int BufferMonitor::index( int input, int flitType ) const {
-  if ( input < 0 || input > _inputs ) 
+  if ( input < 0 || input >= _inputs ) 
     cerr << "ERROR: input out of range in BufferMonitor" << endl ;
-  if ( flitType < 0 || flitType> Flit::NUM_FLIT_TYPES ) 
+  if ( flitType < 0 || flitType >= Flit::NUM_FLIT_TYPES ) 
     cerr << "ERROR: flitType out of range in flitType" << endl ;
   return flitType + Flit::NUM_FLIT_TYPES * input ;
 }
@@ -73,4 +73,3 @@ ostream& operator<<( ostream& os, const BufferMonitor& obj ) {
   }
   return os ;
 }
-

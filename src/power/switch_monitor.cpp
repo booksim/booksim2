@@ -36,7 +36,7 @@ SwitchMonitor::SwitchMonitor( int inputs, int outputs ) {
   _cycles  = 0 ;
   _inputs  = inputs ;
   _outputs = outputs ;
-  const int n = (inputs+1) * (outputs+1) * Flit::NUM_FLIT_TYPES ;
+  const int n = inputs * outputs * Flit::NUM_FLIT_TYPES ;
   _event.resize(n, 0) ;
 }
 
