@@ -86,6 +86,8 @@ protected:
 
   vector<string> _traffic;
 
+  vector<int> _class_priority;
+
   vector<tTrafficFunction> _traffic_function;
   vector<tInjectionProcess> _injection_process;
 

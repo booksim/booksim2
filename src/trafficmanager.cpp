@@ -180,6 +180,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _traffic_function.push_back(iter->second);
   }
 
+  _class_priority = config.GetIntArray("class_priority"); 
+  if(_class_priority.empty()) {
+    _class_priority.push_back(config.GetInt("class_priority"));
+  }
+  _class_priority.resize(_classes, _class_priority.back());
+
   vector<string> inject = config.GetStrArray("injection_process");
   inject.resize(_classes, inject.back());
 
@@ -833,7 +839,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     }
     switch( _pri_type ) {
     case class_based:
-      f->pri = cl;
+      f->pri = _class_priority[cl];
       assert(f->pri >= 0);
       break;
     case age_based:
