@@ -63,14 +63,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //#define DEBUG_FATFLY
 
-// Whether we want progressive choice of intermediate destination. If enabled, at every hop until you reach one, you can
-// choose another intermediate destination which will make you go to a port in the same dimension. In total you take the
-// same number of hops, so you don't loop for example.
-#define PROGRESSIVE false
-
-// Used for UGAL and valiant. Half of the total VCs, to define two traffic classes.
-int FlatFlyOnChip::half_vcs = 0;
-
 static int _xcount;
 static int _ycount;
 static int _xrouter;
@@ -91,8 +83,6 @@ void FlatFlyOnChip::_ComputeSize( const Configuration &config )
   _n = config.GetInt( "n" );	// dimension
   _c = config.GetInt( "c" );    //concentration, may be different from k
   _r = _c + (_k-1)*_n ;		// total radix of the switch  ( # of inputs/outputs)
-
-  FlatFlyOnChip::half_vcs = config.GetInt("num_vcs") / 2;
 
   //how many routers in the x or y direction
   _xcount = config.GetInt("x");
@@ -826,22 +816,6 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
        }
      }
    }
-   else if (PROGRESSIVE && f->ph == 1) { // We want progressive adaptive routing. So if you are routing non-minimally you can choose another destination that would yield an output port
-                          // in the same axis, and see if it is a better choice to go there. If so, update your random destination.
-     out_port = flatfly_outport(dest, rID); // The minimal output port to the intermediate destination.
-     do {
-       _ran_intm = find_ran_intm(flatfly_transformation(f->src), dest); // Find another intermediate destination.
-       tmp_out_port = flatfly_outport(_ran_intm, rID); // Loop until we find one with an output in the same axis.
-     } while ((out_port-gC) / (gK-1) != (tmp_out_port-gC) / (gK-1)); // Now we need to know the distance with the old and new intermediate destination
-     _min_hop = find_distance(flatfly_transformation(f->src), f->intm) +    find_distance(f->intm, dest); // Old intermediate destination.
-     _nonmin_hop = find_distance(flatfly_transformation(f->src),_ran_intm) +    find_distance(_ran_intm, dest); // New.
-     if (r->GetCredit(out_port, vcBegin, vcEnd) * _min_hop > r->GetCredit(tmp_out_port, vcBegin, vcEnd) * _nonmin_hop) { // If the queuecnt for the other nonminimal output is smaller.
-       dest = _ran_intm; // We know the distance is equal because
-       f->intm = _ran_intm; // This is now our new intermediate destination.
-     }
-   }
-
-   
    
    // find minimal correct dimension to route through
    out_port =  flatfly_outport(dest, rID);

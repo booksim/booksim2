@@ -66,8 +66,6 @@ public:
   static void RegisterRoutingFunctions() ;
   double Capacity( ) const;
   void InsertRandomFaults( const Configuration &config );
-
-  static int half_vcs;
 };
 
 void xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
