@@ -186,6 +186,15 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _class_priority.resize(_classes, _class_priority.back());
 
+  for(int c = 0; c < _classes; ++c) {
+    int const & prio = _class_priority[c];
+    if(_class_prio_map.count(prio) > 0) {
+      _class_prio_map.find(prio)->second.second.push_back(c);
+    } else {
+      _class_prio_map.insert(make_pair(prio, make_pair(-1, vector<int>(1, c))));
+    }
+  }
+
   vector<string> inject = config.GetStrArray("injection_process");
   inject.resize(_classes, inject.back());
 
@@ -961,55 +970,73 @@ void TrafficManager::_Step( )
   for(int i = 0; i < _duplicate_networks; ++i) {
     for(int input = 0; input < _sources; ++input) {
       Flit * f = NULL;
-      for(int c = _classes - 1; c >= 0; --c) {
-	if(!_partial_packets[input][c][i].empty()) {
-	  f = _partial_packets[input][c][i].front();
-	  if(f->head && f->vc == -1) { // Find first available VC
-	    
-	    if(_use_xyyx){
-	      f->vc = _buf_states[input][i]->FindAvailable(f->type ,f->x_then_y);
-	    } else {
-	      f->vc = _buf_states[input][i]->FindAvailable(f->type);
-	    }
-	    if(f->vc != -1) {
-	      _buf_states[input][i]->TakeBuffer(f->vc);
-	    }
-	  }
+      for(map<int, pair<int, vector<int> > >::reverse_iterator iter = _class_prio_map.rbegin();
+	  iter != _class_prio_map.rend();
+	  ++iter) {
+
+	int const & base = iter->second.first;
+	vector<int> const & classes = iter->second.second;
+	int const count = classes.size();
+
+	for(int j = 1; j <= count; ++j) {
 	  
-	  if((f->vc != -1) && (!_buf_states[input][i]->IsFullFor(f->vc))) {
-	    
-	    _partial_packets[input][c][i].pop_front();
-	    _buf_states[input][i]->SendingFlit(f);
-	    
-	    if(_pri_type == network_age_based) {
-	      f->pri = numeric_limits<int>::max() - _time;
-	      assert(f->pri >= 0);
+	  int const offset = (base + j) % count;
+	  int const c = classes[offset];
+
+	  if(!_partial_packets[input][c][i].empty()) {
+	    f = _partial_packets[input][c][i].front();
+	    if(f->head && f->vc == -1) { // Find first available VC
+	      
+	      if(_use_xyyx){
+		f->vc = _buf_states[input][i]->FindAvailable(f->type ,f->x_then_y);
+	      } else {
+		f->vc = _buf_states[input][i]->FindAvailable(f->type);
+	      }
+	      if(f->vc != -1) {
+		_buf_states[input][i]->TakeBuffer(f->vc);
+	      }
 	    }
 	    
-	    if(f->watch) {
-	      *gWatchOut << GetSimTime() << " | "
-			 << "node" << input << " | "
-			 << "Injecting flit " << f->id
-			 << " at time " << _time
-			 << " with priority " << f->pri
-			 << "." << endl;
+	    if((f->vc != -1) && (!_buf_states[input][i]->IsFullFor(f->vc))) {
+	      
+	      _partial_packets[input][c][i].pop_front();
+	      _buf_states[input][i]->SendingFlit(f);
+	      
+	      if(_pri_type == network_age_based) {
+		f->pri = numeric_limits<int>::max() - _time;
+		assert(f->pri >= 0);
+	      }
+	      
+	      if(f->watch) {
+		*gWatchOut << GetSimTime() << " | "
+			   << "node" << input << " | "
+			   << "Injecting flit " << f->id
+			   << " at time " << _time
+			   << " with priority " << f->pri
+			   << "." << endl;
+	      }
+	      
+	      // Pass VC "back"
+	      if(!_partial_packets[input][c][i].empty() && !f->tail) {
+		Flit * nf = _partial_packets[input][c][i].front();
+		nf->vc = f->vc;
+	      }
+	      
+	      ++_injected_flow[input];
+	      
+	      _net[i]->WriteFlit(f, input);
+	      
+	      iter->second.first = offset;
+	      
+	      break;
+	      
+	    } else {
+	      f = NULL;
 	    }
-	    
-	    // Pass VC "back"
-	    if(!_partial_packets[input][c][i].empty() && !f->tail) {
-	      Flit * nf = _partial_packets[input][c][i].front();
-	      nf->vc = f->vc;
-	    }
-	    
-	    ++_injected_flow[input];
-
-	    _net[i]->WriteFlit(f, input);
-
-	    break;
-
-	  } else {
-	    f = NULL;
 	  }
+	}
+	if(f) {
+	  break;
 	}
       }
       if(((_sim_mode != batch) && (_sim_state == warming_up)) || (_sim_state == running)) {

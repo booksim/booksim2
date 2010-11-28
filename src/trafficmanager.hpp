@@ -88,6 +88,8 @@ protected:
 
   vector<int> _class_priority;
 
+  map<int, pair<int, vector<int> > > _class_prio_map;
+
   vector<tTrafficFunction> _traffic_function;
   vector<tInjectionProcess> _injection_process;
 
