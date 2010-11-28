@@ -341,7 +341,7 @@ void FlatFlyOnChip::RegisterRoutingFunctions(){
 
 
 void xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
-		  OutputSet *outputs, bool inject )
+		  OutputSet *outputs )
 {
  
   outputs->Clear( );
@@ -427,7 +427,7 @@ int flatfly_outport_yx(int dest, int rID) {
 }
 
 void valiant_flatfly( const Router *r, const Flit *f, int in_channel, 
-		  OutputSet *outputs, bool inject )
+		  OutputSet *outputs )
 {
   outputs->Clear( );
   int dest  = flatfly_transformation(f->dest);
@@ -484,7 +484,7 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
 }
 
 void min_flatfly( const Router *r, const Flit *f, int in_channel, 
-		  OutputSet *outputs, bool inject )
+		  OutputSet *outputs )
 {
  
   outputs->Clear( );
@@ -532,7 +532,7 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
 //same as ugal except uses xyyx routing and no progressive
 //cannot use_read_write
 void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
-			  OutputSet *outputs, bool inject )
+			  OutputSet *outputs )
 {
   outputs->Clear( );
   int dest  = flatfly_transformation(f->dest);
@@ -718,7 +718,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 
 //ugal now uses modified comparison, modefied getcredit
 void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
-			  OutputSet *outputs, bool inject )
+			  OutputSet *outputs )
 {
   outputs->Clear( );
   int dest  = flatfly_transformation(f->dest);

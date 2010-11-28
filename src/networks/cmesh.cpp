@@ -506,7 +506,7 @@ int cmesh_yx( int cur, int dest ) {
 }
 
 void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel, 
-		  OutputSet *outputs, bool inject )
+		  OutputSet *outputs )
 {
 
   // Destination Router, Destination Port
@@ -646,7 +646,7 @@ int cmesh_yx_no_express( int cur, int dest ) {
 }
 
 void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel, 
-			     OutputSet *outputs, bool inject )
+			     OutputSet *outputs )
 {
 
   // Destination Router, Destination Port
@@ -775,7 +775,7 @@ int cmesh_next( int cur, int dest ) {
 }
 
 void dor_cmesh( const Router *r, const Flit *f, int in_channel, 
-		OutputSet *outputs, bool inject )
+		OutputSet *outputs )
 {
 
   // Destination Router, Destination Port
@@ -842,7 +842,7 @@ int cmesh_next_no_express( int cur, int dest ) {
 }
 
 void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel, 
-			   OutputSet *outputs, bool inject )
+			   OutputSet *outputs )
 {
  
   // Destination Router, Destination Port

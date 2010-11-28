@@ -174,7 +174,7 @@ void AnyNet::RegisterRoutingFunctions() {
 }
 
 void min_anynet( const Router *r, const Flit *f, int in_channel, 
-		 OutputSet *outputs, bool inject ){
+		 OutputSet *outputs ){
   outputs->Clear( );
   int out_port = -1;
   int rID = r->GetID();

@@ -453,7 +453,7 @@ int flatfly_selfrouting(int dest) {
 }
 
 void min_dragonflynew( const Router *r, const Flit *f, int in_channel, 
-		       OutputSet *outputs, bool inject )
+		       OutputSet *outputs )
 {
   outputs->Clear( );
 
@@ -564,7 +564,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
 // //FLIT RESERVATION
 // ////////////////////////////////////////////////////////////
 // void res_dragonflynew( const Router *r, const Flit *f, int in_channel,
-// 		       OutputSet *outputs, bool inject )
+// 		       OutputSet *outputs )
 // {
 
 
@@ -872,7 +872,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
 
 // void compressed_dragonflynew( const Router *r, const Flit *f, int in_channel,
-// 		       OutputSet *outputs, bool inject )
+// 		       OutputSet *outputs )
 // {
 //   //if compressed data is > than this, fail and route nonminial
 //   int compressed_threshold = 0;

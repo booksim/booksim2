@@ -153,7 +153,7 @@ void ChaosRouter::ReadInputs( )
 	  } else {
 	    _input_state[input] = filling;
 	  }
-	  _rf( this, f, input, _input_route[input], false );
+	  _rf( this, f, input, _input_route[input] );
 	} else {
 	  cout << *f;
 	  Error( "Empty buffer received non-head flit!" );
@@ -527,7 +527,7 @@ void ChaosRouter::_OutputAdvance( )
 	mq = _input_mq_match[i];
 
 	if ( f->head ) {
-	  _rf( this, f, i, _mq_route[mq], false );
+	  _rf( this, f, i, _mq_route[mq] );
 	  _mq_age[mq] = 0;
 
 	  if ( _multi_state[mq] == empty ) {
@@ -574,7 +574,7 @@ void ChaosRouter::_OutputAdvance( )
 	    _input_state[i] = filling;
 	    f2 = _input_frame[i].front( );
 	    // update routes
-	    _rf( this, f2, i, _input_route[i], false );
+	    _rf( this, f2, i, _input_route[i] );
 	  }
 	  
 	  _input_output_match[i] = -1;
