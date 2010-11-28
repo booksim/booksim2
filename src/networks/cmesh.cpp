@@ -544,7 +544,7 @@ void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel,
   }
 
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
-  int vcBegin = 0, vcEnd = gNumVCS-1;
+  int vcBegin = 0, vcEnd = gNumVCs-1;
   int available_vcs = 0;
   //each class must have ast east 2 vcs assigned or else xy_yx will deadlock
   if ( f->type == Flit::READ_REQUEST ) {
@@ -560,7 +560,7 @@ void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel,
    available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
    vcBegin = gWriteReplyBeginVC;
   } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCS;
+    available_vcs = gNumVCs;
     vcBegin = 0;
   }
   assert( available_vcs>=2);
@@ -684,7 +684,7 @@ void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
   }
 
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
-  int vcBegin = 0, vcEnd = gNumVCS-1;
+  int vcBegin = 0, vcEnd = gNumVCs-1;
   int available_vcs = 0;
   //each class must have ast east 2 vcs assigned or else xy_yx will deadlock
   if ( f->type == Flit::READ_REQUEST ) {
@@ -700,7 +700,7 @@ void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
    available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
    vcBegin = gWriteReplyBeginVC;
   } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCS;
+    available_vcs = gNumVCs;
     vcBegin = 0;
   }
   assert( available_vcs>=2);
@@ -805,7 +805,7 @@ void dor_cmesh( const Router *r, const Flit *f, int in_channel,
   if (f->type ==  Flit::WRITE_REPLY)
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
  if (f->type ==  Flit::ANY_TYPE)
-      outputs->AddRange( out_port, 0, gNumVCS-1);
+      outputs->AddRange( out_port, 0, gNumVCs-1);
 }
 
 //============================================================
@@ -862,7 +862,7 @@ void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
     // Forward to neighbouring router
     out_port = cmesh_next_no_express( cur_router, dest_router );
   }
-  outputs->AddRange( out_port, 0, gNumVCS - 1 );
+  outputs->AddRange( out_port, 0, gNumVCs - 1 );
   if (f->type == Flit::READ_REQUEST)
     outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
   if (f->type == Flit::WRITE_REQUEST)
@@ -872,6 +872,6 @@ void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
   if (f->type ==  Flit::WRITE_REPLY)
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
   if (f->type ==  Flit::ANY_TYPE)
-    outputs->AddRange( out_port, 0, gNumVCS-1 );
+    outputs->AddRange( out_port, 0, gNumVCs-1 );
   
 }

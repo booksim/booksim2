@@ -59,7 +59,7 @@ map<string, tRoutingFunction> gRoutingFunctionMap;
 
 /* Global information used by routing functions */
 
-int gNumVCS;
+int gNumVCs;
 
 /* Add more functions here
  *
@@ -101,7 +101,7 @@ void dest_tag_crossbar( const Router *r,
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
     break;
   case Flit::ANY_TYPE:
-    outputs->AddRange( out_port, 0, gNumVCS-1 );
+    outputs->AddRange( out_port, 0, gNumVCs-1 );
     break;
   }
   
@@ -144,7 +144,7 @@ void qtree_nca( const Router *r, const Flit *f,
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
     break;
   case Flit::ANY_TYPE:
-    outputs->AddRange( out_port, 0, gNumVCS-1 );
+    outputs->AddRange( out_port, 0, gNumVCs-1 );
     break;
   }
 }
@@ -210,7 +210,7 @@ void tree4_anca( const Router *r, const Flit *f,
     break;
   case Flit::ANY_TYPE:
     vcBegin = 0;
-    vcEnd   = gNumVCS-1;
+    vcEnd   = gNumVCs-1;
   }
   
   for (int i = 0; i < range; ++i) 
@@ -266,7 +266,7 @@ void tree4_nca( const Router *r, const Flit *f,
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
     break;
   case Flit::ANY_TYPE:
-    outputs->AddRange( out_port, 0, gNumVCS-1 );
+    outputs->AddRange( out_port, 0, gNumVCs-1 );
     break;
   }
 }
@@ -347,7 +347,7 @@ void fattree_nca( const Router *r, const Flit *f,
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
     break;
   case Flit::ANY_TYPE:
-    outputs->AddRange( out_port, 0, gNumVCS-1 );
+    outputs->AddRange( out_port, 0, gNumVCs-1 );
     break;
   }
 }
@@ -449,7 +449,7 @@ void fattree_anca( const Router *r, const Flit *f,
     break;
   case Flit::ANY_TYPE:
     vcBegin = 0;
-    vcEnd   = gNumVCS-1;
+    vcEnd   = gNumVCs-1;
   }
 
   if (range > 1) {
@@ -490,7 +490,7 @@ void dor_mesh( const Router *r, const Flit *f,
   else if (f->type ==  Flit::WRITE_REPLY)
     outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
   else if (f->type ==  Flit::ANY_TYPE)
-    outputs->AddRange( out_port, 0, gNumVCS-1 );
+    outputs->AddRange( out_port, 0, gNumVCs-1 );
 }
 
 // ============================================================
@@ -522,7 +522,7 @@ void xy_yx_mesh( const Router *r, const Flit *f,
   }
 
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
-  int vcBegin = 0, vcEnd = gNumVCS-1;
+  int vcBegin = 0, vcEnd = gNumVCs-1;
   int available_vcs = 0;
   //each class must have ast east 2 vcs assigned or else xy_yx will deadlock
   if ( f->type == Flit::READ_REQUEST ) {
@@ -538,7 +538,7 @@ void xy_yx_mesh( const Router *r, const Flit *f,
     available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
     vcBegin = gWriteReplyBeginVC;
   } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCS;
+    available_vcs = gNumVCs;
     vcBegin = 0;
   }
   assert( available_vcs>=2);
@@ -610,7 +610,7 @@ int route_yx( int router_id, int dest_id ) {
 void singlerf( const Router *, const Flit *f, int, OutputSet *outputs )
 {
   outputs->Clear( );
-  outputs->AddRange( f->dest, 0, gNumVCS-1); // VOQing
+  outputs->AddRange( f->dest, 0, gNumVCs-1); // VOQing
 }
 
 //=============================================================
@@ -722,7 +722,7 @@ void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
     *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 	       << "Adding VC range [" 
 	       << 0 << "," 
-	       << gNumVCS - 1 << "]"
+	       << gNumVCs - 1 << "]"
 	       << " at output port " << out_port
 	       << " for flit " << f->id
 	       << " (input port " << in_channel
@@ -730,7 +730,7 @@ void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
 	       << "." << endl;
   }
   
-  outputs->AddRange( out_port, 0, gNumVCS - 1 );
+  outputs->AddRange( out_port, 0, gNumVCs - 1 );
 }
 
 //=============================================================
@@ -738,7 +738,7 @@ void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
 void dim_order_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs )
 {
   int out_port;
-  int vcs_per_dest = gNumVCS / gNodes;
+  int vcs_per_dest = gNumVCs / gNodes;
 
   outputs->Clear( );
   out_port = dor_next_mesh( r->GetID( ), f->dest );
@@ -825,7 +825,7 @@ void romm_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outpu
    available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
    vc_min = gWriteReplyBeginVC;
   } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCS;
+    available_vcs = gNumVCs;
     vc_min = 0;
   }
   assert( available_vcs>=2);
@@ -845,7 +845,7 @@ void romm_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outpu
 void romm_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs )
 {
   int out_port;
-  int vcs_per_dest = gNumVCS / gNodes;
+  int vcs_per_dest = gNumVCs / gNodes;
 
   outputs->Clear( );
 
@@ -878,7 +878,7 @@ void min_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
   outputs->Clear( );
   
   if ( in_channel == 2*gN ) {
-    in_vc = gNumVCS - 1; // ignore the injection VC
+    in_vc = gNumVCs - 1; // ignore the injection VC
   } else {
     in_vc = f->vc;
   }
@@ -911,7 +911,7 @@ void min_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
 	    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 			<< "Adding VC range [" 
 			<< 1 << "," 
-			<< gNumVCS - 1 << "]"
+			<< gNumVCs - 1 << "]"
 			<< " at output port " << 2*n
 			<< " with priority " << 1
 			<< " for flit " << f->id
@@ -919,13 +919,13 @@ void min_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
 			<< ", destination " << f->dest << ")"
 			<< "." << endl;
 	  }
-	  outputs->AddRange( 2*n, 1, gNumVCS - 1, 1 ); 
+	  outputs->AddRange( 2*n, 1, gNumVCs - 1, 1 ); 
 	} else { // Left
 	  if ( f->watch ) {
 	    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 			<< "Adding VC range [" 
 			<< 1 << "," 
-			<< gNumVCS - 1 << "]"
+			<< gNumVCs - 1 << "]"
 			<< " at output port " << 2*n+1
 			<< " with priority " << 1
 			<< " for flit " << f->id
@@ -933,7 +933,7 @@ void min_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
 			<< ", destination " << f->dest << ")"
 			<< "." << endl;
 	  }
-	  outputs->AddRange( 2*n + 1, 1, gNumVCS - 1, 1 ); 
+	  outputs->AddRange( 2*n + 1, 1, gNumVCs - 1, 1 ); 
 	}
       }
       cur  /= gK;
@@ -962,7 +962,7 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
   cur     = r->GetID( ); 
   dest    = f->dest;
   in_vc   = f->vc;
-  vc_mult = gNumVCS / 3;
+  vc_mult = gNumVCs / 3;
 
   if ( cur != dest ) {
    
@@ -997,7 +997,7 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
     if ( ( cur % gK ) < ( dest % gK ) ) { // Increasing
       increase = true;
       if ( !r->IsFaultyOutput( 2*n ) ) {
-	outputs->AddRange( 2*n, 2*vc_mult, gNumVCS - 1 );
+	outputs->AddRange( 2*n, 2*vc_mult, gNumVCs - 1 );
 	fault = false;
 
 	if ( f->watch ) {
@@ -1011,7 +1011,7 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
     } else { // Decreasing
       increase = false;
       if ( !r->IsFaultyOutput( 2*n + 1 ) ) {
-	outputs->AddRange( 2*n + 1, 2*vc_mult, gNumVCS - 1 ); 
+	outputs->AddRange( 2*n + 1, 2*vc_mult, gNumVCs - 1 ); 
 	fault = false;
 
 	if ( f->watch ) {
@@ -1095,7 +1095,7 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
       }
     }
   } else {
-    outputs->AddRange( 2*gN, 0, gNumVCS - 1 ); 
+    outputs->AddRange( 2*gN, 0, gNumVCs - 1 ); 
   }
 }
 
@@ -1112,8 +1112,8 @@ void limited_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputS
   cur = r->GetID( ); dest = f->dest;
   
   if ( cur != dest ) {
-    if ( ( f->vc != gNumVCS - 1 ) && 
-	 ( f->dr != gNumVCS - 2 ) ) {
+    if ( ( f->vc != gNumVCs - 1 ) && 
+	 ( f->dr != gNumVCs - 2 ) ) {
       
       for ( int n = 0; n < gN; ++n ) {
 	if ( ( cur % gK ) != ( dest % gK ) ) { 
@@ -1124,14 +1124,14 @@ void limited_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputS
 	  }
 	  
 	  // Go in a productive direction with high priority
-	  outputs->AddRange( min_port, 0, gNumVCS - 2, 2 );
+	  outputs->AddRange( min_port, 0, gNumVCs - 2, 2 );
 	  
 	  // Go in the non-productive direction with low priority
-	  outputs->AddRange( min_port ^ 0x1, 0, gNumVCS - 2, 1 );
+	  outputs->AddRange( min_port ^ 0x1, 0, gNumVCs - 2, 1 );
 	} else {
 	  // Both directions are non-productive
-	  outputs->AddRange( 2*n, 0, gNumVCS - 2, 1 );
-	  outputs->AddRange( 2*n+1, 0, gNumVCS - 2, 1 );
+	  outputs->AddRange( 2*n, 0, gNumVCs - 2, 1 );
+	  outputs->AddRange( 2*n+1, 0, gNumVCs - 2, 1 );
 	}
 	
 	cur  /= gK;
@@ -1140,11 +1140,11 @@ void limited_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputS
       
     } else {
       outputs->AddRange( dor_next_mesh( cur, dest ),
-			 gNumVCS - 1, gNumVCS - 1, 0 );
+			 gNumVCs - 1, gNumVCs - 1, 0 );
     }
     
   } else { // at destination
-    outputs->AddRange( 2*gN, 0, gNumVCS - 1 ); 
+    outputs->AddRange( 2*gN, 0, gNumVCs - 1 ); 
   }
 }
 
@@ -1187,7 +1187,7 @@ void valiant_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *ou
    available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
    vc_min = gWriteReplyBeginVC;
   } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCS;
+    available_vcs = gNumVCs;
     vc_min = 0;
   }
   assert( available_vcs>=2);
@@ -1244,7 +1244,7 @@ void valiant_torus( const Router *r, const Flit *f, int in_channel, OutputSet *o
     available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;
     begin_vcs = gWriteReplyBeginVC;
   } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = (gNumVCS);
+    available_vcs = (gNumVCs);
     begin_vcs = 0;
   }
 
@@ -1364,7 +1364,7 @@ void dim_order_torus( const Router *r, const Flit *f, int in_channel,
     break;
   case Flit::ANY_TYPE:
     vc_class_min = 0;
-    vc_class_max = gNumVCS-1;
+    vc_class_max = gNumVCs-1;
   }
   
   int vc_class_size = vc_class_max - vc_class_min ;
@@ -1400,7 +1400,7 @@ void dim_order_ni_torus( const Router *r, const Flit *f, int in_channel,
   int dest;
 
   int out_port;
-  int vcs_per_dest = gNumVCS / gNodes;
+  int vcs_per_dest = gNumVCs / gNodes;
 
   outputs->Clear( );
 
@@ -1467,7 +1467,7 @@ void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel,
     break;
   case Flit::ANY_TYPE:
     vc_class_min = 0;
-    vc_class_max = gNumVCS-1;
+    vc_class_max = gNumVCs-1;
   }
 
   int vc_class_size = vc_class_max - vc_class_min ;
@@ -1505,7 +1505,7 @@ void min_adapt_torus( const Router *r, const Flit *f, int in_channel, OutputSet 
   outputs->Clear( );
   
   if ( in_channel == 2*gN ) {
-    in_vc = gNumVCS - 1; // ignore the injection VC
+    in_vc = gNumVCs - 1; // ignore the injection VC
   } else {
     in_vc = f->vc;
   }
@@ -1551,7 +1551,7 @@ void min_adapt_torus( const Router *r, const Flit *f, int in_channel, OutputSet 
       *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		  << "Adding VC range [" 
 		  << 0 << "," 
-		  << gNumVCS - 1 << "]"
+		  << gNumVCs - 1 << "]"
 		  << " at output port " << out_port
 		  << " for flit " << f->id
 		  << " (input port " << in_channel
@@ -1579,7 +1579,7 @@ void dest_tag( const Router *r, const Flit *f, int in_channel,
 
   int out_port = dest % gK;
 
-  outputs->AddRange( out_port, 0, gNumVCS - 1 );
+  outputs->AddRange( out_port, 0, gNumVCs - 1 );
 }
 
 
@@ -1654,7 +1654,7 @@ void chaos_mesh( const Router *r, const Flit *f,
 void InitializeRoutingMap( const Configuration & config )
 {
 
-  gNumVCS = config.GetInt( "num_vcs" );
+  gNumVCs = config.GetInt( "num_vcs" );
 
   //
   // traffic class partitions

@@ -363,7 +363,7 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
   }
   
 
-  int vcBegin = 0, vcEnd = gNumVCS-1;
+  int vcBegin = 0, vcEnd = gNumVCs-1;
   int available_vcs = 0;
   //each class must have ast east 2 vcs assigned or else xy_yx will deadlock
   if ( f->type == Flit::READ_REQUEST ) {
@@ -379,7 +379,7 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
    available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
    vcBegin = gWriteReplyBeginVC;
   } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCS;
+    available_vcs = gNumVCs;
     vcBegin = 0;
   }
   assert( available_vcs>=2);
@@ -432,7 +432,7 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
   outputs->Clear( );
   int dest  = flatfly_transformation(f->dest);
   int out_port;
-  int vcBegin = 0, vcEnd = (gNumVCS-1); 
+  int vcBegin = 0, vcEnd = (gNumVCs-1); 
   if ( in_channel < gC ){
     f->ph = 0;
     f->intm = RandomInt( powi( gK, gN )*gC-1);
@@ -468,7 +468,7 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
    available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
    vcBegin = gWriteReplyBeginVC;
   } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCS;
+    available_vcs = gNumVCs;
     vcBegin = 0;
   }
   assert( available_vcs>=2);
@@ -504,7 +504,7 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
     out_port = flatfly_outport(dest, r->GetID());
   }
  
-  int vcBegin = 0, vcEnd = gNumVCS-1;
+  int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
     vcBegin = gReadReqBeginVC;
     vcEnd   = gReadReqEndVC;
@@ -519,7 +519,7 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
     vcEnd   = gWriteReplyEndVC;
   } else if ( f->type ==  Flit::ANY_TYPE ) {
     vcBegin = 0;
-    vcEnd   = gNumVCS-1;
+    vcEnd   = gNumVCs-1;
   }
     outputs->AddRange( out_port , vcBegin, vcEnd );
 }
@@ -547,7 +547,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   int threshold = 2;
 
   int vcBegin = 0;
-  int vcEnd = gNumVCS - 1;
+  int vcEnd = gNumVCs - 1;
 
 
   if ( in_channel < gC ){
@@ -692,7 +692,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;
     begin_vcs = gWriteReplyBeginVC;
   } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = (gNumVCS);
+    available_vcs = (gNumVCs);
     begin_vcs = 0;
   }
 
@@ -733,7 +733,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   int threshold = 2;
 
   int vcBegin = 0;
-  int vcEnd = gNumVCS - 1;
+  int vcEnd = gNumVCs - 1;
 
   if ( in_channel < gC ){
     if(gTrace){
@@ -879,7 +879,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
    available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
    vcBegin = gWriteReplyBeginVC;
   } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCS;
+    available_vcs = gNumVCs;
     vcBegin = 0;
   }
   assert( available_vcs>=2);

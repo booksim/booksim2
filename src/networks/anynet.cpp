@@ -182,7 +182,7 @@ void min_anynet( const Router *r, const Flit *f, int in_channel,
   
   out_port = global_routing_table[rID].find(dest)->second;
 
-  int vcBegin = 0, vcEnd = gNumVCS-1;
+  int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
     vcBegin = gReadReqBeginVC;
     vcEnd   = gReadReqEndVC;
@@ -197,7 +197,7 @@ void min_anynet( const Router *r, const Flit *f, int in_channel,
     vcEnd   = gWriteReplyEndVC;
   } else if ( f->type ==  Flit::ANY_TYPE ) {
     vcBegin = 0;
-    vcEnd   = gNumVCS-1;
+    vcEnd   = gNumVCs-1;
   }
 
   outputs->AddRange( out_port , vcBegin, vcEnd );
