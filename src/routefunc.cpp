@@ -1682,8 +1682,6 @@ void InitializeRoutingMap( const Configuration & config )
   gRoutingFunctionMap["anca_tree4"]          = &tree4_anca;
   gRoutingFunctionMap["dor_mesh"]            = &dor_mesh;
   gRoutingFunctionMap["xy_yx_mesh"]          = &xy_yx_mesh;
-  gRoutingFunctionMap["dor_isolated_mesh"]   = &dor_mesh;
-  gRoutingFunctionMap["xy_yx_isolated_mesh"] = &xy_yx_mesh;
   gRoutingFunctionMap["dest_tag_crossbar"]   = &dest_tag_crossbar ;
   // End Balfour-Schultz
   // ===================================================
