@@ -61,7 +61,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-//#define DEBUG_FATFLY
+//#define DEBUG_FLATFLY
 
 static int _xcount;
 static int _ycount;
@@ -141,7 +141,7 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
     _timed_modules.push_back(_routers[node]);
 
 
-#ifdef DEBUG_FATFLY
+#ifdef DEBUG_FLATFLY
     cout << " ======== router node : " << node << " ======== " << " router_" << router_name.str() << " router node # : " << node << endl;
 #endif
 
@@ -200,12 +200,12 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 	}
 	_routers[node]->AddInputChannel( _inject[link], _inject_cred[link] );
 	
-#ifdef DEBUG_FATFLY
+#ifdef DEBUG_FLATFLY
 	cout << "  Adding injection channel " << link << endl;
 #endif
 	
 	_routers[node]->AddOutputChannel( _eject[link], _eject_cred[link] );
-#ifdef DEBUG_FATFLY
+#ifdef DEBUG_FLATFLY
 	cout << "  Adding ejection channel " << link << endl;
 #endif
       }
@@ -252,7 +252,7 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 	  other = cnt*_k*_k*_k+curr6;
 	}
 	if(other == node){
-#ifdef DEBUG_FATFLY
+#ifdef DEBUG_FLATFLY
 	  cout << "ignore channel : " << _output << " to node " << node <<" and "<<other<<endl;
 #endif
 	  continue;
@@ -270,7 +270,7 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 	_output = (_k-1) * _n  * node + (_k-1) * dim  + cnt+offset;
 	
 	
-#ifdef DEBUG_FATFLY
+#ifdef DEBUG_FLATFLY
 	cout << "Adding channel : " << _output << " to node " << node <<" and "<<other<<" with length "<<length<<endl;
 #endif
 	if(use_noc_latency){
