@@ -105,7 +105,6 @@ protected:
 
   // ============ Injection queues ============ 
 
-  int          _voqing;
   vector<vector<int> > _qtime;
   vector<vector<bool> > _qdrained;
   vector<vector<vector<list<Flit *> > > > _partial_packets;
