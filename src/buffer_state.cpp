@@ -204,15 +204,15 @@ int BufferState::FindAvailable( Flit::FlitType type, bool x_then_y )
 {
   int vcBegin = _vc_range_begin[type];
   //split the vc space in two partitipons
-  int available_vcs = (_vc_range_size[type]>>1);
+  int available_vcs = _vc_range_size[type]/2;
   if(x_then_y){
-    vcBegin = vcBegin+(available_vcs);
+    vcBegin = vcBegin+available_vcs;
   } 
   
   for (int v = 1; v <= available_vcs; ++v) {
-    int vc = vcBegin + ((_vc_sel_last[type] + v) % (available_vcs));
-    if ( IsAvailableFor(vc) && !IsFullFor(vc)  ) {
-      _vc_sel_last[type] = _vc_sel_last[type] + v;
+    int vc = vcBegin + (_vc_sel_last[type] + v) % available_vcs;
+    if ( IsAvailableFor(vc) && !IsFullFor(vc) ) {
+      _vc_sel_last[type] = vc - vcBegin;
       return vc;
     }
   }
@@ -223,10 +223,12 @@ int BufferState::FindAvailable( Flit::FlitType type, bool x_then_y )
 
 int BufferState::FindAvailable( Flit::FlitType type )
 {
-  for (int v = 1; v <= _vc_range_size[type]; ++v) {
-    int vc = _vc_range_begin[type] + (_vc_sel_last[type] + v) % _vc_range_size[type];
-    if ( IsAvailableFor(vc) && !IsFullFor(vc)  ) {
-      _vc_sel_last[type] = vc;
+  int vcBegin = _vc_range_begin[type];
+  int available_vcs = _vc_range_size[type];
+  for (int v = 1; v <= available_vcs; ++v) {
+    int vc = vcBegin + (_vc_sel_last[type] + v) % available_vcs;
+    if ( IsAvailableFor(vc) && !IsFullFor(vc) ) {
+      _vc_sel_last[type] = vc - vcBegin;
       return vc;
     }
   }
