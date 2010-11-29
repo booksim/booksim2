@@ -76,7 +76,7 @@ traffic       = uniform;
 // xr, yr specifiies the arayment of clients in a router
 //
 topology = flatfly;
-physical_subnetworks = 1;
+subnets = 1;
 
 c  = 4;
 k  = 4;

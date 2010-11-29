@@ -120,12 +120,12 @@ bool AllocatorSim( BookSimConfig const & config )
   vector<Network *> net;
 
   string topo = config.GetStr( "topology" );
-  int networks = config.GetInt("physical_subnetworks");
+  int subnets = config.GetInt("subnets");
   /*To include a new network, must register the network here
    *add an else if statement with the name of the network
    */
-  net.resize(networks);
-  for (int i = 0; i < networks; ++i) {
+  net.resize(subnets);
+  for (int i = 0; i < subnets; ++i) {
     ostringstream name;
     name << "network_" << i;
     if ( topo == "torus" ) {
@@ -206,7 +206,7 @@ bool AllocatorSim( BookSimConfig const & config )
     delete pnet;
   }
 
-  for (int i=0; i<networks; ++i)
+  for (int i=0; i<subnets; ++i)
     delete net[i];
 
   delete trafficManager;

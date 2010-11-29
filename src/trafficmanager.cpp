@@ -58,7 +58,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   assert(_limit<=_sources);
  
-  _duplicate_networks = config.GetInt("physical_subnetworks");
+  _subnets = config.GetInt("subnets");
  
   _subnet_map.resize(Flit::NUM_FLIT_TYPES);
   _subnet_map[Flit::READ_REQUEST] = config.GetInt("read_request_subnet");
@@ -99,8 +99,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   for ( int s = 0; s < _sources; ++s ) {
     ostringstream tmp_name;
     tmp_name << "terminal_buf_state_" << s;
-    _buf_states[s].resize(_duplicate_networks);
-    for (int a = 0; a < _duplicate_networks; ++a) {
+    _buf_states[s].resize(_subnets);
+    for (int a = 0; a < _subnets; ++a) {
       _buf_states[s][a] = new BufferState( config, this, tmp_name.str( ) );
     }
     tmp_name.str("");
@@ -371,8 +371,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _injected_flow.resize(_sources, 0);
   _ejected_flow.resize(_dests, 0);
 
-  _received_flow.resize(_duplicate_networks*_routers, 0);
-  _sent_flow.resize(_duplicate_networks*_routers, 0);
+  _received_flow.resize(_subnets*_routers, 0);
+  _sent_flow.resize(_subnets*_routers, 0);
 
   _slowest_flit.resize(_classes, -1);
 
@@ -380,8 +380,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _total_sims = config.GetInt( "sim_count" );
 
-  _router_map.resize(_duplicate_networks);
-  for (int i=0; i < _duplicate_networks; ++i) {
+  _router_map.resize(_subnets);
+  for (int i=0; i < _subnets; ++i) {
     _router_map[i] = _net[i]->GetRouters();
   }
 
@@ -484,7 +484,7 @@ TrafficManager::~TrafficManager( )
 {
 
   for ( int s = 0; s < _sources; ++s ) {
-    for (int a = 0; a < _duplicate_networks; ++a) {
+    for (int a = 0; a < _subnets; ++a) {
       delete _buf_states[s][a];
     }
   }
@@ -792,7 +792,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   }
 
   int subnetwork = ((packet_type == Flit::ANY_TYPE) ? 
-		    RandomInt(_duplicate_networks-1) :
+		    RandomInt(_subnets-1) :
 		    _subnet_map[packet_type]);
   
   bool watch = gWatchOut && (_packets_to_watch.count(_cur_pid) > 0);
@@ -930,9 +930,9 @@ void TrafficManager::_Step( )
     cout << "WARNING: Possible network deadlock.\n";
   }
 
-  vector<map<int, Flit *> > flits(_duplicate_networks);
+  vector<map<int, Flit *> > flits(_subnets);
   
-  for ( int i = 0; i < _duplicate_networks; ++i ) {
+  for ( int i = 0; i < _subnets; ++i ) {
     for ( int input = 0; input < _sources; ++input ) {
       Credit * const c = _net[i]->ReadCredit( input );
       if ( c ) {
@@ -1044,7 +1044,7 @@ void TrafficManager::_Step( )
       }
     }
   }
-  for(int subnet = 0; subnet < _duplicate_networks; ++subnet) {
+  for(int subnet = 0; subnet < _subnets; ++subnet) {
     for(int output = 0; output < _dests; ++output) {
       map<int, Flit *>::const_iterator iter = flits[subnet].find(output);
       if(iter != flits[subnet].end()) {
@@ -1069,7 +1069,7 @@ void TrafficManager::_Step( )
     _net[subnet]->WriteOutputs( );
   }
   
-  for (int subnet = 0; subnet < _duplicate_networks; ++subnet) {
+  for (int subnet = 0; subnet < _subnets; ++subnet) {
     for(int router = 0; router < _routers; ++router) {
       _received_flow[subnet*_routers+router] += _router_map[subnet][router]->GetReceivedFlits();
       _sent_flow[subnet*_routers+router] += _router_map[subnet][router]->GetSentFlits();
@@ -1289,8 +1289,8 @@ bool TrafficManager::_SingleSim( )
 	}
 	_injected_flow.assign(_sources, 0);
 	_ejected_flow.assign(_dests, 0);
-	_received_flow.assign(_duplicate_networks*_routers, 0);
-	_sent_flow.assign(_duplicate_networks*_routers, 0);
+	_received_flow.assign(_subnets*_routers, 0);
+	_sent_flow.assign(_subnets*_routers, 0);
       }
       cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) sent. Time used is " << _time - start_time << " cycles." << endl;
       cout << "Draining the Network...................\n";
@@ -1317,8 +1317,8 @@ bool TrafficManager::_SingleSim( )
 	}
 	_injected_flow.assign(_sources, 0);
 	_ejected_flow.assign(_dests, 0);
-	_received_flow.assign(_duplicate_networks*_routers, 0);
-	_sent_flow.assign(_duplicate_networks*_routers, 0);
+	_received_flow.assign(_subnets*_routers, 0);
+	_sent_flow.assign(_subnets*_routers, 0);
 	++empty_steps;
 	
 	if ( empty_steps % 1000 == 0 ) {
@@ -1418,8 +1418,8 @@ bool TrafficManager::_SingleSim( )
 	}
 	_injected_flow.assign(_sources, 0);
 	_ejected_flow.assign(_dests, 0);
-	_received_flow.assign(_duplicate_networks*_routers, 0);
-	_sent_flow.assign(_duplicate_networks*_routers, 0);
+	_received_flow.assign(_subnets*_routers, 0);
+	_sent_flow.assign(_subnets*_routers, 0);
       } 
       
       cout << _sim_state << endl;
@@ -1582,8 +1582,8 @@ bool TrafficManager::_SingleSim( )
 	  }
 	  _injected_flow.assign(_sources, 0);
 	  _ejected_flow.assign(_dests, 0);
-	  _received_flow.assign(_duplicate_networks*_routers, 0);
-	  _sent_flow.assign(_duplicate_networks*_routers, 0);
+	  _received_flow.assign(_subnets*_routers, 0);
+	  _sent_flow.assign(_subnets*_routers, 0);
 	  ++empty_steps;
 	  
 	  if ( empty_steps % 1000 == 0 ) {
@@ -1656,8 +1656,8 @@ bool TrafficManager::_SingleSim( )
       }
       _injected_flow.assign(_sources, 0);
       _ejected_flow.assign(_dests, 0);
-      _received_flow.assign(_duplicate_networks*_routers, 0);
-      _sent_flow.assign(_duplicate_networks*_routers, 0);
+      _received_flow.assign(_subnets*_routers, 0);
+      _sent_flow.assign(_subnets*_routers, 0);
       ++empty_steps;
 
       if ( empty_steps % 1000 == 0 ) {

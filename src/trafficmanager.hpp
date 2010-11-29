@@ -118,13 +118,16 @@ protected:
   vector<map<int, Flit *> > _retired_packets;
   bool _empty_network;
 
-  // ============ sub-networks and deadlock ==========
+  // ============ physical sub-networks ==========
 
-  int _duplicate_networks;
-  int _deadlock_timer;
-  int _deadlock_warn_timeout;
+  int _subnets;
 
   vector<int> _subnet_map;
+
+  // ============ deadlock ==========
+
+  int _deadlock_timer;
+  int _deadlock_warn_timeout;
 
   // ============ batch mode ==========================
 
