@@ -55,7 +55,7 @@ alloc_iters  = 2;
 
 credit_delay   = 2;
 routing_delay  = 0;
-vc_alloc_delay = 0;
+vc_alloc_delay = 1;
 sw_alloc_delay = 1;
 st_final_delay = 1;
 
@@ -86,7 +86,7 @@ sim_count          = 1;
 // xr, yr specifiies the arayment of clients in a router
 //
 topology = flatfly;
-physical_subnetworks = 1;
+subnets = 1;
 
 c  = 4;
 k  = 4;

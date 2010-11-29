@@ -111,20 +111,23 @@ protected:
 
   vector<vector<int> > _qtime;
   vector<vector<bool> > _qdrained;
-  vector<vector<vector<list<Flit *> > > > _partial_packets;
+  vector<vector<list<Flit *> > > _partial_packets;
 
   vector<map<int, Flit *> > _total_in_flight_flits;
   vector<map<int, Flit *> > _measured_in_flight_flits;
   vector<map<int, Flit *> > _retired_packets;
   bool _empty_network;
 
-  // ============ sub-networks and deadlock ==========
+  // ============ physical sub-networks ==========
 
-  int _duplicate_networks;
-  int _deadlock_timer;
-  int _deadlock_warn_timeout;
+  int _subnets;
 
   vector<int> _subnet_map;
+
+  // ============ deadlock ==========
+
+  int _deadlock_timer;
+  int _deadlock_warn_timeout;
 
   // ============ batch mode ==========================
 
