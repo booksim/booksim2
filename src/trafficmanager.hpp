@@ -111,7 +111,7 @@ protected:
 
   vector<vector<int> > _qtime;
   vector<vector<bool> > _qdrained;
-  vector<vector<vector<list<Flit *> > > > _partial_packets;
+  vector<vector<list<Flit *> > > _partial_packets;
 
   vector<map<int, Flit *> > _total_in_flight_flits;
   vector<map<int, Flit *> > _measured_in_flight_flits;
