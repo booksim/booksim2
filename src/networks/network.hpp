@@ -55,6 +55,7 @@ protected:
   int _sources;
   int _dests;
   int _channels;
+  int _classes;
 
   vector<Router *> _routers;
 

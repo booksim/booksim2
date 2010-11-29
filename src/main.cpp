@@ -198,16 +198,16 @@ bool AllocatorSim( BookSimConfig const & config )
 
   cout<<"Total run time "<<total_time<<endl;
 
+  for (int i=0; i<subnets; ++i) {
 
-  ///Power analysis
-  if(config.GetInt("sim_power") > 0){
-    Power_Module * pnet = new Power_Module(net[0], trafficManager, config);
-    pnet->run();
-    delete pnet;
-  }
+    ///Power analysis
+    if(config.GetInt("sim_power") > 0){
+      Power_Module pnet(net[i], trafficManager, config);
+      pnet.run();
+    }
 
-  for (int i=0; i<subnets; ++i)
     delete net[i];
+  }
 
   delete trafficManager;
   trafficManager = NULL;

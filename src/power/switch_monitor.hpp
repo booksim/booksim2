@@ -42,17 +42,28 @@ class SwitchMonitor {
   int  _cycles ;
   int  _inputs ;
   int  _outputs ;
+  int  _classes ;
   vector<int> _event ;
-  int index( int input, int output, int flitType ) const ;
+  int index( int input, int output, int cl ) const ;
 public:
-  SwitchMonitor( int inputs, int outputs ) ;
+  SwitchMonitor( int inputs, int outputs, int classes ) ;
   void cycle() ;
-  const vector<int> & GetActivity() const {return _event;}
-  int NumInputs() const {return _inputs;}
-  int NumOutputs() const {return _outputs;}
+  vector<int> const & GetActivity() const {
+    return _event;
+  }
+  inline int const & NumInputs() const {
+    return _inputs;
+  }
+  inline int const & NumOutputs() const {
+    return _outputs;
+  }
+  inline int const & NumClasses() const {
+    return _classes;
+  }
   void traversal( int input, int output, Flit const * f ) ;
-  friend ostream& operator<<( ostream& os, const SwitchMonitor& obj ) ;
-  
+  void display(ostream & os) const;
 } ;
+
+ostream & operator<<( ostream & os, SwitchMonitor const & obj ) ;
 
 #endif

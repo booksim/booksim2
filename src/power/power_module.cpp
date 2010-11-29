@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim_config.hpp"
 #include "buffer_monitor.hpp"
 #include "switch_monitor.hpp"
+#include "iq_router.hpp"
 
 Power_Module::Power_Module(Network * n , TrafficManager* parent, const Configuration &config)
   : Module( 0, "power_module" ){
@@ -44,6 +45,7 @@ Power_Module::Power_Module(Network * n , TrafficManager* parent, const Configura
   net = n;
   sim = parent;
   output_file_name = config.GetStr("power_output_file");
+  classes = config.GetInt("classes");
   channel_width = (double)config.GetInt("channel_width");
   channel_sweep = (double)config.GetInt("channel_sweep");
 
@@ -127,8 +129,8 @@ void Power_Module::calcChannel(const FlitChannel* f){
 
   //activity factor;
   const vector<int> temp = f->GetActivity();
-  vector<double> a(Flit::NUM_FLIT_TYPES);
-  for(int i = 0; i< Flit::NUM_FLIT_TYPES; i++){
+  vector<double> a(classes);
+  for(int i = 0; i< classes; i++){
 
     a[i] = ((double)temp[i])/totalTime;
   }
@@ -137,7 +139,7 @@ void Power_Module::calcChannel(const FlitChannel* f){
   double const bitPower = powerRepeatedWire(channelLength, K,M,N);
 
   channelClkPower += powerWireClk(M,channel_width);
-  for(int i = 0; i< Flit::NUM_FLIT_TYPES; i++){
+  for(int i = 0; i< classes; i++){
     channelWirePower += bitPower * a[i]*channel_width;
     channelDFFPower += powerWireDFF(M, channel_width, a[i]);
   }
@@ -233,9 +235,9 @@ void Power_Module::calcBuffer(const BufferMonitor *bm){
   for(int i = 0; i<bm->NumInputs(); i++){
     inputArea += areaInputModule( depth );
     inputLeakagePower += Pleak ;
-    for(int j = 0; j< Flit::NUM_FLIT_TYPES; j++){
-      double ar = ((double)reads[i* Flit::NUM_FLIT_TYPES+j])/totalTime;
-      double aw = ((double)writes[i* Flit::NUM_FLIT_TYPES+j])/totalTime;
+    for(int j = 0; j< classes; j++){
+      double ar = ((double)reads[i* classes+j])/totalTime;
+      double aw = ((double)writes[i* classes+j])/totalTime;
       if(ar>1 ||aw >1){
 	cout<<"activity factor is greater than one, soemthing is stomping memory\n"; exit(-1);
       }
@@ -308,15 +310,15 @@ void Power_Module::calcSwitch(const SwitchMonitor* sm){
   switchPowerLeak += powerCrossbarLeak(channel_width, sm->NumInputs(), sm->NumOutputs());
 
   const vector<int> activity = sm->GetActivity();
-  vector<double> type_activity(Flit::NUM_FLIT_TYPES);
+  vector<double> type_activity(classes);
 
   for(int i = 0; i<sm->NumOutputs(); i++){
-    for(int k = 0; k<Flit::NUM_FLIT_TYPES; k++){
+    for(int k = 0; k<classes; k++){
       type_activity[k] = 0;
     }
     for(int j = 0; j<sm->NumInputs(); j++){
-      for(int k  = 0; k<Flit::NUM_FLIT_TYPES; k++){
-	double a = activity[k+Flit::NUM_FLIT_TYPES*(i+sm->NumOutputs()*j)];
+      for(int k  = 0; k<classes; k++){
+	double a = activity[k+classes*(i+sm->NumOutputs()*j)];
 	a = a/totalTime;
 	if(a>1){
 	  cout<<"Switcht activity factor is greater than 1!!!\n";exit(-1);
@@ -328,7 +330,7 @@ void Power_Module::calcSwitch(const SwitchMonitor* sm){
       }
     }
     outputPowerClk += powerWireClk( 1, channel_width ) ;
-    for(int k = 0; k<Flit::NUM_FLIT_TYPES; k++){
+    for(int k = 0; k<classes; k++){
       outputPower += type_activity[k] * powerWireDFF( 1, channel_width, 1.0 ) ;
       outputCtrlPower += type_activity[k] * powerOutputCtrl(channel_width ) ;
     }
@@ -486,7 +488,7 @@ void Power_Module::run(){
 
   vector<Router*> routers = net->GetRouters();
   for(size_t i = 0; i < routers.size(); i++){
-    IQRouterBase* temp = dynamic_cast<IQRouterBase*>(routers[i]);
+    IQRouter* temp = dynamic_cast<IQRouter*>(routers[i]);
     const BufferMonitor * bm = temp->GetBufferMonitor();
     calcBuffer(bm);
     const SwitchMonitor * sm = temp->GetSwitchMonitor();

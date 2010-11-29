@@ -39,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
 #include <iomanip>
+
 #include "router.hpp"
 #include "globals.hpp"
 
@@ -47,9 +48,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //  $Date: 2007/06/27 23:10:17 $
 //  $Id$
 // ----------------------------------------------------------------------
-FlitChannel::FlitChannel(Module * parent, string const & name, int cycles)
-: Channel<Flit>(parent, name, cycles), _idle(0) {
-  _active.resize(Flit::NUM_FLIT_TYPES, 0);
+FlitChannel::FlitChannel(Module * parent, string const & name, int classes)
+: Channel<Flit>(parent, name), _idle(0), _classes(classes) {
+  _active.resize(classes, 0);
 }
 
 void FlitChannel::SetSource(Router * router) {
@@ -62,7 +63,7 @@ void FlitChannel::SetSink(Router * router) {
 
 void FlitChannel::Send(Flit * f) {
   if(f) {
-    ++_active[f->type];
+    ++_active[f->cl];
   } else {
     ++_idle;
   }

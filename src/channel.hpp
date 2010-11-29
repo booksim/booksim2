@@ -52,7 +52,7 @@ using namespace std;
 template<typename T>
 class Channel : public TimedModule {
 public:
-  Channel(Module * parent, string const & name, int cycles = 1);
+  Channel(Module * parent, string const & name);
   virtual ~Channel() {}
 
   // Physical Parameters
@@ -78,15 +78,15 @@ protected:
 };
 
 template<typename T>
-Channel<T>::Channel(Module * parent, string const & name, int cycles)
-  : TimedModule(parent, name), _delay(cycles), _input(0), _output(0) {
-  if(!cycles) {
-    Error("Channel must have positive delay.");
-  }
+Channel<T>::Channel(Module * parent, string const & name)
+  : TimedModule(parent, name), _delay(1), _input(0), _output(0) {
 }
 
 template<typename T>
 void Channel<T>::SetLatency(int cycles) {
+  if(!cycles) {
+    Error("Channel must have positive delay.");
+  }
   _delay = cycles ;
 }
 
