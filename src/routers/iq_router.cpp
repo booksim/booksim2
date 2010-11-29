@@ -155,8 +155,9 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _sent_flits.resize(_outputs);
   ResetFlitStats();
 
-  _bufferMonitor = new BufferMonitor(inputs);
-  _switchMonitor = new SwitchMonitor(inputs, outputs);
+  int classes = config.GetInt("classes");
+  _bufferMonitor = new BufferMonitor(inputs, classes);
+  _switchMonitor = new SwitchMonitor(inputs, outputs, classes);
 
 }
 

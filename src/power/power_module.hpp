@@ -32,14 +32,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _POWER_MODULE_HPP_
 
 #include <map>
+
 #include "module.hpp"
 #include "network.hpp"
 #include "config_utils.hpp"
 #include "trafficmanager.hpp"
 #include "flitchannel.hpp"
-#include "iq_router_base.hpp"
-#include "flit.hpp"
-
+#include "switch_monitor.hpp"
+#include "buffer_monitor.hpp"
 
 struct wire{
   double L;
@@ -54,6 +54,7 @@ protected:
   //network undersimulation
   Network * net;
   TrafficManager* sim;
+  int classes;
   //all channels are this width
   double channel_width;
   //resimulate all with channel_width decremented by channel_sweep until 0

@@ -50,6 +50,7 @@ Network::Network( const Configuration &config, const string & name ) :
   _sources  = -1; 
   _dests    = -1;
   _channels = -1;
+  _classes  = config.GetInt("classes");
 }
 
 Network::~Network( )
@@ -92,7 +93,7 @@ void Network::_Alloc( )
   for ( int s = 0; s < _sources; ++s ) {
     ostringstream name;
     name << Name() << "_fchan_ingress" << s;
-    _inject[s] = new FlitChannel(this, name.str());
+    _inject[s] = new FlitChannel(this, name.str(), _classes);
     _timed_modules.push_back(_inject[s]);
     name.str("");
     name << Name() << "_cchan_ingress" << s;
@@ -104,7 +105,7 @@ void Network::_Alloc( )
   for ( int d = 0; d < _dests; ++d ) {
     ostringstream name;
     name << Name() << "_fchan_egress" << d;
-    _eject[d] = new FlitChannel(this, name.str());
+    _eject[d] = new FlitChannel(this, name.str(), _classes);
     _timed_modules.push_back(_eject[d]);
     name.str("");
     name << Name() << "_cchan_egress" << d;
@@ -116,7 +117,7 @@ void Network::_Alloc( )
   for ( int c = 0; c < _channels; ++c ) {
     ostringstream name;
     name << Name() << "_fchan_" << c;
-    _chan[c] = new FlitChannel(this, name.str());
+    _chan[c] = new FlitChannel(this, name.str(), _classes);
     _timed_modules.push_back(_chan[c]);
     name.str("");
     name << Name() << "_cchan_" << c;

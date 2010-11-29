@@ -32,21 +32,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "flit.hpp"
 
-BufferMonitor::BufferMonitor( int inputs ) {
-  _cycles = 0 ;
-  _inputs = inputs ;
-
-  const int n = inputs  * Flit::NUM_FLIT_TYPES ;
-  _reads.resize(n, 0) ;
-  _writes.resize(n, 0) ;
+BufferMonitor::BufferMonitor( int inputs, int classes ) 
+: _cycles(0), _inputs(inputs), _classes(classes) {
+  _reads.resize(inputs * classes, 0) ;
+  _writes.resize(inputs * classes, 0) ;
 }
 
-int BufferMonitor::index( int input, int flitType ) const {
-  if ( input < 0 || input >= _inputs ) 
-    cerr << "ERROR: input out of range in BufferMonitor" << endl ;
-  if ( flitType < 0 || flitType >= Flit::NUM_FLIT_TYPES ) 
-    cerr << "ERROR: flitType out of range in flitType" << endl ;
-  return flitType + Flit::NUM_FLIT_TYPES * input ;
+int BufferMonitor::index( int input, int cl ) const {
+  assert((input >= 0) && (input < _inputs)); 
+  assert((cl >= 0) && (cl < _classes));
+  return cl + _classes * input ;
 }
 
 void BufferMonitor::cycle() {
@@ -54,22 +49,26 @@ void BufferMonitor::cycle() {
 }
 
 void BufferMonitor::write( int input, Flit const * f ) {
-  _writes[ index(input, f->type) ]++ ;
+  _writes[ index(input, f->cl) ]++ ;
 }
 
 void BufferMonitor::read( int input, Flit const * f ) {
-  _reads[ index(input, f->type) ]++ ;
+  _reads[ index(input, f->cl) ]++ ;
 }
 
-ostream& operator<<( ostream& os, const BufferMonitor& obj ) {
-  for ( int i = 0 ; i < obj._inputs ; i++ ) {
+void BufferMonitor::display(ostream & os) const {
+  for ( int i = 0 ; i < _inputs ; i++ ) {
     os << "[ " << i << " ] " ;
-    for ( int f = 0 ; f < Flit::NUM_FLIT_TYPES ; f++ ) {
-      os << "Type=" << f
-	 << ":(R#" << obj._reads[ obj.index( i, f) ]  << ","
-	 << "W#" << obj._writes[ obj.index( i, f) ] << ")" << " " ;
+    for ( int c = 0 ; c < _classes ; c++ ) {
+      os << "Type=" << c
+	 << ":(R#" << _reads[ index( i, c) ]  << ","
+	 << "W#" << _writes[ index( i, c) ] << ")" << " " ;
     }
     os << endl ;
   }
+}
+
+ostream & operator<<( ostream & os, BufferMonitor const & obj ) {
+  obj.display(os);
   return os ;
 }
