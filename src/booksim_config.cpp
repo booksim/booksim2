@@ -263,6 +263,7 @@ BookSimConfig::BookSimConfig( )
   
   AddStrField("watch_flits", "");
   AddStrField("watch_packets", "");
+  AddStrField("watch_transactions", "");
 
   AddStrField("watch_out", "");
 
