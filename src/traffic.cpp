@@ -338,7 +338,7 @@ static vector<pair<int, int> > _hs_elems;
 
 int hotspot(int source, int total_nodes){
   int pct = RandomInt(_hs_max_val);
-  for(int i = 0; i < (_hs_elems.size()-1); ++i) {
+  for(size_t i = 0; i < (_hs_elems.size()-1); ++i) {
     int limit = _hs_elems[i].first;
     if(limit > pct) {
       return _hs_elems[i].second;
@@ -357,7 +357,7 @@ static vector<pair<int, tTrafficFunction> > _cp_elems;
 
 int combined(int source, int total_nodes){
   int pct = RandomInt(_cp_max_val);
-  for(int i = 0; i < (_cp_elems.size()-1); ++i) {
+  for(size_t i = 0; i < (_cp_elems.size()-1); ++i) {
     int limit = _cp_elems[i].first;
     if(limit > pct) {
       return _cp_elems[i].second(source, total_nodes);
@@ -380,7 +380,7 @@ void InitializeTrafficMap( const Configuration & config )
   vector<int> hotspot_rates = config.GetIntArray("hotspot_rates");
   hotspot_rates.resize(hotspot_nodes.size(), hotspot_rates.empty() ? 1 : hotspot_rates.back());
   _hs_max_val = -1;
-  for(int i = 0; i < hotspot_nodes.size(); ++i) {
+  for(size_t i = 0; i < hotspot_nodes.size(); ++i) {
     int rate = hotspot_rates[i];
     _hs_elems.push_back(make_pair(rate, hotspot_nodes[i]));
     _hs_max_val += rate;
@@ -392,7 +392,7 @@ void InitializeTrafficMap( const Configuration & config )
   vector<int> combined_rates = config.GetIntArray("combined_rates");
   combined_rates.resize(combined_patterns.size(), combined_rates.empty() ? 1 : combined_rates.back());
   _cp_max_val = -1;
-  for(int i = 0; i < combined_patterns.size(); ++i) {
+  for(size_t i = 0; i < combined_patterns.size(); ++i) {
     match = gTrafficFunctionMap.find(combined_patterns[i]);
     if(match == gTrafficFunctionMap.end()) {
       cout << "Error: Undefined traffic pattern '" << combined_patterns[i] << "'." << endl;
