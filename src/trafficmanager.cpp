@@ -449,12 +449,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _LoadWatchList(watch_file);
 
   vector<int> watch_flits = config.GetIntArray("watch_flits");
-  for(int i = 0; i < watch_flits.size(); ++i) {
+  for(size_t i = 0; i < watch_flits.size(); ++i) {
     _flits_to_watch.insert(watch_flits[i]);
   }
   
   vector<int> watch_packets = config.GetIntArray("watch_packets");
-  for(int i = 0; i < watch_packets.size(); ++i) {
+  for(size_t i = 0; i < watch_packets.size(); ++i) {
     _packets_to_watch.insert(watch_packets[i]);
   }
 

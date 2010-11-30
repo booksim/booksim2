@@ -100,6 +100,7 @@ string Configuration::GetStr(string const & field) const
     return match->second;
   } else {
     ParseError("Unknown string field: " + field);
+    exit(-1);
   }
 }
 
@@ -112,6 +113,7 @@ int Configuration::GetInt(string const & field) const
     return match->second;
   } else {
     ParseError("Unknown integer field: " + field);
+    exit(-1);
   }
 }
 
@@ -124,6 +126,7 @@ double Configuration::GetFloat(string const & field) const
     return match->second;
   } else {
     ParseError("Unknown double field: " + field);
+    exit(-1);
   }
 }
 

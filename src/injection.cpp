@@ -72,7 +72,7 @@ bool on_off( int source, double rate )
   assert( ( source >= 0 ) && ( source < gNodes ) );
   assert( rate <= 1.0 );
 
-  if ( gNodeStates.size() != gNodes ) {
+  if ( gNodeStates.size() != (size_t)gNodes ) {
     gNodeStates.resize(gNodes, 0);
   }
 
