@@ -1118,13 +1118,13 @@ bool TrafficManager::_PacketsOutstanding( ) const
 
 void TrafficManager::_ClearStats( )
 {
+  _slowest_flit.assign(_classes, -1);
 
   for ( int c = 0; c < _classes; ++c ) {
 
     _latency_stats[c]->Clear( );
     _tlat_stats[c]->Clear( );
     _frag_stats[c]->Clear( );
-    _slowest_flit[c] = -1;
   
     for ( int i = 0; i < _sources; ++i ) {
       _sent_flits[c][i]->Clear( );
@@ -1205,17 +1205,15 @@ bool TrafficManager::_SingleSim( )
   _time = 0;
 
   //remove any pending request from the previous simulations
+  _requestsOutstanding.assign(_sources, 0);
   for (int i=0;i<_sources;i++) {
-    _requestsOutstanding[i] = 0;
     _repliesPending[i].clear();
   }
 
   //reset queuetime for all sources
   for ( int s = 0; s < _sources; ++s ) {
-    for ( int c = 0; c < _classes; ++c  ) {
-      _qtime[s][c]    = 0;
-      _qdrained[s][c] = false;
-    }
+    _qtime[s].assign(_classes, 0);
+    _qdrained[s].assign(_classes, false);
   }
 
   // warm-up ...
@@ -1266,8 +1264,7 @@ bool TrafficManager::_SingleSim( )
 
   } else if(_sim_mode == batch && !_timed_mode){//batch mode   
     while(total_phases < _batch_count) {
-      for (int i = 0; i < _sources; i++)
-	_packets_sent[i] = 0;
+      _packets_sent.assign(_sources, 0);
       _last_id = -1;
       _last_pid = -1;
       _sim_state = running;
