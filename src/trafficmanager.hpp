@@ -220,10 +220,12 @@ protected:
 
   int _cur_id;
   int _cur_pid;
+  int _cur_tid;
   int _time;
 
   set<int> _flits_to_watch;
   set<int> _packets_to_watch;
+  set<int> _transactions_to_watch;
 
   bool _print_csv_results;
   bool _print_vc_stats;

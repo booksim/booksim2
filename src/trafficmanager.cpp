@@ -42,7 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "packet_reply_info.hpp"
 
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
-: Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _time(0)
+: Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
 
   _sources = _net[0]->NumSources( );
@@ -458,6 +458,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _packets_to_watch.insert(watch_packets[i]);
   }
 
+  vector<int> watch_transactions = config.GetIntArray("watch_transactions");
+  for(size_t i = 0; i < watch_transactions.size(); ++i) {
+    _transactions_to_watch.insert(watch_transactions[i]);
+  }
+
   string stats_out_file = config.GetStr( "stats_out" );
   if(stats_out_file == "") {
     _stats_out = NULL;
@@ -607,7 +612,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       if ( f->watch ) { 
 	*gWatchOut << GetSimTime() << " | "
 		   << "node" << dest << " | "
-		   << "Retiring transation " //<< (transation id) 
+		   << "Completing transation " << f->tid
 		   << " (lat = " << f->atime - head->ttime
 		   << ", src = " << head->src 
 		   << ", dest = " << head->dest
@@ -740,8 +745,13 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   Flit::FlitType packet_type = Flit::ANY_TYPE;
   int size = _packet_size[cl]; //input size 
   int ttime = time;
+  int pid = _cur_pid++;
+  assert(_cur_pid);
+  int tid = _cur_tid;
   int packet_destination = _traffic_function[cl](source, _limit);
   bool record = false;
+  bool watch = gWatchOut && ((_packets_to_watch.count(pid) > 0) ||
+			     (_transactions_to_watch.count(tid) > 0));
   if(_use_read_write[cl]){
     if(stype < 0) {
       if (stype ==-1) {
@@ -755,6 +765,15 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 	err << "Invalid packet type: " << packet_type;
 	Error( err.str( ) );
       }
+      if ( watch ) { 
+	*gWatchOut << GetSimTime() << " | "
+		   << "node" << source << " | "
+		   << "Beginning transaction " << tid
+		   << " at time " << time
+		   << "." << endl;
+      }
+      ++_cur_tid;
+      assert(_cur_tid);
     } else  {
       map<int, PacketReplyInfo*>::iterator iter = _repliesDetails.find(stype);
       PacketReplyInfo* rinfo = iter->second;
@@ -771,12 +790,16 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 	Error( err.str( ) );
       }
       packet_destination = rinfo->source;
+      tid = rinfo->tid;
       time = rinfo->time;
       ttime = rinfo->ttime;
       record = rinfo->record;
       _repliesDetails.erase(iter);
       rinfo->Free();
     }
+  } else {
+    ++_cur_tid;
+    assert(_cur_tid);
   }
 
   if ((packet_destination <0) || (packet_destination >= _dests)) {
@@ -795,12 +818,10 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 		    RandomInt(_subnets-1) :
 		    _subnet_map[packet_type]);
   
-  bool watch = gWatchOut && (_packets_to_watch.count(_cur_pid) > 0);
-  
   if ( watch ) { 
     *gWatchOut << GetSimTime() << " | "
 		<< "node" << source << " | "
-		<< "Enqueuing packet " << _cur_pid
+		<< "Enqueuing packet " << pid
 		<< " at time " << time
 		<< "." << endl;
   }
@@ -809,7 +830,8 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     Flit * f  = Flit::New();
     f->id     = _cur_id++;
     assert(_cur_id);
-    f->pid    = _cur_pid;
+    f->pid    = pid;
+    f->tid    = tid;
     f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
     f->subnetwork = subnetwork;
     f->src    = source;
@@ -879,8 +901,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 
     _partial_packets[source][cl].push_back( f );
   }
-  ++_cur_pid;
-  assert(_cur_pid);
 }
 
 void TrafficManager::_Inject(){
@@ -1794,6 +1814,8 @@ void TrafficManager::_LoadWatchList(const string & filename){
       if(line != "") {
 	if(line[0] == 'p') {
 	  _packets_to_watch.insert(atoi(line.c_str()+1));
+	} else if(line[0] == 't') {
+	  _transactions_to_watch.insert(atoi(line.c_str()+1));
 	} else {
 	  _flits_to_watch.insert(atoi(line.c_str()));
 	}
