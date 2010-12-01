@@ -92,22 +92,14 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _replies_inherit_priority = config.GetInt("replies_inherit_priority");
 
-  // ============ Injection VC states  ============ 
-
-  _buf_states.resize(_sources);
-
-  for ( int source = 0; source < _sources; ++source ) {
-    _buf_states[source].resize(_subnets);
-    for ( int subnet = 0; subnet < _subnets; ++subnet ) {
-      ostringstream tmp_name;
-      tmp_name << "terminal_buf_state_" << source << "_" << subnet;
-      _buf_states[source][subnet] = new BufferState( config, this, tmp_name.str( ) );
-    }
-  }
-
   // ============ Routing ============ 
 
-  string rf = config.GetStr("routing_function");
+  string rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
+  map<string, tRoutingFunction>::const_iterator rf_iter = gRoutingFunctionMap.find(rf);
+  if(rf_iter == gRoutingFunctionMap.end()) {
+    Error("Invalid routing function: " + rf);
+  }
+  _rf = rf_iter->second;
   _use_xyyx = ((rf.find("xyyx") != string::npos) || 
 	       (rf.find("xy_yx") != string::npos));
 
@@ -204,6 +196,22 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
       Error("Invalid injection process: " + inject[c]);
     }
     _injection_process.push_back(iter->second);
+  }
+
+  // ============ Injection VC states  ============ 
+
+  _buf_states.resize(_sources);
+  _last_vc.resize(_sources);
+
+  for ( int source = 0; source < _sources; ++source ) {
+    _buf_states[source].resize(_subnets);
+    _last_vc[source].resize(_subnets);
+    for ( int subnet = 0; subnet < _subnets; ++subnet ) {
+      ostringstream tmp_name;
+      tmp_name << "terminal_buf_state_" << source << "_" << subnet;
+      _buf_states[source][subnet] = new BufferState( config, this, tmp_name.str( ) );
+      _last_vc[source][subnet].resize(_classes, -1);
+    }
   }
 
   // ============ Injection queues ============ 
@@ -1004,23 +1012,48 @@ void TrafficManager::_Step( )
 	if(!_partial_packets[source][c].empty()) {
 	  f = _partial_packets[source][c].front();
 	  assert(f);
+
 	  int const subnet = f->subnetwork;
+
+	  BufferState * const dest_buf = _buf_states[source][subnet];
+
 	  if(f->head && f->vc == -1) { // Find first available VC
 	    
-	    if(_use_xyyx){
-	      f->vc = _buf_states[source][subnet]->FindAvailable(f->type ,f->x_then_y);
-	    } else {
-	      f->vc = _buf_states[source][subnet]->FindAvailable(f->type);
+	    OutputSet route_set;
+	    _rf(NULL, f, 0, &route_set, true);
+	    set<OutputSet::sSetElement> const & os = route_set.GetSet();
+	    assert(os.size() == 1);
+	    OutputSet::sSetElement const & se = *os.begin();
+	    assert(se.output_port == 0);
+	    int const & vc_start = se.vc_start;
+	    int const & vc_end = se.vc_end;
+	    int const vc_count = vc_end - vc_start + 1;
+	    for(int i = 1; i <= vc_count; ++i) {
+	      int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
+	      if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
+		f->vc = vc;
+		break;
+	      }
+	    }
+	    if(f->vc == -1) {
+	      for(int i = 1; i <= vc_count; ++i) {
+		int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
+		if(dest_buf->IsAvailableFor(vc)) {
+		  f->vc = vc;
+		  break;
+		}
+	      }
 	    }
 	    if(f->vc != -1) {
-	      _buf_states[source][subnet]->TakeBuffer(f->vc);
+	      dest_buf->TakeBuffer(f->vc);
+	      _last_vc[source][subnet][c] = f->vc - vc_start;
 	    }
 	  }
 	  
-	  if((f->vc != -1) && (!_buf_states[source][subnet]->IsFullFor(f->vc))) {
+	  if((f->vc != -1) && (!dest_buf->IsFullFor(f->vc))) {
 	    
 	    _partial_packets[source][c].pop_front();
-	    _buf_states[source][subnet]->SendingFlit(f);
+	    dest_buf->SendingFlit(f);
 	    
 	    if(_pri_type == network_age_based) {
 	      f->pri = numeric_limits<int>::max() - _time;
