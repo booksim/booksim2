@@ -94,14 +94,14 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   // ============ Injection VC states  ============ 
 
-  _buf_states.resize(_subnets);
+  _buf_states.resize(_sources);
 
-  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
-    _buf_states[subnet].resize(_sources);
-    for ( int source = 0; source < _sources; ++source ) {
+  for ( int source = 0; source < _sources; ++source ) {
+    _buf_states[source].resize(_subnets);
+    for ( int subnet = 0; subnet < _subnets; ++subnet ) {
       ostringstream tmp_name;
-      tmp_name << "terminal_buf_state_" << subnet << "_" << source;
-      _buf_states[subnet][source] = new BufferState( config, this, tmp_name.str( ) );
+      tmp_name << "terminal_buf_state_" << source << "_" << subnet;
+      _buf_states[source][subnet] = new BufferState( config, this, tmp_name.str( ) );
     }
   }
 
@@ -489,7 +489,7 @@ TrafficManager::~TrafficManager( )
 
   for ( int subnet = 0; subnet < _subnets; ++subnet ) {
     for ( int source = 0; source < _sources; ++source ) {
-      delete _buf_states[subnet][source];
+      delete _buf_states[source][subnet];
     }
   }
   
@@ -949,16 +949,19 @@ void TrafficManager::_Step( )
     cout << "WARNING: Possible network deadlock.\n";
   }
 
-  vector<map<int, Flit *> > flits(_subnets);
-  
-  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
-    for ( int source = 0; source < _sources; ++source ) {
+  for ( int source = 0; source < _sources; ++source ) {
+    for ( int subnet = 0; subnet < _subnets; ++subnet ) {
       Credit * const c = _net[subnet]->ReadCredit( source );
       if ( c ) {
-	_buf_states[subnet][source]->ProcessCredit(c);
+	_buf_states[source][subnet]->ProcessCredit(c);
 	c->Free();
       }
     }
+  }
+
+  vector<map<int, Flit *> > flits(_subnets);
+  
+  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
     for ( int dest = 0; dest < _dests; ++dest ) {
       Flit * const f = _net[subnet]->ReadFlit( dest );
       if ( f ) {
@@ -1005,19 +1008,19 @@ void TrafficManager::_Step( )
 	  if(f->head && f->vc == -1) { // Find first available VC
 	    
 	    if(_use_xyyx){
-	      f->vc = _buf_states[subnet][source]->FindAvailable(f->type ,f->x_then_y);
+	      f->vc = _buf_states[source][subnet]->FindAvailable(f->type ,f->x_then_y);
 	    } else {
-	      f->vc = _buf_states[subnet][source]->FindAvailable(f->type);
+	      f->vc = _buf_states[source][subnet]->FindAvailable(f->type);
 	    }
 	    if(f->vc != -1) {
-	      _buf_states[subnet][source]->TakeBuffer(f->vc);
+	      _buf_states[source][subnet]->TakeBuffer(f->vc);
 	    }
 	  }
 	  
-	  if((f->vc != -1) && (!_buf_states[subnet][source]->IsFullFor(f->vc))) {
+	  if((f->vc != -1) && (!_buf_states[source][subnet]->IsFullFor(f->vc))) {
 	    
 	    _partial_packets[source][c].pop_front();
-	    _buf_states[subnet][source]->SendingFlit(f);
+	    _buf_states[source][subnet]->SendingFlit(f);
 	    
 	    if(_pri_type == network_age_based) {
 	      f->pri = numeric_limits<int>::max() - _time;
