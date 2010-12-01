@@ -94,16 +94,15 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   // ============ Injection VC states  ============ 
 
-  _buf_states.resize(_sources);
+  _buf_states.resize(_subnets);
 
-  for ( int s = 0; s < _sources; ++s ) {
-    ostringstream tmp_name;
-    tmp_name << "terminal_buf_state_" << s;
-    _buf_states[s].resize(_subnets);
-    for (int a = 0; a < _subnets; ++a) {
-      _buf_states[s][a] = new BufferState( config, this, tmp_name.str( ) );
+  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
+    _buf_states[subnet].resize(_sources);
+    for ( int source = 0; source < _sources; ++source ) {
+      ostringstream tmp_name;
+      tmp_name << "terminal_buf_state_" << subnet << "_" << source;
+      _buf_states[subnet][source] = new BufferState( config, this, tmp_name.str( ) );
     }
-    tmp_name.str("");
   }
 
   // ============ Routing ============ 
@@ -488,9 +487,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 TrafficManager::~TrafficManager( )
 {
 
-  for ( int s = 0; s < _sources; ++s ) {
-    for (int a = 0; a < _subnets; ++a) {
-      delete _buf_states[s][a];
+  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
+    for ( int source = 0; source < _sources; ++source ) {
+      delete _buf_states[subnet][source];
     }
   }
   
@@ -514,17 +513,17 @@ TrafficManager::~TrafficManager( )
     delete _overall_accepted[c];
     delete _overall_accepted_min[c];
     
-    for ( int i = 0; i < _sources; ++i ) {
-      delete _sent_flits[c][i];
+    for ( int source = 0; source < _sources; ++source ) {
+      delete _sent_flits[c][source];
       
-      for ( int j = 0; j < _dests; ++j ) {
-	delete _pair_latency[c][i*_dests+j];
-	delete _pair_tlat[c][i*_dests+j];
+      for ( int dest = 0; dest < _dests; ++dest ) {
+	delete _pair_latency[c][source*_dests+dest];
+	delete _pair_tlat[c][source*_dests+dest];
       }
     }
     
-    for ( int i = 0; i < _dests; ++i ) {
-      delete _accepted_flits[c][i];
+    for ( int dest = 0; dest < _dests; ++dest ) {
+      delete _accepted_flits[c][dest];
     }
     
   }
@@ -952,39 +951,39 @@ void TrafficManager::_Step( )
 
   vector<map<int, Flit *> > flits(_subnets);
   
-  for ( int i = 0; i < _subnets; ++i ) {
-    for ( int input = 0; input < _sources; ++input ) {
-      Credit * const c = _net[i]->ReadCredit( input );
+  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
+    for ( int source = 0; source < _sources; ++source ) {
+      Credit * const c = _net[subnet]->ReadCredit( source );
       if ( c ) {
-	_buf_states[input][i]->ProcessCredit(c);
+	_buf_states[subnet][source]->ProcessCredit(c);
 	c->Free();
       }
     }
-    for ( int output = 0; output < _dests; ++output ) {
-      Flit * const f = _net[i]->ReadFlit( output );
+    for ( int dest = 0; dest < _dests; ++dest ) {
+      Flit * const f = _net[subnet]->ReadFlit( dest );
       if ( f ) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
-		     << "node" << output << " | "
+		     << "node" << dest << " | "
 		     << "Ejecting flit " << f->id
 		     << " (packet " << f->pid << ")"
 		     << " from VC " << f->vc
 		     << "." << endl;
 	}
-	flits[i].insert(make_pair(output, f));
+	flits[subnet].insert(make_pair(dest, f));
       }
       if( ( _sim_state == warming_up ) || ( _sim_state == running ) ) {
 	for(int c = 0; c < _classes; ++c) {
-	  _accepted_flits[c][output]->AddSample( (f && (f->cl == c)) ? 1 : 0 );
+	  _accepted_flits[c][dest]->AddSample( (f && (f->cl == c)) ? 1 : 0 );
 	}
       }
     }
-    _net[i]->ReadInputs( );
+    _net[subnet]->ReadInputs( );
   }
   
   _Inject();
 
-  for(int input = 0; input < _sources; ++input) {
+  for(int source = 0; source < _sources; ++source) {
     Flit * f = NULL;
     for(map<int, pair<int, vector<int> > >::reverse_iterator iter = _class_prio_map.rbegin();
 	iter != _class_prio_map.rend();
@@ -999,26 +998,26 @@ void TrafficManager::_Step( )
 	int const offset = (base + j) % count;
 	int const c = classes[offset];
 	
-	if(!_partial_packets[input][c].empty()) {
-	  f = _partial_packets[input][c].front();
+	if(!_partial_packets[source][c].empty()) {
+	  f = _partial_packets[source][c].front();
 	  assert(f);
 	  int const subnet = f->subnetwork;
 	  if(f->head && f->vc == -1) { // Find first available VC
 	    
 	    if(_use_xyyx){
-	      f->vc = _buf_states[input][subnet]->FindAvailable(f->type ,f->x_then_y);
+	      f->vc = _buf_states[subnet][source]->FindAvailable(f->type ,f->x_then_y);
 	    } else {
-	      f->vc = _buf_states[input][subnet]->FindAvailable(f->type);
+	      f->vc = _buf_states[subnet][source]->FindAvailable(f->type);
 	    }
 	    if(f->vc != -1) {
-	      _buf_states[input][subnet]->TakeBuffer(f->vc);
+	      _buf_states[subnet][source]->TakeBuffer(f->vc);
 	    }
 	  }
 	  
-	  if((f->vc != -1) && (!_buf_states[input][subnet]->IsFullFor(f->vc))) {
+	  if((f->vc != -1) && (!_buf_states[subnet][source]->IsFullFor(f->vc))) {
 	    
-	    _partial_packets[input][c].pop_front();
-	    _buf_states[input][subnet]->SendingFlit(f);
+	    _partial_packets[source][c].pop_front();
+	    _buf_states[subnet][source]->SendingFlit(f);
 	    
 	    if(_pri_type == network_age_based) {
 	      f->pri = numeric_limits<int>::max() - _time;
@@ -1027,7 +1026,7 @@ void TrafficManager::_Step( )
 	    
 	    if(f->watch) {
 	      *gWatchOut << GetSimTime() << " | "
-			 << "node" << input << " | "
+			 << "node" << source << " | "
 			 << "Injecting flit " << f->id
 			 << " into subnet " << subnet
 			 << " at time " << _time
@@ -1036,14 +1035,14 @@ void TrafficManager::_Step( )
 	    }
 	    
 	    // Pass VC "back"
-	    if(!_partial_packets[input][c].empty() && !f->tail) {
-	      Flit * nf = _partial_packets[input][c].front();
+	    if(!_partial_packets[source][c].empty() && !f->tail) {
+	      Flit * nf = _partial_packets[source][c].front();
 	      nf->vc = f->vc;
 	    }
 	    
-	    ++_injected_flow[input];
+	    ++_injected_flow[source];
 	    
-	    _net[subnet]->WriteFlit(f, input);
+	    _net[subnet]->WriteFlit(f, source);
 	    
 	    iter->second.first = offset;
 	    
@@ -1060,28 +1059,28 @@ void TrafficManager::_Step( )
     }
     if(((_sim_mode != batch) && (_sim_state == warming_up)) || (_sim_state == running)) {
       for(int c = 0; c < _classes; ++c) {
-	_sent_flits[c][input]->AddSample((f && (f->cl == c)) ? 1 : 0);
+	_sent_flits[c][source]->AddSample((f && (f->cl == c)) ? 1 : 0);
       }
     }
   }
   for(int subnet = 0; subnet < _subnets; ++subnet) {
-    for(int output = 0; output < _dests; ++output) {
-      map<int, Flit *>::const_iterator iter = flits[subnet].find(output);
+    for(int dest = 0; dest < _dests; ++dest) {
+      map<int, Flit *>::const_iterator iter = flits[subnet].find(dest);
       if(iter != flits[subnet].end()) {
 	Flit * const & f = iter->second;
-	++_ejected_flow[output];
+	++_ejected_flow[dest];
 	f->atime = _time;
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
-		     << "node" << output << " | "
+		     << "node" << dest << " | "
 		     << "Injecting credit for VC " << f->vc 
 		     << " into subnet " << subnet 
 		     << "." << endl;
 	}
 	Credit * const c = Credit::New();
 	c->vc.insert(f->vc);
-	_net[subnet]->WriteCredit(c, output);
-	_RetireFlit(f, output);
+	_net[subnet]->WriteCredit(c, dest);
+	_RetireFlit(f, dest);
       }
     }
     flits[subnet].clear();
