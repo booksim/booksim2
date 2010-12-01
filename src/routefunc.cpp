@@ -80,13 +80,14 @@ int gWriteReplyBeginVC, gWriteReplyEndVC;
 void dest_tag_crossbar( const Router *r, 
 			const Flit *f, 
 			int in_channel, 
-			OutputSet *outputs ) {
+			OutputSet *outputs, 
+			bool inject ) {
   
   outputs->Clear() ;
 
   // Output port determined by those bits of destination above 
   //  concentration bits
-  int out_port = f->dest >> log_two( gC ) ;
+  int out_port = inject ? 0 : ( f->dest >> log_two( gC ) ) ;
   switch(f->type) {
   case Flit::READ_REQUEST:
     outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
@@ -111,24 +112,28 @@ void dest_tag_crossbar( const Router *r,
 //  QTree: Nearest Common Ancestor
 // ===
 void qtree_nca( const Router *r, const Flit *f,
-		int in_channel, OutputSet* outputs)
+		int in_channel, OutputSet* outputs, bool inject)
 {
   int out_port = 0;
+
+  if(!inject) {
+    
+    int height = QTree::HeightFromID( r->GetID() );
+    int pos    = QTree::PosFromID( r->GetID() );
+    
+    int dest   = f->dest;
+    
+    for (int i = height+1; i < gN; i++) 
+      dest /= gK;
+    if ( pos == dest / gK ) 
+      // Route down to child
+      out_port = dest % gK ; 
+    else
+      // Route up to parent
+      out_port = gK;        
+  }
+
   outputs->Clear( );
-
-  int height = QTree::HeightFromID( r->GetID() );
-  int pos    = QTree::PosFromID( r->GetID() );
-
-  int dest   = f->dest;
-
-  for (int i = height+1; i < gN; i++) 
-    dest /= gK;
-  if ( pos == dest / gK ) 
-    // Route down to child
-    out_port = dest % gK ; 
-  else
-    // Route up to parent
-    out_port = gK;        
 
   switch(f->type) {
   case Flit::READ_REQUEST:
@@ -153,44 +158,45 @@ void qtree_nca( const Router *r, const Flit *f,
 //  Tree4: Nearest Common Ancestor w/ Adaptive Routing Up
 // ===
 void tree4_anca( const Router *r, const Flit *f,
-		 int in_channel, OutputSet* outputs)
+		 int in_channel, OutputSet* outputs, bool inject)
 {
-  const int NPOS = 16;
-
   int out_port = 0;
-  int dest     = f->dest;
-
-  int rH = r->GetID( ) / NPOS;
-  int rP = r->GetID( ) % NPOS;
-
   int range = 1;
+  
+  if(!inject) {
 
-  outputs->Clear( );
-
-  if ( rH == 0 ) {
-    dest /= 16;
-    out_port = 2 * dest + RandomInt(1);
-  } else if ( rH == 1 ) {
-    dest /= 4;
-    if ( dest / 4 == rP / 2 )
-      out_port = dest % 4;
-    else {
-      out_port = gK;
-      range = gK;
+    int dest = f->dest;
+    
+    const int NPOS = 16;
+    
+    int rH = r->GetID( ) / NPOS;
+    int rP = r->GetID( ) % NPOS;
+    
+    if ( rH == 0 ) {
+      dest /= 16;
+      out_port = 2 * dest + RandomInt(1);
+    } else if ( rH == 1 ) {
+      dest /= 4;
+      if ( dest / 4 == rP / 2 )
+	out_port = dest % 4;
+      else {
+	out_port = gK;
+	range = gK;
+      }
+    } else {
+      if ( dest/4 == rP )
+	out_port = dest % 4;
+      else {
+	out_port = gK;
+	range = 2;
+      }
     }
-  } else {
-    if ( dest/4 == rP )
-      out_port = dest % 4;
-    else {
-      out_port = gK;
-      range = 2;
-    }
+    
+    //  cout << "Router("<<rH<<","<<rP<<"): id= " << f->id << " dest= " << f->dest << " out_port = "
+    //       << out_port << endl;
   }
-  
-  //  cout << "Router("<<rH<<","<<rP<<"): id= " << f->id << " dest= " << f->dest << " out_port = "
-  //       << out_port << endl;
-  
-  int vcBegin = 0, vcEnd = 0;
+
+  int vcBegin = 0, vcEnd = gNumVCs - 1;
   switch(f->type) {
   case Flit::READ_REQUEST:
     vcBegin = gReadReqBeginVC;
@@ -207,12 +213,10 @@ void tree4_anca( const Router *r, const Flit *f,
   case Flit::WRITE_REPLY:
     vcBegin = gWriteReplyBeginVC;
     vcEnd   = gWriteReplyEndVC;
-    break;
-  case Flit::ANY_TYPE:
-    vcBegin = 0;
-    vcEnd   = gNumVCs-1;
   }
   
+  outputs->Clear( );
+
   for (int i = 0; i < range; ++i) 
     outputs->AddRange( out_port + i, vcBegin, vcEnd );
 }
@@ -221,36 +225,40 @@ void tree4_anca( const Router *r, const Flit *f,
 //  Tree4: Nearest Common Ancestor w/ Random Routing Up
 // ===
 void tree4_nca( const Router *r, const Flit *f,
-		int in_channel, OutputSet* outputs)
+		int in_channel, OutputSet* outputs, bool inject)
 {
-  const int NPOS = 16;
-
   int out_port = 0;
-  int dest     = f->dest;
 
-  int rH = r->GetID( ) / NPOS;
-  int rP = r->GetID( ) % NPOS;
+  if(!inject) {
+
+    int dest = f->dest;
+    
+    const int NPOS = 16;
+    
+    int rH = r->GetID( ) / NPOS;
+    int rP = r->GetID( ) % NPOS;
+    
+    if ( rH == 0 ) {
+      dest /= 16;
+      out_port = 2 * dest + RandomInt(1);
+    } else if ( rH == 1 ) {
+      dest /= 4;
+      if ( dest / 4 == rP / 2 )
+	out_port = dest % 4;
+      else
+	out_port = gK + RandomInt(gK-1);
+    } else {
+      if ( dest/4 == rP )
+	out_port = dest % 4;
+      else
+	out_port = gK + RandomInt(1);
+    }
+    
+    //  cout << "Router("<<rH<<","<<rP<<"): id= " << f->id << " dest= " << f->dest << " out_port = "
+    //       << out_port << endl;
+  }
 
   outputs->Clear( );
-
-  if ( rH == 0 ) {
-    dest /= 16;
-    out_port = 2 * dest + RandomInt(1);
-  } else if ( rH == 1 ) {
-    dest /= 4;
-    if ( dest / 4 == rP / 2 )
-      out_port = dest % 4;
-    else
-      out_port = gK + RandomInt(gK-1);
-  } else {
-    if ( dest/4 == rP )
-      out_port = dest % 4;
-    else
-      out_port = gK + RandomInt(1);
-  }
- 
-  //  cout << "Router("<<rH<<","<<rP<<"): id= " << f->id << " dest= " << f->dest << " out_port = "
-  //       << out_port << endl;
 
   switch(f->type) {
   case Flit::READ_REQUEST:
@@ -275,63 +283,65 @@ void tree4_nca( const Router *r, const Flit *f,
 //  FATTREE: Nearest Common Ancestor w/ Random  Routing Up
 // ===
 void fattree_nca( const Router *r, const Flit *f,
-               int in_channel, OutputSet* outputs)
+               int in_channel, OutputSet* outputs, bool inject)
 {
   int out_port = 0;
-  int dest     = f->dest;
-  int router_id = r->GetID();
-  int router_depth, router_port;
 
+  if(!inject) {
+    
+    int dest = f->dest;
+    int router_id = r->GetID();
+    int router_depth, router_port;
 
-
-  int routers_so_far = 0, routers;
-  for (int depth = gN - 1; depth >= 0; --depth) // We want to find out where the router is. At which level.
-  {
-    routers = powi(gK, depth);
-    if (router_id - routers_so_far < routers) {
-      router_depth = depth;
-      router_port = router_id - routers_so_far;
-      break;
-    }
-    routers_so_far += routers;
-  }
-
-  outputs->Clear( );
-
-  int fatness_factor = powi(gK, gN - router_depth ); // This is the fatness factor for when going upwards.
-  int destinations = powi(gK, gN); // According to the depth and port of the current router, we know which destinations are reachable by it by going down.
-  int temp = powi(gK, router_depth); // (destinations / (powi(gK, router_depth) ) are the number of destinations below the current router.
-  if ((destinations / (temp) ) * router_port <= dest && (destinations / (temp) ) * (router_port + 1) > dest)
-  {
-    out_port = (dest - (destinations / (temp) ) * router_port) / (fatness_factor / gK); // This is the direction to go. We multiply this by the fatness factor of that link.
-    out_port *= fatness_factor / gK; // Because we are going downwards. Now we point to the first link that is going downwards, among all the same.
+    int routers_so_far = 0, routers;
+    for (int depth = gN - 1; depth >= 0; --depth) // We want to find out where the router is. At which level.
+      {
+	routers = powi(gK, depth);
+	if (router_id - routers_so_far < routers) {
+	  router_depth = depth;
+	  router_port = router_id - routers_so_far;
+	  break;
+	}
+	routers_so_far += routers;
+      }
+    
+    int fatness_factor = powi(gK, gN - router_depth ); // This is the fatness factor for when going upwards.
+    int destinations = powi(gK, gN); // According to the depth and port of the current router, we know which destinations are reachable by it by going down.
+    int temp = powi(gK, router_depth); // (destinations / (powi(gK, router_depth) ) are the number of destinations below the current router.
+    if ((destinations / (temp) ) * router_port <= dest && (destinations / (temp) ) * (router_port + 1) > dest)
+      {
+	out_port = (dest - (destinations / (temp) ) * router_port) / (fatness_factor / gK); // This is the direction to go. We multiply this by the fatness factor of that link.
+	out_port *= fatness_factor / gK; // Because we are going downwards. Now we point to the first link that is going downwards, among all the same.
         if (router_depth != gN - 1 )
-      out_port += RandomInt(fatness_factor / gK - 1); // Choose at random from the possible choices.
+	  out_port += RandomInt(fatness_factor / gK - 1); // Choose at random from the possible choices.
         else
           out_port = dest % gK; // If we are going to a final destination, only one link to choose.
-  }
-  else // We need to go up. Choose one of the links at random.
-  {
-    out_port = fatness_factor /*upwards ports are the last indexed */ + RandomInt(fatness_factor - 1); // Chose one of the going upwards at random.
-  }
-
-  /*if (rH == 0) {
-    out_port = dest / (gK*gK);
-  }
-  if (rH == 1) {
-    if ( dest / (gK*gK)  == rP / gK )
+      }
+    else // We need to go up. Choose one of the links at random.
+      {
+	out_port = fatness_factor /*upwards ports are the last indexed */ + RandomInt(fatness_factor - 1); // Chose one of the going upwards at random.
+      }
+    
+    /*if (rH == 0) {
+      out_port = dest / (gK*gK);
+      }
+      if (rH == 1) {
+      if ( dest / (gK*gK)  == rP / gK )
       out_port = (dest/gK) % gK;
-    else
+      else
       out_port = gK + RandomInt(gK-1);
-  }
-  if (rH == 2) {
-    if ( dest / gK == rP )
+      }
+      if (rH == 2) {
+      if ( dest / gK == rP )
       out_port = dest % gK;
-    else
+      else
       out_port =  gK + RandomInt(gK-1);
-  }*/
-//  cout << "Router("<<rH<<","<<rP<<"): id= " << f->id << " dest= " << f->dest << " out_port = "
-//       << out_port << endl;
+      }*/
+    //  cout << "Router("<<rH<<","<<rP<<"): id= " << f->id << " dest= " << f->dest << " out_port = "
+    //       << out_port << endl;
+  }
+  
+  outputs->Clear( );
 
   switch(f->type) {
   case Flit::READ_REQUEST:
@@ -356,80 +366,83 @@ void fattree_nca( const Router *r, const Flit *f,
 //  FATTREE: Nearest Common Ancestor w/ Adaptive Routing Up
 // ===
 void fattree_anca( const Router *r, const Flit *f,
-                int in_channel, OutputSet* outputs)
+                int in_channel, OutputSet* outputs, bool inject)
 {
 
   int out_port = 0;
-  int dest     = f->dest;
-  int router_id = r->GetID();
-  int router_depth, router_port;
+  int range = 1;
 
-  int routers_so_far = 0, routers;
-  for (int depth = gN - 1; depth >= 0; --depth) // We want to find out where the router is. At which level.
-  {
-    routers = powi(gK, depth);
-    if (router_id - routers_so_far < routers) {
-      router_depth = depth;
-      router_port = router_id - routers_so_far;
-      break;
-    }
-    routers_so_far += routers;
-  }
+  if(!inject) {
 
-  outputs->Clear( );
-
-  int fatness_factor = powi(gK, gN - router_depth ); // This is the fatness factor for when going upwards.
-  int destinations = powi(gK, gN); // According to the depth and port of the current router, we know which destinations are reachable by it by going down.
-  int temp = powi(gK, router_depth);
-  int range; // (destinations / (powi(gK, router_depth) ) are the number of destinations below the current router.
-  if ((destinations / (temp) ) * router_port <= dest && (destinations / (temp) ) * (router_port + 1) > dest)
-  {
-    out_port = (dest - (destinations / (temp)) * router_port) / (fatness_factor / gK); // This is the direction to go. We multiply this by the fatness factor of that link.
-    out_port *= fatness_factor / gK; // Because we are going downwards. Now we point to the first link that is going downwards, among all the same.
+    int dest     = f->dest;
+    int router_id = r->GetID();
+    int router_depth, router_port;
+    
+    int routers_so_far = 0, routers;
+    for (int depth = gN - 1; depth >= 0; --depth) // We want to find out where the router is. At which level.
+      {
+	routers = powi(gK, depth);
+	if (router_id - routers_so_far < routers) {
+	  router_depth = depth;
+	  router_port = router_id - routers_so_far;
+	  break;
+	}
+	routers_so_far += routers;
+      }
+    
+    int fatness_factor = powi(gK, gN - router_depth ); // This is the fatness factor for when going upwards.
+    int destinations = powi(gK, gN); // According to the depth and port of the current router, we know which destinations are reachable by it by going down.
+    int temp = powi(gK, router_depth);
+    if ((destinations / (temp) ) * router_port <= dest && (destinations / (temp) ) * (router_port + 1) > dest) // (destinations / (powi(gK, router_depth) ) are the number of destinations below the current router.
+      {
+	out_port = (dest - (destinations / (temp)) * router_port) / (fatness_factor / gK); // This is the direction to go. We multiply this by the fatness factor of that link.
+	out_port *= fatness_factor / gK; // Because we are going downwards. Now we point to the first link that is going downwards, among all the same.
         if (router_depth != gN - 1 )
-        {
-          range = fatness_factor / gK;
-        }
+	  {
+	    range = fatness_factor / gK;
+	  }
         else
-        {
-          out_port = dest % gK; // If we are going to a final destination, only one link to choose.
-      range = 1;
-        }
-  }
-  else // We need to go up. Choose one of the links at random.
-  {
-    range = fatness_factor;
-    out_port = fatness_factor /*upwards ports are the last indexed */ ;
-  }
-
-  // r->GetCredit(tmp_out_port, vcBegin, vcEnd);
-
-  /*if (rH == 0) {
-    out_port = dest / (gK*gK);
-  }
-  if (rH == 1) {
-    if ( dest / (gK*gK)  == rP / gK )
-      out_port = (dest/gK) % gK;
-    else {
-      out_port = gK;
-      range    = gK;
+	  {
+	    out_port = dest % gK; // If we are going to a final destination, only one link to choose.
+	    range = 1;
+	  }
+      }
+    else // We need to go up. Choose one of the links at random.
+      {
+	range = fatness_factor;
+	out_port = fatness_factor /*upwards ports are the last indexed */ ;
+      }
+    
+    // r->GetCredit(tmp_out_port, vcBegin, vcEnd);
+    
+    /*if (rH == 0) {
+      out_port = dest / (gK*gK);
     }
-
-  }
-  if (rH == 2) {
-    if ( dest / gK == rP )
-      out_port = dest % gK;
-    else {
-      out_port = gK;
-      range    = gK;
+    if (rH == 1) {
+      if ( dest / (gK*gK)  == rP / gK )
+	out_port = (dest/gK) % gK;
+      else {
+	out_port = gK;
+	range    = gK;
+      }
+      
     }
-  }*/
+    if (rH == 2) {
+      if ( dest / gK == rP )
+	out_port = dest % gK;
+      else {
+	out_port = gK;
+	range    = gK;
+      }
+    }*/
 
 //  cout << "Router("<<rH<<","<<rP<<"): id= "
 //       << f->id << " dest= " << f->dest << " out_port = "
 //       << out_port << endl;
 
-  int vcBegin = 0, vcEnd = 0;
+  }
+
+  int vcBegin = 0, vcEnd = gNumVCs-1;
   switch(f->type) {
   case Flit::READ_REQUEST:
     vcBegin = gReadReqBeginVC;
@@ -446,11 +459,9 @@ void fattree_anca( const Router *r, const Flit *f,
   case Flit::WRITE_REPLY:
     vcBegin = gWriteReplyBeginVC;
     vcEnd   = gWriteReplyEndVC;
-    break;
-  case Flit::ANY_TYPE:
-    vcBegin = 0;
-    vcEnd   = gNumVCs-1;
   }
+
+  outputs->Clear( );
 
   if (range > 1) {
     /*for (int i = 0; i < range; ++i)
@@ -474,13 +485,12 @@ void fattree_anca( const Router *r, const Flit *f,
 // ====
 int dor_next_mesh(int, int);
 void dor_mesh( const Router *r, const Flit *f, 
-	       int in_channel, OutputSet *outputs )
+	       int in_channel, OutputSet *outputs, bool inject )
 {
-  int out_port;
+  int out_port = inject ? 0 : dor_next_mesh( r->GetID( ), f->dest );
 
   outputs->Clear( );
 
-  out_port = dor_next_mesh( r->GetID( ), f->dest );
   if (f->type == Flit::READ_REQUEST)
     outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
   else if (f->type == Flit::WRITE_REQUEST)
@@ -501,30 +511,24 @@ int route_xy( int router_id, int dest_id );
 int route_yx( int router_id, int dest_id );
 
 void xy_yx_mesh( const Router *r, const Flit *f, 
-		 int in_channel, OutputSet *outputs )
+		 int in_channel, OutputSet *outputs, bool inject )
 {
-  int  out_port = 0;
-  outputs->Clear();
-  
-  // Route order (XY or YX) determined when packet is injected
-  //  into the network
-  if (in_channel == 4) {
+  int out_port = 0;
+
+  if(!inject) {
+
+    // Route order (XY or YX) determined when packet is injected
+    //  into the network
     if ( f->x_then_y ) {
       out_port = route_xy( r->GetID(), f->dest );
     } else {
       out_port = route_yx( r->GetID(), f->dest );
     }
-  } else {
-    if ( f->x_then_y )
-      out_port = route_xy( r->GetID(), f->dest );
-    else
-      out_port = route_yx( r->GetID(), f->dest );
   }
 
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
-  int vcBegin = 0, vcEnd = gNumVCs-1;
-  int available_vcs = 0;
-  //each class must have ast east 2 vcs assigned or else xy_yx will deadlock
+  int vcBegin = 0;
+  int available_vcs = gNumVCs;
   if ( f->type == Flit::READ_REQUEST ) {
     available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
     vcBegin = gReadReqBeginVC;
@@ -537,17 +541,20 @@ void xy_yx_mesh( const Router *r, const Flit *f,
   } else if ( f->type ==  Flit::WRITE_REPLY ) {
     available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
     vcBegin = gWriteReplyBeginVC;
-  } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCs;
-    vcBegin = 0;
   }
+
+  //each class must have ast east 2 vcs assigned or else xy_yx will deadlock
   assert( available_vcs>=2);
+  int vcEnd;
   if(f->x_then_y){
-    vcEnd   = vcBegin+(available_vcs-1);
+    vcEnd   = vcBegin+available_vcs-1;
     vcBegin = vcBegin+(available_vcs>>1);
-  }else{
-    vcEnd   =vcBegin +(available_vcs>>1)-1;
+  } else {
+    vcEnd   = vcBegin+(available_vcs>>1)-1;
   } 
+
+  outputs->Clear();
+
   outputs->AddRange( out_port , vcBegin, vcEnd );
   
 }
@@ -607,10 +614,11 @@ int route_yx( int router_id, int dest_id ) {
 
 
 
-void singlerf( const Router *, const Flit *f, int, OutputSet *outputs )
+void singlerf( const Router *, const Flit *f, int, OutputSet *outputs, bool inject )
 {
+  int output = inject ? 0 : f->dest;
   outputs->Clear( );
-  outputs->AddRange( f->dest, 0, gNumVCs-1); // VOQing
+  outputs->AddRange( output, 0, gNumVCs-1); // VOQing
 }
 
 //=============================================================
@@ -710,15 +718,12 @@ void dor_next_torus( int cur, int dest, int in_port,
 
 //=============================================================
 
-void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs )
+void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
-  int out_port;
 
-  outputs->Clear( );
-
-  out_port = dor_next_mesh( r->GetID( ), f->dest );
+  int out_port = inject ? 0 : dor_next_mesh( r->GetID( ), f->dest );
   
-  if ( f->watch ) {
+  if ( !inject && f->watch ) {
     *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 	       << "Adding VC range [" 
 	       << 0 << "," 
@@ -730,20 +735,20 @@ void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
 	       << "." << endl;
   }
   
+  outputs->Clear();
+
   outputs->AddRange( out_port, 0, gNumVCs - 1 );
 }
 
 //=============================================================
 
-void dim_order_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs )
+void dim_order_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
-  int out_port;
   int vcs_per_dest = gNumVCs / gNodes;
 
-  outputs->Clear( );
-  out_port = dor_next_mesh( r->GetID( ), f->dest );
+  int out_port = inject ? 0 : dor_next_mesh( r->GetID( ), f->dest );
 
-  if ( f->watch ) {
+  if ( !inject && f->watch ) {
       *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		  << "Adding VC range [" 
 		  << f->dest*vcs_per_dest << "," 
@@ -755,6 +760,8 @@ void dim_order_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
 		  << "." << endl;
   }
   
+  outputs->Clear( );
+
   outputs->AddRange( out_port, f->dest*vcs_per_dest, (f->dest+1)*vcs_per_dest - 1 );
 }
 
@@ -787,31 +794,25 @@ int rand_min_intr_mesh( int src, int dest )
 
 //=============================================================
 
-void romm_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs )
+void romm_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
-  int out_port;
-  int vc_min, vc_max;
+  int out_port = 0;
 
-  outputs->Clear( );
+  if(!inject) {
+    if ( in_channel == 2*gN ) {
+      f->ph   = 1;  // Phase 1
+      f->intm = rand_min_intr_mesh( f->src, f->dest );
+    } 
 
-  if ( in_channel == 2*gN ) {
-    f->ph   = 1;  // Phase 1
-    f->intm = rand_min_intr_mesh( f->src, f->dest );
-  } 
+    if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
+      f->ph = 2; // Go to phase 2
+    }
 
-  if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
-    f->ph = 2; // Go to phase 2
+    out_port = dor_next_mesh( r->GetID( ), (f->ph == 1) ? f->intm : f->dest );
   }
-  
-  if ( f->ph == 1 ) { // In phase 1
-    out_port = dor_next_mesh( r->GetID( ), f->intm );
-  } else { // In phase 2
-    out_port = dor_next_mesh( r->GetID( ), f->dest );
-  }
-  
 
-    //each class must have ast east 2 vcs assigned or else valiant valiant will deadlock
-  int available_vcs = 0;
+  int available_vcs = gNumVCs;
+  int vc_min = 0;
   if ( f->type == Flit::READ_REQUEST ) {
     available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
     vc_min = gReadReqBeginVC;
@@ -824,11 +825,11 @@ void romm_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outpu
   } else if ( f->type ==  Flit::WRITE_REPLY ) {
    available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
    vc_min = gWriteReplyBeginVC;
-  } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCs;
-    vc_min = 0;
   }
+
+  //each class must have ast east 2 vcs assigned or else valiant valiant will deadlock
   assert( available_vcs>=2);
+  int vc_max;
   if(f->ph==1){
     vc_max   =vc_min +(available_vcs>>1)-1;
   }else{
@@ -836,47 +837,52 @@ void romm_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outpu
     vc_min = vc_min+(available_vcs>>1);
   } 
 
+  outputs->Clear( );
 
   outputs->AddRange( out_port, vc_min, vc_max );
 }
 
 //=============================================================
 
-void romm_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs )
+void romm_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
-  int out_port;
+  int out_port = 0;
   int vcs_per_dest = gNumVCs / gNodes;
+
+  if(!inject) {
+    if ( in_channel == 2*gN ) {
+      f->ph   = 1;  // Phase 1
+      f->intm = rand_min_intr_mesh( f->src, f->dest );
+    } 
+
+    if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
+      f->ph = 2; // Go to phase 2
+    }
+
+    out_port = dor_next_mesh( r->GetID( ), (f->ph == 1) ? f->intm : f->dest );
+  }
 
   outputs->Clear( );
 
-  if ( in_channel == 2*gN ) {
-    f->ph   = 1;  // Phase 1
-    f->intm = rand_min_intr_mesh( f->src, f->dest );
-  } 
-
-  if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
-    f->ph = 2; // Go to phase 2
-  }
-  
-  if ( f->ph == 1 ) { // In phase 1
-    out_port = dor_next_mesh( r->GetID( ), f->intm );
-  } else { // In phase 2
-    out_port = dor_next_mesh( r->GetID( ), f->dest );
-  }
-  
   outputs->AddRange( out_port, f->dest*vcs_per_dest, (f->dest+1)*vcs_per_dest - 1 );
 }
 
 //=============================================================
 
-void min_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs )
+void min_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
+  outputs->Clear( );
+  
+  if(inject) {
+    // injection can use all VCs
+    outputs->AddRange(0, 0, gNumVCs);
+    return;
+  }
+
   int out_port;
   int cur, dest;
   int in_vc;
 
-  outputs->Clear( );
-  
   if ( in_channel == 2*gN ) {
     in_vc = gNumVCs - 1; // ignore the injection VC
   } else {
@@ -944,8 +950,16 @@ void min_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
 
 //=============================================================
 
-void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs )
+void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
+  outputs->Clear( );
+  
+  if(inject) {
+    // injection can use all VCs
+    outputs->AddRange(0, 0, gNumVCs);
+    return;
+  }
+
   int cur, dest;
   int vc_mult;
   int vc_min, vc_max;
@@ -956,8 +970,6 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
   bool increase;
   bool fault;
   bool atedge;
-
-  outputs->Clear( );
 
   cur     = r->GetID( ); 
   dest    = f->dest;
@@ -1101,13 +1113,19 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
 
 //=============================================================
 
-void limited_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs )
+void limited_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
   int min_port;
 
   int cur, dest;
 
   outputs->Clear( );
+
+  if ( inject ) {
+    outputs->AddRange( 0, 0, gNumVCs - 2 );
+    f->dr = 0; // zero dimension reversals
+    return;
+  }
 
   cur = r->GetID( ); dest = f->dest;
   
@@ -1150,30 +1168,25 @@ void limited_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputS
 
 //=============================================================
 
-void valiant_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs )
+void valiant_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
-  int out_port;
-  int vc_min, vc_max;
+  int out_port = 0;
 
-  outputs->Clear( );
+  if(!inject) {
+    if ( in_channel == 2*gN ) {
+      f->ph   = 1;  // Phase 1
+      f->intm = RandomInt( gNodes - 1 );
+    }
 
+    if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
+      f->ph = 2; // Go to phase 2
+    }
 
-  if ( in_channel == 2*gN ) {
-    f->ph   = 1;  // Phase 1
-    f->intm = RandomInt( gNodes - 1 );
+    out_port = dor_next_mesh( r->GetID( ), (f->ph == 1) ? f->intm : f->dest );
   }
 
-  if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
-    f->ph = 2; // Go to phase 2
-  }
-  
-  if ( f->ph == 1 ) { // In phase 1
-    out_port = dor_next_mesh( r->GetID( ), f->intm );
-  } else { // In phase 2
-    out_port = dor_next_mesh( r->GetID( ), f->dest );
-  }
-    //each class must have ast east 2 vcs assigned or else valiant valiant will deadlock
-  int available_vcs = 0;
+  int available_vcs = gNumVCs;
+  int vc_min = 0;
   if ( f->type == Flit::READ_REQUEST ) {
     available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
     vc_min = gReadReqBeginVC;
@@ -1186,11 +1199,11 @@ void valiant_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *ou
   } else if ( f->type ==  Flit::WRITE_REPLY ) {
    available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
    vc_min = gWriteReplyBeginVC;
-  } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCs;
-    vc_min = 0;
   }
+
+  //each class must have ast east 2 vcs assigned or else valiant valiant will deadlock
   assert( available_vcs>=2);
+  int vc_max;
   if(f->ph==1){
     vc_max   =vc_min +(available_vcs>>1)-1;
   }else{
@@ -1198,39 +1211,35 @@ void valiant_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *ou
     vc_min = vc_min+(available_vcs>>1);
   }     
 
+  outputs->Clear( );
+
   outputs->AddRange( out_port, vc_min, vc_max );
 }
 
 //=============================================================
 
-void valiant_torus( const Router *r, const Flit *f, int in_channel, OutputSet *outputs )
+void valiant_torus( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
-  int out_port;
-  int vc_min, vc_max;
+  int out_port = 0;
 
-  outputs->Clear( );
+  if(!inject) {
+    if ( in_channel == 2*gN ) {
+      f->ph   = 1;  // Phase 1
+      f->intm = RandomInt( gNodes - 1 );
+    }
 
-  if ( in_channel == 2*gN ) {
-    f->ph   = 1;  // Phase 1
-    f->intm = RandomInt( gNodes - 1 );
-  }
-
-  if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
-    f->ph = 2; // Go to phase 2
-    in_channel = 2*gN; // ensures correct vc selection at the beginning of phase 2
-  }
+    if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
+      f->ph = 2; // Go to phase 2
+      in_channel = 2*gN; // ensures correct vc selection at the beginning of phase 2
+    }
   
-  if ( f->ph == 1 ) { // In phase 1
-    dor_next_torus( r->GetID( ), f->intm, in_channel,
-		    &out_port, &f->ring_par, false );
-  } else { // In phase 2
-     dor_next_torus( r->GetID( ), f->dest, in_channel,
+    dor_next_torus( r->GetID( ), (f->ph == 1) ? f->intm : f->dest, in_channel,
 		    &out_port, &f->ring_par, false );
   }
 
   //each class must have ast east 4 vcs assigned or else xy_yx + min+ nonmin will deadlock
-  int begin_vcs = -1;
-  int available_vcs = 0;
+  int begin_vcs = 0;
+  int available_vcs = gNumVCs;
   if ( f->type == Flit::READ_REQUEST ) {
     available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
     begin_vcs = gReadReqBeginVC;
@@ -1243,14 +1252,12 @@ void valiant_torus( const Router *r, const Flit *f, int in_channel, OutputSet *o
   } else if ( f->type ==  Flit::WRITE_REPLY ) {
     available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;
     begin_vcs = gWriteReplyBeginVC;
-  } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = (gNumVCs);
-    begin_vcs = 0;
   }
 
   assert( available_vcs>=4);
   int half_ava = available_vcs>>1;
   int quarter_ava = available_vcs>>2;
+  int vc_min, vc_max;
   if(f->ph ==1){
     vc_min = begin_vcs;
     vc_max =   begin_vcs+quarter_ava-1;
@@ -1262,45 +1269,45 @@ void valiant_torus( const Router *r, const Flit *f, int in_channel, OutputSet *o
     vc_min +=half_ava;
     vc_max += half_ava;
   }    
+
+  outputs->Clear( );
+
   outputs->AddRange( out_port, vc_min, vc_max );
 }
 
 //=============================================================
 
 void valiant_ni_torus( const Router *r, const Flit *f, int in_channel, 
-		       OutputSet *outputs )
+		       OutputSet *outputs, bool inject )
 {
-  int out_port;
+  int out_port = 0;
+
+  if(!inject) {
+    if ( in_channel == 2*gN ) {
+      f->ph   = 1;  // Phase 1
+      f->intm = RandomInt( gNodes - 1 );
+    }
+
+    if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
+      f->ph = 2; // Go to phase 2
+      in_channel = 2*gN; // ensures correct vc selection at the beginning of phase 2
+    }
+  
+    dor_next_torus( r->GetID( ), (f->ph == 1) ? f->intm : f->dest, in_channel,
+		    &out_port, &f->ring_par, false );
+  }
+
   int vc_min, vc_max;
 
-  outputs->Clear( );
-
-  if ( in_channel == 2*gN ) {
-    f->ph   = 1;  // Phase 1
-    f->intm = RandomInt( gNodes - 1 );
-  }
-
-  if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
-    f->ph = 2; // Go to phase 2
-    in_channel = 2*gN; // ensures correct vc selection at the beginning of phase 2
-  }
-  
   if ( f->ph == 1 ) { // In phase 1
-      dor_next_torus( r->GetID( ), f->intm, in_channel,
-		      &out_port, &f->ring_par, false );
-      
-      if ( f->ring_par == 0 ) {
-	vc_min = f->dest;
-	vc_max = f->dest;
-      } else {
-	vc_min = f->dest + gNodes;
-	vc_max = f->dest + gNodes;
-      }
-
+    if ( f->ring_par == 0 ) {
+      vc_min = f->dest;
+      vc_max = f->dest;
+    } else {
+      vc_min = f->dest + gNodes;
+      vc_max = f->dest + gNodes;
+    }
   } else { // In phase 2
-     dor_next_torus( r->GetID( ), f->dest, in_channel,
-		     &out_port, &f->ring_par, false );
-    
     if ( f->ring_par == 0 ) {
       vc_min = f->dest + 2*gNodes;
       vc_max = f->dest + 2*gNodes;
@@ -1310,7 +1317,7 @@ void valiant_ni_torus( const Router *r, const Flit *f, int in_channel,
     }
   }
 
-  if ( f->watch ) {
+  if ( !inject && f->watch ) {
       *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		  << "Adding VC range [" 
 		  << vc_min << "," 
@@ -1322,29 +1329,27 @@ void valiant_ni_torus( const Router *r, const Flit *f, int in_channel,
 		  << "." << endl;
   }
   
+  outputs->Clear( );
+
   outputs->AddRange( out_port, vc_min, vc_max );
 }
 
 //=============================================================
 
 void dim_order_torus( const Router *r, const Flit *f, int in_channel, 
-		      OutputSet *outputs )
+		      OutputSet *outputs, bool inject )
 {
-  int cur;
-  int dest;
+  int out_port = 0;
 
-  int out_port;
-  int vc_min, vc_max;
+  if(!inject) {
+    int cur  = r->GetID( );
+    int dest = f->dest;
 
-  outputs->Clear( );
+    dor_next_torus( cur, dest, in_channel,
+		    &out_port, &f->ring_par, false );
+  }
 
-  cur  = r->GetID( );
-  dest = f->dest;
-
-  dor_next_torus( cur, dest, in_channel,
-		  &out_port, &f->ring_par, false );
-
-  int vc_class_min, vc_class_max ;
+  int vc_class_min = 0, vc_class_max = gNumVCs - 1;
   switch(f->type) {
   case Flit::READ_REQUEST:
     vc_class_min = gReadReqBeginVC;
@@ -1361,13 +1366,10 @@ void dim_order_torus( const Router *r, const Flit *f, int in_channel,
   case Flit::WRITE_REPLY:
     vc_class_min = gWriteReplyBeginVC;
     vc_class_max = gWriteReplyEndVC;
-    break;
-  case Flit::ANY_TYPE:
-    vc_class_min = 0;
-    vc_class_max = gNumVCs-1;
   }
   
   int vc_class_size = vc_class_max - vc_class_min + 1 ;
+  int vc_min, vc_max;
   if ( f->ring_par == 0 ) {
     vc_min = vc_class_min ;
     vc_max = vc_class_min + vc_class_size/2 - 1 ;
@@ -1376,7 +1378,7 @@ void dim_order_torus( const Router *r, const Flit *f, int in_channel,
     vc_max = vc_class_min + vc_class_size - 1 ;
   } 
   
-  if ( f->watch ) {
+  if ( !inject && f->watch ) {
       *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		  << "Adding VC range [" 
 		  << vc_min << "," 
@@ -1388,30 +1390,28 @@ void dim_order_torus( const Router *r, const Flit *f, int in_channel,
 		  << "." << endl;
   }
  
+  outputs->Clear( );
+
   outputs->AddRange( out_port, vc_min, vc_max );
 }
 
 //=============================================================
 
 void dim_order_ni_torus( const Router *r, const Flit *f, int in_channel, 
-			 OutputSet *outputs )
+			 OutputSet *outputs, bool inject )
 {
-  int cur;
-  int dest;
-
-  int out_port;
+  int out_port = 0;
   int vcs_per_dest = gNumVCs / gNodes;
 
-  outputs->Clear( );
+  if(!inject) {
+    int cur  = r->GetID( );
+    int dest = f->dest;
 
-  cur  = r->GetID( );
-  dest = f->dest;
+    dor_next_torus( cur, dest, in_channel,
+		    &out_port, &f->ring_par, false );
+  }
 
-  outputs->Clear( );
-  dor_next_torus( cur, dest, in_channel,
-		  &out_port, &f->ring_par, false );
-
-  if ( f->watch ) {
+  if ( !inject && f->watch ) {
       *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		  << "Adding VC range [" 
 		  << f->dest*vcs_per_dest << "," 
@@ -1423,31 +1423,28 @@ void dim_order_ni_torus( const Router *r, const Flit *f, int in_channel,
 		  << "." << endl;
   }
   
+  outputs->Clear( );
+
   outputs->AddRange( out_port, f->dest*vcs_per_dest, (f->dest+1)*vcs_per_dest - 1 );
 }
 
 //=============================================================
 
 void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel, 
-			  OutputSet *outputs )
+			  OutputSet *outputs, bool inject )
 {
-  int cur;
-  int dest;
+  int out_port = 0;
 
-  int out_port;
-  int vc_min, vc_max;
+  if(!inject) {
+    int cur  = r->GetID( );
+    int dest = f->dest;
 
-  int vc_class_min, vc_class_max ;
+    dor_next_torus( cur, dest, in_channel,
+		    &out_port, &f->ring_par, true );
+  }
 
-  outputs->Clear( );
-
-  cur  = r->GetID( );
-  dest = f->dest;
-
-  dor_next_torus( cur, dest, in_channel,
-		  &out_port, &f->ring_par, true );
-  
   // ( Traffic Class ) -> Virtual Channel Range
+  int vc_class_min = 0, vc_class_max = gNumVCs - 1;
   switch(f->type) {
   case Flit::READ_REQUEST:
     vc_class_min = gReadReqBeginVC ;
@@ -1464,13 +1461,10 @@ void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel,
   case Flit::WRITE_REPLY:
     vc_class_min = gWriteReplyBeginVC ;
     vc_class_max = gWriteReplyEndVC ;
-    break;
-  case Flit::ANY_TYPE:
-    vc_class_min = 0;
-    vc_class_max = gNumVCs-1;
   }
 
   int vc_class_size = vc_class_max - vc_class_min + 1 ;
+  int vc_min, vc_max;
   if ( f->ring_par == 0 ) {
     vc_min = vc_class_min ;
     vc_max = vc_class_min + vc_class_size/2 - 1 ;
@@ -1479,7 +1473,7 @@ void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel,
     vc_max = vc_class_min + vc_class_size - 1 ;
   } 
   
-  if ( f->watch ) {
+  if ( !inject && f->watch ) {
       *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 		  << "Adding VC range [" 
 		  << vc_min << "," 
@@ -1491,19 +1485,27 @@ void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel,
 		  << "." << endl;
   }
   
+  outputs->Clear( );
+
   outputs->AddRange( out_port, vc_min, vc_max );
 }
 
 //=============================================================
 
-void min_adapt_torus( const Router *r, const Flit *f, int in_channel, OutputSet *outputs )
+void min_adapt_torus( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
+  outputs->Clear( );
+  
+  if(inject) {
+    // injection can use all VCs
+    outputs->AddRange(0, 0, gNumVCs);
+    return;
+  }
+
   int cur, dest, dist2;
   int in_vc;
   int out_port;
 
-  outputs->Clear( );
-  
   if ( in_channel == 2*gN ) {
     in_vc = gNumVCs - 1; // ignore the injection VC
   } else {
@@ -1565,19 +1567,23 @@ void min_adapt_torus( const Router *r, const Flit *f, int in_channel, OutputSet 
 //=============================================================
 
 void dest_tag( const Router *r, const Flit *f, int in_channel, 
-	       OutputSet *outputs )
+	       OutputSet *outputs, bool inject )
 {
-  outputs->Clear( );
+  int out_port = 0;
 
-  int stage = ( r->GetID( ) * gK ) / gNodes;
-  int dest  = f->dest;
+  if(!inject) {
+    int stage = ( r->GetID( ) * gK ) / gNodes;
+    int dest  = f->dest;
 
-  while( stage < ( gN - 1 ) ) {
-    dest /= gK;
-    ++stage;
+    while( stage < ( gN - 1 ) ) {
+      dest /= gK;
+      ++stage;
+    }
+
+    out_port = dest % gK;
   }
 
-  int out_port = dest % gK;
+  outputs->Clear( );
 
   outputs->AddRange( out_port, 0, gNumVCs - 1 );
 }
@@ -1587,20 +1593,23 @@ void dest_tag( const Router *r, const Flit *f, int in_channel,
 //=============================================================
 
 void chaos_torus( const Router *r, const Flit *f, 
-		  int in_channel, OutputSet *outputs )
+		  int in_channel, OutputSet *outputs, bool inject )
 {
-  int cur, dest;
-  int dist2;
-
   outputs->Clear( );
 
-  cur = r->GetID( ); dest = f->dest;
+  if(inject) {
+    outputs->AddRange(0, 0, 0);
+    return;
+  }
+
+  int cur = r->GetID( );
+  int dest = f->dest;
   
   if ( cur != dest ) {
     for ( int n = 0; n < gN; ++n ) {
 
       if ( ( cur % gK ) != ( dest % gK ) ) { 
-	dist2 = gK - 2 * ( ( ( dest % gK ) - ( cur % gK ) + gK ) % gK );
+	int dist2 = gK - 2 * ( ( ( dest % gK ) - ( cur % gK ) + gK ) % gK );
       
 	if ( dist2 >= 0 ) {
 	  outputs->AddRange( 2*n, 0, 0 ); // Right
@@ -1623,13 +1632,17 @@ void chaos_torus( const Router *r, const Flit *f,
 //=============================================================
 
 void chaos_mesh( const Router *r, const Flit *f, 
-		  int in_channel, OutputSet *outputs )
+		  int in_channel, OutputSet *outputs, bool inject )
 {
-  int cur, dest;
-
   outputs->Clear( );
 
-  cur = r->GetID( ); dest = f->dest;
+  if(inject) {
+    outputs->AddRange(0, 0, 0);
+    return;
+  }
+
+  int cur = r->GetID( );
+  int dest = f->dest;
   
   if ( cur != dest ) {
     for ( int n = 0; n < gN; ++n ) {

@@ -65,5 +65,5 @@ public:
 };
 
 void min_anynet( const Router *r, const Flit *f, int in_channel, 
-		      OutputSet *outputs );
+		      OutputSet *outputs, bool inject );
 #endif
