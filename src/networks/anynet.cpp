@@ -190,9 +190,6 @@ void min_anynet( const Router *r, const Flit *f, int in_channel,
   } else if ( f->type ==  Flit::WRITE_REPLY ) {
     vcBegin = gWriteReplyBeginVC;
     vcEnd   = gWriteReplyEndVC;
-  } else if ( f->type ==  Flit::ANY_TYPE ) {
-    vcBegin = 0;
-    vcEnd   = gNumVCs-1;
   }
 
   outputs->Clear( );
