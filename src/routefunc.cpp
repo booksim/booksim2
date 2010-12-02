@@ -483,7 +483,7 @@ void fattree_anca( const Router *r, const Flit *f,
 // ============================================================
 //  Mesh: Dimension-order w/ VC restrictions
 // ====
-int dor_next_mesh(int, int);
+int dor_next_mesh(int, int, bool = false);
 void dor_mesh( const Router *r, const Flit *f, 
 	       int in_channel, OutputSet *outputs, bool inject )
 {
@@ -507,8 +507,6 @@ void dor_mesh( const Router *r, const Flit *f,
 //  Mesh - Random XY,YX Routing 
 //         Traffic Class Virtual Channel assignment Enforced 
 // ===
-int route_xy( int router_id, int dest_id );
-int route_yx( int router_id, int dest_id );
 
 void xy_yx_mesh( const Router *r, const Flit *f, 
 		 int in_channel, OutputSet *outputs, bool inject )
@@ -520,9 +518,9 @@ void xy_yx_mesh( const Router *r, const Flit *f,
     // Route order (XY or YX) determined when packet is injected
     //  into the network
     if ( f->x_then_y ) {
-      out_port = route_xy( r->GetID(), f->dest );
+      out_port = dor_next_mesh( r->GetID(), f->dest, false );
     } else {
-      out_port = route_yx( r->GetID(), f->dest );
+      out_port = dor_next_mesh( r->GetID(), f->dest, true );
     }
   }
 
@@ -559,52 +557,6 @@ void xy_yx_mesh( const Router *r, const Flit *f,
   
 }
 
-int route_xy( int router_id, int dest_id ) {
- 
-  int router_x = router_id % gK;
-  int router_y = router_id / gK;
-  int dest_x = dest_id % gK;
-  int dest_y = dest_id / gK;
-  int out_port = 0;
-
-  if ( router_x < dest_x ) 
-    out_port = 0;
-  else if ( router_x > dest_x )
-    out_port = 1;
-  else {
-    if ( router_y < dest_y )
-      out_port = 2;
-    else if ( router_y > dest_y )
-      out_port = 3;
-    else
-      out_port = 2*gN;
-  }
-  return out_port;
-}
-
-int route_yx( int router_id, int dest_id ) {
-
-  int router_x = router_id % gK;
-  int router_y = router_id / gK;
-  int dest_x = dest_id % gK;
-  int dest_y = dest_id / gK;
-  int out_port = 0;
-
-  if ( router_y < dest_y )
-    out_port = 2;
-  else if ( router_y > dest_y )
-    out_port = 3;
-  else  {
-    if ( router_x < dest_x ) 
-      out_port = 0;
-    else if ( router_x > dest_x )
-      out_port = 1;
-    else 
-      out_port = 2*gN;
-  }
-  return out_port;
-}
-
 //
 // End Balfour-Schultz
 //=============================================================
@@ -623,7 +575,7 @@ void singlerf( const Router *, const Flit *f, int, OutputSet *outputs, bool inje
 
 //=============================================================
 
-int dor_next_mesh( int cur, int dest )
+int dor_next_mesh( int cur, int dest, bool descending )
 {
   if ( cur == dest ) {
     return 2*gN;  // Eject
@@ -631,12 +583,21 @@ int dor_next_mesh( int cur, int dest )
 
   int dim_left;
 
-  for ( dim_left = 0; dim_left < ( gN - 1 ); ++dim_left ) {
-    if ( ( cur % gK ) != ( dest % gK ) ) { break; }
-    cur /= gK; dest /= gK;
+  if(descending) {
+    for ( dim_left = ( gN - 1 ); dim_left > 0; --dim_left ) {
+      if ( ( cur * gK / gNodes ) != ( dest * gK / gNodes ) ) { break; }
+      cur = (cur * gK) % gNodes; dest = (dest * gK) % gNodes;
+    }
+    cur = (cur * gK) / gNodes;
+    dest = (dest * gK) / gNodes;
+  } else {
+    for ( dim_left = 0; dim_left < ( gN - 1 ); ++dim_left ) {
+      if ( ( cur % gK ) != ( dest % gK ) ) { break; }
+      cur /= gK; dest /= gK;
+    }
+    cur %= gK;
+    dest %= gK;
   }
-  
-  cur %= gK; dest %= gK;
 
   if ( cur < dest ) {
     return 2*dim_left;     // Right
