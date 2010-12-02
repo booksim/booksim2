@@ -106,7 +106,6 @@ protected:
 
   // ============ Routing ============ 
 
-  bool _use_xyyx;
   tRoutingFunction _rf;
 
   // ============ Injection queues ============ 

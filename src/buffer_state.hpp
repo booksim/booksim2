@@ -66,6 +66,7 @@ public:
   void TakeBuffer( int vc = 0 );
 
   bool IsFullFor( int vc = 0 ) const;
+  bool IsEmptyFor( int vc = 0 ) const;
   bool IsAvailableFor( int vc = 0 ) const;
   int Size (int vc = 0) const;
   void Display( ) const;

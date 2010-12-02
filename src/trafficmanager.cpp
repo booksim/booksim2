@@ -100,8 +100,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     Error("Invalid routing function: " + rf);
   }
   _rf = rf_iter->second;
-  _use_xyyx = ((rf.find("xyyx") != string::npos) || 
-	       (rf.find("xy_yx") != string::npos));
 
   // ============ Traffic ============ 
 
@@ -861,14 +859,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       f->head = true;
       //packets are only generated to nodes smaller or equal to limit
       f->dest = packet_destination;
-      //obliviously assign a packet to xy or yx route
-      if(_use_xyyx){
-	if(RandomInt(1)){
-	  f->x_then_y = true;
-	} else {
-	  f->x_then_y = false;
-	}
-      }
     } else {
       f->head = false;
       f->dest = -1;
@@ -1030,7 +1020,7 @@ void TrafficManager::_Step( )
 	    int const vc_count = vc_end - vc_start + 1;
 	    for(int i = 1; i <= vc_count; ++i) {
 	      int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
-	      if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
+	      if(dest_buf->IsAvailableFor(vc) && dest_buf->IsEmptyFor(vc)) {
 		f->vc = vc;
 		break;
 	      }
@@ -1038,9 +1028,18 @@ void TrafficManager::_Step( )
 	    if(f->vc == -1) {
 	      for(int i = 1; i <= vc_count; ++i) {
 		int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
-		if(dest_buf->IsAvailableFor(vc)) {
+		if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
 		  f->vc = vc;
 		  break;
+		}
+	      }
+	      if(f->vc == -1) {
+		for(int i = 1; i <= vc_count; ++i) {
+		  int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
+		  if(dest_buf->IsAvailableFor(vc)) {
+		    f->vc = vc;
+		    break;
+		  }
 		}
 	      }
 	    }

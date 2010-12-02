@@ -251,6 +251,7 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 	}else if (dim ==3){
 	  other = cnt*_k*_k*_k+curr6;
 	}
+	assert(dim < 4);
 	if(other == node){
 #ifdef DEBUG_FLATFLY
 	  cout << "ignore channel : " << _output << " to node " << node <<" and "<<other<<endl;
@@ -336,6 +337,23 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
  
   int out_port = 0;
 
+  // ( Traffic Class , Routing Order ) -> Virtual Channel Range
+  int vcBegin = 0, vcEnd = gNumVCs-1;
+  if ( f->type == Flit::READ_REQUEST ) {
+    vcBegin = gReadReqBeginVC;
+    vcEnd = gReadReqEndVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    vcBegin = gWriteReqBeginVC;
+    vcEnd = gWriteReqEndVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    vcBegin = gReadReplyBeginVC;
+    vcEnd = gReadReplyEndVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    vcBegin = gWriteReplyBeginVC;
+    vcEnd = gWriteReplyEndVC;
+  }
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
+
   if(!inject) {
 
     int dest = flatfly_transformation(f->dest);
@@ -343,43 +361,24 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
 
     if(targetr==r->GetID()){ //if we are at the final router, yay, output to client
       out_port = dest  - targetr*gC;
-    } else{
+
+    } else {
    
-      if(f->x_then_y){
+      //each class must have at least 2 vcs assigned or else xy_yx will deadlock
+      int const available_vcs = (vcEnd - vcBegin + 1) / 2;
+      assert(available_vcs > 0);
+
+      bool x_then_y = (f->vc < (vcBegin + available_vcs));
+
+      if(x_then_y) {
 	out_port = flatfly_outport(dest, r->GetID());
+	vcEnd -= available_vcs;
       } else {
 	out_port = flatfly_outport_yx(dest, r->GetID());
+	vcBegin += available_vcs;
       }
     }
   }
-
-  int vcBegin = 0, vcEnd = gNumVCs-1;
-  int available_vcs = 0;
-  if ( f->type == Flit::READ_REQUEST ) {
-    available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
-    vcBegin = gReadReqBeginVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-   available_vcs = (gWriteReqEndVC-gWriteReqBeginVC)+1;
-   vcBegin = gWriteReqBeginVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-   available_vcs = (gReadReplyEndVC-gReadReplyBeginVC)+1;
-   vcBegin = gReadReplyBeginVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-   available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
-   vcBegin = gWriteReplyBeginVC;
-  } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCs;
-    vcBegin = 0;
-  }
-
-  //each class must have ast east 2 vcs assigned or else xy_yx will deadlock
-  assert( available_vcs>=2);
-  if(f->x_then_y){
-    vcEnd   = vcBegin+(available_vcs-1);
-    vcBegin = vcBegin+(available_vcs>>1);
-  }else{
-    vcEnd   =vcBegin +(available_vcs>>1)-1;
-  } 
 
   outputs->Clear( );
 
@@ -425,6 +424,23 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
 {
   int out_port = 0;
 
+  // ( Traffic Class , Routing Order ) -> Virtual Channel Range
+  int vcBegin = 0, vcEnd = gNumVCs-1;
+  if ( f->type == Flit::READ_REQUEST ) {
+    vcBegin = gReadReqBeginVC;
+    vcEnd = gReadReqEndVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    vcBegin = gWriteReqBeginVC;
+    vcEnd = gWriteReqEndVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    vcBegin = gReadReplyBeginVC;
+    vcEnd = gReadReplyEndVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    vcBegin = gWriteReplyBeginVC;
+    vcEnd = gWriteReplyEndVC;
+  }
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
+
   if(!inject) {
     if ( in_channel < gC ){
       f->ph = 0;
@@ -438,46 +454,28 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
       f->ph = 1;
     }
 
-    if(f->ph == 0){
+    if(f->ph == 0) {
       out_port = flatfly_outport(intm, r->GetID());
-    } else if(f->ph ==1){
-      // If routing to final destination use the second half of the VCs.
-      out_port = flatfly_outport(dest, r->GetID());
     } else {
-      cout<<"can't enter here ever"<<endl;
-      exit(-1);
+      assert(f->ph == 1);
+      out_port = flatfly_outport(dest, r->GetID());
+    }
+
+    if((int)(dest/gC) != r->GetID()) {
+
+      //each class must have at least 2 vcs assigned or else valiant valiant will deadlock
+      int const available_vcs = (vcEnd - vcBegin + 1) / 2;
+      assert(available_vcs > 0);
+
+      if(f->ph == 0) {
+	vcEnd -= available_vcs;
+      } else {
+	// If routing to final destination use the second half of the VCs.
+	assert(f->ph == 1);
+	vcBegin += available_vcs;
+      }
     }
   }
-
-  int available_vcs = 0;
-  int vcBegin = 0, vcEnd = (gNumVCs-1); 
-  if ( f->type == Flit::READ_REQUEST ) {
-    available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
-    vcBegin = gReadReqBeginVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-   available_vcs = (gWriteReqEndVC-gWriteReqBeginVC)+1;
-   vcBegin = gWriteReqBeginVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-   available_vcs = (gReadReplyEndVC-gReadReplyBeginVC)+1;
-   vcBegin = gReadReplyBeginVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-   available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
-   vcBegin = gWriteReplyBeginVC;
-  } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCs;
-    vcBegin = 0;
-  }
-
-  //each class must have ast east 2 vcs assigned or else valiant valiant will deadlock
-  assert( available_vcs>=2);
-  if(inject) {
-    vcEnd   = vcBegin+available_vcs-1;
-  } else if(f->ph==1){
-    vcEnd   =vcBegin +(available_vcs>>1)-1;
-  }else{
-    vcEnd   = vcBegin+(available_vcs-1);
-    vcBegin = vcBegin+(available_vcs>>1);
-  } 
 
   outputs->Clear( );
 
@@ -488,6 +486,23 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
 		  OutputSet *outputs, bool inject )
 {
   int out_port = 0;
+
+  // ( Traffic Class , Routing Order ) -> Virtual Channel Range
+  int vcBegin = 0, vcEnd = gNumVCs-1;
+  if ( f->type == Flit::READ_REQUEST ) {
+    vcBegin = gReadReqBeginVC;
+    vcEnd = gReadReqEndVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    vcBegin = gWriteReqBeginVC;
+    vcEnd = gWriteReqEndVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    vcBegin = gReadReplyBeginVC;
+    vcEnd = gReadReplyEndVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    vcBegin = gWriteReplyBeginVC;
+    vcEnd = gWriteReplyEndVC;
+  }
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
   if(!inject) {
 
@@ -506,24 +521,6 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
     }
   }
 
-  int vcBegin = 0, vcEnd = gNumVCs-1;
-  if ( f->type == Flit::READ_REQUEST ) {
-    vcBegin = gReadReqBeginVC;
-    vcEnd   = gReadReqEndVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-    vcBegin = gWriteReqBeginVC;
-    vcEnd   = gWriteReqEndVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-    vcBegin = gReadReplyBeginVC;
-    vcEnd   = gReadReplyEndVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-    vcBegin = gWriteReplyBeginVC;
-    vcEnd   = gWriteReplyEndVC;
-  } else if ( f->type ==  Flit::ANY_TYPE ) {
-    vcBegin = 0;
-    vcEnd   = gNumVCs-1;
-  }
- 
   outputs->Clear( );
 
   outputs->AddRange( out_port , vcBegin, vcEnd );
@@ -534,12 +531,28 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
 //=============================================================^M
 
 
-//same as ugal except uses xyyx routing and no progressive
-//cannot use_read_write
+//same as ugal except uses xyyx routing
 void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 			  OutputSet *outputs, bool inject )
 {
   int out_port = 0;
+
+  // ( Traffic Class , Routing Order ) -> Virtual Channel Range
+  int vcBegin = 0, vcEnd = gNumVCs-1;
+  if ( f->type == Flit::READ_REQUEST ) {
+    vcBegin = gReadReqBeginVC;
+    vcEnd = gReadReqEndVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    vcBegin = gWriteReqBeginVC;
+    vcEnd = gWriteReqEndVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    vcBegin = gReadReplyBeginVC;
+    vcEnd = gReadReplyEndVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    vcBegin = gWriteReplyBeginVC;
+    vcEnd = gWriteReplyEndVC;
+  }
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
   if(!inject) {
 
@@ -598,10 +611,15 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 
     if (!found) {
 
+      int const xy_available_vcs = (vcEnd - vcBegin + 1) / 2;
+      assert(xy_available_vcs > 0);
+
+      bool x_then_y = (f->vc < (vcBegin + xy_available_vcs));
+
       if (f->ph == 0) {
 	//find the min port and min distance
 	_min_hop = find_distance(flatfly_transformation(f->src),dest);
-	if(f->x_then_y){
+	if(x_then_y){
 	  tmp_out_port =  flatfly_outport(dest, rID);
 	} else {
 	  tmp_out_port =  flatfly_outport_yx(dest, rID);
@@ -615,7 +633,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	//find the nonmin router, nonmin port, nonmin count
 	_ran_intm = find_ran_intm(flatfly_transformation(f->src), dest);
 	_nonmin_hop = find_distance(flatfly_transformation(f->src),_ran_intm) +    find_distance(_ran_intm, dest);
-	if(f->x_then_y){
+	if(x_then_y){
 	  tmp_out_port =  flatfly_outport(_ran_intm, rID);
 	} else {
 	  tmp_out_port =  flatfly_outport_yx(_ran_intm, rID);
@@ -653,11 +671,32 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       }
 
       //dest here should be == intm if ph==1, or dest == dest if ph == 2
-      if(f->x_then_y){
+      if(x_then_y){
 	out_port =  flatfly_outport(dest, rID);
+	if(out_port >= gC) {
+	  vcEnd -= xy_available_vcs;
+	}
       } else {
 	out_port =  flatfly_outport_yx(dest, rID);
+	if(out_port >= gC) {
+	  vcBegin -= xy_available_vcs;
+	}
       }
+
+      // if we haven't reached our destination, restrict VCs appropriately to avoid routing deadlock
+      if(out_port >= gC) {
+
+	int const ph_available_vcs = xy_available_vcs / 2;
+	assert(ph_available_vcs > 0);
+
+	if(f->ph == 1) {
+	  vcEnd -= ph_available_vcs;
+	} else {
+	  assert(f->ph == 2);
+	  vcBegin += ph_available_vcs;
+	}
+      }
+
       found = 1;
     }
 
@@ -677,42 +716,6 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     if(gTrace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
   }
 
-  int begin_vcs = -1;
-  int available_vcs = 0;
-  if ( f->type == Flit::READ_REQUEST ) {
-    available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
-    begin_vcs = gReadReqBeginVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-    available_vcs = (gWriteReqEndVC-gWriteReqBeginVC)+1;
-    begin_vcs = gWriteReqBeginVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-    available_vcs = (gReadReplyEndVC-gReadReplyBeginVC)+1;
-    begin_vcs = gReadReplyBeginVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-    available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;
-    begin_vcs = gWriteReplyBeginVC;
-  } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = (gNumVCs);
-    begin_vcs = 0;
-  }
-
-  //each class must have ast east 4 vcs assigned or else xy_yx + min+ nonmin will deadlock
-  assert( available_vcs>=4);
-  int half_ava = available_vcs>>1;
-  int quarter_ava = available_vcs>>2;
-  int vcBegin, vcEnd;
-  if(f->ph ==1){
-    vcBegin = begin_vcs;
-    vcEnd =   begin_vcs+quarter_ava-1;
-  }else{
-    vcBegin = begin_vcs+(quarter_ava);
-    vcEnd   = begin_vcs+half_ava-1;
-  } 
-  if(f->x_then_y){
-    vcBegin +=half_ava;
-    vcEnd += half_ava;
-  }
-
   outputs->Clear( );
 
   outputs->AddRange( out_port , vcBegin, vcEnd );
@@ -725,6 +728,23 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 			  OutputSet *outputs, bool inject )
 {
   int out_port = 0;
+
+  // ( Traffic Class , Routing Order ) -> Virtual Channel Range
+  int vcBegin = 0, vcEnd = gNumVCs-1;
+  if ( f->type == Flit::READ_REQUEST ) {
+    vcBegin = gReadReqBeginVC;
+    vcEnd = gReadReqEndVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    vcBegin = gWriteReqBeginVC;
+    vcEnd = gWriteReqEndVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    vcBegin = gReadReplyBeginVC;
+    vcEnd = gReadReplyEndVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    vcBegin = gWriteReplyBeginVC;
+    vcEnd = gWriteReplyEndVC;
+  }
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
   if(!inject) {
 
@@ -832,6 +852,19 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 
       // find minimal correct dimension to route through
       out_port =  flatfly_outport(dest, rID);
+
+      // if we haven't reached our destination, restrict VCs appropriately to avoid routing deadlock
+      if(out_port >= gC) {
+	int const available_vcs = (vcEnd - vcBegin + 1) / 2;
+	assert(available_vcs > 0);
+	if(f->ph == 1) {
+	  vcEnd -= available_vcs;
+	} else {
+	  assert(f->ph == 2);
+	  vcBegin += available_vcs;
+	}
+      }
+
       found = 1;
     }
 
@@ -850,34 +883,6 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     if (debug) cout << "        through output port : " << out_port << endl;
     if(gTrace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
   }
-
-  int available_vcs = 0;
-  int vcBegin = 0, vcEnd = gNumVCs - 1;
-  if ( f->type == Flit::READ_REQUEST ) {
-    available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
-    vcBegin = gReadReqBeginVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-   available_vcs = (gWriteReqEndVC-gWriteReqBeginVC)+1;
-   vcBegin = gWriteReqBeginVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-   available_vcs = (gReadReplyEndVC-gReadReplyBeginVC)+1;
-   vcBegin = gReadReplyBeginVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-   available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
-   vcBegin = gWriteReplyBeginVC;
-  } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCs;
-    vcBegin = 0;
-  }
-
-  //each class must have ast east 2 vcs assigned or else valiant will deadlock
-  assert( available_vcs>=2);
-  if(f->ph==1){
-    vcEnd   =vcBegin +(available_vcs>>1)-1;
-  }else{
-    vcEnd   = vcBegin+(available_vcs-1);
-    vcBegin = vcBegin+(available_vcs>>1);
-  } 
 
   outputs->Clear( );
 

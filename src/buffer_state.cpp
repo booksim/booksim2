@@ -153,6 +153,12 @@ bool BufferState::IsFullFor( int vc  ) const
 	       ( ( _cur_occupied[vc] - _vc_buf_size ) >= ( _shared_buf_size / _active_vcs ) ) ) ) );
 }
 
+bool BufferState::IsEmptyFor( int vc  ) const
+{
+  assert( ( vc >= 0 ) && ( vc < _vcs ) );
+  return ( _cur_occupied[vc] == 0 );
+}
+
 bool BufferState::IsAvailableFor( int vc ) const
 {
  
