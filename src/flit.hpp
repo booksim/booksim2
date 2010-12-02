@@ -88,9 +88,6 @@ public:
   // Which VC parition to use for deadlock avoidance in a ring
   mutable int ring_par;
 
-  // Fileds for XY or YX randomized routing
-  mutable int x_then_y;
-
   // Fields for arbitrary data
   void* data ;
 

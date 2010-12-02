@@ -55,10 +55,6 @@ class BufferState : public Module {
   vector<int> _last_id;
   vector<int> _last_pid;
 
-  vector<int> _vc_range_begin;
-  vector<int> _vc_range_size;
-  vector<int> _vc_sel_last;
-
 public:
 
   BufferState( const Configuration& config, 
@@ -70,9 +66,8 @@ public:
   void TakeBuffer( int vc = 0 );
 
   bool IsFullFor( int vc = 0 ) const;
+  bool IsEmptyFor( int vc = 0 ) const;
   bool IsAvailableFor( int vc = 0 ) const;
-  int FindAvailable( Flit::FlitType type, bool x_then_y);
-  int FindAvailable( Flit::FlitType type = Flit::ANY_TYPE );
   int Size (int vc = 0) const;
   void Display( ) const;
 };

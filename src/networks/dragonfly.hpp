@@ -65,9 +65,9 @@ public:
 };
 int flatfly_selfrouting(int dest);
 void res_dragonflynew( const Router *r, const Flit *f, int in_channel,
-		       OutputSet *outputs );
+		       OutputSet *outputs, bool inject );
 void compressed_dragonflynew( const Router *r, const Flit *f, int in_channel,
-		       OutputSet *outputs );
+		       OutputSet *outputs, bool inject );
 void min_dragonflynew( const Router *r, const Flit *f, int in_channel, 
-		       OutputSet *outputs );
+		       OutputSet *outputs, bool inject );
 #endif 

@@ -174,13 +174,8 @@ void AnyNet::RegisterRoutingFunctions() {
 }
 
 void min_anynet( const Router *r, const Flit *f, int in_channel, 
-		 OutputSet *outputs ){
-  outputs->Clear( );
-  int out_port = -1;
-  int rID = r->GetID();
-  int dest = f->dest;
-  
-  out_port = global_routing_table[rID].find(dest)->second;
+		 OutputSet *outputs, bool inject ){
+  int out_port = inject ? 0 : global_routing_table[r->GetID()].find(f->dest)->second;
 
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -195,13 +190,11 @@ void min_anynet( const Router *r, const Flit *f, int in_channel,
   } else if ( f->type ==  Flit::WRITE_REPLY ) {
     vcBegin = gWriteReplyBeginVC;
     vcEnd   = gWriteReplyEndVC;
-  } else if ( f->type ==  Flit::ANY_TYPE ) {
-    vcBegin = 0;
-    vcEnd   = gNumVCs-1;
   }
 
-  outputs->AddRange( out_port , vcBegin, vcEnd );
+  outputs->Clear( );
 
+  outputs->AddRange( out_port , vcBegin, vcEnd );
 }
 
 void AnyNet::buildRoutingTable(){

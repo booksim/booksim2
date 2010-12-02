@@ -102,10 +102,11 @@ protected:
   // ============ Injection VC states  ============ 
 
   vector<vector<BufferState *> > _buf_states;
+  vector<vector<vector<int> > > _last_vc;
 
   // ============ Routing ============ 
 
-  bool _use_xyyx;
+  tRoutingFunction _rf;
 
   // ============ Injection queues ============ 
 

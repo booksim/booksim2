@@ -90,7 +90,6 @@ void Flit::Reset()
   dr = -1;
   minimal = 1;
   ring_par = -1;
-  x_then_y = -1;
   data = 0;
 }  
 
