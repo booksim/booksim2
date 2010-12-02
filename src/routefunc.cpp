@@ -625,27 +625,24 @@ void singlerf( const Router *, const Flit *f, int, OutputSet *outputs, bool inje
 
 int dor_next_mesh( int cur, int dest )
 {
-  int dim_left;
-  int out_port;
+  if ( cur == dest ) {
+    return 2*gN;  // Eject
+  }
 
-  for ( dim_left = 0; dim_left < gN; ++dim_left ) {
+  int dim_left;
+
+  for ( dim_left = 0; dim_left < ( gN - 1 ); ++dim_left ) {
     if ( ( cur % gK ) != ( dest % gK ) ) { break; }
     cur /= gK; dest /= gK;
   }
   
-  if ( dim_left < gN ) {
-    cur %= gK; dest %= gK;
+  cur %= gK; dest %= gK;
 
-    if ( cur < dest ) {
-      out_port = 2*dim_left;     // Right
-    } else {
-      out_port = 2*dim_left + 1; // Left
-    }
+  if ( cur < dest ) {
+    return 2*dim_left;     // Right
   } else {
-    out_port = 2*gN;  // Eject
+    return 2*dim_left + 1; // Left
   }
-
-  return out_port;
 }
 
 //=============================================================
