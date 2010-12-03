@@ -1116,7 +1116,7 @@ void IQRouter::_SWAllocEvaluate( )
 		     << "." << (vc % _input_speedup)
 		     << "." << endl;
 	}
-	_sw_rr_offset[expanded_input] = (vc + _input_speedup) % _input_speedup;
+	_sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
       } else {
 	expanded_output = -1;
       }
@@ -1159,7 +1159,7 @@ void IQRouter::_SWAllocEvaluate( )
 		       << "." << (vc % _input_speedup)
 		       << "." << endl;
 	  }
-	  _sw_rr_offset[expanded_input] = (vc + _input_speedup) % _input_speedup;
+	  _sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
 	} else {
 	  expanded_output = -1;
 	}
