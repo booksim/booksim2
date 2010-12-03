@@ -216,6 +216,10 @@ BookSimConfig::BookSimConfig( )
   _int_map["sample_period"] = 1000; // how long between measurements
   _int_map["max_samples"]   = 10;   // maximum number of sample periods in a simulation
 
+  // whether or not to measure statistics for a given traffic class
+  _int_map["measure_stats"] = 1;
+  AddStrField("measure_stats", ""); // workaround to allow for vector specification
+
   // if avg. latency exceeds the threshold, assume unstable
   _float_map["latency_thres"] = 500.0;
   AddStrField("latency_thres", ""); // workaround to allow for vector specification

@@ -211,6 +211,8 @@ protected:
 
   int   _include_queuing;
 
+  vector<int> _measure_stats;
+
   vector<double> _latency_thres;
 
   vector<double> _stopping_threshold;

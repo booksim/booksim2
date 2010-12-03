@@ -413,6 +413,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _max_samples    = config.GetInt( "max_samples" );
   _warmup_periods = config.GetInt( "warmup_periods" );
 
+  _measure_stats = config.GetIntArray( "measure_stats" );
+  if(_measure_stats.empty()) {
+    _measure_stats.push_back(config.GetInt("measure_stats"));
+  }
+  _measure_stats.resize(_classes, _measure_stats.back());
+
   _latency_thres = config.GetFloatArray( "latency_thres" );
   if(_latency_thres.empty()) {
     _latency_thres.push_back(config.GetFloat("latency_thres"));
@@ -816,7 +822,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 
   if ( ( _sim_state == running ) ||
        ( ( _sim_state == draining ) && ( time < _drain_time ) ) ) {
-    record = true;
+    record = _measure_stats[cl];
   }
 
   int subnetwork = ((packet_type == Flit::ANY_TYPE) ? 
