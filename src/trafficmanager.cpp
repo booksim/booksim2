@@ -1755,6 +1755,11 @@ bool TrafficManager::Run( )
     //the power script depend on it
     cout << "Time taken is " << _time << " cycles" <<endl; 
     for ( int c = 0; c < _classes; ++c ) {
+
+      if(_measure_stats[c] == 0) {
+	continue;
+      }
+
       _overall_min_latency[c]->AddSample( _latency_stats[c]->Min( ) );
       _overall_avg_latency[c]->AddSample( _latency_stats[c]->Average( ) );
       _overall_max_latency[c]->AddSample( _latency_stats[c]->Max( ) );
@@ -1787,6 +1792,10 @@ bool TrafficManager::Run( )
 
 void TrafficManager::DisplayStats() {
   for ( int c = 0; c < _classes; ++c ) {
+
+    if(_measure_stats[c] == 0) {
+      continue;
+    }
 
     if(_print_csv_results) {
       cout << "results:"
