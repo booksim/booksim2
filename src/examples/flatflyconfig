@@ -97,27 +97,13 @@ limit = 0;
 
 routing_function = ran_min;
 
-//1: batch mode, 0: injection mode
-use_read_write = 0;
-
 //for injection mode
-const_flits_per_packet = 1;
 injection_rate = 0.1;
 
-//for batch mode
-read_request_size=1;
-write_request_size=1;
-read_reply_size=1;
-write_reply_size=1;
-
-read_request_begin_vc  = 0;
-read_request_end_vc    = 5;
-write_reply_begin_vc   = 2;
-write_reply_end_vc     = 7;
-read_reply_begin_vc    = 8;
-read_reply_end_vc      = 12;
-write_request_begin_vc = 10;
-write_request_end_vc   = 15;
+classes = 4;
+start_vc = {0,4,0,4};
+end_vc = {3,7,3,7};
+packet_size = {2,6,6,2};
 
 //latency: drains all packet, throughput:no drain?
 sim_type = latency;

@@ -66,36 +66,26 @@ protected:
 
   vector<double> _load;
 
-  vector<int>    _packet_size;
+  int _subnets;
 
-  /*false means all packet types are the same length "const_flits_per_packet"
-   *All packets uses all VCS
-   *packet types are generated randomly, essentially making it only 1 type
-   *of packet in the network
-   *
-   *True means only request packets are generated and replies are generated
-   *as a response to the requests, packets are now difference length, correspond
-   *to "read_request_size" etc. 
-   */
-  vector<int> _use_read_write;
+  vector<int> _subnet;
 
-  vector<int> _read_request_size;
-  vector<int> _read_reply_size;
-  vector<int> _write_request_size;
-  vector<int> _write_reply_size;
+  vector<int> _packet_size;
+
+  vector<int> _reply_class;
 
   vector<string> _traffic;
 
   vector<int> _class_priority;
 
-  map<int, pair<int, vector<int> > > _class_prio_map;
+  vector<int> _last_class;
 
   vector<tTrafficFunction> _traffic_function;
   vector<tInjectionProcess> _injection_process;
 
   // ============ Message priorities ============ 
 
-  enum ePriority { class_based, age_based, network_age_based, local_age_based, queue_length_based, hop_count_based, sequence_based, none };
+  enum ePriority { class_based, age_based, trans_age_based, network_age_based, local_age_based, queue_length_based, hop_count_based, sequence_based, none };
 
   ePriority _pri_type;
 
@@ -117,13 +107,8 @@ protected:
   vector<map<int, Flit *> > _total_in_flight_flits;
   vector<map<int, Flit *> > _measured_in_flight_flits;
   vector<map<int, Flit *> > _retired_packets;
+
   bool _empty_network;
-
-  // ============ physical sub-networks ==========
-
-  int _subnets;
-
-  vector<int> _subnet_map;
 
   // ============ deadlock ==========
 
@@ -132,14 +117,11 @@ protected:
 
   // ============ batch mode ==========================
 
-  vector<int> _packets_sent;
+  vector<vector<int> > _packets_sent;
   int _batch_size;
   int _batch_count;
-  vector<list<int> > _repliesPending;
-  map<int, PacketReplyInfo*> _repliesDetails;
-  vector<int> _requestsOutstanding;
-  int _maxOutstanding;
-  bool _replies_inherit_priority;
+  vector<vector<int> > _requests_outstanding;
+  vector<int> _max_outstanding;
 
   int _last_id;
   int _last_pid;
@@ -247,8 +229,8 @@ protected:
 
   bool _PacketsOutstanding( ) const;
   
-  int  _IssuePacket( int source, int cl );
-  void _GeneratePacket( int source, int size, int cl, int time );
+  bool _IssuePacket( int source, int cl );
+  void _GeneratePacket( int source, int dest, int size, int cl, int time, int tid, int ttime );
 
   void _ClearStats( );
 

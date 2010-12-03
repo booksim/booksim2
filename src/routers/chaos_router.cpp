@@ -53,7 +53,7 @@ ChaosRouter::ChaosRouter( const Configuration& config,
   }
 
   _buffer_size      = config.GetInt( "vc_buf_size" );
-  assert(_buffer_size >= config.GetInt( "const_flits_per_packet" ));
+  assert(_buffer_size >= config.GetInt( "packet_size" ));
 
   _multi_queue_size = config.GetInt( "multi_queue_size" );
   

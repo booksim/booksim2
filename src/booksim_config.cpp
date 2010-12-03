@@ -105,7 +105,6 @@ BookSimConfig::BookSimConfig( )
   _int_map["wait_for_tail_credit"] = 0; // reallocate a VC before a tail credit?
   _int_map["vc_busy_when_full"] = 0; // mark VCs as in use when they have no credit available
   _int_map["vc_priority_donation"] = 0; // allow high-priority flits to donate their priority to low-priority that they are queued up behind
-  _int_map["replies_inherit_priority"] = 0; // whenusing request-reply traffic (use_read_write=1) with age-based priority, make replies inherit their corresponding requests' age
 
   _int_map["hold_switch_for_packet"] = 0; // hold a switch config for the entire packet
 
@@ -141,6 +140,25 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["classes"] = 1;
 
+  // number of flits per packet
+  _int_map["packet_size"] = 1;
+  AddStrField("packet_size", ""); // workaraound to allow for vector specification
+
+  // Control assignment of packets to VCs
+  _int_map["start_vc"] = -1;
+  AddStrField("start_vc", ""); // workaraound to allow for vector specification
+  _int_map["end_vc"] = -1;
+  AddStrField("end_vc", ""); // workaraound to allow for vector specification
+
+  // Control Injection of Packets into Replicated Networks
+  _int_map["subnet"] = 0;
+  AddStrField("subnet", ""); // workaraound to allow for vector specification
+
+  // for every class, determine which class receiving nodes will generate a reply packet for
+  // (set to -1 for no reply)
+  _int_map["reply_class"] = -1;
+  AddStrField("reply_class", ""); // workaraound to allow for vector specification
+
   AddStrField( "traffic", "uniform" );
 
   _int_map["class_priority"] = 0;
@@ -159,9 +177,6 @@ BookSimConfig::BookSimConfig( )
   
   _int_map["injection_rate_uses_flits"] = 0;
 
-  _int_map["const_flits_per_packet"] = 1; //use  read_request_size etc insted
-  AddStrField("const_flits_per_packet", ""); // workaraound to allow for vector specification
-
   AddStrField( "injection_process", "bernoulli" );
 
   _float_map["burst_alpha"] = 0.5; // burst interval
@@ -171,37 +186,9 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["batch_size"] = 1000;
   _int_map["batch_count"] = 1;
-  _int_map["max_outstanding_requests"] = 4;
 
-  // Use read/write request reply scheme
-  _int_map["use_read_write"] = 0;
-  AddStrField("use_read_write", ""); // workaraound to allow for vector specification
-
-  // Control assignment of packets to VCs
-  _int_map["read_request_begin_vc"] = 0;
-  _int_map["read_request_end_vc"] = 5;
-  _int_map["write_request_begin_vc"] = 2;
-  _int_map["write_request_end_vc"] = 7;
-  _int_map["read_reply_begin_vc"] = 8;
-  _int_map["read_reply_end_vc"] = 13;
-  _int_map["write_reply_begin_vc"] = 10;
-  _int_map["write_reply_end_vc"] = 15;
-
-  // Control Injection of Packets into Replicated Networks
-  _int_map["read_request_subnet"] = 0;
-  _int_map["read_reply_subnet"] = 0;
-  _int_map["write_request_subnet"] = 0;
-  _int_map["write_reply_subnet"] = 0;
-
-  // Set packet length in flits
-  _int_map["read_request_size"]  = 1;
-  AddStrField("read_request_size", ""); // workaraound to allow for vector specification
-  _int_map["write_request_size"] = 1;
-  AddStrField("write_request_size", ""); // workaraound to allow for vector specification
-  _int_map["read_reply_size"]    = 1;
-  AddStrField("read_reply_size", ""); // workaraound to allow for vector specification
-  _int_map["write_reply_size"]   = 1;
-  AddStrField("write_reply_size", ""); // workaraound to allow for vector specification
+  _int_map["max_outstanding_requests"] = -1;
+  AddStrField("max_outstanding_requests", "");
 
   //==== Simulation parameters ==========================
 
@@ -312,7 +299,7 @@ vector<pair<string, vector<string> > > BookSimConfig::GetImportantMap() {
   important[2].second.push_back("vc_alloc_arb_type");
   important[2].second.push_back("sw_allocator");
   important[2].second.push_back("sw_alloc_arb_type");
-  important[2].second.push_back( "priority");
+  important[2].second.push_back("priority");
   important[2].second.push_back("speculative");
 
   important.push_back(make_pair("Simulation", vector<string>()));
@@ -321,7 +308,7 @@ vector<pair<string, vector<string> > > BookSimConfig::GetImportantMap() {
   important[3].second.push_back("injection_rate_uses_flits");
   important[3].second.push_back("sim_type");
   important[3].second.push_back("latency_thres");
-  important[3].second.push_back("const_flits_per_packet");
+  important[3].second.push_back("packet_size");
   important[3].second.push_back("injection_process");
   important[3].second.push_back("sample_period");
 

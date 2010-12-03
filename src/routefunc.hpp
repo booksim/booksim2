@@ -31,6 +31,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _ROUTEFUNC_HPP_
 #define _ROUTEFUNC_HPP_
 
+#include <vector>
+#include <map>
+
 #include "flit.hpp"
 #include "router.hpp"
 #include "outputset.hpp"
@@ -43,9 +46,8 @@ void InitializeRoutingMap( const Configuration & config );
 extern map<string, tRoutingFunction> gRoutingFunctionMap;
 
 extern int gNumVCs;
-extern int gReadReqBeginVC, gReadReqEndVC;
-extern int gWriteReqBeginVC, gWriteReqEndVC;
-extern int gReadReplyBeginVC, gReadReplyEndVC;
-extern int gWriteReplyBeginVC, gWriteReplyEndVC;
+extern int gNumClasses;
+extern vector<int> gBeginVCs;
+extern vector<int> gEndVCs;
 
 #endif
