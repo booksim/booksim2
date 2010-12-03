@@ -211,10 +211,6 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField( "sim_type", "latency" );
 
-  // for latency simulations, disable latency unboundedness checks for given classes (vector)
-  _int_map["ignore_latency"] = 0;
-  AddStrField("ignore_latency", "");
-
   _int_map["warmup_periods"] = 0; // number of samples periods to "warm-up" the simulation
 
   _int_map["sample_period"] = 1000; // how long between measurements
