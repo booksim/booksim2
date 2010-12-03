@@ -333,10 +333,7 @@ void FlatFlyOnChip::RegisterRoutingFunctions(){
 
 void xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
 		  OutputSet *outputs, bool inject )
-{
- 
-  int out_port = 0;
-
+{ 
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -354,7 +351,13 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
   }
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
-  if(!inject) {
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
 
     int dest = flatfly_transformation(f->dest);
     int targetr = (int)(dest/gC);
@@ -368,7 +371,10 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
       int const available_vcs = (vcEnd - vcBegin + 1) / 2;
       assert(available_vcs > 0);
 
-      bool x_then_y = (f->vc < (vcBegin + available_vcs));
+      // randomly select dimension order at first hop
+      bool x_then_y = ((in_channel < gC) ?
+		       (RandomInt(1) > 0) : 
+		       (f->vc < (vcBegin + available_vcs)));
 
       if(x_then_y) {
 	out_port = flatfly_outport(dest, r->GetID());
@@ -378,6 +384,7 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
 	vcBegin += available_vcs;
       }
     }
+
   }
 
   outputs->Clear( );
@@ -422,8 +429,6 @@ int flatfly_outport_yx(int dest, int rID) {
 void valiant_flatfly( const Router *r, const Flit *f, int in_channel, 
 		  OutputSet *outputs, bool inject )
 {
-  int out_port = 0;
-
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -441,7 +446,14 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
   }
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
-  if(!inject) {
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
+
     if ( in_channel < gC ){
       f->ph = 0;
       f->intm = RandomInt( powi( gK, gN )*gC-1);
@@ -475,6 +487,7 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
 	vcBegin += available_vcs;
       }
     }
+
   }
 
   outputs->Clear( );
@@ -485,8 +498,6 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
 void min_flatfly( const Router *r, const Flit *f, int in_channel, 
 		  OutputSet *outputs, bool inject )
 {
-  int out_port = 0;
-
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -504,7 +515,13 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
   }
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
-  if(!inject) {
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
 
     int dest  = flatfly_transformation(f->dest);
     int targetr= (int)(dest/gC);
@@ -519,6 +536,7 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
     } else{ //else select a dimension at random
       out_port = flatfly_outport(dest, r->GetID());
     }
+
   }
 
   outputs->Clear( );
@@ -535,8 +553,6 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
 void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 			  OutputSet *outputs, bool inject )
 {
-  int out_port = 0;
-
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -554,7 +570,13 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   }
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
-  if(!inject) {
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
 
     int dest  = flatfly_transformation(f->dest);
 
@@ -614,7 +636,10 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       int const xy_available_vcs = (vcEnd - vcBegin + 1) / 2;
       assert(xy_available_vcs > 0);
 
-      bool x_then_y = (f->vc < (vcBegin + xy_available_vcs));
+      // randomly select dimension order at first hop
+      bool x_then_y = ((in_channel < gC) ?
+		       (RandomInt(1) > 0) : 
+		       (f->vc < (vcBegin + xy_available_vcs)));
 
       if (f->ph == 0) {
 	//find the min port and min distance
@@ -714,6 +739,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 
     if (debug) cout << "        through output port : " << out_port << endl;
     if(gTrace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
+
   }
 
   outputs->Clear( );
@@ -727,8 +753,6 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 			  OutputSet *outputs, bool inject )
 {
-  int out_port = 0;
-
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -746,7 +770,13 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   }
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
-  if(!inject) {
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
 
     int dest  = flatfly_transformation(f->dest);
 
