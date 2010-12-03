@@ -1299,6 +1299,10 @@ bool TrafficManager::_SingleSim( )
 	
 	for(int c = 0; c < _classes; ++c) {
 
+	  if(_measure_stats[c] == 0) {
+	    continue;
+	  }
+
 	  double cur_latency = _latency_stats[c]->Average( );
 	  double min, avg;
 	  int dmin = _ComputeStats( _accepted_flits[c], &avg, &min );
@@ -1488,6 +1492,10 @@ bool TrafficManager::_SingleSim( )
       int acc_chg_exc_class = -1;
 
       for(int c = 0; c < _classes; ++c) {
+
+	if(_measure_stats[c] == 0) {
+	  continue;
+	}
 
 	double cur_latency = _latency_stats[c]->Average( );
 	int dmin;
