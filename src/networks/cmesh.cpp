@@ -509,8 +509,6 @@ void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel,
 		  OutputSet *outputs, bool inject )
 {
 
-  int out_port = 0;
-
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -528,7 +526,13 @@ void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel,
   }
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
-  if(!inject) {
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
 
     // Current Router
     int cur_router = r->GetID();
@@ -549,7 +553,10 @@ void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel,
       int const available_vcs = (vcEnd - vcBegin + 1) / 2;
       assert(available_vcs > 0);
 
-      bool x_then_y = (f->vc < (vcBegin + available_vcs));
+      // randomly select dimension order at first hop
+      bool x_then_y = ((in_channel < gC) ?
+		       (RandomInt(1) > 0) :
+		       (f->vc < (vcBegin + available_vcs)));
 
       if(x_then_y) {
 	out_port = cmesh_xy( cur_router, dest_router );
@@ -559,6 +566,7 @@ void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel,
 	vcBegin += available_vcs;
       }
     }
+
   }
 
   outputs->Clear();
@@ -641,8 +649,6 @@ int cmesh_yx_no_express( int cur, int dest ) {
 void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel, 
 			     OutputSet *outputs, bool inject )
 {
-  int out_port = 0;
-
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -660,7 +666,13 @@ void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
   }
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
-  if(!inject) {
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
 
     // Current Router
     int cur_router = r->GetID();
@@ -681,7 +693,10 @@ void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
       int const available_vcs = (vcEnd - vcBegin + 1) / 2;
       assert(available_vcs > 0);
 
-      bool x_then_y = (f->vc < (vcBegin + available_vcs));
+      // randomly select dimension order at first hop
+      bool x_then_y = ((in_channel < gC) ?
+		       (RandomInt(1) > 0) :
+		       (f->vc < (vcBegin + available_vcs)));
 
       if(x_then_y) {
 	out_port = cmesh_xy_no_express( cur_router, dest_router );
@@ -761,8 +776,6 @@ int cmesh_next( int cur, int dest ) {
 void dor_cmesh( const Router *r, const Flit *f, int in_channel, 
 		OutputSet *outputs, bool inject )
 {
-  int out_port = 0;
-
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -780,7 +793,13 @@ void dor_cmesh( const Router *r, const Flit *f, int in_channel,
   }
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
-  if(!inject) {
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
 
     // Current Router
     int cur_router = r->GetID();
@@ -841,8 +860,6 @@ int cmesh_next_no_express( int cur, int dest ) {
 void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel, 
 			   OutputSet *outputs, bool inject )
 {
-  int out_port = 0;
-
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -860,7 +877,13 @@ void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
   }
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
-  if(!inject) {
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
 
     // Current Router
     int cur_router = r->GetID();
