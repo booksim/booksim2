@@ -1154,7 +1154,7 @@ bool TrafficManager::_PacketsOutstanding( ) const
     if ( _measured_in_flight_flits[c].empty() ) {
 
       for ( int s = 0; s < _sources; ++s ) {
-	if ( !_qdrained[s][c] ) {
+	if ( _measure_stats[c] && !_qdrained[s][c] ) {
 #ifdef DEBUG_DRAIN
 	  cout << "waiting on queue " << s << " class " << c;
 	  cout << ", time = " << _time << " qtime = " << _qtime[s][c] << endl;
