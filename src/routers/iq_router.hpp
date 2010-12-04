@@ -39,7 +39,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "router.hpp"
 #include "routefunc.hpp"
-#include "iq_router_base.hpp"
 
 using namespace std;
 
@@ -54,7 +53,8 @@ class BufferMonitor;
 
 class IQRouter : public Router {
 
-  int  _vcs ;
+  int _vcs;
+  int _classes;
 
   bool _speculative;
   bool _spec_check_elig;
@@ -87,6 +87,7 @@ class IQRouter : public Router {
   Allocator *_sw_allocator;
   Allocator *_spec_sw_allocator;
   
+  vector<int> _vc_rr_offset;
   vector<int> _sw_rr_offset;
 
   tRoutingFunction   _rf;

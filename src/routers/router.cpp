@@ -48,8 +48,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //////////////////Sub router types//////////////////////
 #include "iq_router.hpp"
-#include "iq_router_combined.hpp"
-#include "iq_router_split.hpp"
 #include "event_router.hpp"
 #include "chaos_router.hpp"
 ///////////////////////////////////////////////////////
@@ -127,10 +125,6 @@ Router *Router::NewRouter( const Configuration& config,
 
   if ( type == "iq" ) {
     r = new IQRouter( config, parent, name, id, inputs, outputs );
-  } else if ( type == "iq_combined" ) {
-    r = new IQRouterCombined( config, parent, name, id, inputs, outputs );
-  } else if ( type == "iq_split" ) {
-    r = new IQRouterSplit( config, parent, name, id, inputs, outputs );
   } else if ( type == "event" ) {
     r = new EventRouter( config, parent, name, id, inputs, outputs );
   } else if ( type == "chaos" ) {
