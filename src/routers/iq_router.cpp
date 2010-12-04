@@ -930,7 +930,7 @@ void IQRouter::_SWAllocEvaluate( )
       
       BufferState const * const dest_buf = _next_buf[match_port];
       
-      if(dest_buf->IsFullFor(match_vc)) {
+      if(!dest_buf->HasCreditFor(match_vc)) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  Unable to reuse held connection from input " << input
@@ -1001,7 +1001,7 @@ void IQRouter::_SWAllocEvaluate( )
       
       BufferState const * const dest_buf = _next_buf[dest_output];
       
-      if(dest_buf->IsFullFor(dest_vc)) {
+      if(!dest_buf->HasCreditFor(dest_vc)) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  VC " << dest_vc 
@@ -1276,7 +1276,7 @@ void IQRouter::_SWAllocEvaluate( )
 			 << " due to port mismatch between VC and switch allocator." << endl;
 	    }
 	    iter->second.second = -1;
-	  } else if(dest_buf->IsFullFor((output_and_vc % _vcs))) {
+	  } else if(!dest_buf->HasCreditFor((output_and_vc % _vcs))) {
 	    if(f->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 			 << "Discarding grant from input " << input
@@ -1306,7 +1306,7 @@ void IQRouter::_SWAllocEvaluate( )
 		  ++out_vc) {
 		assert((out_vc >= 0) && (out_vc < _vcs));
 		if(dest_buf->IsAvailableFor(out_vc) && 
-		   !dest_buf->IsFullFor(out_vc)) {
+		   dest_buf->HasCreditFor(out_vc)) {
 		  found_vc = true;
 		  break;
 		}
@@ -1337,7 +1337,7 @@ void IQRouter::_SWAllocEvaluate( )
 	int const match_vc = cur_buf->GetOutputVC(vc);
 	assert((match_vc >= 0) && (match_vc < _vcs));
 
-	if(dest_buf->IsFullFor(match_vc)) {
+	if(!dest_buf->HasCreditFor(match_vc)) {
 	  if(f->watch) {
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		       << "  Discarding grant from input " << input
@@ -1580,7 +1580,7 @@ void IQRouter::_SWAllocUpdate( )
 		++out_vc) {
 	      assert((out_vc >= 0) && (out_vc < _vcs));
 	      if(dest_buf->IsAvailableFor(out_vc) && 
-		 !dest_buf->IsFullFor(out_vc) &&
+		 dest_buf->HasCreditFor(out_vc) &&
 		 ((match_vc < 0) || 
 		  RoundRobinArbiter::Supersedes(out_vc, iset->pri, 
 						match_vc, match_prio, 

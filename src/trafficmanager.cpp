@@ -1034,7 +1034,7 @@ void TrafficManager::_Step( )
 	    if(f->vc == -1) {
 	      for(int i = 1; i <= vc_count; ++i) {
 		int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
-		if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
+		if(dest_buf->IsAvailableFor(vc) && dest_buf->HasCreditFor(vc)) {
 		  f->vc = vc;
 		  break;
 		}
@@ -1055,7 +1055,7 @@ void TrafficManager::_Step( )
 	    }
 	  }
 	  
-	  if((f->vc != -1) && (!dest_buf->IsFullFor(f->vc))) {
+	  if((f->vc != -1) && (dest_buf->HasCreditFor(f->vc))) {
 	    
 	    _partial_packets[source][c].pop_front();
 	    dest_buf->SendingFlit(f);
