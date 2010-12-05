@@ -144,13 +144,11 @@ void BufferState::TakeBuffer( int vc )
   ++_active_vcs;
 }
 
-bool BufferState::IsFullFor( int vc  ) const
+bool BufferState::IsFullFor( int vc ) const
 {
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
   return ( ( _cur_occupied[vc] >= _vc_buf_size ) &&
-	   ( ( _shared_occupied >= _shared_buf_size ) ||
-	     ( _dynamic_sharing && ( _active_vcs > 0 ) &&
-	       ( ( _cur_occupied[vc] - _vc_buf_size ) >= ( _shared_buf_size / _active_vcs ) ) ) ) );
+	   ( _shared_occupied >= _shared_buf_size ) );
 }
 
 bool BufferState::IsEmptyFor( int vc  ) const
@@ -164,6 +162,16 @@ bool BufferState::IsAvailableFor( int vc ) const
  
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
   return !_in_use[vc] && (!_vc_busy_when_full || !IsFullFor(vc));
+}
+
+bool BufferState::HasCreditFor( int vc ) const
+{
+  assert( ( vc >= 0 ) && ( vc < _vcs ) );
+  return ( ( _cur_occupied[vc] < _vc_buf_size ) ||
+	   ( ( _shared_occupied < _shared_buf_size ) &&
+	     ( _dynamic_sharing && ( _active_vcs > 0 ) &&
+	       ( ( _cur_occupied[vc] - _vc_buf_size ) < 
+		 ( _shared_buf_size / _active_vcs ) ) ) ) );
 }
 
 int BufferState::Size(int vc) const{
