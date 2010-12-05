@@ -127,6 +127,14 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _reply_class.resize(_classes, _reply_class.back());
 
+  _is_reply_class.resize(_classes, false);
+  for(int c = 0; c < _classes; ++c) {
+    int const & reply_class = _reply_class[c];
+    if(reply_class >= 0) {
+      _is_reply_class[reply_class] = true;
+    }
+  }
+
   _traffic = config.GetStrArray("traffic");
   _traffic.resize(_classes, _traffic.back());
 
@@ -591,6 +599,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       }
       _requests_outstanding[dest][f->cl]--;
     } else {
+      _packets_sent[dest][f->cl]++;
       _GeneratePacket( f->dest, f->src, _packet_size[reply_class], 
 		       reply_class, f->atime + 1, f->tid, f->ttime );
     }
@@ -760,22 +769,23 @@ void TrafficManager::_Inject(){
   for ( int source = 0; source < _sources; ++source ) {
     for ( int c = 0; c < _classes; ++c ) {
       // Potentially generate packets for any (source,class)
-      // that is currently empty, with the exception of reply classes
-      if(_reply_class[c] >= 0) {
-	continue;
-      }
+      // that is currently empty
       if ( _partial_packets[source][c].empty() ) {
 	if ( !_empty_network ) {
-	  bool generated = false;
-	  while( !generated && ( _qtime[source][c] <= _time ) ) {
-	    if(_IssuePacket(source, c)) { //generate a packet
-	      int dest = _traffic_function[c](source, _dests);
-	      int size = _packet_size[c];
-	      int time = ((_include_queuing == 1) ? _qtime[source][c] : _time);
-	      _GeneratePacket(source, dest, size, c, time, -1, time);
-	      generated = true;
+	  if(_is_reply_class[c]) {
+	    _qtime[source][c] = _time;
+	  } else {
+	    bool generated = false;
+	    while( !generated && ( _qtime[source][c] <= _time ) ) {
+	      if(_IssuePacket(source, c)) { //generate a packet
+		int dest = _traffic_function[c](source, _dests);
+		int size = _packet_size[c];
+		int time = ((_include_queuing == 1) ? _qtime[source][c] : _time);
+		_GeneratePacket(source, dest, size, c, time, -1, time);
+		generated = true;
+	      }
+	      ++_qtime[source][c];
 	    }
-	    ++_qtime[source][c];
 	  }
 	  if((_sim_state == draining) && (_qtime[source][c] > _drain_time)) {
 	    _qdrained[source][c] = true;
