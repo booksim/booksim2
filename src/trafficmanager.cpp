@@ -1026,27 +1026,9 @@ void TrafficManager::_Step( )
 	    int const vc_count = vc_end - vc_start + 1;
 	    for(int i = 1; i <= vc_count; ++i) {
 	      int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
-	      if(dest_buf->IsAvailableFor(vc) && dest_buf->IsEmptyFor(vc)) {
+	      if(dest_buf->IsAvailableFor(vc) && dest_buf->HasCreditFor(vc)) {
 		f->vc = vc;
 		break;
-	      }
-	    }
-	    if(f->vc == -1) {
-	      for(int i = 1; i <= vc_count; ++i) {
-		int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
-		if(dest_buf->IsAvailableFor(vc) && dest_buf->HasCreditFor(vc)) {
-		  f->vc = vc;
-		  break;
-		}
-	      }
-	      if(f->vc == -1) {
-		for(int i = 1; i <= vc_count; ++i) {
-		  int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
-		  if(dest_buf->IsAvailableFor(vc)) {
-		    f->vc = vc;
-		    break;
-		  }
-		}
 	      }
 	    }
 	    if(f->vc != -1) {
