@@ -1595,15 +1595,21 @@ bool TrafficManager::Run( )
 	continue;
       }
 
-      _overall_min_latency[c]->AddSample( _latency_stats[c]->Min( ) );
-      _overall_avg_latency[c]->AddSample( _latency_stats[c]->Average( ) );
-      _overall_max_latency[c]->AddSample( _latency_stats[c]->Max( ) );
-      _overall_min_tlat[c]->AddSample( _tlat_stats[c]->Min( ) );
-      _overall_avg_tlat[c]->AddSample( _tlat_stats[c]->Average( ) );
-      _overall_max_tlat[c]->AddSample( _tlat_stats[c]->Max( ) );
-      _overall_min_frag[c]->AddSample( _frag_stats[c]->Min( ) );
-      _overall_avg_frag[c]->AddSample( _frag_stats[c]->Average( ) );
-      _overall_max_frag[c]->AddSample( _frag_stats[c]->Max( ) );
+      if(_latency_stats[c]->NumSamples() > 0) {
+	_overall_min_latency[c]->AddSample( _latency_stats[c]->Min( ) );
+	_overall_avg_latency[c]->AddSample( _latency_stats[c]->Average( ) );
+	_overall_max_latency[c]->AddSample( _latency_stats[c]->Max( ) );
+      }
+      if(_tlat_stats[c]->NumSamples() > 0) {
+	_overall_min_tlat[c]->AddSample( _tlat_stats[c]->Min( ) );
+	_overall_avg_tlat[c]->AddSample( _tlat_stats[c]->Average( ) );
+	_overall_max_tlat[c]->AddSample( _tlat_stats[c]->Max( ) );
+      }
+      if(_frag_stats[c]->NumSamples() > 0) {
+	_overall_min_frag[c]->AddSample( _frag_stats[c]->Min( ) );
+	_overall_avg_frag[c]->AddSample( _frag_stats[c]->Average( ) );
+	_overall_max_frag[c]->AddSample( _frag_stats[c]->Max( ) );
+      }
 
       double min, avg;
       _ComputeStats( _accepted_flits[c], &avg, &min );
@@ -1656,35 +1662,51 @@ void TrafficManager::DisplayStats() {
 
     cout << "====== Traffic class " << c << " ======" << endl;
     
-    cout << "Overall minimum latency = " << _overall_min_latency[c]->Average( )
-	 << " (" << _overall_min_latency[c]->NumSamples( ) << " samples)" << endl;
-    cout << "Overall average latency = " << _overall_avg_latency[c]->Average( )
-	 << " (" << _overall_avg_latency[c]->NumSamples( ) << " samples)" << endl;
-    cout << "Overall maximum latency = " << _overall_max_latency[c]->Average( )
-	 << " (" << _overall_max_latency[c]->NumSamples( ) << " samples)" << endl;
-    cout << "Overall minimum transaction latency = " << _overall_min_tlat[c]->Average( )
-	 << " (" << _overall_min_tlat[c]->NumSamples( ) << " samples)" << endl;
-    cout << "Overall average transaction latency = " << _overall_avg_tlat[c]->Average( )
-	 << " (" << _overall_avg_tlat[c]->NumSamples( ) << " samples)" << endl;
-    cout << "Overall maximum transaction latency = " << _overall_max_tlat[c]->Average( )
-	 << " (" << _overall_max_tlat[c]->NumSamples( ) << " samples)" << endl;
-    
-    cout << "Overall minimum fragmentation = " << _overall_min_frag[c]->Average( )
-	 << " (" << _overall_min_frag[c]->NumSamples( ) << " samples)" << endl;
-    cout << "Overall average fragmentation = " << _overall_avg_frag[c]->Average( )
-	 << " (" << _overall_avg_frag[c]->NumSamples( ) << " samples)" << endl;
-    cout << "Overall maximum fragmentation = " << _overall_max_frag[c]->Average( )
-	 << " (" << _overall_max_frag[c]->NumSamples( ) << " samples)" << endl;
+    if(_overall_min_latency[c]->NumSamples() > 0) {
+      cout << "Overall minimum latency = " << _overall_min_latency[c]->Average( )
+	   << " (" << _overall_min_latency[c]->NumSamples( ) << " samples)" << endl;
+      assert(_overall_avg_latency[c]->NumSamples() > 0);
+      cout << "Overall average latency = " << _overall_avg_latency[c]->Average( )
+	   << " (" << _overall_avg_latency[c]->NumSamples( ) << " samples)" << endl;
+      assert(_overall_max_latency[c]->NumSamples() > 0);
+      cout << "Overall maximum latency = " << _overall_max_latency[c]->Average( )
+	   << " (" << _overall_max_latency[c]->NumSamples( ) << " samples)" << endl;
+    }
+    if(_overall_min_tlat[c]->NumSamples() > 0) {
+      cout << "Overall minimum transaction latency = " << _overall_min_tlat[c]->Average( )
+	   << " (" << _overall_min_tlat[c]->NumSamples( ) << " samples)" << endl;
+      assert(_overall_avg_tlat[c]->NumSamples() > 0);
+      cout << "Overall average transaction latency = " << _overall_avg_tlat[c]->Average( )
+	   << " (" << _overall_avg_tlat[c]->NumSamples( ) << " samples)" << endl;
+      assert(_overall_max_tlat[c]->NumSamples() > 0);
+      cout << "Overall maximum transaction latency = " << _overall_max_tlat[c]->Average( )
+	   << " (" << _overall_max_tlat[c]->NumSamples( ) << " samples)" << endl;
+    }
+    if(_overall_min_frag[c]->NumSamples() > 0) {
+      cout << "Overall minimum fragmentation = " << _overall_min_frag[c]->Average( )
+	   << " (" << _overall_min_frag[c]->NumSamples( ) << " samples)" << endl;
+      assert(_overall_avg_frag[c]->NumSamples() > 0);
+      cout << "Overall average fragmentation = " << _overall_avg_frag[c]->Average( )
+	   << " (" << _overall_avg_frag[c]->NumSamples( ) << " samples)" << endl;
+      assert(_overall_max_frag[c]->NumSamples() > 0);
+      cout << "Overall maximum fragmentation = " << _overall_max_frag[c]->Average( )
+	   << " (" << _overall_max_frag[c]->NumSamples( ) << " samples)" << endl;
+    }
+    if(_overall_accepted[c]->NumSamples() > 0) {
+      cout << "Overall average accepted rate = " << _overall_accepted[c]->Average( )
+	   << " (" << _overall_accepted[c]->NumSamples( ) << " samples)" << endl;
+      assert(_overall_accepted_min[c]->NumSamples() > 0);
+      cout << "Overall min accepted rate = " << _overall_accepted_min[c]->Average( )
+	   << " (" << _overall_accepted_min[c]->NumSamples( ) << " samples)" << endl;
+    }
+    if(_hop_stats[c]->NumSamples() > 0) {
+      cout << "Average hops = " << _hop_stats[c]->Average( )
+	   << " (" << _hop_stats[c]->NumSamples( ) << " samples)" << endl;
+    }
 
-    cout << "Overall average accepted rate = " << _overall_accepted[c]->Average( )
-	 << " (" << _overall_accepted[c]->NumSamples( ) << " samples)" << endl;
-    cout << "Overall min accepted rate = " << _overall_accepted_min[c]->Average( )
-	 << " (" << _overall_accepted_min[c]->NumSamples( ) << " samples)" << endl;
-    
-    cout << "Average hops = " << _hop_stats[c]->Average( )
-	 << " (" << _hop_stats[c]->NumSamples( ) << " samples)" << endl;
-
-    cout << "Slowest flit = " << _slowest_flit[c] << endl;
+    if(_slowest_flit[c] >= 0) {
+      cout << "Slowest flit = " << _slowest_flit[c] << endl;
+    }
   
   }
   
