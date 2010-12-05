@@ -1155,7 +1155,7 @@ void IQRouter::_SWAllocEvaluate( )
 		       << " has non-speculative requests." << endl;
 	  }
 	  expanded_output = -1;
-	} else if(_spec_mask_by_reqs &&
+	} else if(!_spec_mask_by_reqs &&
 		  (_sw_allocator->InputAssigned(expanded_output) >= 0)) {
 	  if(f->watch) {
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
