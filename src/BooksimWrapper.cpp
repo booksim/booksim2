@@ -45,7 +45,8 @@ BooksimInterface::BooksimInterface(string name, SystemConfig* sysCon, Fwk::Log* 
   string topo;
 
   topo = booksimconfig->GetStr( "topology");
-  int networks = booksimconfig->GetInt("physical_subnetworks");
+
+  int networks  = booksimconfig->GetInt("subnets");
   /*To include a new network, must register the network here
    *add an else if statement with the name of the network
    */

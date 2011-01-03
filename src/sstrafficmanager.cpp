@@ -43,7 +43,7 @@ void SSTrafficManager::DisplayStats(){
     double cur_accepted = avg;
 
     cout << "Class " << c+1 << ":" << endl;
-
+    cout << "Number of packets = "<< _latency_stats[c]->NumSamples()<<endl;
     cout << "Minimum latency = " << _latency_stats[c]->Min( ) << endl;
     cout << "Average latency = " << cur_latency << endl;
     cout << "Maximum latency = " << _latency_stats[c]->Max( ) << endl;
