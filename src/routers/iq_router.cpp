@@ -135,7 +135,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     Error("Unknown sw_allocator type: " + alloc_type);
   }
   
-  if ( _speculative && ( config.GetInt("spec_use_prio") > 0 ) ) {    
+  if ( _speculative && ( config.GetInt("spec_use_prio") == 0 ) ) {    
     _spec_sw_allocator = Allocator::NewAllocator( this, "spec_sw_allocator",
 						  alloc_type,
 						  _inputs*_input_speedup, 
