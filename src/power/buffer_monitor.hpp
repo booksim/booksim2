@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -41,18 +41,31 @@ class Flit;
 class BufferMonitor {
   int  _cycles ;
   int  _inputs ;
+  int  _classes ;
   vector<int> _reads ;
   vector<int> _writes ;
-  int index( int input, int flitType ) const ;
+  int index( int input, int cl ) const ;
 public:
-  BufferMonitor( int inputs ) ;
+  BufferMonitor( int inputs, int classes ) ;
   void cycle() ;
-  void write( int input, Flit* flit ) ;
-  void read( int input, Flit* flit ) ;
-  const vector<int> & GetReads() const {return _reads;}
-  const vector<int> & GetWrites() const {return _writes;}
-  int NumInputs() const {return _inputs;}
-  friend ostream& operator<<( ostream& os, const BufferMonitor& obj ) ;
+  void write( int input, Flit const * f ) ;
+  void read( int input, Flit const * f ) ;
+  inline const vector<int> & GetReads() const {
+    return _reads;
+  }
+  inline const vector<int> & GetWrites() const {
+    return _writes;
+  }
+  inline int NumInputs() const {
+    return _inputs;
+  }
+  inline int NumClasses() const {
+    return _classes;
+  }
+  void display(ostream & os) const;
+
 } ;
+
+ostream & operator<<( ostream & os, BufferMonitor const & obj ) ;
 
 #endif

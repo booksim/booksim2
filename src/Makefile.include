@@ -21,10 +21,7 @@ network/booksim/buffer.cpp \
 network/booksim/booksim_config.cpp \
 network/booksim/booksim_main.cpp \
 network/booksim/routers/router.cpp \
-network/booksim/routers/iq_router_split.cpp \
 network/booksim/routers/iq_router.cpp \
-network/booksim/routers/iq_router_combined.cpp \
-network/booksim/routers/iq_router_base.cpp \
 network/booksim/routers/event_router.cpp \
 network/booksim/routers/chaos_router.cpp \
 network/booksim/power/switch_monitor.cpp \
@@ -35,13 +32,10 @@ network/booksim/networks/singlenet.cpp \
 network/booksim/networks/qtree.cpp \
 network/booksim/networks/network.cpp \
 network/booksim/networks/kncube.cpp \
-network/booksim/networks/isolated_mesh.cpp \
 network/booksim/networks/fly.cpp \
 network/booksim/networks/flatfly_onchip.cpp \
 network/booksim/networks/fattree.cpp \
 network/booksim/networks/dragonfly.cpp \
-network/booksim/networks/cmo.cpp \
-network/booksim/networks/cmeshx2.cpp \
 network/booksim/networks/cmesh.cpp \
 network/booksim/networks/anynet.cpp \
 network/booksim/arbiters/roundrobin_arb.cpp \

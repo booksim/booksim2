@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -32,12 +32,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _IQ_ROUTER_HPP_
 
 #include <string>
+#include <deque>
 #include <queue>
-#include <list>
+#include <set>
+#include <map>
 
 #include "router.hpp"
 #include "routefunc.hpp"
-#include "iq_router_base.hpp"
 
 using namespace std;
 
@@ -52,10 +53,12 @@ class BufferMonitor;
 
 class IQRouter : public Router {
 
-  int  _vcs ;
-  int  _speculative ;
+  int _vcs;
+  int _classes;
 
-  int  _filter_spec_grants ;
+  bool _speculative;
+  bool _spec_check_elig;
+  bool _spec_mask_by_reqs;
   
   int _routing_delay;
   int _vc_alloc_delay;
@@ -64,12 +67,18 @@ class IQRouter : public Router {
   vector<int> _received_flits;
   vector<int> _sent_flits;
 
-  list<pair<int, int> > _in_queue_vcs;
-  queue<pair<int, pair<int, int> > > _route_waiting_vcs;
-  queue<pair<int, pair<int, int> > > _vc_alloc_waiting_vcs;  
-  list<pair<int, int> > _vc_alloc_pending_vcs;
-  queue<pair<int, pair<int, Flit *> > > _crossbar_waiting_flits;
-  queue<pair<int, pair<int, Credit *> > > _proc_waiting_credits;
+  map<int, Flit *> _in_queue_flits;
+
+  deque<pair<int, pair<Credit *, int> > > _proc_credits;
+
+  deque<pair<int, pair<int, int> > > _route_vcs;
+  deque<pair<int, pair<pair<int, int>, int> > > _vc_alloc_vcs;  
+  deque<pair<int, pair<pair<int, int>, int> > > _sw_alloc_vcs;
+  deque<pair<int, pair<pair<int, int>, int> > > _sw_hold_vcs;
+
+  deque<pair<int, pair<Flit *, pair<int, int> > > > _crossbar_flits;
+
+  map<int, Credit *> _out_queue_credits;
 
   vector<Buffer *> _buf;
   vector<BufferState *> _next_buf;
@@ -78,6 +87,7 @@ class IQRouter : public Router {
   Allocator *_sw_allocator;
   Allocator *_spec_sw_allocator;
   
+  vector<int> _vc_rr_offset;
   vector<int> _sw_rr_offset;
 
   tRoutingFunction   _rf;
@@ -86,7 +96,7 @@ class IQRouter : public Router {
 
   vector<queue<Credit *> > _credit_buffer;
 
-  int _hold_switch_for_packet;
+  bool _hold_switch_for_packet;
   vector<int> _switch_hold_in;
   vector<int> _switch_hold_out;
   vector<int> _switch_hold_vc;
@@ -94,10 +104,22 @@ class IQRouter : public Router {
   void _ReceiveFlits( );
   void _ReceiveCredits( );
 
+  virtual void _InternalStep( );
+
+  bool _SWAllocAddReq(int input, int vc, int output);
+
   void _InputQueuing( );
-  void _Route( );
-  void _VCAlloc( );
-  void _SWAlloc( );
+
+  void _RouteEvaluate( );
+  void _VCAllocEvaluate( );
+  void _SWAllocEvaluate( );
+  void _SwitchEvaluate( );
+
+  void _RouteUpdate( );
+  void _VCAllocUpdate( );
+  void _SWAllocUpdate( );
+  void _SwitchUpdate( );
+
   void _OutputQueuing( );
 
   void _SendFlits( );
@@ -114,14 +136,13 @@ class IQRouter : public Router {
   
 public:
 
-  IQRouter( const Configuration& config,
-	    Module *parent, const string & name, int id,
+  IQRouter( Configuration const & config,
+	    Module *parent, string const & name, int id,
 	    int inputs, int outputs );
   
   virtual ~IQRouter( );
   
   virtual void ReadInputs( );
-  virtual void InternalStep( );
   virtual void WriteOutputs( );
   
   void Display( ) const;
@@ -132,8 +153,8 @@ public:
   virtual int GetSentFlits(int o = -1) const;
   virtual void ResetFlitStats();
 
-  const SwitchMonitor* GetSwitchMonitor() const {return _switchMonitor;}
-  const BufferMonitor* GetBufferMonitor() const {return _bufferMonitor;}
+  SwitchMonitor const * const GetSwitchMonitor() const {return _switchMonitor;}
+  BufferMonitor const * const GetBufferMonitor() const {return _bufferMonitor;}
 
 };
 

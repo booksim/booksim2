@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -65,6 +65,8 @@ public:
 
   int  id;
   int  pid;
+  int  tid;
+
   bool record;
 
   int  src;
@@ -76,9 +78,6 @@ public:
   bool watch;
   int  subnetwork;
 
-  //for credit tracking, last router visited
-  mutable int from_router;
-
   // Fields for multi-phase algorithms
   mutable int intm;
   mutable int ph;
@@ -88,9 +87,6 @@ public:
 
   // Which VC parition to use for deadlock avoidance in a ring
   mutable int ring_par;
-
-  // Fileds for XY or YX randomized routing
-  mutable int x_then_y;
 
   // Fields for arbitrary data
   void* data ;

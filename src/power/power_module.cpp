@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -32,26 +32,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim_config.hpp"
 #include "buffer_monitor.hpp"
 #include "switch_monitor.hpp"
+#include "iq_router.hpp"
 
 Power_Module::Power_Module(BSNetwork * n , TrafficManager* parent, const Configuration &config)
   : Module( 0, "power_module" ){
 
   
+  string pfile = config.GetStr("tech_file");
   PowerConfig pconfig;
-  string pfile;
-  config.GetStr("tech_file", pfile);
-  char ** argv = (char**)malloc(sizeof(char*)*2);
-  argv[1] = (char*)malloc(sizeof(char)*(pfile.length()+1));
-  strcpy(argv[1],pfile.c_str());
-
-  if ( !ParseArgs( &pconfig,2,argv) )  {
-    cout<<"cant locate technology file  "<<argv[1]<<endl;
-  }
-  
+  pconfig.ParseFile(pfile);
 
   net = n;
   sim = parent;
-  config.GetStr( "power_output_file", output_file_name );
+  output_file_name = config.GetStr("power_output_file");
+  classes = config.GetInt("classes");
   channel_width = (double)config.GetInt("channel_width");
   channel_sweep = (double)config.GetInt("channel_sweep");
 
@@ -126,76 +120,70 @@ Power_Module::~Power_Module(){
 
 void Power_Module::calcChannel(const FlitChannel* f){
   double channelLength = f->GetLatency()* wire_length;
-  wire * this_wire = wireOptimize(channelLength);
-  double K = this_wire->K;
-  double N = this_wire->N;
-  double M = this_wire->M;
+  wire const this_wire = wireOptimize(channelLength);
+  double const & K = this_wire.K;
+  double const & N = this_wire.N;
+  double const & M = this_wire.M;
   //area
   channelArea += areaChannel(K,N,M);
 
   //activity factor;
   const vector<int> temp = f->GetActivity();
-  double* a = (double*)malloc(sizeof(double)* Flit::NUM_FLIT_TYPES);
-  for(int i = 0; i< Flit::NUM_FLIT_TYPES; i++){
+  vector<double> a(classes);
+  for(int i = 0; i< classes; i++){
 
     a[i] = ((double)temp[i])/totalTime;
   }
 
   //power calculation
-  double bitPower = powerRepeatedWire(channelLength, K,M,N);
+  double const bitPower = powerRepeatedWire(channelLength, K,M,N);
 
   channelClkPower += powerWireClk(M,channel_width);
-  for(int i = 0; i< Flit::NUM_FLIT_TYPES; i++){
+  for(int i = 0; i< classes; i++){
     channelWirePower += bitPower * a[i]*channel_width;
     channelDFFPower += powerWireDFF(M, channel_width, a[i]);
   }
   channelLeakPower+= powerRepeatedWireLeak(K,M,N)*channel_width;
 }
 
-wire* Power_Module::wireOptimize(double L){
-  double W,K,M,N,bestMetric;
-  if(wire_map.find(L)!=wire_map.end()){
-    return wire_map.find(L)->second;
-  } 
-  
-  W = 64;
-  bestMetric =  100000000 ;
-  double bestK = -1;
-  double bestM = -1;
-  double bestN = -1;
-  for ( K = 1.0 ; K < 10 ; K+=0.1 ) {
-    for (N = 1.0 ; N < 40 ; N += 1.0 ) {
-      for (M = 1.0 ; M < 40.0 ; M +=1.0 ) {
-	double l = 1.0 * L/( N * M) ;
-	
-	double k0 = R * (Co_delay + Ci_delay) ;
-	double k1 = R/K * Cw + K * Rw * Ci_delay ;
-	double k2 = 0.5 * Rw * Cw ;
-	double Tw = k0 + (k1 * l) + k2 * (l * l) ;
-	double alpha = 0.2 ;
-	double power = alpha * W * powerRepeatedWire( L, K, M, N) + powerWireDFF( M, W, alpha ) ;
-	double metric = M * M * M * M * power ;
-	if ( (N*Tw) < (0.8 * tCLK) ) {
-	  if ( metric < bestMetric ) {
-	    bestMetric = metric ;
-	    bestK = K ;
-	    bestM = M ;
-	    bestN = N ;
+wire const & Power_Module::wireOptimize(double L){
+  map<double, wire>::iterator iter = wire_map.find(L);
+  if(iter == wire_map.end()){
+    
+    double W = 64;
+    double bestMetric =  100000000 ;
+    double bestK = -1;
+    double bestM = -1;
+    double bestN = -1;
+    for (double K = 1.0 ; K < 10 ; K+=0.1 ) {
+      for (double N = 1.0 ; N < 40 ; N += 1.0 ) {
+	for (double M = 1.0 ; M < 40.0 ; M +=1.0 ) {
+	  double l = 1.0 * L/( N * M) ;
+	  
+	  double k0 = R * (Co_delay + Ci_delay) ;
+	  double k1 = R/K * Cw + K * Rw * Ci_delay ;
+	  double k2 = 0.5 * Rw * Cw ;
+	  double Tw = k0 + (k1 * l) + k2 * (l * l) ;
+	  double alpha = 0.2 ;
+	  double power = alpha * W * powerRepeatedWire( L, K, M, N) + powerWireDFF( M, W, alpha ) ;
+	  double metric = M * M * M * M * power ;
+	  if ( (N*Tw) < (0.8 * tCLK) ) {
+	    if ( metric < bestMetric ) {
+	      bestMetric = metric ;
+	      bestK = K ;
+	      bestM = M ;
+	      bestN = N ;
+	    }
 	  }
 	}
       }
     }
+    cout<<"L = "<<L<<" K = "<<bestK<<" M = "<<bestM<<" N = "<<bestN<<endl;
+    
+    wire const temp = {L, bestK, bestM, bestN};
+    iter = wire_map.insert(make_pair(L, temp)).first;
   }
-  cout<<"L = "<<L<<" K = "<<bestK<<" M = "<<bestM<<" N = "<<bestN<<endl;
-  
-  wire * temp = new wire;
-  temp->L = L;
-  temp->K = bestK;
-  temp->M = bestM;
-  temp->N = bestN;
-  wire_map[L] = temp;
-  return temp;
-
+  return iter->second;
 }
 
 double Power_Module::powerRepeatedWire(double L, double K, double M, double N){
@@ -247,9 +235,9 @@ void Power_Module::calcBuffer(const BufferMonitor *bm){
   for(int i = 0; i<bm->NumInputs(); i++){
     inputArea += areaInputModule( depth );
     inputLeakagePower += Pleak ;
-    for(int j = 0; j< Flit::NUM_FLIT_TYPES; j++){
-      double ar = ((double)reads[i* Flit::NUM_FLIT_TYPES+j])/totalTime;
-      double aw = ((double)writes[i* Flit::NUM_FLIT_TYPES+j])/totalTime;
+    for(int j = 0; j< classes; j++){
+      double ar = ((double)reads[i* classes+j])/totalTime;
+      double aw = ((double)writes[i* classes+j])/totalTime;
       if(ar>1 ||aw >1){
 	cout<<"activity factor is greater than one, soemthing is stomping memory\n"; exit(-1);
       }
@@ -322,15 +310,15 @@ void Power_Module::calcSwitch(const SwitchMonitor* sm){
   switchPowerLeak += powerCrossbarLeak(channel_width, sm->NumInputs(), sm->NumOutputs());
 
   const vector<int> activity = sm->GetActivity();
-  double * type_activity = (double*)malloc(sizeof(double)*Flit::NUM_FLIT_TYPES);
+  vector<double> type_activity(classes);
 
   for(int i = 0; i<sm->NumOutputs(); i++){
-    for(int k = 0; k<Flit::NUM_FLIT_TYPES; k++){
+    for(int k = 0; k<classes; k++){
       type_activity[k] = 0;
     }
     for(int j = 0; j<sm->NumInputs(); j++){
-      for(int k  = 0; k<Flit::NUM_FLIT_TYPES; k++){
-	double a = activity[k+Flit::NUM_FLIT_TYPES*(i+sm->NumOutputs()*j)];
+      for(int k  = 0; k<classes; k++){
+	double a = activity[k+classes*(i+sm->NumOutputs()*j)];
 	a = a/totalTime;
 	if(a>1){
 	  cout<<"Switcht activity factor is greater than 1!!!\n";exit(-1);
@@ -342,7 +330,7 @@ void Power_Module::calcSwitch(const SwitchMonitor* sm){
       }
     }
     outputPowerClk += powerWireClk( 1, channel_width ) ;
-    for(int k = 0; k<Flit::NUM_FLIT_TYPES; k++){
+    for(int k = 0; k<classes; k++){
       outputPower += type_activity[k] * powerWireDFF( 1, channel_width, 1.0 ) ;
       outputCtrlPower += type_activity[k] * powerOutputCtrl(channel_width ) ;
     }
@@ -500,7 +488,7 @@ void Power_Module::run(){
 
   vector<Router*> routers = net->GetRouters();
   for(size_t i = 0; i < routers.size(); i++){
-    IQRouterBase* temp = dynamic_cast<IQRouterBase*>(routers[i]);
+    IQRouter* temp = dynamic_cast<IQRouter*>(routers[i]);
     const BufferMonitor * bm = temp->GetBufferMonitor();
     calcBuffer(bm);
     const SwitchMonitor * sm = temp->GetSwitchMonitor();

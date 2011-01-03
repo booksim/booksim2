@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -51,8 +51,8 @@ MatrixArbiter::MatrixArbiter( Module *parent, const string &name, int size )
 
 void MatrixArbiter::PrintState() const  {
   cout << "Priority Matrix: " << endl ;
-  for ( int r = 0; r < _input_size ; r++ ) {
-    for ( int c = 0 ; c < _input_size ; c++ ) {
+  for ( int r = 0; r < _size ; r++ ) {
+    for ( int c = 0 ; c < _size ; c++ ) {
       cout << _matrix[r][c] << " " ;
     }
     cout << endl ;
@@ -63,7 +63,7 @@ void MatrixArbiter::PrintState() const  {
 void MatrixArbiter::UpdateState() {
   // update priority matrix using last grant
   if ( _selected > -1 ) {
-    for ( int i = 0; i < _input_size ; i++ ) {
+    for ( int i = 0; i < _size ; i++ ) {
       if( _selected != i ) {
 	_matrix[_selected][i] = 0 ;
 	_matrix[i][_selected] = 1 ;
@@ -90,11 +90,11 @@ int MatrixArbiter::Arbitrate( int* id, int* pri ) {
     
     _selected = -1 ;
 
-    for ( int input = 0 ; input < _input_size ; input++ ) {
+    for ( int input = 0 ; input < _size ; input++ ) {
       if(_request[input].valid) {
 	
 	bool grant = true;
-	for ( int i = 0 ; i < _input_size ; i++ ) {
+	for ( int i = 0 ; i < _size ; i++ ) {
 	  if ( _request[i].valid &&
 	       ( ( ( _request[i].pri == _request[input].pri ) &&
 		   _matrix[i][input]) ||

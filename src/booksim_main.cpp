@@ -68,10 +68,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "singlenet.hpp"
 #include "kncube.hpp"
 #include "fly.hpp"
-#include "isolated_mesh.hpp"
-#include "cmo.hpp"
 #include "cmesh.hpp"
-#include "cmeshx2.hpp"
 #include "flatfly_onchip.hpp"
 #include "qtree.hpp"
 #include "tree4.hpp"
@@ -143,7 +140,7 @@ bool AllocatorSim( const Configuration& config )
   vector<BSNetwork *> net;
   string topo;
 
-  config.GetStr( "topology", topo );
+  topo = config.GetStr( "topology");
   int networks = config.GetInt("physical_subnetworks");
   /*To include a new network, must register the network here
    *add an else if statement with the name of the network
@@ -161,18 +158,12 @@ bool AllocatorSim( const Configuration& config )
     } else if ( topo == "cmesh" ) {
       CMesh::RegisterRoutingFunctions() ;
       net[i] = new CMesh( config, name.str() );
-    } else if ( topo == "cmeshx2" ) {
-      CMeshX2::RegisterRoutingFunctions() ;
-      net[i] = new CMeshX2( config, name.str() );
-    } else if ( topo == "fly" ) {
+    }  else if ( topo == "fly" ) {
       KNFly::RegisterRoutingFunctions() ;
       net[i] = new KNFly( config, name.str() );
     } else if ( topo == "single" ) {
       SingleNet::RegisterRoutingFunctions() ;
       net[i] = new SingleNet( config, name.str() );
-    } else if ( topo == "isolated_mesh" ) {
-      IsolatedMesh::RegisterRoutingFunctions() ;
-      net[i] = new IsolatedMesh( config, name.str() );
     } else if ( topo == "qtree" ) {
       QTree::RegisterRoutingFunctions() ;
       net[i] = new QTree( config, name.str() );
@@ -185,9 +176,6 @@ bool AllocatorSim( const Configuration& config )
     } else if ( topo == "flatfly" ) {
       FlatFlyOnChip::RegisterRoutingFunctions() ;
       net[i] = new FlatFlyOnChip( config, name.str() );
-    } else if ( topo == "cmo"){
-      CMO::RegisterRoutingFunctions() ;
-      net[i] = new CMO(config, name.str());
     } else if ( topo == "anynet"){
       AnyNet::RegisterRoutingFunctions() ;
       net[i] = new AnyNet(config, name.str());
@@ -209,7 +197,7 @@ bool AllocatorSim( const Configuration& config )
 
 
   string traffic ;
-  config.GetStr( "traffic", traffic ) ;
+  traffic = config.GetStr( "traffic" ) ;
 
   /*tcc and characterize are legacy
    *not sure how to use them 

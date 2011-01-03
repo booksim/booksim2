@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -58,7 +58,12 @@ EventRouter::EventRouter( const Configuration& config,
 
   // Routing
 
-  _rf = GetRoutingFunction( config );
+  string rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
+  map<string, tRoutingFunction>::iterator rf_iter = gRoutingFunctionMap.find(rf);
+  if(rf_iter == gRoutingFunctionMap.end()) {
+    Error("Invalid routing function: " + rf);
+  }
+  _rf = rf_iter->second;
 
   // Alloc VC's
 
@@ -162,7 +167,7 @@ void EventRouter::ReadInputs( )
   _ReceiveCredits( );
 }
 
-void EventRouter::InternalStep( )
+void EventRouter::_InternalStep( )
 {
   // Receive incoming flits
   _IncomingFlits( );
@@ -471,15 +476,14 @@ void EventRouter::_ArrivalArb( int output )
     c = _out_cred_buffer[output].front( );
     _out_cred_buffer[output].pop( );
     
-    if ( c->vc_cnt != 1 ) {
-      Error( "Code can't handle credit counts not equal to 1." );
-    } 
-        
+    assert( c->vc.size() == 1 );
+    int vc = *c->vc.begin();
+
     EventNextVCState::eNextVCState state = 
-      _output_state[output]->GetState( c->vc[0] );
+      _output_state[output]->GetState( vc );
     
-    credits = _output_state[output]->GetCredits( c->vc[0] );
-    pres    = _output_state[output]->GetPresence( c->vc[0] );
+    credits = _output_state[output]->GetCredits( vc );
+    pres    = _output_state[output]->GetPresence( vc );
       
     if ( _vct ) {
       // In cut-through mode, only head credits indicate a change in 
@@ -487,26 +491,26 @@ void EventRouter::_ArrivalArb( int output )
 
       if ( c->head ) {
 	credits++;
-	_output_state[output]->SetCredits( c->vc[0], credits );
-	_ProcessWaiting( output, c->vc[0] );
+	_output_state[output]->SetCredits( vc, credits );
+	_ProcessWaiting( output, vc );
       }
     } else {
       credits++;
-      _output_state[output]->SetCredits( c->vc[0], credits );
+      _output_state[output]->SetCredits( vc, credits );
 
       if ( c->tail ) { // tail flit -- recycle VC
 	if ( state != EventNextVCState::busy ) {
 	  Error( "Received tail credit at non-busy output VC" );
 	}
 	
-	_ProcessWaiting( output, c->vc[0] );
+	_ProcessWaiting( output, vc );
       } else if ( ( state == EventNextVCState::busy ) && ( pres > 0 ) ) {
 	// Flit is present => generate transport event
 	
 	tevt         = new tTransportEvent;
-	tevt->input  = _output_state[output]->GetInput( c->vc[0] );
-	tevt->src_vc = _output_state[output]->GetInputVC( c->vc[0] );
-	tevt->dst_vc = c->vc[0];
+	tevt->input  = _output_state[output]->GetInput( vc );
+	tevt->src_vc = _output_state[output]->GetInputVC( vc );
+	tevt->dst_vc = vc;
 	tevt->watch  = false;
 	tevt->id     = -1;
 	
@@ -514,12 +518,12 @@ void EventRouter::_ArrivalArb( int output )
 	
 	pres--;
 	credits--;
-	_output_state[output]->SetPresence( c->vc[0], pres );
-	_output_state[output]->SetCredits( c->vc[0], credits );
+	_output_state[output]->SetPresence( vc, pres );
+	_output_state[output]->SetCredits( vc, credits );
       }
     }
 
-    _RetireCredit(c);
+    c->Free();
   }
 
   // Now process arrival events
@@ -672,11 +676,10 @@ void EventRouter::_TransportArb( int input )
       }
     }
 
-    c = _NewCredit( );
-    c->vc[c->vc_cnt] = f->vc;
+    c = Credit::New( );
+    c->vc.insert(f->vc);
     c->head          = f->head;
     c->tail          = f->tail;
-    c->vc_cnt++;
     c->id            = f->id;
     _credit_pipe->Write( c, input );
     
@@ -723,33 +726,23 @@ void EventRouter::_OutputQueuing( )
 
 void EventRouter::_SendFlits( )
 {
-  Flit *f;
-
   for ( int output = 0; output < _outputs; ++output ) {
     if ( !_output_buffer[output].empty( ) ) {
-      f = _output_buffer[output].front( );
+      Flit *f = _output_buffer[output].front( );
       _output_buffer[output].pop( );
-    } else {
-      f = 0;
+      _output_channels[output]->Send( f );
     }
-	
-    _output_channels[output]->Send( f );
   }
 }
 
 void EventRouter::_SendCredits( )
 {
-  Credit *c;
-
   for ( int input = 0; input < _inputs; ++input ) {
     if ( !_in_cred_buffer[input].empty( ) ) {
-      c = _in_cred_buffer[input].front( );
+      Credit *c = _in_cred_buffer[input].front( );
       _in_cred_buffer[input].pop( );
-    } else {
-      c = 0;
+      _input_credits[input]->Send( c );
     }
-
-    _input_credits[input]->Send( c );
   }
 }
 

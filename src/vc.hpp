@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class VC : public Module {
 public:
   enum eVCState { state_min = 0, idle = state_min, routing, vc_alloc, active, 
-		  vc_spec, vc_spec_grant, state_max = vc_spec_grant };
+		  state_max = active };
   struct state_info_t {
     int cycles;
   };
@@ -80,6 +80,9 @@ private:
 
   int _expected_pid;
 
+  int _last_id;
+  int _last_pid;
+
 public:
   
   VC( const Configuration& config, int outputs,
@@ -87,7 +90,11 @@ public:
   ~VC();
 
   bool AddFlit( Flit *f );
-  Flit *FrontFlit( );
+  inline Flit *FrontFlit( ) const
+  {
+    return _buffer.empty() ? NULL : _buffer.front();
+  }
+  
   Flit *RemoveFlit( );
   
   

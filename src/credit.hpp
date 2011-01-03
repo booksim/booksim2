@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -31,23 +31,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _CREDIT_HPP_
 #define _CREDIT_HPP_
 
-#include <vector>
+#include <set>
 #include <stack>
 
 class Credit {
 
 public:
 
-  vector<int> vc;
-  int  vc_cnt;
+  set<int> vc;
+
+  // these are only used by the event router
   bool head, tail;
   int  id;
-  //where this credit should be processed
-  int dest_router;
 
-  void Reset(int max_vcs = 1);
+  void Reset();
   
-  static Credit * New(int max_vcs = 1);
+  static Credit * New();
   void Free();
   static void FreeAll();
 
@@ -56,7 +55,7 @@ private:
   static stack<Credit *> _all;
   static stack<Credit *> _free;
 
-  Credit( int max_vcs = 1 );
+  Credit();
   ~Credit() {}
 
 };

@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -65,6 +65,7 @@ void SingleNet::_BuildNet( const Configuration &config )
 
   _routers[0] = Router::NewRouter( config, this, "router", 0, 
 				   _sources, _dests );
+  _timed_modules.push_back(_routers[0]);
 
   for ( i = 0; i < _sources; ++i ) {
     _routers[0]->AddInputChannel( _inject[i], _inject_cred[i] );

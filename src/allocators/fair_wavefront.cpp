@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -50,15 +50,10 @@ DenseAllocator( parent, name, inputs, outputs ),
 void FairWavefront::AddRequest( int in, int out, int label, 
 				int in_pri, int out_pri )
 {
-  // count unique requests
-  sRequest req;
-  bool overwrite = ReadRequest(req, in, out);
-  if(!overwrite || (req.in_pri < in_pri)) {
-    _num_requests++;
-    _last_in = in;
-    _last_out = out;
-  }
   DenseAllocator::AddRequest(in, out, label, in_pri, out_pri);
+  _num_requests++;
+  _last_in = in;
+  _last_out = out;
 }
 
 void FairWavefront::Allocate( )

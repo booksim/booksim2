@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -53,19 +53,16 @@ void RoundRobinArbiter::PrintState() const  {
 void RoundRobinArbiter::UpdateState() {
   // update priority matrix using last grant
   if ( _selected > -1 ) 
-    _pointer = _selected ;
+    _pointer = ( _selected + 1 ) % _size ;
 }
 
 void RoundRobinArbiter::AddRequest( int input, int id, int pri )
 {
   if(!_request[input].valid || (_request[input].pri < pri)) {
-    if((_num_reqs == 0) || (_highest_pri < pri)) {
+    if((_num_reqs == 0) || 
+       Supersedes(input, pri, _best_input, _highest_pri, _pointer,_size )) {
       _highest_pri = pri;
       _best_input = input;
-    } else if(_highest_pri == pri) {
-      int a = (input <= _pointer) ? (input + _input_size) : input;
-      int b = (_best_input <= _pointer) ? (_best_input + _input_size) : _best_input;
-      _best_input = (a < b) ? input : _best_input;
     }
   }
   Arbiter::AddRequest(input, id, pri);

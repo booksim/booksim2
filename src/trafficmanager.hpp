@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -53,9 +53,9 @@ class PacketReplyInfo;
 
 class TrafficManager : public Module {
 protected:
-  unsigned int _sources;
-  unsigned int _dests;
-  unsigned int _routers;
+  int _sources;
+  int _dests;
+  int _routers;
 
   vector<BSNetwork *> _net;
   vector<vector<Router *> > _router_map;
@@ -64,11 +64,11 @@ protected:
 
   int    _classes;
 
-  double _load;
+  vector<double> _load;
 
-  int    _packet_size;
+  vector<int>    _packet_size;
 
-  /*false means all packet types are the same length "gConstantsize"
+  /*false means all packet types are the same length "const_flits_per_packet"
    *All packets uses all VCS
    *packet types are generated randomly, essentially making it only 1 type
    *of packet in the network
@@ -77,15 +77,21 @@ protected:
    *as a response to the requests, packets are now difference length, correspond
    *to "read_request_size" etc. 
    */
-  bool _use_read_write;
+  vector<int> _use_read_write;
 
-  int _read_request_size;
-  int _read_reply_size;
-  int _write_request_size;
-  int _write_reply_size;
+  vector<int> _read_request_size;
+  vector<int> _read_reply_size;
+  vector<int> _write_request_size;
+  vector<int> _write_reply_size;
 
-  tTrafficFunction  _traffic_function;
-  tInjectionProcess _injection_process;
+  vector<string> _traffic;
+
+  vector<int> _class_priority;
+
+  map<int, pair<int, vector<int> > > _class_prio_map;
+
+  vector<tTrafficFunction> _traffic_function;
+  vector<tInjectionProcess> _injection_process;
 
   // ============ Message priorities ============ 
 
@@ -96,27 +102,36 @@ protected:
   // ============ Injection VC states  ============ 
 
   vector<vector<BufferState *> > _buf_states;
+  vector<vector<vector<int> > > _last_vc;
 
-  bool _use_xyyx;
+  // ============ Routing ============ 
+
+  tRoutingFunction _rf;
+
   // ============ Injection queues ============ 
 
-  int          _voqing;
   vector<vector<int> > _qtime;
   vector<vector<bool> > _qdrained;
-  vector<vector<vector<list<Flit *> > > > _partial_packets;
+  vector<vector<list<Flit *> > > _partial_packets;
 
   vector<map<int, Flit *> > _total_in_flight_flits;
   vector<map<int, Flit *> > _measured_in_flight_flits;
   vector<map<int, Flit *> > _retired_packets;
   bool _empty_network;
 
-  // ============ sub-networks and deadlock ==========
+  // ============ physical sub-networks ==========
 
-  int _duplicate_networks;
+  int _subnets;
+
+  vector<int> _subnet_map;
+
+  // ============ deadlock ==========
+
   int _deadlock_timer;
   int _deadlock_warn_timeout;
 
   // ============ batch mode ==========================
+
   vector<int> _packets_sent;
   int _batch_size;
   int _batch_count;
@@ -130,6 +145,7 @@ protected:
   int _last_pid;
 
   // ============voq mode =============================
+
   vector<vector<list<Flit*> > > _voq;
   vector<list<int> > _active_list;
   vector<vector<bool> > _active_vc;
@@ -163,10 +179,10 @@ protected:
   Stats * _batch_time;
   Stats * _overall_batch_time;
 
-  vector<unsigned int> _injected_flow;
-  vector<unsigned int> _ejected_flow;
-  vector<unsigned int> _received_flow;
-  vector<unsigned int> _sent_flow;
+  vector<int> _injected_flow;
+  vector<int> _ejected_flow;
+  vector<int> _received_flow;
+  vector<int> _sent_flow;
 
   vector<int> _slowest_flit;
 
@@ -195,23 +211,27 @@ protected:
 
   int   _include_queuing;
 
-  double _latency_thres;
-  double _stopping_threshold;
-  double _acc_stopping_threshold;
-  double _warmup_threshold;
+  vector<int> _measure_stats;
+
+  vector<double> _latency_thres;
+
+  vector<double> _stopping_threshold;
+  vector<double> _acc_stopping_threshold;
+
+  vector<double> _warmup_threshold;
+  vector<double> _acc_warmup_threshold;
 
   int _cur_id;
   int _cur_pid;
+  int _cur_tid;
   int _time;
-
-  tRoutingFunction  _routing_function;
 
   set<int> _flits_to_watch;
   set<int> _packets_to_watch;
+  set<int> _transactions_to_watch;
 
   bool _print_csv_results;
   bool _print_vc_stats;
-  string _traffic;
   bool _drain_measured_only;
 
   //flits to watch
@@ -222,8 +242,7 @@ protected:
 protected:
   virtual void _RetireFlit( Flit *f, int dest );
 
-  void _NormalInject();
-  void _BatchInject();
+  void _Inject();
   void _Step( );
 
   bool _PacketsOutstanding( ) const;
@@ -236,8 +255,6 @@ protected:
   int  _ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const;
 
   virtual bool _SingleSim( );
-
-  int DivisionAlgorithm(int packet_type);
 
   void _DisplayRemaining( ) const;
   

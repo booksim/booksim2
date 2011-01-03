@@ -7,10 +7,7 @@
 #include "singlenet.hpp"
 #include "kncube.hpp"
 #include "fly.hpp"
-#include "isolated_mesh.hpp"
-#include "cmo.hpp"
 #include "cmesh.hpp"
-#include "cmeshx2.hpp"
 #include "flatfly_onchip.hpp"
 #include "qtree.hpp"
 #include "tree4.hpp"
@@ -35,17 +32,19 @@ BooksimInterface::BooksimInterface(string name, SystemConfig* sysCon, Fwk::Log* 
   Interface(name,sysCon,log,id){
 
 
-  InitializeRoutingMap( );
-  InitializeTrafficMap( );
-  InitializeInjectionMap( );
 
   booksimconfig = new BookSimConfig();
   booksimconfig->ParseFile("/home/qtedq/bsuptodate/branches/systemsim_interface/testconfig");
-  booksimconfig->Assign("limit",(unsigned int)sysCon->nCores);
+  booksimconfig->Assign("limit",(int)sysCon->nCores);
+
+  InitializeRoutingMap(*booksimconfig );
+  InitializeTrafficMap(*booksimconfig );
+  InitializeInjectionMap(*booksimconfig );
+
 
   string topo;
 
-  booksimconfig->GetStr( "topology", topo );
+  topo = booksimconfig->GetStr( "topology");
   int networks = booksimconfig->GetInt("physical_subnetworks");
   /*To include a new network, must register the network here
    *add an else if statement with the name of the network
@@ -63,18 +62,12 @@ BooksimInterface::BooksimInterface(string name, SystemConfig* sysCon, Fwk::Log* 
     } else if ( topo == "cmesh" ) {
       CMesh::RegisterRoutingFunctions() ;
       net[i] = new CMesh( *booksimconfig, name.str() );
-    } else if ( topo == "cmeshx2" ) {
-      CMeshX2::RegisterRoutingFunctions() ;
-      net[i] = new CMeshX2( *booksimconfig, name.str() );
-    } else if ( topo == "fly" ) {
+    }else if ( topo == "fly" ) {
       KNFly::RegisterRoutingFunctions() ;
       net[i] = new KNFly( *booksimconfig, name.str() );
     } else if ( topo == "single" ) {
       SingleNet::RegisterRoutingFunctions() ;
       net[i] = new SingleNet( *booksimconfig, name.str() );
-    } else if ( topo == "isolated_mesh" ) {
-      IsolatedMesh::RegisterRoutingFunctions() ;
-      net[i] = new IsolatedMesh( *booksimconfig, name.str() );
     } else if ( topo == "qtree" ) {
       QTree::RegisterRoutingFunctions() ;
       net[i] = new QTree( *booksimconfig, name.str() );
@@ -87,9 +80,6 @@ BooksimInterface::BooksimInterface(string name, SystemConfig* sysCon, Fwk::Log* 
     } else if ( topo == "flatfly" ) {
       FlatFlyOnChip::RegisterRoutingFunctions() ;
       net[i] = new FlatFlyOnChip( *booksimconfig, name.str() );
-    } else if ( topo == "cmo"){
-      CMO::RegisterRoutingFunctions() ;
-      net[i] = new CMO(*booksimconfig, name.str());
     } else if ( topo == "anynet"){
       AnyNet::RegisterRoutingFunctions() ;
       net[i] = new AnyNet(*booksimconfig, name.str());

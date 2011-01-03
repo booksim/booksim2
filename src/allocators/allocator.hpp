@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -72,6 +72,10 @@ public:
 
   int OutputAssigned( int in ) const;
   int InputAssigned( int out ) const;
+
+  virtual bool OutputHasRequests( int out ) const = 0;
+  virtual bool InputHasRequests( int in ) const = 0;
+
   virtual void PrintRequests( ostream * os = NULL ) const = 0;
   void PrintGrants( ostream * os = NULL ) const;
 
@@ -103,7 +107,11 @@ public:
 		   int in_pri = 0, int out_pri = 0 );
   void RemoveRequest( int in, int out, int label = 1 );
 
+  bool OutputHasRequests( int out ) const;
+  bool InputHasRequests( int in ) const;
+
   void PrintRequests( ostream * os = NULL ) const;
+
 };
 
 //==================================================
@@ -132,7 +140,11 @@ public:
 		   int in_pri = 0, int out_pri = 0 );
   void RemoveRequest( int in, int out, int label = 1 );
   
+  bool OutputHasRequests( int out ) const;
+  bool InputHasRequests( int in ) const;
+
   void PrintRequests( ostream * os = NULL ) const;
+
 };
 
 #endif

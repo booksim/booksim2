@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <vector>
 
-#include "module.hpp"
+#include "timed_module.hpp"
 #include "flit.hpp"
 #include "credit.hpp"
 #include "flitchannel.hpp"
@@ -43,7 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 typedef Channel<Credit> CreditChannel;
 
-class Router : public Module {
+class Router : public TimedModule {
 
 protected:
   int _id;
@@ -66,8 +66,7 @@ protected:
   vector<CreditChannel *> _output_credits;
   vector<bool>            _channel_faults;
 
-  Credit *_NewCredit( int vcs = 1 );
-  void    _RetireCredit( Credit *c );
+  virtual void _InternalStep() = 0;
 
 public:
   Router( const Configuration& config,
@@ -81,13 +80,8 @@ public:
   void AddInputChannel( FlitChannel *channel, CreditChannel *backchannel );
   void AddOutputChannel( FlitChannel *channel, CreditChannel *backchannel );
  
-  void Evaluate( );
-  inline void Update( ) {
-    WriteOutputs( );
-  }
-
   virtual void ReadInputs( ) = 0;
-  virtual void InternalStep( ) = 0;
+  virtual void Evaluate( );
   virtual void WriteOutputs( ) = 0;
 
   void OutChannelFault( int c, bool fault = true );

@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -48,8 +48,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //////////////////Sub router types//////////////////////
 #include "iq_router.hpp"
-#include "iq_router_combined.hpp"
-#include "iq_router_split.hpp"
 #include "event_router.hpp"
 #include "chaos_router.hpp"
 ///////////////////////////////////////////////////////
@@ -57,7 +55,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Router::Router( const Configuration& config,
 		Module *parent, const string & name, int id,
 		int inputs, int outputs ) :
-  Module( parent, name ),
+  TimedModule( parent, name ),
   _id( id ),
   _inputs( inputs ),
   _outputs( outputs )
@@ -69,16 +67,6 @@ Router::Router( const Configuration& config,
   _output_speedup   = config.GetInt( "output_speedup" );
   _internal_speedup = config.GetFloat( "internal_speedup" );
   _partial_internal_cycles = 0.0;
-}
-
-Credit *Router::_NewCredit( int vcs )
-{
-  return Credit::New(vcs);
-}
-
-void Router::_RetireCredit( Credit *c )
-{
-  c->Free();
 }
 
 void Router::AddInputChannel( FlitChannel *channel, CreditChannel *backchannel )
@@ -98,10 +86,9 @@ void Router::AddOutputChannel( FlitChannel *channel, CreditChannel *backchannel 
 
 void Router::Evaluate( )
 {
-  ReadInputs( );
   _partial_internal_cycles += _internal_speedup;
   while( _partial_internal_cycles >= 1.0 ) {
-    InternalStep( );
+    _InternalStep( );
     _partial_internal_cycles -= 1.0;
   }
 }
@@ -114,14 +101,14 @@ int Router::GetID( ) const
 
 void Router::OutChannelFault( int c, bool fault )
 {
-  assert( ( c >= 0 ) && ( (unsigned int)c < _channel_faults.size( ) ) );
+  assert( ( c >= 0 ) && ( (size_t)c < _channel_faults.size( ) ) );
 
   _channel_faults[c] = fault;
 }
 
 bool Router::IsFaultyOutput( int c ) const
 {
-  assert( ( c >= 0 ) && ( (unsigned int)c < _channel_faults.size( ) ) );
+  assert( ( c >= 0 ) && ( (size_t)c < _channel_faults.size( ) ) );
 
   return _channel_faults[c];
 }
@@ -132,18 +119,12 @@ Router *Router::NewRouter( const Configuration& config,
 			   int inputs, int outputs )
 {
   Router *r = NULL;
-  string type;
-  string topo;
 
-  config.GetStr( "router", type );
-  config.GetStr( "topology", topo);
+  string type = config.GetStr( "router" );
+  string topo = config.GetStr( "topology" );
 
   if ( type == "iq" ) {
     r = new IQRouter( config, parent, name, id, inputs, outputs );
-  } else if ( type == "iq_combined" ) {
-    r = new IQRouterCombined( config, parent, name, id, inputs, outputs );
-  } else if ( type == "iq_split" ) {
-    r = new IQRouterSplit( config, parent, name, id, inputs, outputs );
   } else if ( type == "event" ) {
     r = new EventRouter( config, parent, name, id, inputs, outputs );
   } else if ( type == "chaos" ) {

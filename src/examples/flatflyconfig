@@ -47,7 +47,7 @@ alloc_iters  = 1;
 
 credit_delay   = 2;
 routing_delay  = 0;
-vc_alloc_delay = 0;
+vc_alloc_delay = 1;
 sw_alloc_delay = 1;
 st_final_delay = 1;
 
@@ -76,7 +76,7 @@ traffic       = uniform;
 // xr, yr specifiies the arayment of clients in a router
 //
 topology = flatfly;
-physical_subnetworks = 1;
+subnets = 1;
 
 c  = 4;
 k  = 4;
@@ -102,7 +102,7 @@ use_read_write = 0;
 
 //for injection mode
 const_flits_per_packet = 10;
-injection_rate = 1.4;
+injection_rate = 0.1;
 
 //for batch mode
 read_request_size=1;

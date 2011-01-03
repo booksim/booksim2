@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -45,7 +45,7 @@ using namespace std ;
 
 Arbiter::Arbiter( Module *parent, const string &name, int size )
   : Module( parent, name ),
-    _input_size(size), _selected(-1), _highest_pri(numeric_limits<int>::min()),
+    _size(size), _selected(-1), _highest_pri(numeric_limits<int>::min()),
     _best_input(-1), _num_reqs(0)
 {
   _request.resize(size);
@@ -55,15 +55,13 @@ Arbiter::Arbiter( Module *parent, const string &name, int size )
 
 void Arbiter::AddRequest( int input, int id, int pri )
 {
-  assert( 0 <= input && input < _input_size ) ;
-  if(!_request[input].valid || (_request[input].pri < pri)) {
-    if(!_request[input].valid) {
-      _num_reqs++ ;
-      _request[input].valid = true ;
-    }
-    _request[input].id = id ;
-    _request[input].pri = pri ;
-  }
+  assert( 0 <= input && input < _size ) ;
+  assert( !_request[input].valid );
+
+  _num_reqs++ ;
+  _request[input].valid = true ;
+  _request[input].id = id ;
+  _request[input].pri = pri ;
 }
 
 int Arbiter::Arbitrate( int* id, int* pri )
@@ -85,7 +83,7 @@ void Arbiter::Clear()
   if(_num_reqs > 0) {
     
     // clear the request vector
-    for ( int i = 0; i < _input_size ; i++ )
+    for ( int i = 0; i < _size ; i++ )
       _request[i].valid = false ;
     _num_reqs = 0 ;
     _selected = -1;

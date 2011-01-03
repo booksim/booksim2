@@ -15,9 +15,9 @@ void configerror(string msg);
 %}
 
 %union {
-  char         *name;
-  unsigned int num;
-  double       fnum;
+  char   *name;
+  int    num;
+  double fnum;
 }
 
 %token <name> STR

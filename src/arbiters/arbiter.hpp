@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -52,7 +52,7 @@ protected:
   } entry_t ;
   
   vector<entry_t> _request ;
-  int  _input_size ;
+  int  _size ;
 
   int  _selected ;
   int _highest_pri;

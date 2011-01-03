@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -105,6 +105,8 @@ class ChaosRouter : public Router {
   void _SendFlits( );
   void _SendCredits( );
 
+  virtual void _InternalStep( );
+
 public:
   ChaosRouter( const Configuration& config,
 	    Module *parent, const string & name, int id,
@@ -113,7 +115,6 @@ public:
   virtual ~ChaosRouter( );
 
   virtual void ReadInputs( );
-  virtual void InternalStep( );
   virtual void WriteOutputs( );
 
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const {return 0;}

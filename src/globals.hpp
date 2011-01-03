@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -47,22 +47,9 @@ extern int gK;
 extern int gN;
 extern int gC;
 
-
-extern int realgk;
-extern int realgn;
-
 extern int gNodes;
 
-
-extern int xrouter;
-extern int yrouter;
-extern int xcount ;
-extern int ycount;
-
 extern bool gTrace;
-
-/*number of flits per packet, set by the configuration file*/
-extern int    gConstPacketSize;
 
 extern std::ostream * gWatchOut;
 

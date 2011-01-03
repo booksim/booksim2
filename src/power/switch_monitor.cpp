@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -32,35 +32,39 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "flit.hpp"
 
-SwitchMonitor::SwitchMonitor( int inputs, int outputs ) {
-  _cycles  = 0 ;
-  _inputs  = inputs ;
-  _outputs = outputs ;
-  const int n = (inputs+1) * (outputs+1) * Flit::NUM_FLIT_TYPES ;
-  _event.resize(n, 0) ;
+SwitchMonitor::SwitchMonitor( int inputs, int outputs, int classes )
+: _cycles(0), _inputs(inputs), _outputs(outputs), _classes(classes) {
+  _event.resize(inputs * outputs * classes, 0) ;
 }
 
-int SwitchMonitor::index( int input, int output, int flitType ) const {
-  return flitType + Flit::NUM_FLIT_TYPES * ( output + _outputs * input ) ;
+int SwitchMonitor::index( int input, int output, int cl ) const {
+  assert((input >= 0) && (input < _inputs));
+  assert((output >= 0) && (output < _outputs));
+  assert((cl >= 0) && (cl < _classes));
+  return cl + _classes * ( output + _outputs * input ) ;
 }
 
 void SwitchMonitor::cycle() {
   _cycles++ ;
 }
 
-void SwitchMonitor::traversal( int input, int output, Flit* flit ) {
-  _event[ index( input, output, flit->type) ]++ ;
+void SwitchMonitor::traversal( int input, int output, Flit const * f ) {
+  _event[ index( input, output, f->cl) ]++ ;
 }
 
-ostream& operator<<( ostream& os, const SwitchMonitor& obj ) {
-  for ( int i = 0 ; i < obj._inputs ; i++ ) {
-    for ( int o = 0 ; o < obj._outputs ; o++) {
+void SwitchMonitor::display(ostream & os) const {
+  for ( int i = 0 ; i < _inputs ; i++ ) {
+    for ( int o = 0 ; o < _outputs ; o++) {
       os << "[" << i << " -> " << o << "] " ;
-      for ( int f = 0 ; f < Flit::NUM_FLIT_TYPES ; f++ ) {
-	os << f << ":" << obj._event[ obj.index(i,o,f)] << " " ;
+      for ( int c = 0 ; c < _classes ; c++ ) {
+	os << c << ":" << _event[index(i,o,c)] << " " ;
       }
       os << endl ;
     }
   }
+}
+
+ostream & operator<<( ostream & os, SwitchMonitor const & obj ) {
+  obj.display(os);
   return os ;
 }

@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -52,25 +52,23 @@ class BufferState : public Module {
   vector<bool> _in_use;
   vector<bool> _tail_sent;
   vector<int> _cur_occupied;
-
-  vector<int> _vc_range_begin;
-  vector<int> _vc_range_size;
-  vector<int> _vc_sel_last;
+  vector<int> _last_id;
+  vector<int> _last_pid;
 
 public:
 
   BufferState( const Configuration& config, 
 	       Module *parent, const string& name );
 
-  void ProcessCredit( Credit *c );
-  void SendingFlit( Flit *f );
+  void ProcessCredit( Credit const * c );
+  void SendingFlit( Flit const * f );
 
   void TakeBuffer( int vc = 0 );
 
   bool IsFullFor( int vc = 0 ) const;
+  bool IsEmptyFor( int vc = 0 ) const;
   bool IsAvailableFor( int vc = 0 ) const;
-  int FindAvailable( Flit::FlitType type, bool x_then_y);
-  int FindAvailable( Flit::FlitType type = Flit::ANY_TYPE );
+  bool HasCreditFor( int vc = 0 ) const;
   int Size (int vc = 0) const;
   void Display( ) const;
 };

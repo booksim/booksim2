@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -32,14 +32,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _POWER_MODULE_HPP_
 
 #include <map>
+
 #include "module.hpp"
 #include "network.hpp"
 #include "config_utils.hpp"
 #include "trafficmanager.hpp"
 #include "flitchannel.hpp"
-#include "iq_router_base.hpp"
-#include "flit.hpp"
-
+#include "switch_monitor.hpp"
+#include "buffer_monitor.hpp"
 
 struct wire{
   double L;
@@ -54,6 +54,7 @@ protected:
   //network undersimulation
   BSNetwork * net;
   TrafficManager* sim;
+  int classes;
   //all channels are this width
   double channel_width;
   //resimulate all with channel_width decremented by channel_sweep until 0
@@ -67,7 +68,7 @@ protected:
   double numVC;
 
   //store the property of wires based on length
-  map<double, wire*> wire_map;
+  map<double, wire> wire_map;
 
   //////////////////////////////////Constants/////////////////////////////
   //wire length in (mm)
@@ -150,7 +151,7 @@ protected:
 
   //channels
   void calcChannel(const FlitChannel * f);
-  wire* wireOptimize(double l);
+  wire const & wireOptimize(double l);
   double powerRepeatedWire(double L, double K, double M, double N);
   double powerRepeatedWireLeak (double K, double M, double N);
   double powerWireClk (double M, double W);

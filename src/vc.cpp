@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <limits>
+#include <sstream>
 
 #include "globals.hpp"
 #include "booksim.hpp"
@@ -46,13 +47,9 @@ int VC::total_cycles = 0;
 const char * const VC::VCSTATE[] = {"idle",
 				    "routing",
 				    "vc_alloc",
-				    "active",
-				    "vc_spec",
-				    "vc_spec_grant"};
+				    "active"};
 
 VC::state_info_t VC::state_info[] = {{0},
-				     {0},
-				     {0},
 				     {0},
 				     {0},
 				     {0}};
@@ -63,14 +60,13 @@ VC::VC( const Configuration& config, int outputs,
   : Module( parent, name ), 
     _state(idle), _state_time(0), _out_port(-1), _out_vc(-1), _total_cycles(0),
     _vc_alloc_cycles(0), _active_cycles(0), _idle_cycles(0), _routing_cycles(0),
-    _pri(0), _watched(false), _expected_pid(-1)
+    _pri(0), _watched(false), _expected_pid(-1), _last_id(-1), _last_pid(-1)
 {
   _size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
 
   _route_set = new OutputSet( );
 
-  string priority;
-  config.GetStr( "priority", priority );
+  string priority = config.GetStr( "priority" );
   if ( priority == "local_age" ) {
     _pri_type = local_age_based;
   } else if ( priority == "queue_length" ) {
@@ -97,7 +93,10 @@ bool VC::AddFlit( Flit *f )
 
   if(_expected_pid >= 0) {
     if(f->pid != _expected_pid) {
-      Error("Received flit with unexpected packet ID.");
+      ostringstream err;
+      err << "Received flit " << f->id << " with unexpected packet ID: " << f->pid 
+	  << " (expected: " << _expected_pid << ")";
+      Error(err.str());
       return false;
     } else if(f->tail) {
       _expected_pid = -1;
@@ -125,17 +124,14 @@ bool VC::AddFlit( Flit *f )
   return true;
 }
 
-Flit *VC::FrontFlit( )
-{
-  return _buffer.empty() ? NULL : _buffer.front();
-}
-
 Flit *VC::RemoveFlit( )
 {
   Flit *f = NULL;
   if ( !_buffer.empty( ) ) {
     f = _buffer.front( );
     _buffer.pop_front( );
+    _last_id = f->id;
+    _last_pid = f->pid;
     UpdatePriority();
   } else {
     Error("Trying to remove flit from empty buffer.");
@@ -154,21 +150,8 @@ void VC::SetState( eVCState s )
 		<< "Changing state from " << VC::VCSTATE[_state]
 		<< " to " << VC::VCSTATE[s] << "." << endl;
   
-  // do not reset state time for speculation-related pseudo state transitions
-  if(((_state == vc_alloc) && (s == vc_spec)) ||
-     ((_state == vc_spec) && (s == vc_spec_grant))) {
-    assert(f);
-    if(f->watch)
-      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		  << "Keeping state time at " << _state_time << "." << endl;
-  } else {
-    if(f && f->watch)
-      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		  << "Resetting state time." << endl;
-    _state_time = 0;
-  }
-  
   _state = s;
+  _state_time = 0;
 }
 
 const OutputSet *VC::GetRouteSet( ) const
@@ -214,8 +197,10 @@ void VC::UpdatePriority()
 
 
 void VC::Route( tRoutingFunction rf, const Router* router, const Flit* f, int in_channel )
-{  
+{
   rf( router, f, in_channel, _route_set, false );
+  _out_port = -1;
+  _out_vc = -1;
 }
 
 void VC::AdvanceTime( )
@@ -228,9 +213,7 @@ void VC::AdvanceTime( )
   switch( _state ) {
   case idle          : _idle_cycles++; break;
   case active        : _active_cycles++; break;
-  case vc_spec_grant : _active_cycles++; break;
   case vc_alloc      : _vc_alloc_cycles++; break;
-  case vc_spec       : _vc_alloc_cycles++; break;
   case routing       : _routing_cycles++; break;
   }
   state_info[_state].cycles++;
@@ -254,7 +237,7 @@ void VC::Display( ) const
   if ( _state != VC::idle ) {
     cout << FullName() << ": "
 	 << " state: " << VCSTATE[_state];
-    if((_state == VC::vc_spec_grant) || (_state == VC::active)) {
+    if(_state == VC::active) {
       cout << " out_port: " << _out_port
 	   << " out_vc: " << _out_vc;
     }

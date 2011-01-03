@@ -36,7 +36,7 @@ DblConst ({Digit}*\.)?{Digit}+{Exponent}?
 
 [A-Za-z_\-/][A-Za-z0-9_\-/\.\+]* { configlval.name = strdup( yytext ); return STR; }
 
-\{[A-Za-z0-9_\-]+(\,[A-Za-z0-9_\-]+)*\} { configlval.name = strdup( yytext ); return STR; }
+\{[A-Za-z0-9_\-\.]+(\,[A-Za-z0-9_\-\.]+)*\} { configlval.name = strdup( yytext ); return STR; }
 
 -?[0-9]+     { configlval.num = strtoul( yytext, 0, 10 ); return NUM; }
 

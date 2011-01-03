@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -136,8 +136,7 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
   
 
 //   //are we using reservation?
-//   string fn;
-//   config.GetStr( "routing_function", fn, "none" );
+//   string fn = config.GetStr( "routing_function", "none" );
 //   if(fn.compare("res")==0){
 //     cout<<"USING RESERVATION\n";
 //     use_reservation = true;
@@ -237,6 +236,7 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
 
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
 					node, _k, _k );
+    _timed_modules.push_back(_routers[node]);
 
 #ifdef DEBUG_DRAGONFLYNEW
     cout << " ======== router node : " << node << " ======== " << " router_" << router_name.str() << " router node # : " << node<< endl;
@@ -456,6 +456,11 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
 		       OutputSet *outputs, bool inject )
 {
   outputs->Clear( );
+
+  if(inject) {
+    outputs->AddRange(0, 0, 0);
+    return;
+  }
 
   int dest  = f->dest;
   int rID =  r->GetID(); 

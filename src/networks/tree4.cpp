@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -115,9 +115,10 @@ void Tree4::_BuildNet( const Configuration& config )
       name.str("");
       name << "router_" << h << "_" << pos;
       id = h * powi( _k, _n-1 ) + pos;
-      _Router( h, pos ) = Router::NewRouter( config, this,
-					     name.str( ),
-					     id, degree, degree );
+      Router * r = Router::NewRouter( config, this, name.str( ),
+				      id, degree, degree );
+      _Router( h, pos ) = r;
+      _timed_modules.push_back(r);
     }
   }
 

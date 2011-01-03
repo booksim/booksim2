@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -55,21 +55,26 @@ class Router ;
 
 class FlitChannel : public Channel<Flit> {
 public:
-  FlitChannel( int cycles = 1 );
-  ~FlitChannel();
+  FlitChannel(Module * parent, string const & name, int classes);
 
-  void SetSource( Router* router ) ;
-  inline int GetSource() const {return _routerSource;}
-  void SetSink( Router* router ) ;
-  inline int GetSink() const {return _routerSink;}
+  void SetSource(Router * router) ;
+  inline int const & GetSource() const {
+    return _routerSource;
+  }
+  void SetSink(Router * router) ;
+  inline int const & GetSink() const {
+    return _routerSink;
+  }
 
-  inline const vector<int> & GetActivity() const {return _active;}
-
-  // Check for flit on input. Used for tracking channel use
-  bool InUse() const;
+  inline vector<int> const & GetActivity() const {
+    return _active;
+  }
 
   // Send flit 
-  virtual void Send( Flit* flit );
+  virtual void Send(Flit * flit);
+
+  virtual void ReadInputs();
+  virtual void WriteOutputs();
 
 private:
   
@@ -79,14 +84,14 @@ private:
   //
   ////////////////////////////////////////
 
-  int _routerSource ;
-  int _routerSink ;
+  int _routerSource;
+  int _routerSink;
   
 
   // Statistics for Activity Factors
-  vector<int>  _active;
-  int          _idle;
-
+  vector<int> _active;
+  int _idle;
+  int _classes;
 };
 
 #endif

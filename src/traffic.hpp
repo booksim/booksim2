@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -35,11 +35,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 typedef int (*tTrafficFunction)( int, int );
 
-void InitializeTrafficMap( );
+void InitializeTrafficMap( const Configuration & config );
 
 void ResetTraffic( );
 void StepTrafficFunctions( );
 
-tTrafficFunction GetTrafficFunction( const Configuration& config );
+extern map<string, tTrafficFunction> gTrafficFunctionMap;
 
 #endif
