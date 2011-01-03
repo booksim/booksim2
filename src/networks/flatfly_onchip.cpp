@@ -656,7 +656,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       } else {
 	out_port =  flatfly_outport_yx(dest, rID);
 	if(out_port >= gC) {
-	  vcBegin -= xy_available_vcs;
+	  vcBegin += xy_available_vcs;
 	}
       }
 
