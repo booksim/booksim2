@@ -12,8 +12,8 @@ SSTrafficManager::SSTrafficManager(  const Configuration &config, const vector<B
   : TrafficManager(config, net)
 {
 
+  vc_classes=0;
   nodes.resize(_limit);
-  vc_classes =0;
   vc_ptrs = new int[ _sources ];
   memset(vc_ptrs,0, _sources *sizeof(int));
   flit_size = config.GetInt("channel_width");
@@ -86,9 +86,11 @@ void SSTrafficManager::DisplayStats(){
       }
       *_stats_out << "];" << endl;
       *_stats_out << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
+      *_stats_out << "network_time = "<<_network_time<<";"<<endl;
+      *_stats_out << "system_time = "<<_time<<";"<<endl;
     }
 	
-  
+    
   }
 
 }
@@ -102,8 +104,6 @@ void SSTrafficManager::_RetireFlit( Flit *f, int dest )
   if(f){
     if(f->tail){
       SS_Network::Message* msg = packet_payload[f->pid].ptr();
-      //printf("%ld Retiring packet %d from  %d to %d on vc %d\n",_time, msg->Id ,f->src, f->dest, msg->VirtualChannel);
-
       assert(msg);
       msg->DeliveryTime = Time(_time);
       nodes[dest]->messageIs(msg,(const Link*)1 /*bypass null check*/);
@@ -123,11 +123,13 @@ void SSTrafficManager::_GeneratePacket( int source, int stype,
     return ;
   }
 
+  //read the message, the argument should be which vc.
   SS_Network::Message* msg = nodes[source]->message(-1);
 
 
   Flit::FlitType packet_type = Flit::ANY_TYPE;
-  int size =ceil(float(msg->Size*8)/float(channel_width));/*Size is in bytes, channel width is in bits*/
+  /*Size is in bytes, channel width is in bits*/
+  int size =ceil(float(msg->Size*8)/float(channel_width));
 
   int ttime = time;
   int packet_destination=msg->Destination->id();
@@ -236,7 +238,7 @@ void SSTrafficManager::_GeneratePacket( int source, int stype,
 
 void SSTrafficManager::SSInject(){
   
-  for ( int input = 0; input < _sources; ++input ) {
+  for ( int input = 0; input < _limit; ++input ) {
     for ( int c = 0; c < _classes; ++c ) {
       // Potentially generate packets for any (input,class)
       // that is currently empty
@@ -260,14 +262,8 @@ void SSTrafficManager::_Step(int t)
   for(int c = 0; c < _classes; ++c) {
     flits_in_flight |= !_total_in_flight_flits[c].empty();
   }
-  /*
-  if(flits_in_flight && (_deadlock_timer++ >= _deadlock_warn_timeout)){
-    _deadlock_timer = 0;
-    cout << "WARNING: Possible network deadlock.\n";
-  }
-  */
 
- for ( int source = 0; source < _sources; ++source ) {
+ for ( int source = 0; source < _limit; ++source ) {
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {
       Credit * const c = _net[subnet]->ReadCredit( source );
       if ( c ) {
@@ -279,7 +275,7 @@ void SSTrafficManager::_Step(int t)
  vector<map<int, Flit *> > flits(_subnets);
   
   for ( int subnet = 0; subnet < _subnets; ++subnet ) {
-    for ( int dest = 0; dest < _dests; ++dest ) {
+    for ( int dest = 0; dest < _limit; ++dest ) {
       Flit * const f = _net[subnet]->ReadFlit( dest );
       if ( f ) {
 	if(f->watch) {
@@ -303,7 +299,7 @@ void SSTrafficManager::_Step(int t)
 
   SSInject();
 
-   for(int source = 0; source < _sources; ++source) {
+  for(int source = 0; source < _limit; ++source) {
     Flit * f = NULL;
     for(map<int, pair<int, vector<int> > >::reverse_iterator iter = _class_prio_map.rbegin();
 	iter != _class_prio_map.rend();
@@ -400,7 +396,7 @@ void SSTrafficManager::_Step(int t)
     }
   }
   for(int subnet = 0; subnet < _subnets; ++subnet) {
-    for(int dest = 0; dest < _dests; ++dest) {
+    for(int dest = 0; dest < _limit; ++dest) {
       map<int, Flit *>::const_iterator iter = flits[subnet].find(dest);
       if(iter != flits[subnet].end()) {
 	Flit * const & f = iter->second;

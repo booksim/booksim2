@@ -20,18 +20,19 @@
 
 //a booksim activity is already in the event queue
 bool booksim_active = false;
+
 //if inflight>0, booksim_activity needs to be true
 int booksim_inflight = 0;
+
 //indicate message is available from a coreinterface
 vector<int> has_message;
+
 //pointer to the sstrafficmanager, needed by rest of booksim
 extern TrafficManager * trafficManager;
 
 //Perform almost every function of the original main.cpp, initialization of booksim
 BooksimInterface::BooksimInterface(string name, SystemConfig* sysCon, Fwk::Log* log, int id):
   Interface(name,sysCon,log,id){
-
-
 
   booksimconfig = new BookSimConfig();
   booksimconfig->ParseFile("/home/qtedq/bsuptodate/branches/systemsim_interface/testconfig");
@@ -150,10 +151,10 @@ BooksimCoreInterface::BooksimCoreInterface(string name, SystemConfig* sysCon, Fw
 void BooksimCoreInterface::messageIs(SS_Network::Message *msg){
   
  
-  //  if(_log)_log->debugf("network", 1, "%s sending message of type %s id=0x%x to %s", name().c_str(), msg->Type.c_str(), msg->Id, msg->Destination->name().c_str());
+
   msg->Id = generateId();
   msg->SourceTime = parent->now();
-  //printf("%ld Issue packet %d from %s to %s on vc %d\n",msg->SourceTime.value(),msg->Id, msg->Source->name().c_str(), msg->Destination->name().c_str(), msg->VirtualChannel); 
+ 
   //queue the message to send
   _inBuffer.push_back(msg);
   has_message[this->id()]++;
@@ -175,6 +176,8 @@ SS_Network::Message* BooksimCoreInterface::message(int vc) const{
   if(vc==-1){
     return _inBuffer.front().ptr();
   } else {
+    cout<<"Booksim core interface does not differentiate VCs yet\n";
+    assert(false);
     return CoreInterface::message(vc);
   }
 }

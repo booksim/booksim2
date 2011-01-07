@@ -68,7 +68,11 @@ void Stats::Clear( )
 
 double Stats::Average( ) const
 {
-  return _sample_sum / (double)_num_samples;
+  if(_num_samples){
+    return _sample_sum / (double)_num_samples;
+  } else {
+    return 0.0;
+  }
 }
 
 double Stats::Min( ) const
