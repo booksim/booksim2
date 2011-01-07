@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -37,80 +37,92 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //   an integer number of simulator cycles.
 //
 /////
-#ifndef CHANNEL_HPP
-#define CHANNEL_HPP
+#ifndef _CHANNEL_HPP
+#define _CHANNEL_HPP
 
 #include <queue>
+#include <cassert>
+
+#include "globals.hpp"
+#include "module.hpp"
+#include "timed_module.hpp"
 
 using namespace std;
 
-template<class T>
-class Channel {
+template<typename T>
+class Channel : public TimedModule {
 public:
-  Channel( int cycles = 1 );
+  Channel(Module * parent, string const & name);
+  virtual ~Channel() {}
 
   // Physical Parameters
-  void SetLatency( int cycles );
-  int GetLatency() { return _delay ; }
+  void SetLatency(int cycles);
+  int GetLatency() const { return _delay ; }
   
   // Send data 
-  virtual void Send( T* data );
+  virtual void Send(T * data);
   
   // Receive data
-  T* Receive( ); 
-
-  // Peek at data
-  T* Peek( );
+  virtual T * Receive(); 
+  
+  virtual void ReadInputs();
+  virtual void Evaluate() {}
+  virtual void WriteOutputs();
 
 protected:
-  int       _delay;
-  queue<T*> _queue;
+  int _delay;
+  T * _input;
+  T * _output;
+  queue<pair<int, T *> > _wait_queue;
 
 };
 
-template<class T>
-Channel<T>::Channel( int cycles ) {
-  SetLatency(cycles);
+template<typename T>
+Channel<T>::Channel(Module * parent, string const & name)
+  : TimedModule(parent, name), _delay(1), _input(0), _output(0) {
 }
 
-template<class T>
-void Channel<T>::SetLatency( int cycles ) {
-
+template<typename T>
+void Channel<T>::SetLatency(int cycles) {
+  if(!cycles) {
+    Error("Channel must have positive delay.");
+  }
   _delay = cycles ;
-  while ( !_queue.empty() )
-    _queue.pop( );
-  for (int i = 0; i < _delay; i++)
-    _queue.push(0);
 }
 
-template<class T>
-void Channel<T>::Send( T* data ) {
-
-  while ( (_queue.size() > (unsigned int)_delay) && (_queue.front() == 0) )
-    _queue.pop( );
-
-  _queue.push(data);
-
+template<typename T>
+void Channel<T>::Send(T * data) {
+  _input = data;
 }
 
-template<class T>
-T* Channel<T>::Receive() {
-
-  if ( _queue.empty( ) )
-    return 0;
-
-  T* data = _queue.front();
-  _queue.pop();
-  return data;
+template<typename T>
+T * Channel<T>::Receive() {
+  return _output;
 }
 
-template<class T>
-T* Channel<T>::Peek( ) 
-{
-  if ( _queue.empty() )
-    return 0;
+template<typename T>
+void Channel<T>::ReadInputs() {
+  if(_input) {
+    _wait_queue.push(make_pair(GetSimTime() + _delay - 1, _input));
+    _input = 0;
+  }
+}
 
-  return _queue.front( );
+template<typename T>
+void Channel<T>::WriteOutputs() {
+  _output = 0;
+  if(_wait_queue.empty()) {
+    return;
+  }
+  pair<int, T *> const & item = _wait_queue.front();
+  int const & time = item.first;
+  if(GetSimTime() < time) {
+    return;
+  }
+  assert(GetSimTime() == time);
+  _wait_queue.pop();
+  _output = item.second;
+  assert(_output);
 }
 
 #endif

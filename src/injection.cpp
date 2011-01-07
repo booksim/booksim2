@@ -1,7 +1,7 @@
 // $Id: injection.cpp 1969 2010-05-10 11:09:22Z dub $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -32,40 +32,47 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *Class of injection methods, bernouli and on_off
  *
- *The rate is packet rate not flit rate. Each time a packet is generated
- *gConstPacketSize number of flits are generated
+ *The rate is packet rate not flit rate.
+ *
  */
 
 #include "booksim.hpp"
 #include <map>
-#include <assert.h>
+#include <cassert>
 
 #include "injection.hpp"
 #include "network.hpp"
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
 
-extern map<string, tInjectionProcess> gInjectionProcessMap;
+map<string, tInjectionProcess> gInjectionProcessMap;
 
 //=============================================================
 
-int bernoulli( int /*source*/, double rate )
+bool bernoulli( int source, double rate )
 {
+
+  assert( ( source >= 0 ) && ( source < gNodes ) );
+  assert( rate <= 1.0 );
+
   //this is the packet injection rate, not flit rate
-  return ( RandomFloat( ) < ( rate ) ) ? 
-    gConstPacketSize : 0;
+  return (RandomFloat( ) < rate);
 }
 
 //=============================================================
 
-int on_off( int source, double rate )
+//burst rates
+static double gBurstAlpha;
+static double gBurstBeta;
+
+static std::vector<int> gNodeStates;
+
+bool on_off( int source, double rate )
 {
-  double r1;
-  bool issue;
-
   assert( ( source >= 0 ) && ( source < gNodes ) );
+  assert( rate <= 1.0 );
 
-  if ( gNodeStates.size() != gNodes ) {
+  if ( gNodeStates.size() != (size_t)gNodes ) {
     gNodeStates.resize(gNodes, 0);
   }
 
@@ -81,49 +88,25 @@ int on_off( int source, double rate )
 
   // generate packet
 
-  issue = false;
   if ( gNodeStates[source] ) { // on?
-    r1 = rate * ( 1.0 + gBurstBeta / gBurstAlpha ) / 
-      (double)gConstPacketSize;
-
-    if ( RandomFloat( ) < r1 ) {
-      issue = true;
-    }
+    double r1 = rate * (gBurstAlpha + gBurstBeta) / gBurstAlpha;
+    return (RandomFloat( ) < r1);
   }
 
-  return issue ? gConstPacketSize : 0;
+  return false;
 }
 
 //=============================================================
 
-void InitializeInjectionMap( )
+void InitializeInjectionMap( const Configuration & config )
 {
+
+  gBurstAlpha = config.GetFloat( "burst_alpha" );
+  gBurstBeta  = config.GetFloat( "burst_beta" );
+
   /* Register injection processes functions here */
 
   gInjectionProcessMap["bernoulli"] = &bernoulli;
   gInjectionProcessMap["on_off"]    = &on_off;
-}
 
-tInjectionProcess GetInjectionProcess( const Configuration& config )
-{
-  map<string, tInjectionProcess>::const_iterator match;
-  tInjectionProcess ip;
-
-  string fn;
-
-  config.GetStr( "injection_process", fn );
-  match = gInjectionProcessMap.find( fn );
-
-  if ( match != gInjectionProcessMap.end( ) ) {
-    ip = match->second;
-  } else {
-    cout << "Error: Undefined injection process '" << fn << "'." << endl;
-    exit(-1);
-  }
-
-  gConstPacketSize = config.GetInt( "const_flits_per_packet" );
-  gBurstAlpha      = config.GetFloat( "burst_alpha" );
-  gBurstBeta       = config.GetFloat( "burst_beta" );
-
-  return ip;
 }

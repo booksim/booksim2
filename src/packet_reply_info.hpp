@@ -1,7 +1,7 @@
-// $Id: iq_router_split.hpp -1   $
+// $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -28,42 +28,35 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _IQ_ROUTER_SPLIT_HPP_
-#define _IQ_ROUTER_SPLIT_HPP_
+#ifndef _PACKET_REPLY_INFO_HPP_
+#define _PACKET_REPLY_INFO_HPP_
 
-#include <string>
+#include <stack>
 
-#include "module.hpp"
-#include "vc.hpp"
-#include "allocator.hpp"
-#include "routefunc.hpp"
-#include "outputset.hpp"
-#include "buffer_state.hpp"
-#include "pipefifo.hpp"
-#include "iq_router_base.hpp"
+#include "flit.hpp"
 
-class IQRouterSplit : public IQRouterBase {
-  
-private:
-
-  Allocator *_sw_allocator;
-  
-  vector<int> _vc_rr_offset;
-  vector<int> _sw_rr_offset;
-  
-  vector<bool> _use_fast_path;
-  
-protected:
-
-  virtual void _Alloc( );
+//register the requests to a node
+class PacketReplyInfo {
 
 public:
-  IQRouterSplit( const Configuration& config,
-	    Module *parent, const string & name, int id,
-	    int inputs, int outputs );
-  
-  virtual ~IQRouterSplit( );
-  
+  int source;
+  int tid;
+  int time;
+  int ttime;
+  bool record;
+  Flit::FlitType type;
+
+  static PacketReplyInfo* New();
+  void Free();
+  static void FreeAll();
+
+private:
+
+  static stack<PacketReplyInfo*> _all;
+  static stack<PacketReplyInfo*> _free;
+
+  PacketReplyInfo() {}
+  ~PacketReplyInfo() {}
 };
 
 #endif

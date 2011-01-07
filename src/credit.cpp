@@ -1,7 +1,7 @@
 // $Id: credit.cpp 1839 2010-03-24 02:03:56Z dub $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -36,17 +36,42 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include "credit.hpp"
 
-Credit::Credit( int max_vcs )
-{
-  vc = new int [max_vcs];
-  vc_cnt = 0;
+stack<Credit *> Credit::_all;
+stack<Credit *> Credit::_free;
 
-  tail = false;
-  id   = -1;
-  dest_router = -1;
+Credit::Credit()
+{
+  Reset();
 }
 
-Credit::~Credit( )
+void Credit::Reset()
 {
-  delete [] vc;
+  vc.clear();
+  head = false;
+  tail = false;
+  id   = -1;
+}
+
+Credit * Credit::New() {
+  Credit * c;
+  if(_free.empty()) {
+    c = new Credit();
+    _all.push(c);
+  } else {
+    c = _free.top();
+    c->Reset();
+    _free.pop();
+  }
+  return c;
+}
+
+void Credit::Free() {
+  _free.push(this);
+}
+
+void Credit::FreeAll() {
+  while(!_all.empty()) {
+    delete _all.top();
+    _all.pop();
+  }
 }

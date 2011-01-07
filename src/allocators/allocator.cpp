@@ -1,7 +1,7 @@
 // $Id: allocator.cpp 2186 2010-06-29 21:15:14Z qtedq $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -30,7 +30,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "booksim.hpp"
 #include <iostream>
-#include <assert.h>
+#include <sstream>
+#include <cassert>
 #include "allocator.hpp"
 
 /////////////////////////////////////////////////////////////////////////
@@ -40,6 +41,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "islip.hpp"
 #include "loa.hpp"
 #include "wavefront.hpp"
+#include "fair_wavefront.hpp"
+#include "prio_wavefront.hpp"
 #include "selalloc.hpp"
 #include "separable_input_first.hpp"
 #include "separable_output_first.hpp"
@@ -54,32 +57,22 @@ Allocator::Allocator( Module *parent, const string& name,
 		      int inputs, int outputs ) :
   Module( parent, name ), _inputs( inputs ), _outputs( outputs )
 {
- 
-  _inmatch  = new int [_inputs];   
-  _outmatch = new int [_outputs];
-  _outmask  = new int [_outputs];
-
-  for ( int out = 0; out < _outputs; ++out ) {
-    _outmask[out] = 0; // active
-  }
+  _inmatch.resize(_inputs, -1);   
+  _outmatch.resize(_outputs, -1);
 }
 
-Allocator::~Allocator( )
+void Allocator::Clear( )
 {
-  delete [] _inmatch;
-  delete [] _outmatch;
-  delete [] _outmask;
+  _inmatch.assign(_inputs, -1);
+  _outmatch.assign(_outputs, -1);
 }
 
-void Allocator::_ClearMatching( )
-{
-  for ( int i = 0; i < _inputs; ++i ) {
-    _inmatch[i] = -1;
-  }
+void Allocator::AddRequest( int in, int out, int label, int in_pri,
+			    int out_pri ) {
 
-  for ( int j = 0; j < _outputs; ++j ) {
-    _outmatch[j] = -1;
-  }
+  assert( ( in >= 0 ) && ( in < _inputs ) );
+  assert( ( out >= 0 ) && ( out < _outputs ) );
+  assert( label >= 0 );
 }
 
 int Allocator::OutputAssigned( int in ) const
@@ -96,10 +89,23 @@ int Allocator::InputAssigned( int out ) const
   return _outmatch[out];
 }
 
-void Allocator::MaskOutput( int out, int mask )
+void Allocator::PrintGrants( ostream * os ) const
 {
-  assert( ( out >= 0 ) && ( out < _outputs ) );
-  _outmask[out] = mask;
+  if(!os) os = &cout;
+
+  *os << "Input grants = [ ";
+  for ( int input = 0; input < _inputs; ++input ) {
+    if(_inmatch[input] >= 0) {
+      *os << input << " -> " << _inmatch[input] << "  ";
+    }
+  }
+  *os << "], output grants = [ ";
+  for ( int output = 0; output < _outputs; ++output ) {
+    if(_outmatch[output] >= 0) {
+      *os << output << " -> " << _outmatch[output] << "  ";
+    }
+  }
+  *os << "]." << endl;
 }
 
 //==================================================
@@ -110,22 +116,14 @@ DenseAllocator::DenseAllocator( Module *parent, const string& name,
 				int inputs, int outputs ) :
   Allocator( parent, name, inputs, outputs )
 {
-  _request  = new sRequest * [_inputs];
+  _request.resize(_inputs);
 
   for ( int i = 0; i < _inputs; ++i ) {
-    _request[i]  = new sRequest [_outputs];  
+    _request[i].resize(_outputs);  
+    for ( int j = 0; j < _outputs; ++j ) {
+      _request[i][j].label = -1;
+    }
   }
-
-  Clear( );
-}
-
-DenseAllocator::~DenseAllocator( )
-{  
-  for ( int i = 0; i < _inputs; ++i ) {
-    delete [] _request[i];
-  }
-  
-  delete [] _request;
 }
 
 void DenseAllocator::Clear( )
@@ -135,57 +133,99 @@ void DenseAllocator::Clear( )
       _request[i][j].label = -1;
     }
   }
+  Allocator::Clear();
 }
 
 int DenseAllocator::ReadRequest( int in, int out ) const
 {
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) );
+  assert( ( in >= 0 ) && ( in < _inputs ) );
+  assert( ( out >= 0 ) && ( out < _outputs ) );
 
   return _request[in][out].label;
 }
 
 bool DenseAllocator::ReadRequest( sRequest &req, int in, int out ) const
 {
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) );
+  assert( ( in >= 0 ) && ( in < _inputs ) );
+  assert( ( out >= 0 ) && ( out < _outputs ) );
 
   req = _request[in][out];
 
-  return ( req.label != -1 );
+  return ( req.label >= 0 );
 }
 
 void DenseAllocator::AddRequest( int in, int out, int label, 
 				 int in_pri, int out_pri )
 {
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) );
-  
-  if((_request[in][out].label == -1) || (_request[in][out].in_pri < in_pri)) {
-    _request[in][out].label   = label;
-    _request[in][out].in_pri  = in_pri;
-    _request[in][out].out_pri = out_pri;
-  }
+  Allocator::AddRequest(in, out, label, in_pri, out_pri);
+  assert( _request[in][out].label == -1 );
+
+  _request[in][out].label   = label;
+  _request[in][out].in_pri  = in_pri;
+  _request[in][out].out_pri = out_pri;
 }
 
 void DenseAllocator::RemoveRequest( int in, int out, int label )
 {
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) ); 
+  assert( ( in >= 0 ) && ( in < _inputs ) );
+  assert( ( out >= 0 ) && ( out < _outputs ) ); 
   
   _request[in][out].label = -1;
+}
+
+bool DenseAllocator::InputHasRequests( int in ) const
+{
+  for(int out = 0; out < _outputs; ++out) {
+    if(_request[in][out].label >= 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool DenseAllocator::OutputHasRequests( int out ) const
+{
+  for(int in = 0; in < _inputs; ++in) {
+    if(_request[in][out].label >= 0) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void DenseAllocator::PrintRequests( ostream * os ) const
 {
   if(!os) os = &cout;
-  *os << "Requests = [ ";
-  for ( int i = 0; i < _inputs; ++i ) {
-    *os << "[ ";
-    for ( int j = 0; j < _outputs; ++j ) {
-      *os << ( _request[i][j].label != -1 ) << " ";
+
+  *os << "Input requests = [ ";
+  for ( int input = 0; input < _inputs; ++input ) {
+    bool print = false;
+    ostringstream ss;
+    for ( int output = 0; output < _outputs; ++output ) {
+      const sRequest & req = _request[input][output];
+      if ( req.label >= 0 ) {
+	print = true;
+	ss << req.port << "@" << req.in_pri << " ";
+      }
     }
-    *os << "] ";
+    if(print) {
+      *os << input << " -> [ " << ss << "]  ";
+    }
+  }
+  *os << "], output requests = [ ";
+  for ( int output = 0; output < _outputs; ++output ) {
+    bool print = false;
+    ostringstream ss;
+    for ( int input = 0; input < _inputs; ++input ) {
+      const sRequest & req = _request[input][output];
+      if ( req.label >= 0 ) {
+	print = true;
+	ss << req.port << "@" << req.out_pri << " ";
+      }
+    }
+    if(print) {
+      *os << output << " -> [ " << ss << "]  ";
+    }
   }
   *os << "]." << endl;
 }
@@ -198,16 +238,10 @@ SparseAllocator::SparseAllocator( Module *parent, const string& name,
 				  int inputs, int outputs ) :
   Allocator( parent, name, inputs, outputs )
 {
-  _in_req =  new list<sRequest> [_inputs];
-  _out_req = new list<sRequest> [_outputs];
+  _in_req.resize(_inputs);
+  _out_req.resize(_outputs);
 }
 
-
-SparseAllocator::~SparseAllocator( )
-{
-  delete [] _in_req;
-  delete [] _out_req;
-}
 
 void SparseAllocator::Clear( )
 {
@@ -221,6 +255,8 @@ void SparseAllocator::Clear( )
 
   _in_occ.clear( );
   _out_occ.clear( );
+
+  Allocator::Clear();
 }
 
 int SparseAllocator::ReadRequest( int in, int out ) const
@@ -238,19 +274,12 @@ bool SparseAllocator::ReadRequest( sRequest &req, int in, int out ) const
 {
   bool found;
 
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) );
+  assert( ( in >= 0 ) && ( in < _inputs ) );
+  assert( ( out >= 0 ) && ( out < _outputs ) );
 
-  list<sRequest>::const_iterator match;
-
-  match = _in_req[in].begin( );
-  while( ( match != _in_req[in].end( ) ) &&
-	 ( match->port != out ) ) {
-    match++;
-  }
-
+  map<int, sRequest>::const_iterator match = _in_req[in].find(out);
   if ( match != _in_req[in].end( ) ) {
-    req = *match;
+    req = match->second;
     found = true;
   } else {
     found = false;
@@ -262,181 +291,97 @@ bool SparseAllocator::ReadRequest( sRequest &req, int in, int out ) const
 void SparseAllocator::AddRequest( int in, int out, int label, 
 				  int in_pri, int out_pri )
 {
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) );
+  Allocator::AddRequest(in, out, label, in_pri, out_pri);
+  assert( _in_req[in].count(out) == 0 );
+  assert( _out_req[out].count(in) == 0 );
 
-  list<sRequest>::iterator insert_point;
-  list<int>::iterator occ_insert;
-  sRequest req;
-
-  // insert into occupied inputs list if
+  // insert into occupied inputs set if
   // input is currently empty
   if ( _in_req[in].empty( ) ) {
-    occ_insert = _in_occ.begin( );
-    while( ( occ_insert != _in_occ.end( ) ) &&
-	   ( *occ_insert < in ) ) {
-      occ_insert++;
-    }
-    assert( ( occ_insert == _in_occ.end( ) ) || 
-	    ( *occ_insert != in ) );
-
-    _in_occ.insert( occ_insert, in );
+    _in_occ.insert(in);
   }
 
   // similarly for the output
   if ( _out_req[out].empty( ) ) {
-    occ_insert = _out_occ.begin( );
-    while( ( occ_insert != _out_occ.end( ) ) &&
-	   ( *occ_insert < out ) ) {
-      occ_insert++;
-    }
-    assert( ( occ_insert == _out_occ.end( ) ) || 
-	    ( *occ_insert != out ) );
-
-    _out_occ.insert( occ_insert, out );
+    _out_occ.insert(out);
   }
 
-  // insert input request in order of it's output
-  insert_point = _in_req[in].begin( );
-  while( ( insert_point != _in_req[in].end( ) ) &&
-	 ( insert_point->port < out ) ) {
-    insert_point++;
-  }
-
+  sRequest req;
   req.port    = out;
   req.label   = label;
   req.in_pri  = in_pri;
   req.out_pri = out_pri;
 
-  bool del = false;
-  bool add = true;
-
-  // For consistent behavior, delete the existing request
-  // if it is for the same output and has a higher
-  // priority
-
-  if ( ( insert_point != _in_req[in].end( ) ) &&
-       ( insert_point->port == out ) ) {
-    if ( insert_point->in_pri < in_pri ) {
-      del = true;
-    } else {
-      add = false;
-    }
-  }
-
-  if ( add ) {
-    _in_req[in].insert( insert_point, req );
-  }
-
-  if ( del ) {
-    _in_req[in].erase( insert_point );
-  }
-
-  insert_point = _out_req[out].begin( );
-  while( ( insert_point != _out_req[out].end( ) ) &&
-	 ( insert_point->port < in ) ) {
-    insert_point++;
-  }
+  _in_req[in][out] = req;
 
   req.port  = in;
-  req.label = label;
 
-  if ( add ) {
-    _out_req[out].insert( insert_point, req );
-  }
-
-  if ( del ) {
-    // This should be consistent, but check for sanity
-    if ( ( insert_point == _out_req[out].end( ) ) ||
-	 ( insert_point->port != in ) ) {
-      Error( "Internal allocator error --- input and output requests non consistent" );
-    }
-    _out_req[out].erase( insert_point );
-  }
+  _out_req[out][in] = req;
 }
 
 void SparseAllocator::RemoveRequest( int in, int out, int label )
 {
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) ); 
+  assert( ( in >= 0 ) && ( in < _inputs ) );
+  assert( ( out >= 0 ) && ( out < _outputs ) ); 
   
-  list<sRequest>::iterator erase_point;
-  list<int>::iterator occ_remove;
-				 
-  // insert input request in order of it's output
-  erase_point = _in_req[in].begin( );
-  while( ( erase_point != _in_req[in].end( ) ) &&
-	 ( erase_point->port != out ) ) {
-    erase_point++;
-  }
-
-  assert( erase_point != _in_req[in].end( ) );
-  _in_req[in].erase( erase_point );
+  assert( _in_req[in].count( out ) > 0 );
+  assert( _in_req[in][out].label == label );
+  _in_req[in].erase( out );
 
   // remove from occupied inputs list if
   // input is now empty
   if ( _in_req[in].empty( ) ) {
-    occ_remove = _in_occ.begin( );
-    while( ( occ_remove != _in_occ.end( ) ) &&
-	   ( *occ_remove != in ) ) {
-      occ_remove++;
-    }
-    
-    assert( occ_remove != _in_occ.end( ) );
-    _in_occ.erase( occ_remove );
+    _in_occ.erase(in);
   }
 
   // similarly for the output
-  erase_point = _out_req[out].begin( );
-  while( ( erase_point != _out_req[out].end( ) ) &&
-	 ( erase_point->port != in ) ) {
-    erase_point++;
-  }
-
-  assert( erase_point != _out_req[out].end( ) );
-  _out_req[out].erase( erase_point );
+  assert( _out_req[out].count( in ) > 0 );
+  assert( _out_req[out][in].label == label );
+  _out_req[out].erase( in );
 
   if ( _out_req[out].empty( ) ) {
-    occ_remove = _out_occ.begin( );
-    while( ( occ_remove != _out_occ.end( ) ) &&
-	   ( *occ_remove != out ) ) {
-      occ_remove++;
-    }
-
-    assert( occ_remove != _out_occ.end( ) );
-    _out_occ.erase( occ_remove );
+    _out_occ.erase(out);
   }
+}
+
+bool SparseAllocator::InputHasRequests( int in ) const
+{
+  return _in_occ.count(in) > 0;
+}
+
+bool SparseAllocator::OutputHasRequests( int out ) const
+{
+  return _out_occ.count(out) > 0;
 }
 
 void SparseAllocator::PrintRequests( ostream * os ) const
 {
-  list<sRequest>::const_iterator iter;
+  map<int, sRequest>::const_iterator iter;
   
   if(!os) os = &cout;
   
   *os << "Input requests = [ ";
   for ( int input = 0; input < _inputs; ++input ) {
-    *os << input << " -> [ ";
-    for ( iter = _in_req[input].begin( ); 
-	  iter != _in_req[input].end( ); iter++ ) {
-      *os << iter->port << " ";
+    if(!_in_req[input].empty()) {
+      *os << input << " -> [ ";
+      for ( iter = _in_req[input].begin( ); 
+	    iter != _in_req[input].end( ); iter++ ) {
+	*os << iter->second.port << "@" << iter->second.in_pri << " ";
+      }
+      *os << "]  ";
     }
-    *os << "]  ";
   }
   *os << "], output requests = [ ";
   for ( int output = 0; output < _outputs; ++output ) {
-    *os << output << " -> ";
-    if ( _outmask[output] == 0 ) {
+    if(!_out_req[output].empty()) {
+      *os << output << " -> ";
       *os << "[ ";
       for ( iter = _out_req[output].begin( ); 
 	    iter != _out_req[output].end( ); iter++ ) {
-	*os << iter->port << " ";
+	*os << iter->second.port << "@" << iter->second.out_pri << " ";
       }
       *os << "]  ";
-    } else {
-      *os << "masked  ";
     }
-    *os << "] ";
   }
   *os << "]." << endl;
 }
@@ -462,6 +407,10 @@ Allocator *Allocator::NewAllocator( Module *parent, const string& name,
     a = new LOA( parent, name, inputs, outputs );
   } else if ( alloc_type == "wavefront" ) {
     a = new Wavefront( parent, name, inputs, outputs );
+  } else if ( alloc_type == "fair_wavefront" ) {
+    a = new FairWavefront( parent, name, inputs, outputs );
+  } else if ( alloc_type == "prio_wavefront" ) {
+    a = new PrioWavefront( parent, name, inputs, outputs );
   } else if ( alloc_type == "select" ) {
     a = new SelAlloc( parent, name, inputs, outputs, iters );
   } else if (alloc_type == "separable_input_first") {

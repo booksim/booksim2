@@ -1,7 +1,7 @@
-// $Id: random_utils.cpp 1839 2010-03-24 02:03:56Z dub $
+// $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -28,34 +28,44 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "booksim.hpp"
-#include "random_utils.hpp"
+#ifndef _BUFFER_MONITOR_HPP_
+#define _BUFFER_MONITOR_HPP_
 
-void RandomSeed( long seed )
-{
-  //  ran_start( seed );
-  //ranf_start( seed );
-  srand48(seed);
-  srand(seed);
-}
+#include <vector>
+#include <iostream>
 
-int RandomInt( int max ) 
-  // Returns a random integer in the range [0,max]
-{
-  /// return ( ran_next( ) % (max+1) );
+using namespace std;
 
- return lrand48() %(max+1);
-}
+class Flit;
 
-unsigned long RandomIntLong( )
-{  
-  return lrand48();
-  //  return ran_next( );
-}
+class BufferMonitor {
+  int  _cycles ;
+  int  _inputs ;
+  int  _classes ;
+  vector<int> _reads ;
+  vector<int> _writes ;
+  int index( int input, int cl ) const ;
+public:
+  BufferMonitor( int inputs, int classes ) ;
+  void cycle() ;
+  void write( int input, Flit const * f ) ;
+  void read( int input, Flit const * f ) ;
+  inline const vector<int> & GetReads() const {
+    return _reads;
+  }
+  inline const vector<int> & GetWrites() const {
+    return _writes;
+  }
+  inline int NumInputs() const {
+    return _inputs;
+  }
+  inline int NumClasses() const {
+    return _classes;
+  }
+  void display(ostream & os) const;
 
-float RandomFloat( float max )
-  // Returns a random floating-point value in the rage [0,max]
-{
-  //  return ( (float)ranf_next( ) * max );
-return drand48()*max;
-}
+} ;
+
+ostream & operator<<( ostream & os, BufferMonitor const & obj ) ;
+
+#endif

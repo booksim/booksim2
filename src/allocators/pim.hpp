@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -31,12 +31,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _PIM_HPP_
 #define _PIM_HPP_
 
+#include <vector>
+
 #include "allocator.hpp"
 
 class PIM : public DenseAllocator {
   int _PIM_iter;
 
-  int *_grants;
 public:
   PIM( Module *parent, const string& name,
        int inputs, int outputs, int iters );

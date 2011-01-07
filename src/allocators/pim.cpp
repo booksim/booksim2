@@ -1,7 +1,7 @@
 // $Id: pim.cpp 1839 2010-03-24 02:03:56Z dub $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -41,12 +41,10 @@ PIM::PIM( Module *parent, const string& name,
   DenseAllocator( parent, name, inputs, outputs ),
   _PIM_iter(iters)
 {
-  _grants = new int [outputs];
 }
 
 PIM::~PIM( )
 {
-  delete [] _grants;
 }
 
 void PIM::Allocate( )
@@ -57,14 +55,13 @@ void PIM::Allocate( )
   int input_offset;
   int output_offset;
 
-  _ClearMatching( );
-
   for ( int iter = 0; iter < _PIM_iter; ++iter ) {
     // Grant phase --- outputs randomly choose
     // between one of their requests
 
+    vector<int> grants(_outputs, -1);
+
     for ( output = 0; output < _outputs; ++output ) {
-      _grants[output] = -1;
       
       // A random arbiter between input requests
       input_offset  = RandomInt( _inputs - 1 );
@@ -77,7 +74,7 @@ void PIM::Allocate( )
 	     ( _outmatch[output] == -1 ) ) {
 	  
 	  // Grant
-	  _grants[output] = input;
+	  grants[output] = input;
 	  break;
 	}
       }
@@ -94,7 +91,7 @@ void PIM::Allocate( )
       for ( int o = 0; o < _outputs; ++o ) {
 	output = ( o + output_offset ) % _outputs;
 	
-	if ( _grants[output] == input ) {
+	if ( grants[output] == input ) {
 	  
 	  // Accept
 	  _inmatch[input]   = output;

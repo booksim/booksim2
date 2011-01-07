@@ -1,6 +1,6 @@
 # $Id $
 
-# Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+# Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without 
@@ -38,8 +38,8 @@ PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
 DEFINE =
 DEFINE_TEST = -DUSE_GUI
-INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks 
-CPPFLAGS = -O3  -ggdb $(INCPATH) $(DEFINE) 
+INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
+CPPFLAGS = -Wall -O3  -ggdb $(INCPATH) $(DEFINE) 
 LFLAGS =  
 
 
@@ -51,22 +51,25 @@ CPP_SRCS = main.cpp \
    config_utils.cpp \
    booksim_config.cpp \
    module.cpp \
+   buffer.cpp \
    vc.cpp \
    routefunc.cpp \
    traffic.cpp \
    flitchannel.cpp \
    trafficmanager.cpp \
+   packet_reply_info.cpp \
    buffer_state.cpp \
    stats.cpp \
    credit.cpp \
    outputset.cpp \
    flit.cpp \
    injection.cpp\
-   random_utils.cpp\
    misc_utils.cpp\
    rng_wrapper.cpp\
    rng_double_wrapper.cpp\
-   power_module.cpp 
+   power_module.cpp \
+   switch_monitor.cpp \
+   buffer_monitor.cpp
 
 ifeq ($(DEFINE) , $(DEFINE_TEST))
 	CPP_SRCS += \
@@ -81,10 +84,11 @@ LEX_OBJS  = ${OBJDIR}/configlex.o
 YACC_OBJS = ${OBJDIR}/config_tab.o
 
 # networks 
-NETWORKS := $(wildcard networks/*.cpp) 
+NETWORKS:= $(wildcard networks/*.cpp) 
 ALLOCATORS:= $(wildcard allocators/*.cpp)
 ARBITERS:= $(wildcard arbiters/*.cpp)
-ROUTERS:=$(wildcard routers/*.cpp)
+ROUTERS:= $(wildcard routers/*.cpp)
+POWER:= $(wildcard power/*.cpp)
 
 #--- Make rules ---
 OBJS :=  $(LEX_OBJS) $(YACC_OBJS)\
@@ -92,7 +96,8 @@ OBJS :=  $(LEX_OBJS) $(YACC_OBJS)\
  $(NETWORKS:networks/%.cpp=${OBJDIR}/%.o)\
  $(ALLOCATORS:allocators/%.cpp=${OBJDIR}/%.o)\
  $(ARBITERS:arbiters/%.cpp=${OBJDIR}/%.o)\
- $(ROUTERS:routers/%.cpp=${OBJDIR}/%.o)
+ $(ROUTERS:routers/%.cpp=${OBJDIR}/%.o)\
+ $(POWER:power/%.cpp=${OBJDIR}/%.o)
 
 .PHONY: clean
 
@@ -130,7 +135,9 @@ ${OBJDIR}/%.o: allocators/%.cpp
 ${OBJDIR}/%.o: routers/%.cpp 
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
-
+# rules to compile power classes
+${OBJDIR}/%.o: power/%.cpp
+	$(CPP) $(CPPFLAGS) -c $< -o $@
 
 clean:
 	rm -f $(OBJS) 

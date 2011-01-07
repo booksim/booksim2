@@ -1,7 +1,7 @@
 // $Id: network.cpp 1970 2010-05-10 11:50:15Z dub $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -35,18 +35,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
+#include <cassert>
+#include <sstream>
+
 #include "booksim.hpp"
-#include <assert.h>
 #include "network.hpp"
 
 
 BSNetwork::BSNetwork( const Configuration &config, const string & name ) :
-  Module( 0, name )
+  TimedModule( 0, name )
 {
   _size     = -1; 
   _sources  = -1; 
   _dests    = -1;
   _channels = -1;
+  _classes  = config.GetInt("classes");
 }
 
 BSNetwork::~BSNetwork( )
@@ -87,25 +90,39 @@ void BSNetwork::_Alloc( )
   _inject.resize(_sources);
   _inject_cred.resize(_sources);
   for ( int s = 0; s < _sources; ++s ) {
-    _inject[s] = new FlitChannel;
-    _inject_cred[s] = new CreditChannel;
+    ostringstream name;
+    name << Name() << "_fchan_ingress" << s;
+    _inject[s] = new FlitChannel(this, name.str(), _classes);
+    _timed_modules.push_back(_inject[s]);
+    name.str("");
+    name << Name() << "_cchan_ingress" << s;
+    _inject_cred[s] = new CreditChannel(this, name.str());
+    _timed_modules.push_back(_inject_cred[s]);
   }
   _eject.resize(_dests);
   _eject_cred.resize(_dests);
   for ( int d = 0; d < _dests; ++d ) {
-    _eject[d] = new FlitChannel;
-    _eject_cred[d] = new CreditChannel;
+    ostringstream name;
+    name << Name() << "_fchan_egress" << d;
+    _eject[d] = new FlitChannel(this, name.str(), _classes);
+    _timed_modules.push_back(_eject[d]);
+    name.str("");
+    name << Name() << "_cchan_egress" << d;
+    _eject_cred[d] = new CreditChannel(this, name.str());
+    _timed_modules.push_back(_eject_cred[d]);
   }
   _chan.resize(_channels);
   _chan_cred.resize(_channels);
   for ( int c = 0; c < _channels; ++c ) {
-    _chan[c] = new FlitChannel;
-    _chan_cred[c] = new CreditChannel;
+    ostringstream name;
+    name << Name() << "_fchan_" << c;
+    _chan[c] = new FlitChannel(this, name.str(), _classes);
+    _timed_modules.push_back(_chan[c]);
+    name.str("");
+    name << Name() << "_cchan_" << c;
+    _chan_cred[c] = new CreditChannel(this, name.str());
+    _timed_modules.push_back(_chan_cred[c]);
   }
-
-  _chan_use.resize(_channels, 0);
-
-  _chan_use_cycles = 0;
 }
 
 int BSNetwork::NumSources( ) const
@@ -121,30 +138,30 @@ int BSNetwork::NumDests( ) const
 
 void BSNetwork::ReadInputs( )
 {
-  for ( int r = 0; r < _size; ++r ) {
-    _routers[r]->ReadInputs( );
+  for(deque<TimedModule *>::const_iterator iter = _timed_modules.begin();
+      iter != _timed_modules.end();
+      ++iter) {
+    (*iter)->ReadInputs( );
   }
 }
 
-void BSNetwork::InternalStep( )
+
+void BSNetwork::Evaluate( )
 {
-  for ( int r = 0; r < _size; ++r ) {
-    _routers[r]->InternalStep( );
+  for(deque<TimedModule *>::const_iterator iter = _timed_modules.begin();
+      iter != _timed_modules.end();
+      ++iter) {
+    (*iter)->Evaluate( );
   }
 }
 
 void BSNetwork::WriteOutputs( )
 {
-  for ( int r = 0; r < _size; ++r ) {
-    _routers[r]->WriteOutputs( );
+  for(deque<TimedModule *>::const_iterator iter = _timed_modules.begin();
+      iter != _timed_modules.end();
+      ++iter) {
+    (*iter)->WriteOutputs( );
   }
-
-  for ( int c = 0; c < _channels; ++c ) {
-    if ( _chan[c]->InUse() ) {
-      _chan_use[c]++;
-    }
-  }
-  _chan_use_cycles++;
 }
 
 void BSNetwork::WriteFlit( Flit *f, int source )
@@ -159,13 +176,6 @@ Flit *BSNetwork::ReadFlit( int dest )
   return _eject[dest]->Receive();
 }
 
-/* new functions added for NOC
- */
-Flit* BSNetwork::PeekFlit( int dest ) 
-{
-  assert( ( dest >= 0 ) && ( dest < _dests ) );
-  return _eject[dest]->Peek( );
-}
 
 void BSNetwork::WriteCredit( Credit *c, int dest )
 {
@@ -179,13 +189,6 @@ Credit *BSNetwork::ReadCredit( int source )
   return _inject_cred[source]->Receive();
 }
 
-/* new functions added for NOC
- */
-Credit *BSNetwork::PeekCredit( int source ) 
-{
-  assert( ( source >= 0 ) && ( source < _sources ) );
-  return _inject_cred[source]->Peek( );
-}
 
 void BSNetwork::InsertRandomFaults( const Configuration &config )
 {
@@ -212,13 +215,4 @@ void BSNetwork::Display( ) const
   for ( int r = 0; r < _size; ++r ) {
     _routers[r]->Display( );
   }
-  double average = 0;
-  for ( int c = 0; c < _channels; ++c ) {
-    cout << "channel " << c << " used " 
-	 << 100.0 * (double)_chan_use[c] / (double)_chan_use_cycles 
-	 << "% of the time" << endl;
-    average += 100.0 * (double)_chan_use[c] / (double)_chan_use_cycles ;
-  }
-  average = average/_channels;
-  cout<<"Average channel: "<<average<<endl;
 }

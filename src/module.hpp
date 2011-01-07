@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -47,12 +47,9 @@ protected:
   void _AddChild( Module *child );
 
 public:
-  Module( );
   Module( Module *parent, const string& name );
   virtual ~Module( ) { }
   
-  void SetName( Module *parent, const string& name );
-
   inline const string & Name() const { return _name; }
   inline const string & FullName() const { return _fullname; }
 

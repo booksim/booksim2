@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -37,6 +37,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _ARBITER_HPP_
 #define _ARBITER_HPP_
 
+#include <vector>
+
 #include "module.hpp"
 
 class Arbiter : public Module {
@@ -49,10 +51,9 @@ protected:
     int pri ;
   } entry_t ;
   
-  entry_t* _request ;
-  int  _input_size ;
+  vector<entry_t> _request ;
+  int  _size ;
 
-  int  _last_req ;
   int  _selected ;
   int _highest_pri;
   int _best_input;
@@ -61,7 +62,6 @@ public:
   int  _num_reqs ;
   // Constructors
   Arbiter( Module *parent, const string &name, int size ) ;
-  virtual ~Arbiter() ;
   
   // Print priority matrix to standard output
   virtual void PrintState() const = 0 ;
@@ -74,8 +74,10 @@ public:
 
   // Arbitrate amongst requests. Returns winning input and 
   // updates pointers to metadata when valid pointers are passed
-  virtual int Arbitrate( int* id = 0, int* pri = 0) = 0 ;
-  
+  virtual int Arbitrate( int* id = 0, int* pri = 0 ) ;
+
+  virtual void Clear();
+
   static Arbiter *NewArbiter( Module *parent, const string &name,
 			      const string &arb_type, int size );
 } ;

@@ -1,7 +1,7 @@
 // $Id: selalloc.cpp 1839 2010-03-24 02:03:56Z dub $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -42,23 +42,9 @@ SelAlloc::SelAlloc( Module *parent, const string& name,
 {
   _iter = iters;
 
-  _grants = new int [outputs];
-  _gptrs  = new int [outputs];
-  _aptrs  = new int [inputs];
-
-  for ( int i = 0; i < inputs; ++i ) {
-    _aptrs[i] = 0;
-  }
-  for ( int j = 0; j < outputs; ++j ) {
-    _gptrs[j] = 0;
-  }
-}
-
-SelAlloc::~SelAlloc( )
-{
-  delete [] _grants;
-  delete [] _aptrs;
-  delete [] _gptrs;
+  _gptrs.resize(outputs, 0);
+  _aptrs.resize(inputs, 0);
+  _outmask.resize(outputs, 0);
 }
 
 void SelAlloc::Allocate( )
@@ -69,18 +55,14 @@ void SelAlloc::Allocate( )
   int input_offset;
   int output_offset;
 
-  list<sRequest>::iterator p;
-  list<int>::iterator outer_iter;
+  map<int, sRequest>::iterator p;
+  set<int>::iterator outer_iter;
   bool wrapped;
 
   int max_index;
   int max_pri;
 
-  _ClearMatching( );
-
-  for ( int i = 0; i < _outputs; ++i ) {
-    _grants[i] = -1;
-  }
+  vector<int> grants(_outputs, -1);
 
   for ( int iter = 0; iter < _iter; ++iter ) {
     // Grant phase
@@ -103,7 +85,7 @@ void SelAlloc::Allocate( )
 
       p = _out_req[output].begin( );
       while( ( p != _out_req[output].end( ) ) &&
-	     ( p->port < input_offset ) ) {
+	     ( p->second.port < input_offset ) ) {
 	p++;
       }
 
@@ -111,7 +93,9 @@ void SelAlloc::Allocate( )
       max_pri   = 0;
 
       wrapped = false;
-      while( (!wrapped) || ( p->port < input_offset ) ) {
+      while( (!wrapped) || 
+	     ( ( p != _out_req[output].end() ) && 
+	       ( p->second.port < input_offset ) ) ) {
 	if ( p == _out_req[output].end( ) ) {
 	  if ( wrapped ) { break; }
 	  // p is valid here because empty lists
@@ -120,14 +104,14 @@ void SelAlloc::Allocate( )
 	  wrapped = true;
 	}
 
-	input = p->port;
+	input = p->second.port;
 
 	// we know the output is free (above) and
 	// if the input is free, check if request is the
 	// highest priority so far
 	if ( ( _inmatch[input] == -1 ) &&
-	     ( ( p->out_pri > max_pri ) || ( max_index == -1 ) ) ) {
-	  max_pri   = p->out_pri;
+	     ( ( p->second.out_pri > max_pri ) || ( max_index == -1 ) ) ) {
+	  max_pri   = p->second.out_pri;
 	  max_index = input;
 	}
 
@@ -135,14 +119,14 @@ void SelAlloc::Allocate( )
       }   
 
       if ( max_index != -1 ) { // grant
-	_grants[output] = max_index;
+	grants[output] = max_index;
       }
     }
 
 #ifdef DEBUG_SELALLOC
     cout << "grants: ";
     for ( int i = 0; i < _outputs; ++i ) {
-      cout << _grants[i] << " ";
+      cout << grants[i] << " ";
     }
     cout << endl;
 
@@ -168,7 +152,7 @@ void SelAlloc::Allocate( )
 
       p = _in_req[input].begin( );
       while( ( p != _in_req[input].end( ) ) &&
-	     ( p->port < output_offset ) ) {
+	     ( p->second.port < output_offset ) ) {
 	p++;
       }
 
@@ -176,7 +160,9 @@ void SelAlloc::Allocate( )
       max_pri   = 0;
 
       wrapped = false;
-      while( (!wrapped) || ( p->port < output_offset ) ) {
+      while( (!wrapped) || 
+	     ( ( p != _in_req[input].end() ) && 
+	       ( p->second.port < output_offset ) ) ) {
 	if ( p == _in_req[input].end( ) ) {
 	  if ( wrapped ) { break; }
 	  // p is valid here because empty lists
@@ -185,15 +171,15 @@ void SelAlloc::Allocate( )
 	  wrapped = true;
 	}
 
-	output = p->port;
+	output = p->second.port;
 
 	// we know the output is free (above) and
 	// if the input is free, check if the highest
 	// priroity
-	if ( ( _grants[output] == input ) && 
+	if ( ( grants[output] == input ) && 
 	     ( !_out_req[output].empty( ) ) &&
-	     ( ( p->in_pri > max_pri ) || ( max_index == -1 ) ) ) {
-	  max_pri   = p->in_pri;
+	     ( ( p->second.in_pri > max_pri ) || ( max_index == -1 ) ) ) {
+	  max_pri   = p->second.in_pri;
 	  max_index = output;
 	}
 
@@ -230,3 +216,42 @@ void SelAlloc::Allocate( )
   cout << endl;
 #endif 
 }
+
+void SelAlloc::MaskOutput( int out, int mask )
+{
+  assert( ( out >= 0 ) && ( out < _outputs ) );
+  _outmask[out] = mask;
+}
+
+void SelAlloc::PrintRequests( ostream * os ) const
+{
+  map<int, sRequest>::const_iterator iter;
+  
+  if(!os) os = &cout;
+  
+  *os << "Input requests = [ ";
+  for ( int input = 0; input < _inputs; ++input ) {
+    *os << input << " -> [ ";
+    for ( iter = _in_req[input].begin( ); 
+	  iter != _in_req[input].end( ); iter++ ) {
+      *os << iter->second.port << " ";
+    }
+    *os << "]  ";
+  }
+  *os << "], output requests = [ ";
+  for ( int output = 0; output < _outputs; ++output ) {
+    *os << output << " -> ";
+    if ( _outmask[output] == 0 ) {
+      *os << "[ ";
+      for ( iter = _out_req[output].begin( ); 
+	    iter != _out_req[output].end( ); iter++ ) {
+	*os << iter->second.port << " ";
+      }
+      *os << "]  ";
+    } else {
+      *os << "masked  ";
+    }
+  }
+  *os << "]." << endl;
+}
+

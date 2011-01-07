@@ -1,7 +1,7 @@
 // $Id: anynet.cpp 2281 2010-07-21 23:10:30Z qtedq $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "anynet.hpp"
 #include <fstream>
 #include <sstream>
+#include <limits>
 
 //this is a hack, I can't easily get the routing talbe out of the network
 map<int, int>* global_routing_table;
@@ -52,7 +53,7 @@ AnyNet::AnyNet( const Configuration &config, const string & name )
 
 
 void AnyNet::_ComputeSize( const Configuration &config ){
-  config.GetStr("network_file",file_name);
+  file_name = config.GetStr("network_file");
   if(file_name==""){
     cout<<"No network file name provided"<<endl;
     exit(-1);
@@ -125,6 +126,7 @@ void AnyNet::_BuildNet( const Configuration &config ){
     router_name << "_" <<  node ;
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
     					node, radix, radix );
+    _timed_modules.push_back(_routers[node]);
     //add injeciton ejection channels
     map<int, int >::const_iterator nniter;
     for(nniter = niter->second->begin();nniter!=niter->second->end(); nniter++){
@@ -173,14 +175,9 @@ void AnyNet::RegisterRoutingFunctions() {
 
 void min_anynet( const Router *r, const Flit *f, int in_channel, 
 		 OutputSet *outputs, bool inject ){
-  outputs->Clear( );
-  int out_port = -1;
-  int rID = r->GetID();
-  int dest = f->dest;
-  
-  out_port = global_routing_table[rID].find(dest)->second;
+  int out_port = inject ? 0 : global_routing_table[r->GetID()].find(f->dest)->second;
 
-  int vcBegin = 0, vcEnd = gNumVCS-1;
+  int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
     vcBegin = gReadReqBeginVC;
     vcEnd   = gReadReqEndVC;
@@ -193,13 +190,11 @@ void min_anynet( const Router *r, const Flit *f, int in_channel,
   } else if ( f->type ==  Flit::WRITE_REPLY ) {
     vcBegin = gWriteReplyBeginVC;
     vcEnd   = gWriteReplyEndVC;
-  } else if ( f->type ==  Flit::ANY_TYPE ) {
-    vcBegin = 0;
-    vcEnd   = gNumVCS-1;
   }
 
-  outputs->AddRange( out_port , vcBegin, vcEnd );
+  outputs->Clear( );
 
+  outputs->AddRange( out_port , vcBegin, vcEnd );
 }
 
 void AnyNet::buildRoutingTable(){
@@ -263,7 +258,7 @@ int AnyNet::findPath(int router, int dest, int* hop_count,map<int, bool>* visite
   map<int,   map<int, int >*>::const_iterator riter = router_list[1].find(router);
   map<int, int >::const_iterator rriter;
 
-  int shortest_distance = 99999;
+  int shortest_distance = numeric_limits<int>::max();
   int shortest_port = -1;
   for(rriter = riter->second->begin();rriter!=riter->second->end(); rriter++){
     int outport = -1;

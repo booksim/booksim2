@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -30,29 +30,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // ----------------------------------------------------------------------
 //
-//  SeparableAllocator: Separable Allocator
+//  SeparableAllocator: Separable Allocator Base Class
 //
 // ----------------------------------------------------------------------
 
 #ifndef _SEPARABLE_HPP_
 #define _SEPARABLE_HPP_
 
-#include "allocator.hpp"
-#include "arbiter.hpp"
-#include <assert.h>
-
 #include <vector>
 
-class SeparableAllocator : public Allocator {
+#include "allocator.hpp"
+
+class Arbiter;
+
+class SeparableAllocator : public SparseAllocator {
   
 protected:
 
-  int* _matched ;
-
-  Arbiter** _input_arb ;
-  Arbiter** _output_arb ;
-
-  vector<sRequest>* _requests ;
+  vector<Arbiter*> _input_arb ;
+  vector<Arbiter*> _output_arb ;
 
 public:
   
@@ -61,17 +57,7 @@ public:
   
   virtual ~SeparableAllocator() ;
 
-  //
-  // Allocator Interface
-  //
   virtual void Clear() ;
-  virtual int  ReadRequest( int in, int out ) const ;
-  virtual bool ReadRequest( sRequest& req, int in, int out ) const ;
-  virtual void AddRequest( int in, int out, int label = 1, 
-			   int in_pri = 0, int out_pri = 0 ) ;
-  virtual void RemoveRequest( int in, int out, int label = 1 ) ;
-  virtual void Allocate() = 0 ;
-  virtual void PrintRequests( ostream * os = NULL ) const ;
 
 } ;
 

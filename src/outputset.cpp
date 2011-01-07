@@ -1,7 +1,7 @@
 // $Id: outputset.cpp 2200 2010-07-01 19:33:38Z qtedq $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -36,20 +36,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
+#include <cassert>
+
 #include "booksim.hpp"
-#include <assert.h>
-
 #include "outputset.hpp"
-
-OutputSet::OutputSet( int num_outputs )
-{
-  _outputs.clear();
-}
-
-OutputSet::~OutputSet( )
-{
-  _outputs.clear( );
-}
 
 void OutputSet::Clear( )
 {
@@ -70,14 +60,14 @@ void OutputSet::AddRange( int output_port, int vc_start, int vc_end, int pri )
   s.vc_end   = vc_end;
   s.pri      = pri;
   s.output_port = output_port;
-  _outputs.push_back( s );
+  _outputs.insert( s );
 }
 
-//legacy support, for performance, just use getsetlist
+//legacy support, for performance, just use GetSet()
 int OutputSet::NumVCs( int output_port ) const
 {
   int total = 0;
-  list<sSetElement>::const_iterator i = _outputs.begin( );
+  set<sSetElement>::const_iterator i = _outputs.begin( );
   while(i!=_outputs.end( )){
     if(i->output_port == output_port){
       total += (i->vc_end - i->vc_start + 1);
@@ -94,7 +84,7 @@ int OutputSet::Size( ) const
 
 bool OutputSet::OutputEmpty( int output_port ) const
 {
-  list<sSetElement>::const_iterator i = _outputs.begin( );
+  set<sSetElement>::const_iterator i = _outputs.begin( );
   while(i!=_outputs.end( )){
     if(i->output_port == output_port){
       return false;
@@ -105,11 +95,11 @@ bool OutputSet::OutputEmpty( int output_port ) const
 }
 
 
-const list<OutputSet::sSetElement>* OutputSet::GetSetList() const{
-  return &_outputs;
+const set<OutputSet::sSetElement> & OutputSet::GetSet() const{
+  return _outputs;
 }
 
-//legacy support, for performance, just use getsetlist
+//legacy support, for performance, just use GetSet()
 int OutputSet::GetVC( int output_port, int vc_index, int *pri ) const
 {
 
@@ -119,7 +109,7 @@ int OutputSet::GetVC( int output_port, int vc_index, int *pri ) const
   
   if ( pri ) { *pri = -1; }
 
-  list<sSetElement>::const_iterator i = _outputs.begin( );
+  set<sSetElement>::const_iterator i = _outputs.begin( );
   while(i!=_outputs.end( )){
     if(i->output_port == output_port){
       range = i->vc_end - i->vc_start + 1;
@@ -138,7 +128,7 @@ int OutputSet::GetVC( int output_port, int vc_index, int *pri ) const
   return vc;
 }
 
-//legacy support, for performance, just use getsetlist
+//legacy support, for performance, just use GetSet()
 bool OutputSet::GetPortVC( int *out_port, int *out_vc ) const
 {
 
@@ -146,7 +136,7 @@ bool OutputSet::GetPortVC( int *out_port, int *out_vc ) const
   bool single_output = false;
   int  used_outputs  = 0;
 
-  list<sSetElement>::const_iterator i = _outputs.begin( );
+  set<sSetElement>::const_iterator i = _outputs.begin( );
   if(i!=_outputs.end( )){
     used_outputs = i->output_port;
   }

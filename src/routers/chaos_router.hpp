@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 #include <queue>
+#include <vector>
 
 #include "module.hpp"
 #include "router.hpp"
@@ -47,7 +48,8 @@ class ChaosRouter : public Router {
 
   tRoutingFunction   _rf;
 
-  OutputSet **_input_route, **_mq_route;
+  vector<OutputSet*> _input_route;
+  vector<OutputSet*> _mq_route;
 
   enum eQState {
     empty,         //            input avail
@@ -63,23 +65,25 @@ class ChaosRouter : public Router {
   int _multi_queue_size;
   int _buffer_size;
 
-  queue<Flit *> *_input_frame;
-  queue<Flit *> *_output_frame;
-  queue<Flit *> *_multi_queue;
+  vector<queue<Flit *> > _input_frame;
+  vector<queue<Flit *> > _output_frame;
+  vector<queue<Flit *> > _multi_queue;
 
-  int *_next_queue_cnt;
+  vector<int> _next_queue_cnt;
 
-  queue<Credit *> *_credit_queue;
+  vector<queue<Credit *> > _credit_queue;
 
-  eQState *_input_state;
-  eQState *_multi_state;
+  vector<eQState> _input_state;
+  vector<eQState> _multi_state;
 
-  int *_input_output_match, *_input_mq_match, *_multi_match;
+  vector<int> _input_output_match;
+  vector<int> _input_mq_match;
+  vector<int> _multi_match;
 
-  int *_mq_age;
+  vector<int> _mq_age;
 
-  bool *_output_matched;
-  bool *_mq_matched;
+  vector<bool> _output_matched;
+  vector<bool> _mq_matched;
 
   int _cur_channel;
   int _read_stall;
@@ -101,6 +105,8 @@ class ChaosRouter : public Router {
   void _SendFlits( );
   void _SendCredits( );
 
+  virtual void _InternalStep( );
+
 public:
   ChaosRouter( const Configuration& config,
 	    Module *parent, const string & name, int id,
@@ -109,7 +115,6 @@ public:
   virtual ~ChaosRouter( );
 
   virtual void ReadInputs( );
-  virtual void InternalStep( );
   virtual void WriteOutputs( );
 
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const {return 0;}

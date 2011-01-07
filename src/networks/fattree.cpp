@@ -1,7 +1,7 @@
 // $Id: fattree.cpp 2314 2010-07-25 02:06:38Z qtedq $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -74,8 +74,8 @@ void FatTree::_ComputeSize( const Configuration& config )
 
   _k = config.GetInt( "k" );
   _n = config.GetInt( "n" );
-  yrouter = config.GetInt( "yr" );
-  xrouter = config.GetInt( "xr" );
+  _yrouter = config.GetInt( "yr" );
+  _xrouter = config.GetInt( "xr" );
 
   /*in case that we are using fattree other than 64 nodes*/
   //latency_correction = (double)_k/4;
@@ -121,9 +121,10 @@ void FatTree::_BuildNet( const Configuration& config )
 
       name.str("");
       name << "router_" << d << "_" << pos;
-      _Router( d, pos ) = Router::NewRouter( config, this,
-					     name.str( ), id,
-					     degree, degree );
+      Router * r = Router::NewRouter( config, this, name.str( ), id,
+				      degree, degree );
+      _Router( d, pos ) = r;
+      _timed_modules.push_back(r);
     }
   }
 
@@ -143,8 +144,8 @@ void FatTree::_BuildNet( const Configuration& config )
   //  placement and power consumption
   //
   
-  int _cY =  yrouter;
-  int _cX =  xrouter;
+  int _cY =  _yrouter;
+  int _cX =  _xrouter;
 
   for ( pos = 0 ; pos < nPos ; ++pos ) {
 

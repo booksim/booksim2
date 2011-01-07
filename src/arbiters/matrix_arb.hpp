@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -37,17 +37,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MATRIX_ARB_HPP_
 #define _MATRIX_ARB_HPP_
 
+#include <vector>
+
 #include "arbiter.hpp"
 
-#include <iostream>
-using namespace std ;
+using namespace std;
 
 class MatrixArbiter : public Arbiter {
 
-  // Priority matrix and access methods
-  int* _matrix ;
-  int  _Priority( int row, int column ) const ;
-  void _SetPriority( int row, int column, int val ) ;
+  // Priority matrix
+  vector<vector<int> > _matrix ;
+
+  int  _last_req ;
 
 public:
 
@@ -63,6 +64,10 @@ public:
   // Arbitrate amongst requests. Returns winning input and 
   // updates pointers to metadata when valid pointers are passed
   virtual int Arbitrate( int* id = 0, int* pri = 0) ;
+
+  virtual void AddRequest( int input, int id, int pri ) ;
+
+  virtual void Clear();
 
 } ;
 

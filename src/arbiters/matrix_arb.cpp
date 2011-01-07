@@ -1,7 +1,7 @@
 // $Id: matrix_arb.cpp 1839 2010-03-24 02:03:56Z dub $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -39,30 +39,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace std ;
 
 MatrixArbiter::MatrixArbiter( Module *parent, const string &name, int size )
-  : Arbiter( parent, name, size ) {
-  _matrix  = new int [ size * size ] ;
-  for ( int i = 0 ; i < size*size ; i++ )
-    _matrix[i] = 0 ;
-  for ( int i = 0 ; i < size ; i++ )
-    _SetPriority( i, size-1, 1 ) ;
-}
-
-int MatrixArbiter::_Priority( int row, int column ) const  {
-  if ( row <= column ) 
-    return _matrix[ row * _input_size + column ] ;
-  return 1 -_matrix[ column * _input_size + row ]  ;
-}
-
-void MatrixArbiter::_SetPriority( int row, int column, int val )  {
-  if ( row != column ) 
-    _matrix[ row * _input_size + column ] = val ;
+  : Arbiter( parent, name, size ), _last_req(-1) {
+  _matrix.resize(size);
+  for ( int i = 0 ; i < size ; i++ ) {
+    _matrix[i].resize(size);
+    for ( int j = 0; j < i; j++ ) {
+      _matrix[i][j] = 1;
+    }
+  }
 }
 
 void MatrixArbiter::PrintState() const  {
   cout << "Priority Matrix: " << endl ;
-  for ( int r = 0; r < _input_size ; r++ ) {
-    for ( int c = 0 ; c < _input_size ; c++ ) {
-      cout << _Priority(r,c) << " " ;
+  for ( int r = 0; r < _size ; r++ ) {
+    for ( int c = 0 ; c < _size ; c++ ) {
+      cout << _matrix[r][c] << " " ;
     }
     cout << endl ;
   }
@@ -72,11 +63,19 @@ void MatrixArbiter::PrintState() const  {
 void MatrixArbiter::UpdateState() {
   // update priority matrix using last grant
   if ( _selected > -1 ) {
-    for ( int i = 0; i < _input_size ; i++ ) {
-      _SetPriority( _selected, i, 0 ) ;
-      _SetPriority( i, _selected, 1 ) ;
+    for ( int i = 0; i < _size ; i++ ) {
+      if( _selected != i ) {
+	_matrix[_selected][i] = 0 ;
+	_matrix[i][_selected] = 1 ;
+      }
     }
   }
+}
+
+void MatrixArbiter::AddRequest( int input, int id, int pri )
+{
+  _last_req = input;
+  Arbiter::AddRequest(input, id, pri);
 }
 
 int MatrixArbiter::Arbitrate( int* id, int* pri ) {
@@ -91,14 +90,14 @@ int MatrixArbiter::Arbitrate( int* id, int* pri ) {
     
     _selected = -1 ;
 
-    for ( int input = 0 ; input < _input_size ; input++ ) {
+    for ( int input = 0 ; input < _size ; input++ ) {
       if(_request[input].valid) {
 	
 	bool grant = true;
-	for ( int i = 0 ; i < _input_size ; i++ ) {
+	for ( int i = 0 ; i < _size ; i++ ) {
 	  if ( _request[i].valid &&
 	       ( ( ( _request[i].pri == _request[input].pri ) &&
-		   _Priority(i,input)) ||
+		   _matrix[i][input]) ||
 		 ( _request[i].pri > _request[input].pri )
 		 ) ) {
 	    grant = false ;
@@ -115,21 +114,11 @@ int MatrixArbiter::Arbitrate( int* id, int* pri ) {
     }
   }
     
-  if ( _selected != -1 ) {
-    if ( id )
-      *id  = _request[_selected].id ;
-    if ( pri )
-      *pri = _request[_selected].pri ;
+  return Arbiter::Arbitrate(id, pri);
+}
 
-    // clear the request vector
-    for ( int i = 0; i < _input_size ; i++ )
-      _request[i].valid = false ;
-    _num_reqs = 0 ;
-    _last_req = -1 ;
-  } else {
-    assert(_num_reqs == 0);
-    assert(_last_req == -1);
-  }
-
-  return _selected ;
+void MatrixArbiter::Clear()
+{
+  _last_req = -1;
+  Arbiter::Clear();
 }

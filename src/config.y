@@ -7,15 +7,17 @@
 int  configlex(void);
 void configerror(string msg);
 
+#ifdef _WIN32
 #pragma warning ( disable : 4102 )
 #pragma warning ( disable : 4244 )
+#endif
 
 %}
 
 %union {
-  char         *name;
-  unsigned int num;
-  double       fnum;
+  char   *name;
+  int    num;
+  double fnum;
 }
 
 %token <name> STR

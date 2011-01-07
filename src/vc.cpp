@@ -1,7 +1,7 @@
 // $Id: vc.cpp 2195 2010-06-30 20:42:08Z qtedq $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -36,6 +36,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *This class calls the routing functions
  */
 
+#include <limits>
+#include <sstream>
+
 #include "globals.hpp"
 #include "booksim.hpp"
 #include "vc.hpp"
@@ -44,52 +47,26 @@ int VC::total_cycles = 0;
 const char * const VC::VCSTATE[] = {"idle",
 				    "routing",
 				    "vc_alloc",
-				    "active",
-				    "vc_spec",
-				    "vc_spec_grant"};
+				    "active"};
 
 VC::state_info_t VC::state_info[] = {{0},
-				     {0},
-				     {0},
 				     {0},
 				     {0},
 				     {0}};
 int VC::occupancy = 0;
 
-VC::VC( const Configuration& config, int outputs ) :
-  Module( )
-{
-  _Init( config, outputs );
-}
-
 VC::VC( const Configuration& config, int outputs, 
-	Module *parent, const string& name ) :
-  Module( parent, name )
+	Module *parent, const string& name )
+  : Module( parent, name ), 
+    _state(idle), _state_time(0), _out_port(-1), _out_vc(-1), _total_cycles(0),
+    _vc_alloc_cycles(0), _active_cycles(0), _idle_cycles(0), _routing_cycles(0),
+    _pri(0), _watched(false), _expected_pid(-1), _last_id(-1), _last_pid(-1)
 {
-  _Init( config, outputs );
-}
+  _size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
 
-VC::~VC( )
-{
-}
+  _route_set = new OutputSet( );
 
-void VC::_Init( const Configuration& config, int outputs )
-{
-  _state      = idle;
-  _state_time = 0;
-
-  _size = int( config.GetInt( "vc_buf_size" ) );
-
-  _route_set = new OutputSet( outputs );
-
-  _total_cycles    = 0;
-  _vc_alloc_cycles = 0;
-  _active_cycles   = 0;
-  _idle_cycles     = 0;
-  _routing_cycles     = 0;
-
-  string priority;
-  config.GetStr( "priority", priority );
+  string priority = config.GetStr( "priority" );
   if ( priority == "local_age" ) {
     _pri_type = local_age_based;
   } else if ( priority == "queue_length" ) {
@@ -102,36 +79,49 @@ void VC::_Init( const Configuration& config, int outputs )
     _pri_type = other;
   }
 
-  _pri = 0;
   _priority_donation = config.GetInt("vc_priority_donation");
+}
 
-  _out_port = 0 ;
-  _out_vc = 0 ;
-
-  _watched = false;
+VC::~VC()
+{
+  delete _route_set;
 }
 
 bool VC::AddFlit( Flit *f )
 {
   assert(f);
 
-  if((int)_buffer.size() >= _size) return false;
+  if(_expected_pid >= 0) {
+    if(f->pid != _expected_pid) {
+      ostringstream err;
+      err << "Received flit " << f->id << " with unexpected packet ID: " << f->pid 
+	  << " (expected: " << _expected_pid << ")";
+      Error(err.str());
+      return false;
+    } else if(f->tail) {
+      _expected_pid = -1;
+    }
+  } else if(!f->tail) {
+    _expected_pid = f->pid;
+  }
+    
+  if((int)_buffer.size() >= _size) {
+    Error("Flit buffer overflow.");
+    return false;
+  }
 
   // update flit priority before adding to VC buffer
   if(_pri_type == local_age_based) {
-    f->pri = -GetSimTime();
+    f->pri = numeric_limits<int>::max() - GetSimTime();
+    assert(f->pri >= 0);
   } else if(_pri_type == hop_count_based) {
     f->pri = f->hops;
+    assert(f->pri >= 0);
   }
 
   _buffer.push_back(f);
   UpdatePriority();
   return true;
-}
-
-Flit *VC::FrontFlit( )
-{
-  return _buffer.empty() ? NULL : _buffer.front();
 }
 
 Flit *VC::RemoveFlit( )
@@ -140,7 +130,11 @@ Flit *VC::RemoveFlit( )
   if ( !_buffer.empty( ) ) {
     f = _buffer.front( );
     _buffer.pop_front( );
+    _last_id = f->id;
+    _last_pid = f->pid;
     UpdatePriority();
+  } else {
+    Error("Trying to remove flit from empty buffer.");
   }
   return f;
 }
@@ -156,21 +150,8 @@ void VC::SetState( eVCState s )
 		<< "Changing state from " << VC::VCSTATE[_state]
 		<< " to " << VC::VCSTATE[s] << "." << endl;
   
-  // do not reset state time for speculation-related pseudo state transitions
-  if(((_state == vc_alloc) && (s == vc_spec)) ||
-     ((_state == vc_spec) && (s == vc_spec_grant))) {
-    assert(f);
-    if(f->watch)
-      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		  << "Keeping state time at " << _state_time << "." << endl;
-  } else {
-    if(f && f->watch)
-      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		  << "Resetting state time." << endl;
-    _state_time = 0;
-  }
-  
   _state = s;
+  _state_time = 0;
 }
 
 const OutputSet *VC::GetRouteSet( ) const
@@ -193,7 +174,7 @@ void VC::UpdatePriority()
     Flit * f = _buffer.front();
     if((_pri_type != local_age_based) && _priority_donation) {
       Flit * df = f;
-      for(int i = 1; i < _buffer.size(); ++i) {
+      for(size_t i = 1; i < _buffer.size(); ++i) {
 	Flit * bf = _buffer[i];
 	if(bf->pri > df->pri) df = bf;
       }
@@ -215,14 +196,11 @@ void VC::UpdatePriority()
 }
 
 
-int VC::GetSize() const
-{
-  return (int)_buffer.size();
-}
-
 void VC::Route( tRoutingFunction rf, const Router* router, const Flit* f, int in_channel )
-{  
+{
   rf( router, f, in_channel, _route_set, false );
+  _out_port = -1;
+  _out_vc = -1;
 }
 
 void VC::AdvanceTime( )
@@ -235,9 +213,7 @@ void VC::AdvanceTime( )
   switch( _state ) {
   case idle          : _idle_cycles++; break;
   case active        : _active_cycles++; break;
-  case vc_spec_grant : _active_cycles++; break;
   case vc_alloc      : _vc_alloc_cycles++; break;
-  case vc_spec       : _vc_alloc_cycles++; break;
   case routing       : _routing_cycles++; break;
   }
   state_info[_state].cycles++;
@@ -260,11 +236,17 @@ void VC::Display( ) const
 {
   if ( _state != VC::idle ) {
     cout << FullName() << ": "
-	 << " state: " << VCSTATE[_state]
-	 << " out_port: " << _out_port
-	 << " out_vc: " << _out_vc 
-	 << " fill: " << _buffer.size() 
-	 << endl ;
+	 << " state: " << VCSTATE[_state];
+    if(_state == VC::active) {
+      cout << " out_port: " << _out_port
+	   << " out_vc: " << _out_vc;
+    }
+    cout << " fill: " << _buffer.size();
+    if(!_buffer.empty()) {
+      cout << " front: " << _buffer.front()->id;
+    }
+    cout << " pri: " << _pri;
+    cout << endl;
   }
 }
 
@@ -272,14 +254,14 @@ void VC::DisplayStats( bool print_csv )
 {
   if(print_csv) {
     for(eVCState state = state_min; state <= state_max; state = eVCState(state+1)) {
-      cout << (float)state_info[state].cycles/(float)total_cycles << ",";
+      cout << (double)state_info[state].cycles/(double)total_cycles << ",";
     }
-    cout << (float)occupancy/(float)total_cycles << endl;
+    cout << (double)occupancy/(double)total_cycles << endl;
   }
   cout << "VC state breakdown:" << endl;
   for(eVCState state = state_min; state <= state_max; state = eVCState(state+1)) {
     cout << "  " << VCSTATE[state]
-	 << ": " << (float)state_info[state].cycles/(float)total_cycles << endl;
+	 << ": " << (double)state_info[state].cycles/(double)total_cycles << endl;
   }
-  cout << "  occupancy: " << (float)occupancy/(float)total_cycles << endl;
+  cout << "  occupancy: " << (double)occupancy/(double)total_cycles << endl;
 }

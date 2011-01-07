@@ -1,7 +1,7 @@
 // $Id: qtree.cpp 2314 2010-07-25 02:06:38Z qtedq $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -102,6 +102,7 @@ void QTree::_BuildNet( const Configuration& config )
       _routers[r] = Router::NewRouter( config, this,
 				       routerName.str( ),
 				       id, d, d);
+      _timed_modules.push_back(_routers[r]);
       routerName.str("");
     }
   }

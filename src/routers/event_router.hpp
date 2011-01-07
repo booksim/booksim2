@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -33,9 +33,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 #include <queue>
+#include <vector>
 
 #include "module.hpp"
 #include "router.hpp"
+#include "buffer.hpp"
 #include "vc.hpp"
 #include "prio_arb.hpp"
 #include "routefunc.hpp"
@@ -58,23 +60,19 @@ private:
   int _buf_size;
   int _vcs;
 
-  int *_credits;
-  int *_presence;
-  int *_input;
-  int *_inputVC;
+  vector<int> _credits;
+  vector<int> _presence;
+  vector<int> _input;
+  vector<int> _inputVC;
 
-  list<tWaiting *> *_waiting;
+  vector<list<tWaiting *> > _waiting;
  
-  eNextVCState *_state;
+  vector<eNextVCState> _state;
 
 public:
-  EventNextVCState() { };
-  void _Init( const Configuration& config );
 
-  EventNextVCState( const Configuration& config );
   EventNextVCState( const Configuration& config, 
 		    Module *parent, const string& name );
-  ~EventNextVCState( );
 
   eNextVCState GetState( int vc ) const;
   int GetPresence( int vc ) const;
@@ -98,24 +96,24 @@ public:
 
 class EventRouter : public Router {
   int _vcs;
-  int _vc_size;
 
   int _vct;
 
-  VC  **_vc;
+  vector<Buffer *> _buf;
+  vector<vector<bool> > _active;
 
   tRoutingFunction   _rf;
 
-  EventNextVCState *_output_state;
+  vector<EventNextVCState *> _output_state;
 
   PipelineFIFO<Flit>   *_crossbar_pipe;
   PipelineFIFO<Credit> *_credit_pipe;
 
-  queue<Flit *> *_input_buffer;
-  queue<Flit *> *_output_buffer;
+  vector<queue<Flit *> > _input_buffer;
+  vector<queue<Flit *> > _output_buffer;
 
-  queue<Credit *> *_in_cred_buffer;
-  queue<Credit *> *_out_cred_buffer;
+  vector<queue<Credit *> > _in_cred_buffer;
+  vector<queue<Credit *> > _out_cred_buffer;
 
   struct tArrivalEvent {
     int  input;
@@ -130,8 +128,8 @@ class EventRouter : public Router {
   };
 
   PipelineFIFO<tArrivalEvent> *_arrival_pipe;
-  queue<tArrivalEvent *>      *_arrival_queue;
-  PriorityArbiter             **_arrival_arbiter;
+  vector<queue<tArrivalEvent *> > _arrival_queue;
+  vector<PriorityArbiter*> _arrival_arbiter;
 
   struct tTransportEvent {
     int  input;
@@ -142,11 +140,11 @@ class EventRouter : public Router {
     bool watch; // debug
   };
 
-  queue<tTransportEvent *> *_transport_queue;
-  PriorityArbiter          **_transport_arbiter;
+  vector<queue<tTransportEvent *> > _transport_queue;
+  vector<PriorityArbiter*> _transport_arbiter;
 
-  bool *_transport_free;
-  int  *_transport_match;
+  vector<bool> _transport_free;
+  vector<int> _transport_match;
 
   void _ReceiveFlits( );
   void _ReceiveCredits( );
@@ -163,6 +161,8 @@ class EventRouter : public Router {
   void _SendFlits( );
   void _SendCredits( );
 
+  virtual void _InternalStep( );
+
 public:
   EventRouter( const Configuration& config,
 	       Module *parent, const string & name, int id,
@@ -170,7 +170,6 @@ public:
   virtual ~EventRouter( );
 
   virtual void ReadInputs( );
-  virtual void InternalStep( );
   virtual void WriteOutputs( );
 
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const {return 0;}

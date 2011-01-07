@@ -1,7 +1,7 @@
 // $Id: separable.cpp 2314 2010-07-25 02:06:38Z qtedq $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -30,147 +30,58 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // ----------------------------------------------------------------------
 //
-//  SeparableAllocator: Separable Allocator
+//  SeparableAllocator: Separable Allocator Base Class
 //
 // ----------------------------------------------------------------------
 
 #include "separable.hpp"
 
-#include "booksim.hpp"
-#include "roundrobin_arb.hpp"
-#include "matrix_arb.hpp"
-
-#include <vector>
-#include <iostream>
-#include <string.h>
 #include <sstream>
+
+#include "arbiter.hpp"
 
 SeparableAllocator::SeparableAllocator( Module* parent, const string& name,
 					int inputs, int outputs,
 					const string& arb_type )
-  : Allocator( parent, name, inputs, outputs )
+  : SparseAllocator( parent, name, inputs, outputs )
 {
   
-  _requests  = new vector<sRequest> [inputs] ;
-  
-  _input_arb = new Arbiter*[inputs];
-  _output_arb = new Arbiter*[outputs];
-  
-  ostringstream arb_name;
-  
+  _input_arb.resize(inputs);
+
   for (int i = 0; i < inputs; ++i) {
-    arb_name << "arb_i" << i;
+    ostringstream arb_name("arb_i");
+    arb_name << i;
     _input_arb[i] = Arbiter::NewArbiter(this, arb_name.str(), arb_type, outputs);
-    arb_name.str("");
   }
+
+  _output_arb.resize(outputs);
+
   for (int i = 0; i < outputs; ++i) {
-    arb_name << "arb_o" << i;
+    ostringstream arb_name("arb_o");
+    arb_name << i;
     _output_arb[i] = Arbiter::NewArbiter(this, arb_name.str( ), arb_type, inputs);
-    arb_name.str("");
   }
-  
-  Clear() ;
+
 }
 
 SeparableAllocator::~SeparableAllocator() {
 
-  delete[] _requests ;
-
   for (int i = 0; i < _inputs; ++i) {
     delete _input_arb[i];
   }
-  delete[] _input_arb ;
 
   for (int i = 0; i < _outputs; ++i) {
     delete _output_arb[i];
   }
-  delete[] _output_arb ;
+
 }
 
 void SeparableAllocator::Clear() {
-  for ( int i = 0 ; i < _inputs ; i++ )
-    _requests[i].clear() ;
-
-}
-
-int SeparableAllocator::ReadRequest( int in, int out ) const {
-  sRequest r ;
-  if ( !ReadRequest( r, in, out) ) {
-    return -1 ;
-  } 
-  return r.label ;
-}
-
-bool SeparableAllocator::ReadRequest( sRequest &req, int in, int out ) const {
-
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) );
-
-  const sRequest * sreq = NULL;
-
-  vector<sRequest>::const_iterator match = _requests[in].begin() ;
-  while ( match != _requests[in].end() ) {
-    if ( ( match->port == out ) && ( !sreq || ( match->in_pri > sreq->in_pri ) ) ) {
-      sreq = &(*match) ;
-    }
-    match++ ;
+  for ( int i = 0 ; i < _inputs ; i++ ) {
+    _input_arb[i]->Clear();
   }
-
-  if(sreq) {
-    req = *sreq;
-    return true;
+  for ( int o = 0; o < _outputs; o++ ) {
+    _output_arb[o]->Clear();
   }
-  return false ;
-
-}
-
-void SeparableAllocator::AddRequest( int in, int out, int label, int in_pri,
-				     int out_pri ) {
-
-  assert( ( in >= 0 ) && ( in < _inputs ) &&
-	  ( out >= 0 ) && ( out < _outputs ) );
-
-  sRequest req ;
-  req.port    = out ;
-  req.label   = label ;
-  req.in_pri  = in_pri ;
-  req.out_pri = out_pri ;
-  
-  _requests[in].push_back( req ) ;
-  
-}
-
-
-void SeparableAllocator::RemoveRequest( int in, int out, int label ) {
-  // Method not implemented yet
-  assert( false ) ;
-
-}
-
-void SeparableAllocator::PrintRequests( ostream * os ) const {
-  
-  if(!os) os = &cout;
-  
-  *os << "Requests = [ ";
-  
-  for ( int input = 0 ; input < _inputs ; input++ ) {
-    if ( _requests[input].empty() )
-      continue ;
-    
-    vector<sRequest>::const_iterator it  = _requests[input].begin() ;
-    vector<sRequest>::const_iterator end = _requests[input].end() ;
-
-    *os << input << " -> [ ";
-    while ( it != end ) {
-      const sRequest& req = *it ;
-      *os << "(lbl:" << req.label
-	   << ",out:" << req.port
-	   << ",ipr:" << req.in_pri
-	   << ",opr:" << req.out_pri
-	   << ") ";
-      it++ ;
-    }
-    *os << "] ";
-  }
-  *os << "]." << endl;
+  SparseAllocator::Clear();
 }

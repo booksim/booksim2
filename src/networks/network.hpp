@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -32,12 +32,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _NETWORK_HPP_
 
 #include <vector>
+#include <deque>
 
 #include "module.hpp"
 #include "flit.hpp"
 #include "credit.hpp"
 #include "router.hpp"
 #include "module.hpp"
+#include "timed_module.hpp"
 #include "flitchannel.hpp"
 #include "channel.hpp"
 #include "config_utils.hpp"
@@ -46,13 +48,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 typedef Channel<Credit> CreditChannel;
 
 
-class BSNetwork : public Module {
+class BSNetwork : public TimedModule {
 protected:
 
   int _size;
   int _sources;
   int _dests;
   int _channels;
+  int _classes;
 
   vector<Router *> _routers;
 
@@ -65,8 +68,7 @@ protected:
   vector<FlitChannel *> _chan;
   vector<CreditChannel *> _chan_cred;
 
-  vector<int> _chan_use;
-  int _chan_use_cycles;
+  deque<TimedModule *> _timed_modules;
 
   virtual void _ComputeSize( const Configuration &config ) = 0;
   virtual void _BuildNet( const Configuration &config ) = 0;
@@ -80,11 +82,9 @@ public:
 
   virtual void WriteFlit( Flit *f, int source );
   virtual Flit *ReadFlit( int dest );
-  virtual Flit *PeekFlit( int dest );
 
   virtual void    WriteCredit( Credit *c, int dest );
   virtual Credit *ReadCredit( int source );
-  virtual Credit *PeekCredit( int source );
 
   int  NumSources( ) const;
   int  NumDests( ) const;
@@ -95,7 +95,7 @@ public:
   virtual double Capacity( ) const;
 
   virtual void ReadInputs( );
-  virtual void InternalStep( );
+  virtual void Evaluate( );
   virtual void WriteOutputs( );
   
   void Display( ) const;

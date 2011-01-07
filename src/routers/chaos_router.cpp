@@ -1,7 +1,7 @@
 // $Id: chaos_router.cpp 1969 2010-05-10 11:09:22Z dub $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <sstream>
 #include <iostream>
-#include <stdlib.h>
+#include <cstdlib>
 
 #include "chaos_router.hpp"
 #include "random_utils.hpp"
@@ -52,7 +52,9 @@ ChaosRouter::ChaosRouter( const Configuration& config,
     Error( "Chaos router must have equal number of input and output ports" );
   }
 
-  _buffer_size      = config.GetInt( "const_flits_per_packet" );
+  _buffer_size      = config.GetInt( "vc_buf_size" );
+  assert(_buffer_size >= config.GetInt( "const_flits_per_packet" ));
+
   _multi_queue_size = config.GetInt( "multi_queue_size" );
   
   _cur_channel = 0;
@@ -60,55 +62,50 @@ ChaosRouter::ChaosRouter( const Configuration& config,
 
   // Routing
 
-  _rf = GetRoutingFunction( config );
+  string rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
+  map<string, tRoutingFunction>::iterator rf_iter = gRoutingFunctionMap.find(rf);
+  if(rf_iter == gRoutingFunctionMap.end()) {
+    Error("Invalid routing function: " + rf);
+  }
+  _rf = rf_iter->second;
 
-  _input_route = new OutputSet * [_inputs];
-  _mq_route    = new OutputSet * [_multi_queue_size];
+  _input_route.resize(_inputs);
 
   for ( i = 0; i < _inputs; ++i ) {
-    _input_route[i] = new OutputSet( _outputs );
+    _input_route[i] = new OutputSet( );
   }
 
+  _mq_route.resize(_multi_queue_size);
+
   for ( i = 0; i < _multi_queue_size; ++i ) {
-    _mq_route[i] = new OutputSet( _outputs );
+    _mq_route[i] = new OutputSet( );
   }				       
 
   // Alloc pipelines (to simulate processing/transmission delays)
 
   _crossbar_pipe = 
     new PipelineFIFO<Flit>( this, "crossbar_pipeline", _outputs, 
-			    _st_prepare_delay + _st_final_delay );
+			    _crossbar_delay );
 
   // Input and output queues
 
-  _input_frame  = new queue<Flit *> [_inputs];
-  _output_frame = new queue<Flit *> [_outputs]; 
-  _multi_queue  = new queue<Flit *> [_multi_queue_size];
+  _input_frame.resize(_inputs);
+  _output_frame.resize(_outputs); 
+  _multi_queue.resize(_multi_queue_size);
   
-  _credit_queue  = new queue<Credit *> [_inputs];
+  _credit_queue.resize(_inputs);
 
-  _input_state        = new eQState [_inputs];
-  _input_output_match = new int [_inputs];
-  _input_mq_match     = new int [_inputs];
+  _input_state.resize(_inputs, empty);
+  _input_output_match.resize(_inputs, -1);
+  _input_mq_match.resize(_inputs, -1);
 
-  _output_matched     = new bool [_outputs];
-  _next_queue_cnt     = new int [_outputs];
+  _output_matched.resize(_outputs, false);
+  _next_queue_cnt.resize(_outputs, 0);
 
-  for ( i = 0; i < _inputs; ++i ) {
-    _input_state[i]        = empty;
-    _input_output_match[i] = -1;
-    _input_mq_match[i]     = -1;
-  }
-
-  for ( i = 0; i < _outputs; ++i ) {
-    _output_matched[i] = false;
-    _next_queue_cnt[i] = 0;
-  }
-
-  _multi_match = new int  [_multi_queue_size];
-  _mq_age      = new int  [_multi_queue_size];
-  _mq_matched  = new bool [_multi_queue_size];
-  _multi_state = new eQState [_multi_queue_size];
+  _multi_match.resize(_multi_queue_size, -1);
+  _mq_age.resize(_multi_queue_size);
+  _mq_matched.resize(_multi_queue_size, false);
+  _multi_state.resize(_multi_queue_size, empty);
 
   for ( i = 0; i < _multi_queue_size; ++i ) {
     _multi_state[i] = empty;
@@ -123,19 +120,6 @@ ChaosRouter::~ChaosRouter( )
 
   delete _crossbar_pipe;
 
-  delete [] _input_frame;
-  delete [] _multi_queue;
-  delete [] _output_frame;
-  delete [] _credit_queue;
-  delete [] _input_state;
-  delete [] _input_output_match;
-  delete [] _input_mq_match;
-  delete [] _multi_match;
-  delete [] _output_matched;
-  delete [] _mq_age;
-  delete [] _mq_matched;
-  delete [] _multi_state;
-
   for ( i = 0; i < _inputs; ++i ) {
     delete _input_route[i];
   }
@@ -143,9 +127,6 @@ ChaosRouter::~ChaosRouter( )
   for ( i = 0; i < _multi_queue_size; ++i ) {
     delete _mq_route[i];
   }
-
-  delete [] _input_route;
-  delete [] _mq_route;
 }
   
 void ChaosRouter::ReadInputs( )
@@ -154,7 +135,7 @@ void ChaosRouter::ReadInputs( )
   Credit *c;
 
   for ( int input = 0; input < _inputs; ++input ) { 
-    f = (*_input_channels)[input]->Receive();
+    f = _input_channels[input]->Receive();
 
     if ( f ) {
       _input_frame[input].push( f );
@@ -232,7 +213,7 @@ void ChaosRouter::ReadInputs( )
   // Process incoming credits
 
   for ( int output = 0; output < _outputs; ++output ) {
-    c = (*_output_credits)[output]->Receive();
+    c = _output_credits[output]->Receive();
     
     if ( c ) {
       _next_queue_cnt[output]--;
@@ -241,12 +222,12 @@ void ChaosRouter::ReadInputs( )
 	Error( "Next queue count fell below zero!" );
       }
 
-      delete c;
+      c->Free();
     }
   }
 }
 
-void ChaosRouter::InternalStep( )
+void ChaosRouter::_InternalStep( )
 {
   _NextInterestingChannel( );
   _OutputAdvance( );
@@ -284,7 +265,7 @@ bool ChaosRouter::_InputReady( int input ) const
 
 bool ChaosRouter::_OutputFull( int out ) const
 {
-  return ( _output_frame[out].size( ) >= (unsigned int)_buffer_size );
+  return ( _output_frame[out].size( ) >= (size_t)_buffer_size );
 }
 
 bool ChaosRouter::_OutputAvail( int out ) const
@@ -296,7 +277,7 @@ bool ChaosRouter::_OutputAvail( int out ) const
 
 bool ChaosRouter::_MultiQueueFull( int mq ) const
 {
-  return ( _multi_queue[mq].size( ) >= (unsigned int)_buffer_size );
+  return ( _multi_queue[mq].size( ) >= (size_t)_buffer_size );
 }
 
 int ChaosRouter::_InputForOutput( int output ) const
@@ -602,9 +583,8 @@ void ChaosRouter::_OutputAdvance( )
 	  _input_mq_match[i]     = -1;
 	}
 	
-	c = _NewCredit( 1 );
-	c->vc[0]  = 0;
-	c->vc_cnt = 1;
+	c = Credit::New( );
+	c->vc.insert(0);
 	_credit_queue[i].push( c );
       }
     }
@@ -663,10 +643,8 @@ void ChaosRouter::_OutputAdvance( )
 
 void ChaosRouter::_SendFlits( )
 {
-  Flit *f;
-
   for ( int output = 0; output < _outputs; ++output ) {
-    f = _crossbar_pipe->Read( output );
+    Flit *f = _crossbar_pipe->Read( output );
 
     if ( f ) {
       _output_frame[output].push( f );
@@ -675,28 +653,21 @@ void ChaosRouter::_SendFlits( )
 
     if ( ( _next_queue_cnt[output] < _buffer_size ) &&
 	 ( !_output_frame[output].empty( ) ) ) {
-      (*_output_channels)[output]->Send( _output_frame[output].front( ) );
+      _output_channels[output]->Send( _output_frame[output].front( ) );
       _output_frame[output].pop( );
       ++_next_queue_cnt[output];
-    } else {
-      (*_output_channels)[output]->Send(0);
     }
   }
 }
 
 void ChaosRouter::_SendCredits( )
 {
-  Credit *c;
-
   for ( int input = 0; input < _inputs; ++input ) {
     if ( !_credit_queue[input].empty( ) ) {
-      c = _credit_queue[input].front( );
+      Credit *c = _credit_queue[input].front( );
       _credit_queue[input].pop( );
-    } else {
-      c = 0;
+      _input_credits[input]->Send( c );
     }
-    (*_input_credits)[input]->Send( c );
-
   }
 }
 

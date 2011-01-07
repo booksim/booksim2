@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -72,7 +72,7 @@ public:
 template<class T>
 ostream & operator<<(ostream & os, const vector<T> & v) {
   os << "[ ";
-  for(int i = 0; i < v.size(); ++i) {
+  for(size_t i = 0; i < v.size(); ++i) {
     os << v[i] << " ";
   }
   os << "]";

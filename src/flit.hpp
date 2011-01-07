@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -31,13 +31,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _FLIT_HPP_
 #define _FLIT_HPP_
 
-#include "booksim.hpp"
 #include <iostream>
+#include <stack>
 
+<<<<<<< .working
 #include "Message.h"
-struct Flit {
 
-  const static int NUM_FLIT_TYPES = 10;
+#include "booksim.hpp"
+
+
+class Flit {
+
+public:
+
+  const static int NUM_FLIT_TYPES = 5;
   enum FlitType { READ_REQUEST  = 0, 
 		  READ_REPLY    = 1,
 		  WRITE_REQUEST = 2,
@@ -47,6 +54,8 @@ struct Flit {
 
   int gems_net;
   int vc;
+
+  int cl;
 
   bool head;
   bool tail;
@@ -61,6 +70,8 @@ struct Flit {
 
   int  id;
   int  pid;
+  int  tid;
+
   bool record;
 
   int  src;
@@ -70,10 +81,7 @@ struct Flit {
 
   int  hops;
   bool watch;
-  short subnetwork;
-
-  //for credit tracking, last router visited
-  mutable int from_router;
+  int  subnetwork;
 
   // Fields for multi-phase algorithms
   mutable int intm;
@@ -85,17 +93,25 @@ struct Flit {
   // Which VC parition to use for deadlock avoidance in a ring
   mutable int ring_par;
 
-  // Fileds for XY or YX randomized routing
-  mutable int x_then_y;
-
   // Fields for arbitrary data
   void* data ;
 
   MsgPtr msg;
 
-  // Constructor
-  Flit() ;
   void Reset();
+
+
+  static Flit * New();
+  void Free();
+  static void FreeAll();
+
+private:
+
+  Flit();
+  ~Flit() {}
+
+  static stack<Flit *> _all;
+  static stack<Flit *> _free;
 
 };
 

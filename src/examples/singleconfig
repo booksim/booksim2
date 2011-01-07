@@ -34,13 +34,27 @@ topology = single;
 in_ports = 10;
 out_ports = 10;
 
+num_vcs = 8 ;
+
+vc_buf_size = 8;
+
+vc_allocator = separable_input_first; 
+sw_allocator = separable_input_first;
+
 routing_function = single;
 
 traffic = uniform;
 
 use_read_write = 0;
 
-injection_rate = 0.4;
+injection_rate = 1.0;
 
 
 
+
+sample_period  = 100000;  
+
+routing_delay  = 0;
+vc_alloc_delay = 1;
+sw_alloc_delay = 1;
+st_final_delay = 1;

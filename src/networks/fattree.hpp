@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -50,6 +50,9 @@ class FatTree : public BSNetwork {
 
   int _k;
   int _n;
+
+  int _xrouter;
+  int _yrouter;
 
   int _layout;
   int _channelWidth;

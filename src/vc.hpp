@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -38,12 +38,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "routefunc.hpp"
 #include "config_utils.hpp"
 
-class VCRouter;
-
 class VC : public Module {
 public:
   enum eVCState { state_min = 0, idle = state_min, routing, vc_alloc, active, 
-		  vc_spec, vc_spec_grant, state_max = vc_spec_grant };
+		  state_max = active };
   struct state_info_t {
     int cycles;
   };
@@ -80,18 +78,23 @@ private:
 
   bool _watched;
 
+  int _expected_pid;
+
+  int _last_id;
+  int _last_pid;
+
 public:
   
-  VC() {}; // jbalfour: hack for GCC 3.4.4+
-  void _Init( const Configuration& config, int outputs );
-
-  VC( const Configuration& config, int outputs );
   VC( const Configuration& config, int outputs,
       Module *parent, const string& name );
-  ~VC( );
+  ~VC();
 
   bool AddFlit( Flit *f );
-  Flit *FrontFlit( );
+  inline Flit *FrontFlit( ) const
+  {
+    return _buffer.empty() ? NULL : _buffer.front();
+  }
+  
   Flit *RemoveFlit( );
   
   
@@ -143,11 +146,15 @@ public:
 
   void AdvanceTime( );
 
+  inline int GetSize() const
+  {
+    return (int)_buffer.size();
+  }
+
   // ==== Debug functions ====
 
   void SetWatch( bool watch = true );
   bool IsWatched( ) const;
-  int GetSize() const;
   void Display( ) const;
   static void DisplayStats( bool print_csv = false );
 };

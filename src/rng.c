@@ -1,35 +1,4 @@
-// $Id: rng.cpp 1839 2010-03-24 02:03:56Z dub $
-
-/*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-Redistributions of source code must retain the above copyright notice, this list
-of conditions and the following disclaimer.
-Redistributions in binary form must reproduce the above copyright notice, this 
-list of conditions and the following disclaimer in the documentation and/or 
-other materials provided with the distribution.
-Neither the name of the Stanford University nor the names of its contributors 
-may be used to endorse or promote products derived from this software without 
-specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR 
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
-/*    This program by D E Knuth is in the public domain and freely copyable
- *    AS LONG AS YOU MAKE ABSOLUTELY NO CHANGES!
+/*    This program by D E Knuth is in the public domain and freely copyable.
  *    It is explained in Seminumerical Algorithms, 3rd edition, Section 3.6
  *    (or in the errata to the 2nd edition --- see
  *        http://www-cs-faculty.stanford.edu/~knuth/taocp.html
@@ -120,22 +89,20 @@ long ran_arr_cycle()
   if (ran_arr_ptr==&ran_arr_dummy)
     ran_start(314159L); /* the user forgot to initialize */
   ran_array(ran_arr_buf,QUALITY);
-  ran_arr_buf[100]=-1;
+  ran_arr_buf[KK]=-1;
   ran_arr_ptr=ran_arr_buf+1;
   return ran_arr_buf[0];
 }
 
-
-// #include <stdio.h>
-// int main()
-// {
-//   register int m; long a[2009]; 
-//   ran_start(310952L);
-//   for (m=0;m<=2009;m++) ran_array(a,1009);
-//   printf("%ld\n", a[0]);             /* 995235265 */
-//   ran_start(310952L);
-//   for (m=0;m<=1009;m++) ran_array(a,2009);
-//   printf("%ld\n", a[0]);             /* 995235265 */
-//   return 0;
-// }
-
+#include <stdio.h>
+int main()
+{
+  register int m; long a[2009]; 
+  ran_start(310952L);
+  for (m=0;m<=2009;m++) ran_array(a,1009);
+  printf("%ld\n", a[0]);             /* 995235265 */
+  ran_start(310952L);
+  for (m=0;m<=1009;m++) ran_array(a,2009);
+  printf("%ld\n", a[0]);             /* 995235265 */
+  return 0;
+}

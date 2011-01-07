@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -28,136 +28,134 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _IQ_ROUTER_BASE_HPP_
-#define _IQ_ROUTER_BASE_HPP_
+#ifndef _IQ_ROUTER_HPP_
+#define _IQ_ROUTER_HPP_
 
 #include <string>
+#include <deque>
 #include <queue>
 #include <set>
-#include <iostream>
+#include <map>
 
 #include "router.hpp"
 #include "routefunc.hpp"
-#include "pipefifo.hpp"
-#include "trafficmanager.hpp"
 
 using namespace std;
 
 class VC;
 class Flit;
 class Credit;
+class Buffer;
 class BufferState;
+class Allocator;
+class SwitchMonitor;
+class BufferMonitor;
 
-class SwitchMonitor {
-  int  _cycles ;
-  int  _inputs ;
-  int  _outputs ;
-  int* _event ;
-  int index( int input, int output, int flitType ) const ;
-public:
-  SwitchMonitor( int inputs, int outputs ) ;
-  void cycle() ;
-  int* GetActivity(){return _event;}
-  int NumInputs(){return _inputs;}
-  int NumOutputs(){return _outputs;}
-  void traversal( int input, int output, Flit* flit ) ;
-  friend ostream& operator<<( ostream& os, const SwitchMonitor& obj ) ;
-  
-} ;
+class IQRouter : public Router {
 
-class BufferMonitor {
-  int  _cycles ;
-  int  _inputs ;
-  int* _reads ;
-  int* _writes ;
-  int index( int input, int flitType ) const ;
-public:
-  BufferMonitor( int inputs ) ;
-  void cycle() ;
-  void write( int input, Flit* flit ) ;
-  void read( int input, Flit* flit ) ;
-  int* GetReads(){return _reads;}
-  int* GetWrites(){return _writes;}
-  int NumInputs(){return _inputs;}
-  friend ostream& operator<<( ostream& os, const BufferMonitor& obj ) ;
-} ;
+  int _vcs;
+  int _classes;
 
-class IQRouterBase : public Router {
-
-protected:
-  int  _vcs ;
-  int  _vc_size ;
-
-  //if a vc is in the vc::routing state, it is inserted here until routing_delay is up
-  queue<int> _routing_vcs;
-  set<int> _vcalloc_vcs;  
-
-  vector<vector<VC *> > _vc;
-  vector<BufferState *> _next_vcs;
-
-  tRoutingFunction   _rf;
-
-  PipelineFIFO<Flit> * _crossbar_pipe;
-  PipelineFIFO<Credit> * _credit_pipe;
+  bool _speculative;
+  bool _spec_check_elig;
+  bool _spec_mask_by_reqs;
   
   int _routing_delay;
   int _vc_alloc_delay;
   int _sw_alloc_delay;
   
-  //  vector<queue<Flit *> > _input_buffer;
+  vector<int> _received_flits;
+  vector<int> _sent_flits;
+
+  map<int, Flit *> _in_queue_flits;
+
+  deque<pair<int, pair<Credit *, int> > > _proc_credits;
+
+  deque<pair<int, pair<int, int> > > _route_vcs;
+  deque<pair<int, pair<pair<int, int>, int> > > _vc_alloc_vcs;  
+  deque<pair<int, pair<pair<int, int>, int> > > _sw_alloc_vcs;
+  deque<pair<int, pair<pair<int, int>, int> > > _sw_hold_vcs;
+
+  deque<pair<int, pair<Flit *, pair<int, int> > > > _crossbar_flits;
+
+  map<int, Credit *> _out_queue_credits;
+
+  vector<Buffer *> _buf;
+  vector<BufferState *> _next_buf;
+
+  Allocator *_vc_allocator;
+  Allocator *_sw_allocator;
+  Allocator *_spec_sw_allocator;
+  
+  vector<int> _vc_rr_offset;
+  vector<int> _sw_rr_offset;
+
+  tRoutingFunction   _rf;
+
   vector<queue<Flit *> > _output_buffer;
 
-  vector<queue<Credit *> > _in_cred_buffer;
-  //vector<queue<Credit *> > _out_cred_buffer;
+  vector<queue<Credit *> > _credit_buffer;
 
-  int _hold_switch_for_packet;
+  bool _hold_switch_for_packet;
   vector<int> _switch_hold_in;
   vector<int> _switch_hold_out;
   vector<int> _switch_hold_vc;
 
-  vector<int> _received_flits;
-  vector<int> _sent_flits;
-
   void _ReceiveFlits( );
   void _ReceiveCredits( );
 
-  virtual void _InputQueuing( );
-  virtual void _Route( );
-  virtual void _Alloc( ) = 0;
-  virtual void _OutputQueuing( );
+  virtual void _InternalStep( );
+
+  bool _SWAllocAddReq(int input, int vc, int output);
+
+  void _InputQueuing( );
+
+  void _RouteEvaluate( );
+  void _VCAllocEvaluate( );
+  void _SWAllocEvaluate( );
+  void _SwitchEvaluate( );
+
+  void _RouteUpdate( );
+  void _VCAllocUpdate( );
+  void _SWAllocUpdate( );
+  void _SwitchUpdate( );
+
+  void _OutputQueuing( );
 
   void _SendFlits( );
   void _SendCredits( );
   
   // ----------------------------------------
   //
-  //   Router Power Modelling
+  //   Router Power Modellingyes
   //
   // ----------------------------------------
-public:
-  SwitchMonitor switchMonitor ;
-  BufferMonitor bufferMonitor ;
+
+  SwitchMonitor * _switchMonitor ;
+  BufferMonitor * _bufferMonitor ;
   
 public:
-  IQRouterBase( const Configuration& config,
-	    Module *parent, const string & name, int id,
+
+  IQRouter( Configuration const & config,
+	    Module *parent, string const & name, int id,
 	    int inputs, int outputs );
   
-  virtual ~IQRouterBase( );
+  virtual ~IQRouter( );
   
   virtual void ReadInputs( );
-  virtual void InternalStep( );
   virtual void WriteOutputs( );
   
   void Display( ) const;
+
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const;
   virtual int GetBuffer(int i = -1) const;
   virtual int GetReceivedFlits(int i = -1) const;
   virtual int GetSentFlits(int o = -1) const;
   virtual void ResetFlitStats();
 
-  SwitchMonitor* GetSwitchMonitor(){return &switchMonitor;}
-  BufferMonitor* GetBufferMonitor(){return &bufferMonitor;}
+  SwitchMonitor const * const GetSwitchMonitor() const {return _switchMonitor;}
+  BufferMonitor const * const GetBufferMonitor() const {return _bufferMonitor;}
+
 };
 
 #endif

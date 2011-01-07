@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -28,59 +28,33 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-////////////////////////////////////////////////////////////////////////
-//
-// IsolatedMesh: Provides two independent physical networks for
-//               transporting different message types.
-//
-////////////////////////////////////////////////////////////////////////
-//
-// RCS Information:
-//  $Author: jbalfour $
-//  $Date: 2007/05/17 17:14:07 $
-//  $Id$
-// 
-////////////////////////////////////////////////////////////////////////
-#ifndef _ISOLATED_MESH_HPP_
-#define _ISOLATED_MESH_HPP_
+#include "packet_reply_info.hpp"
 
-#include "network.hpp"
-#include "kncube.hpp"
-#include <assert.h>
+stack<PacketReplyInfo*> PacketReplyInfo::_all;
+stack<PacketReplyInfo*> PacketReplyInfo::_free;
 
-class IsolatedMesh : public BSNetwork {
+PacketReplyInfo * PacketReplyInfo::New()
+{
+  PacketReplyInfo * pr;
+  if(_free.empty()) {
+    pr = new PacketReplyInfo();
+    _all.push(pr);
+  } else {
+    pr = _free.top();
+    _free.pop();
+  }
+  return pr;
+}
 
-  int _k;
-  int _n;
-  
-  int* _f_read_history;
-  int* _c_read_history;
+void PacketReplyInfo::Free()
+{
+  _free.push(this);
+}
 
-  KNCube* _subMesh[2];
-  int _subNetAssignment[Flit::NUM_FLIT_TYPES];
-
-  void _ComputeSize(const Configuration& config );
-  void _BuildNet(const Configuration& config );
-
-public:
-
-  IsolatedMesh( const Configuration &config, const string & name );
-  ~IsolatedMesh( );
-  static void RegisterRoutingFunctions() ;
-
-  void  WriteFlit( Flit *f, int source );
-  Flit* ReadFlit( int dest );
-
-  void    WriteCredit( Credit *c, int dest );
-  Credit* ReadCredit( int source );
-  
-  void ReadInputs( );
-  void InternalStep( );
-  void WriteOutputs( );
-
-  int GetN( ) const;
-  int GetK( ) const;
-
-};
-
-#endif
+void PacketReplyInfo::FreeAll()
+{
+  while(!_all.empty()) {
+    delete _all.top();
+    _all.pop();
+  }
+}

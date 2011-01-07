@@ -28,26 +28,26 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-// ----------------------------------------------------------------------
-//
-//  SeparableOutputFirstAllocator: Separable Output-First Allocator
-//
-// ----------------------------------------------------------------------
+#ifndef _PRIO_WAVEFRONT_HPP_
+#define _PRIO_WAVEFRONT_HPP_
 
-#ifndef _SEPARABLE_OUTPUT_FIRST_HPP_
-#define _SEPARABLE_OUTPUT_FIRST_HPP_
+#include "allocator.hpp"
 
-#include "separable.hpp"
-
-class SeparableOutputFirstAllocator : public SeparableAllocator {
+class PrioWavefront : public DenseAllocator {
+  int _square;
+  int _pri;
+  int _num_requests;
+  int _last_in;
+  int _last_out;
+  int _max_prio;
 
 public:
+  PrioWavefront( Module *parent, const string& name,
+		 int inputs, int outputs );
   
-  SeparableOutputFirstAllocator( Module* parent, const string& name, int inputs,
-				 int outputs, const string& arb_type ) ;
-  
-  virtual void Allocate() ;
-
-} ;
+  void AddRequest( int in, int out, int label = 1, 
+		   int in_pri = 0, int out_pri = 0 );
+  void Allocate( );
+};
 
 #endif

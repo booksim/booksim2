@@ -1,7 +1,7 @@
 // $Id: kncube.cpp 2314 2010-07-25 02:06:38Z qtedq $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -59,8 +59,6 @@ void KNCube::_ComputeSize( const Configuration &config )
   _n = config.GetInt( "n" );
 
   gK = _k; gN = _n;
-  realgk = _k;
-  realgn = _n;
   _size     = powi( _k, _n );
   _channels = 2*_n*_size;
 
@@ -98,6 +96,7 @@ void KNCube::_BuildNet( const Configuration &config )
 
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
 					node, 2*_n + 1, 2*_n + 1 );
+    _timed_modules.push_back(_routers[node]);
 
     router_name.str("");
 

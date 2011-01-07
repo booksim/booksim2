@@ -1,7 +1,7 @@
 // $Id: flitchannel.cpp 1872 2010-03-29 20:20:22Z dub $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -39,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
 #include <iomanip>
+
 #include "router.hpp"
 #include "globals.hpp"
 
@@ -47,62 +48,45 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //  $Date: 2007/06/27 23:10:17 $
 //  $Id: flitchannel.cpp 1872 2010-03-29 20:20:22Z dub $
 // ----------------------------------------------------------------------
-FlitChannel::FlitChannel( int cycles ) : Channel<Flit>(cycles), _idle(0) {
-  for ( int i = 0; i < Flit::NUM_FLIT_TYPES; ++i)
-    _active[i] = 0;
+FlitChannel::FlitChannel(Module * parent, string const & name, int classes)
+: Channel<Flit>(parent, name), _idle(0), _classes(classes) {
+  _active.resize(classes, 0);
 }
 
-FlitChannel::~FlitChannel() {
-
-  // FIXME: The destructor hardly seems like the appropriate place to print out 
-  // these statistics, so this should probably all be moved into a separate 
-  // member function.
-
-  if(_print_activity){
-    cout << "FlitChannel: " 
-	 << "[" 
-	 << _routerSource
-	 <<  " -> " 
-	 << _routerSink
-	 << "] " 
-	 << "[Latency: " << _delay << "] "
-	 << "(" << _active[0];
-    for(int i = 1; i < Flit::NUM_FLIT_TYPES; ++i) {
-      cout << "," << _active[i];
-    }
-    cout << ") (I#" << _idle << ")" << endl ;
-  }
-  
+void FlitChannel::SetSource(Router * router) {
+  _routerSource = router->GetID();
 }
 
-void FlitChannel::SetSource( Router* router ) {
-  _routerSource = router->GetID() ;
+void FlitChannel::SetSink(Router * router) {
+  _routerSink = router->GetID();
 }
 
-int FlitChannel::GetSource(){
-  return _routerSource;
-}
-
-void FlitChannel::SetSink( Router* router ) {
-  _routerSink = router->GetID() ;
-}
-
-int FlitChannel::GetSink(){
-  return _routerSink;
-}
-
-bool FlitChannel::InUse() {
-  if ( _queue.empty() )
-    return false;
-  return ( _queue.back() != 0 );
-}
-
-void FlitChannel::Send( Flit* flit ) {
-
-  if ( flit )
-    ++_active[flit->type];
-  else 
+void FlitChannel::Send(Flit * f) {
+  if(f) {
+    ++_active[f->cl];
+  } else {
     ++_idle;
+  }
+  Channel<Flit>::Send(f);
+}
 
-  Channel<Flit>::Send(flit);
+void FlitChannel::ReadInputs() {
+  Flit const * const & f = _input;
+  if(f && f->watch) {
+    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+	       << "Beginning channel traversal for flit " << f->id
+	       << " with delay " << _delay
+	       << "." << endl;
+  }
+  Channel<Flit>::ReadInputs();
+}
+
+void FlitChannel::WriteOutputs() {
+  Channel<Flit>::WriteOutputs();
+  Flit const * const & f = _output;
+  if(f && f->watch) {
+    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+	       << "Completed channel traversal for flit " << f->id
+	       << "." << endl;
+  }
 }

@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -28,61 +28,47 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-////////////////////////////////////////////////////////////////////////
-//
-// CMeshX2: Two Concentrated Meshes 
-//
-////////////////////////////////////////////////////////////////////////
-//
-// RCS Information:
-//  $Author: jbalfour $
-//  $Date: 2007/06/26 22:49:23 $
-//  $Id$
-// 
-////////////////////////////////////////////////////////////////////////
-#ifndef _CMESHX2_HPP_
-#define _CMESHX2_HPP_
+#include "buffer_monitor.hpp"
 
-#include "network.hpp"
-#include "cmesh.hpp"
-#include <assert.h>
+#include "flit.hpp"
 
-class CMeshX2 : public BSNetwork {
+BufferMonitor::BufferMonitor( int inputs, int classes ) 
+: _cycles(0), _inputs(inputs), _classes(classes) {
+  _reads.resize(inputs * classes, 0) ;
+  _writes.resize(inputs * classes, 0) ;
+}
 
-  int _k ;
-  int _n ;
-  int _c ;
-  
-  int* _f_read_history;
-  int* _c_read_history;
+int BufferMonitor::index( int input, int cl ) const {
+  assert((input >= 0) && (input < _inputs)); 
+  assert((cl >= 0) && (cl < _classes));
+  return cl + _classes * input ;
+}
 
-  CMesh* _subMesh[2];
-  int _subNetAssignment[Flit::NUM_FLIT_TYPES];
+void BufferMonitor::cycle() {
+  _cycles++ ;
+}
 
-  void _ComputeSize(const Configuration& config );
-  void _BuildNet(const Configuration& config );
+void BufferMonitor::write( int input, Flit const * f ) {
+  _writes[ index(input, f->cl) ]++ ;
+}
 
-public:
+void BufferMonitor::read( int input, Flit const * f ) {
+  _reads[ index(input, f->cl) ]++ ;
+}
 
-  CMeshX2( const Configuration &config, const string & name );
-  ~CMeshX2( );
+void BufferMonitor::display(ostream & os) const {
+  for ( int i = 0 ; i < _inputs ; i++ ) {
+    os << "[ " << i << " ] " ;
+    for ( int c = 0 ; c < _classes ; c++ ) {
+      os << "Type=" << c
+	 << ":(R#" << _reads[ index( i, c) ]  << ","
+	 << "W#" << _writes[ index( i, c) ] << ")" << " " ;
+    }
+    os << endl ;
+  }
+}
 
-  void  WriteFlit( Flit *f, int source );
-  Flit* ReadFlit( int dest );
-
-  void    WriteCredit( Credit *c, int dest );
-  Credit* ReadCredit( int source );
-  
-  void ReadInputs( );
-  void InternalStep( );
-  void WriteOutputs( );
-
-  int GetN( ) const;
-  int GetK( ) const;
-
-  static void RegisterRoutingFunctions() ;
-
-
-};
-
-#endif
+ostream & operator<<( ostream & os, BufferMonitor const & obj ) {
+  obj.display(os);
+  return os ;
+}

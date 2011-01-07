@@ -46,7 +46,7 @@ BooksimGUI::BooksimGUI(QWidget *parent)
 }
 
 //transfer all the control and data from main.cpp
-void BooksimGUI::RegisterAllocSim(booksimfunc wut, Configuration * cf){
+void BooksimGUI::RegisterAllocSim(booksimfunc wut, BookSimConfig * cf){
   arbeit.bs = wut;
   arbeit.config = cf;
   configtab->setup(cf);
@@ -85,18 +85,18 @@ configTab::configTab(QWidget *parent)
   
 }
 
-void configTab::setup( Configuration* cf){
+void configTab::setup( BookSimConfig * cf){
   
   config = cf;
 
   //differentiate which options are part of the "important_map"
   map<string, int> not_advanced_list;
   //data directly from booksim config
-  map<string, char*> *str_map = cf->GetStrMap();
-  map<string, unsigned int> *int_map = cf->GetIntMap();
-  map<string, double> *float_map = cf->GetFloatMap();
+  map<string, string> const & str_map = cf->GetStrMap();
+  map<string, int> const & int_map = cf->GetIntMap();
+  map<string, double> const & float_map = cf->GetFloatMap();
   //gui display data from booksim config
-  vector< pair<string, vector< string> > > *important_map = cf->GetImportantMap(); 
+  vector<pair<string, vector<string> > > important_map = cf->GetImportantMap(); 
   hmax = 0;
   vmax = 0;
   int grid_hindex = 0;
@@ -107,8 +107,8 @@ void configTab::setup( Configuration* cf){
 
   str_map_obj.clear();
   str_map_label.clear();
-  for( map<string, char*>::const_iterator i = str_map->begin();
-       i!=str_map->end();
+  for( map<string, string>::const_iterator i = str_map.begin();
+       i!=str_map.end();
        i++){
     QLabel* tlabel = new QLabel(i->first.c_str());
     str_map_label[i->first] = tlabel;
@@ -122,8 +122,8 @@ void configTab::setup( Configuration* cf){
   stringstream numtochar;
   int_map_obj.clear();
   int_map_label.clear();
-  for( map<string, unsigned int>::const_iterator i = int_map->begin();
-       i!=int_map->end();
+  for( map<string, int>::const_iterator i = int_map.begin();
+       i!=int_map.end();
        i++){
     QLabel* tlabel = new QLabel(i->first.c_str());
     int_map_label[i->first] = tlabel;
@@ -137,8 +137,8 @@ void configTab::setup( Configuration* cf){
 
   float_map_obj.clear();
   float_map_label.clear();
-  for( map<string, double>::const_iterator i = float_map->begin();
-       i!=float_map->end();
+  for( map<string, double>::const_iterator i = float_map.begin();
+       i!=float_map.end();
        i++){
     QLabel* tlabel = new QLabel(i->first.c_str());
     float_map_label[i->first] = tlabel;

@@ -1,4 +1,4 @@
-// $Id: wavefront.cpp 1839 2010-03-24 02:03:56Z dub $
+// $Id$
 
 /*
 Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
@@ -28,35 +28,39 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/*wavefront.cpp
+/*prio_wavefront.cpp
  *
- *The wave front allocator
+ *A priority-aware wave front allocator
  *
  */
 #include "booksim.hpp"
 #include <iostream>
+#include <limits>
 
-#include "wavefront.hpp"
+#include "prio_wavefront.hpp"
 #include "random_utils.hpp"
 
-Wavefront::Wavefront( Module *parent, const string& name,
-		      int inputs, int outputs ) :
+PrioWavefront::PrioWavefront( Module *parent, const string& name,
+			      int inputs, int outputs ) :
 DenseAllocator( parent, name, inputs, outputs ),
    _square((inputs > outputs) ? inputs : outputs), _pri(0), _num_requests(0), 
-   _last_in(-1), _last_out(-1)
+   _last_in(-1), _last_out(-1), _max_prio(numeric_limits<int>::min())
 {
 }
 
-void Wavefront::AddRequest( int in, int out, int label, 
-			    int in_pri, int out_pri )
+void PrioWavefront::AddRequest( int in, int out, int label, 
+				int in_pri, int out_pri )
 {
   DenseAllocator::AddRequest(in, out, label, in_pri, out_pri);
   _num_requests++;
   _last_in = in;
   _last_out = out;
+  if(in_pri > _max_prio) {
+    _max_prio = in_pri;
+  }
 }
 
-void Wavefront::Allocate( )
+void PrioWavefront::Allocate( )
 {
 
   if(_num_requests == 0)
@@ -70,9 +74,16 @@ void Wavefront::Allocate( )
     _inmatch[_last_in] = _last_out;
     _outmatch[_last_out] = _last_in;
     
+    // next time, start at the diagonal after the one with the request in it
+    _pri = ( _last_in + ( _square - _last_out ) + 1 ) % _square;
+    
   } else {
 
     // otherwise we have to loop through the diagonals of request matrix
+
+    int next_pri = -1;
+
+    // first consider only the highest-priority requests
 
     for ( int p = 0; p < _square; ++p ) {
       for ( int q = 0; q < _square; ++q ) {
@@ -81,21 +92,64 @@ void Wavefront::Allocate( )
 	
 	if ( ( input < _inputs ) && ( output < _outputs ) && 
 	     ( _inmatch[input] == -1 ) && ( _outmatch[output] == -1 ) &&
-	     ( _request[input][output].label != -1 ) ) {
+	     ( _request[input][output].label != -1 ) &&
+	     ( _request[input][output].in_pri == _max_prio ) ) {
+
 	  // Grant!
 	  _inmatch[input] = output;
 	  _outmatch[output] = input;
+
+	  // if this is the first diagonal to have any requests, start at the 
+	  // next one the next time around
+	  if(next_pri < 0) {
+	    next_pri = ((_pri + p) + 1) % _square;
+	  }
+
 	}
       }
     }
+    
+    // next, consider all other requests
+
+    // note that we're proceeding through the diagonals in the opposite 
+    // direction here; in hardware, this allows us to traverse the wavefront 
+    // array simultaneously in both directions, with higher-priority grants 
+    // eliminating lower-priority ones, with more dependent requests being 
+    // eliminated first
+
+    for ( int p = 0; p < _square; ++p ) {
+      for ( int q = 0; q < _square; ++q ) {
+	int input = ( ( _pri + _square - p ) + ( _square - q ) ) % _square;
+	int output = q;
+	
+	if ( ( input < _inputs ) && ( output < _outputs ) && 
+	     ( _inmatch[input] == -1 ) && ( _outmatch[output] == -1 ) &&
+	     ( _request[input][output].label != -1 ) &&
+	     ( _request[input][output].in_pri < _max_prio ) ) {
+
+	  // Grant!
+	  _inmatch[input] = output;
+	  _outmatch[output] = input;
+
+	  // if this is the first diagonal to have any requests, start at the 
+	  // next one the next time around
+	  if(next_pri < 0) {
+	    next_pri = ((_pri + _square - p) + 1) % _square;
+	  }
+
+	}
+      }
+    }
+    
+    // update priority diagonal
+    _pri = next_pri;
+
   }
   
   _num_requests = 0;
   _last_in = -1;
   _last_out = -1;
-  
-  // Round-robin the priority diagonal
-  _pri = ( _pri + 1 ) % _square;
+  _max_prio = numeric_limits<int>::min();
 }
 
 

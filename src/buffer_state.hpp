@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -31,6 +31,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _BUFFER_STATE_HPP_
 #define _BUFFER_STATE_HPP_
 
+#include <vector>
+
 #include "module.hpp"
 #include "flit.hpp"
 #include "credit.hpp"
@@ -40,12 +42,18 @@ class BufferState : public Module {
 
   int  _wait_for_tail_credit;
   int  _vc_busy_when_full;
-  int  _buf_size;
+  int  _vc_buf_size;
+  int  _shared_buf_size;
+  int  _shared_occupied;
+  bool _dynamic_sharing;
   int  _vcs;
+  int  _active_vcs;
 
-  bool *_in_use;
-  bool *_tail_sent;
-  int  *_cur_occupied;
+  vector<bool> _in_use;
+  vector<bool> _tail_sent;
+  vector<int> _cur_occupied;
+  vector<int> _last_id;
+  vector<int> _last_pid;
 
 
   int _vc_sel_last[Flit::NUM_FLIT_TYPES];
@@ -53,26 +61,19 @@ class BufferState : public Module {
 
 public:
 
-  static vector<int>  _vc_range_begin;
-  static vector<int>  _vc_range_size;
 
-  BufferState( ) { };
-  void _Init( const Configuration& config );
-
-  BufferState( const Configuration& config );
   BufferState( const Configuration& config, 
 	       Module *parent, const string& name );
-  ~BufferState( );
 
-  void ProcessCredit( Credit *c );
-  void SendingFlit( Flit *f );
+  void ProcessCredit( Credit const * c );
+  void SendingFlit( Flit const * f );
 
   void TakeBuffer( int vc = 0 );
 
   bool IsFullFor( int vc = 0 ) const;
+  bool IsEmptyFor( int vc = 0 ) const;
   bool IsAvailableFor( int vc = 0 ) const;
-
-  int FindAvailable( Flit::FlitType type = Flit::ANY_TYPE );
+  bool HasCreditFor( int vc = 0 ) const;
   int FindAvailable( int t);
   int Size (int vc = 0) const;
   void Display( ) const;

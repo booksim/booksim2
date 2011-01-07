@@ -1,7 +1,7 @@
 // $Id: roundrobin_arb.cpp 2203 2010-07-02 00:04:02Z qtedq $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -53,51 +53,31 @@ void RoundRobinArbiter::PrintState() const  {
 void RoundRobinArbiter::UpdateState() {
   // update priority matrix using last grant
   if ( _selected > -1 ) 
-    _pointer = _selected ;
+    _pointer = ( _selected + 1 ) % _size ;
 }
 
 void RoundRobinArbiter::AddRequest( int input, int id, int pri )
 {
-  assert( 0 <= input && input < _input_size ) ;
   if(!_request[input].valid || (_request[input].pri < pri)) {
-    if(!_request[input].valid) {
-      _num_reqs++ ;
-      _request[input].valid = true ;
-    }
-    _request[input].id = id ;
-    _request[input].pri = pri ;
-    if(_highest_pri<pri){
+    if((_num_reqs == 0) || 
+       Supersedes(input, pri, _best_input, _highest_pri, _pointer,_size )) {
       _highest_pri = pri;
       _best_input = input;
-    } else if(_highest_pri==pri){
-      int a = input<=_pointer?input+_input_size:input;
-      int b = _best_input<=_pointer?_best_input+_input_size:_best_input;
-      _best_input = (a<b)?input:_best_input; 
     }
   }
+  Arbiter::AddRequest(input, id, pri);
 }
 
 int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
   
-  // avoid running arbiter if it has not recevied at least two requests
-  // (in this case, requests and grants are identical)
   _selected = _best_input;
   
-  if ( _selected > -1 ) {
-    if ( id ) 
-      *id = _request[_selected].id ;
-    if ( pri ) 
-      *pri = _request[_selected].pri ;
-    
-    // clear the request vector
-    for ( int i = 0; i < _input_size ; i++ )
-      _request[i].valid = false ;
-    _num_reqs = 0 ;
-    _highest_pri = numeric_limits<int>::min();
-    _best_input = -1;
-  } else {
-    assert(_num_reqs == 0);
-  }
-  
-  return _selected ;
+  return Arbiter::Arbitrate(id, pri);
+}
+
+void RoundRobinArbiter::Clear()
+{
+  _highest_pri = numeric_limits<int>::min();
+  _best_input = -1;
+  Arbiter::Clear();
 }

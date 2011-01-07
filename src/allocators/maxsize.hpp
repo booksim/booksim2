@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -31,10 +31,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MAXSIZE_HPP_
 #define _MAXSIZE_HPP_
 
+#include <vector>
+
 #include "allocator.hpp"
 
 class MaxSizeMatch : public DenseAllocator {
-  int *_from;   // array to hold breadth-first tree
+  vector<int> _from;   // array to hold breadth-first tree
   int *_s;      // stack of leaf nodes in tree
   int *_ns;     // next stack
   int _prio;    // priority pointer to ensure fairness

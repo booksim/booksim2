@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -56,7 +56,6 @@ public:
   PriorityArbiter( const Configuration &config,
 		   Module *parent, const string& name,
 		   int inputs );
-  ~PriorityArbiter( );
 
   void Clear( );
 

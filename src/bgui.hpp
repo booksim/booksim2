@@ -24,12 +24,12 @@
 #include <string>
 
 //for allocsim in main.cpp
-typedef bool (*booksimfunc)( const Configuration& );
+typedef bool (*booksimfunc)( const BookSimConfig & );
 
 //for pthread
 struct bsjob{
   booksimfunc bs;
-  Configuration * config;
+  BookSimConfig * config;
   //0 booksim is free, 1 booksim is already running
   int status;
   bool return_status;
@@ -42,7 +42,7 @@ class configTab : public QWidget
   Q_OBJECT
   public:
   configTab(QWidget *parent = 0);
-  void setup(Configuration * cf);
+  void setup(BookSimConfig * cf);
 
 public slots:
   void toggleadvanced();
@@ -52,7 +52,7 @@ private:
   //layout manager for the config tab
   QGridLayout *configLayout;
   //another pointer to the booksim config file
-  Configuration * config;
+  BookSimConfig * config;
 
   //displaying the misc booksim options
   QFrame* advanced_frame;
@@ -167,7 +167,7 @@ public:
   ~BooksimGUI(){}
   
   //allocsime is called by the gui instead of main, 
-  void RegisterAllocSim(booksimfunc ,Configuration * cf);
+  void RegisterAllocSim(booksimfunc, BookSimConfig * cf);
 public slots:
   void run();
   void checksimulation();

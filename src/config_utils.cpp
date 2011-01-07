@@ -1,6 +1,6 @@
 // $Id: config_utils.cpp 2516 2010-09-01 23:09:06Z qtedq $
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -44,127 +44,154 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Configuration *Configuration::theConfig = 0;
 
-Configuration::Configuration( )
+Configuration::Configuration()
 {
   theConfig = this;
   _config_file = 0;
 }
 
-void Configuration::AddStrField( const string &field, const string &value )
+void Configuration::AddStrField(string const & field, string const & value)
 {
-  _str_map[field] = strdup( value.c_str( ) );
+  _str_map[field] = value;
 }
 
-void Configuration::Assign( const string &field, const string &value )
+void Configuration::Assign(string const & field, string const & value)
 {
-  map<string,char *>::const_iterator match;
+  map<string, string>::const_iterator match;
   
-  match = _str_map.find( field );
-  if ( match != _str_map.end( ) ) {
-    free( _str_map[field] );
-    _str_map[field] = strdup( value.c_str( ) );
+  match = _str_map.find(field);
+  if(match != _str_map.end()) {
+    _str_map[field] = value;
   } else {
-    string errmsg = "Unknown field ";
-    errmsg += field;
-
-    ParseError( errmsg, 0 );
+    ParseError("Unknown string field: " + field);
   }
 }
 
-void Configuration::Assign( const string &field, unsigned int value )
+void Configuration::Assign(string const & field, int value)
 {
-  map<string,unsigned int>::const_iterator match;
+  map<string, int>::const_iterator match;
   
-  match = _int_map.find( field );
-  if ( match != _int_map.end( ) ) {
+  match = _int_map.find(field);
+  if(match != _int_map.end()) {
     _int_map[field] = value;
   } else {
-    string errmsg = "Unknown field ";
-    errmsg += field;
-
-    ParseError( errmsg, 0 );
+    ParseError("Unknown integer field: " + field);
   }
 }
 
-void Configuration::Assign( const string &field, double value )
+void Configuration::Assign(string const & field, double value)
 {
-  map<string,double>::const_iterator match;
+  map<string, double>::const_iterator match;
   
-  match = _float_map.find( field );
-  if ( match != _float_map.end( ) ) {
+  match = _float_map.find(field);
+  if(match != _float_map.end()) {
     _float_map[field] = value;
   } else {
-    string errmsg = "Unknown field ";
-    errmsg += field;
-
-    ParseError( errmsg, 0 );
+    ParseError("Unknown double field: " + field);
   }
 }
 
-void Configuration::GetStr( const string &field, string &value, const string &def ) const
+string Configuration::GetStr(string const & field) const
 {
-  map<string,char *>::const_iterator match;
+  map<string, string>::const_iterator match;
 
-  match = _str_map.find( field );
-  if ( match != _str_map.end( ) ) {
-    value = match->second;
+  match = _str_map.find(field);
+  if(match != _str_map.end()) {
+    return match->second;
   } else {
-    value = def;
+    ParseError("Unknown string field: " + field);
+    exit(-1);
   }
 }
 
-unsigned int Configuration::GetInt( const string &field, unsigned int def ) const
+int Configuration::GetInt(string const & field) const
 {
-  map<string,unsigned int>::const_iterator match;
-  unsigned int r = def;
+  map<string, int>::const_iterator match;
 
-  match = _int_map.find( field );
-  if ( match != _int_map.end( ) ) {
-    r = match->second;
+  match = _int_map.find(field);
+  if(match != _int_map.end()) {
+    return match->second;
+  } else {
+    ParseError("Unknown integer field: " + field);
+    exit(-1);
   }
-
-  return r;
 }
 
-double Configuration::GetFloat( const string &field, double def ) const
+double Configuration::GetFloat(string const & field) const
 {  
   map<string,double>::const_iterator match;
-  double r = def;
 
-  match = _float_map.find( field );
-  if ( match != _float_map.end( ) ) {
-    r = match->second;
+  match = _float_map.find(field);
+  if(match != _float_map.end()) {
+    return match->second;
+  } else {
+    ParseError("Unknown double field: " + field);
+    exit(-1);
   }
-
-  return r;
 }
 
-void Configuration::ParseFile( const string& filename )
+vector<string> Configuration::GetStrArray(string const & field) const
 {
-  if ( ( _config_file = fopen( filename.c_str( ), "r" ) ) == 0 ) {
+  string const param_str = GetStr(field);
+  return tokenize(param_str);
+}
+
+vector<int> Configuration::GetIntArray(string const & field) const
+{
+  vector<string> param_tokens = GetStrArray(field);
+  vector<int> values;
+  assert(values.empty());
+  for(size_t i = 0; i < param_tokens.size(); ++i) {
+    char const * const token = param_tokens[i].c_str();
+    int const value = atoi(token);
+    values.push_back(value);
+    assert(values[i] == value);
+  }
+  assert(values.size() == param_tokens.size());
+  return values;
+}
+
+vector<double> Configuration::GetFloatArray(string const & field) const
+{
+  vector<string> param_tokens = GetStrArray(field);
+  vector<double> values;
+  assert(values.empty());
+  for(size_t i = 0; i < param_tokens.size(); ++i) {
+    char const * const token = param_tokens[i].c_str();
+    double const value = atof(token);
+    values.push_back(value);
+    assert(values[i] == value);
+  }
+  assert(values.size() == param_tokens.size());
+  return values;
+}
+
+void Configuration::ParseFile(string const & filename)
+{
+  if((_config_file = fopen(filename.c_str(), "r")) == 0) {
     cerr << "Could not open configuration file " << filename << endl;
-    exit( -1 );
+    exit(-1);
   }
 
-  configparse( );
+  configparse();
 
-  fclose( _config_file );
+  fclose(_config_file);
   _config_file = 0;
 }
 
-void Configuration::ParseString( const string& str )
+void Configuration::ParseString(string const & str)
 {
   _config_string = str + ';';
-  configparse( );
+  configparse();
   _config_string = "";
 }
 
-int Configuration::Input( char *line, int max_size )
+int Configuration::Input(char * line, int max_size)
 {
   int length = 0;
 
-  if ( _config_file ) {
-    length = fread( line, 1, max_size, _config_file );
+  if(_config_file) {
+    length = fread(line, 1, max_size, _config_file);
   } else {
     length = _config_string.length();
     _config_string.copy(line, max_size);
@@ -174,9 +201,9 @@ int Configuration::Input( char *line, int max_size )
   return length;
 }
 
-void Configuration::ParseError( const string &msg, unsigned int lineno ) const
+void Configuration::ParseError(string const & msg, unsigned int lineno) const
 {
-  if ( lineno ) {
+  if(lineno) {
     cerr << "Parse error on line " << lineno << " : " << msg << endl;
   } else {
     cerr << "Parse error : " << msg << endl;
@@ -186,19 +213,34 @@ void Configuration::ParseError( const string &msg, unsigned int lineno ) const
   exit( -1 );
 }
 
-Configuration *Configuration::GetTheConfig( )
+Configuration * Configuration::GetTheConfig()
 {
   return theConfig;
 }
 
-//============================================================
-
-int config_input( char *line, int max_size )
+vector<string> Configuration::tokenize(string data)
 {
-  return Configuration::GetTheConfig( )->Input( line, max_size );
+  string const separator = "{,}";
+  vector<string> values;
+  size_t last_pos = data.find_first_not_of(separator);
+  size_t pos = data.find_first_of(separator, last_pos);
+  while(pos != string::npos || last_pos != string::npos) {
+    string const value = data.substr(last_pos, pos - last_pos);
+    values.push_back(value);
+    last_pos = data.find_first_not_of(separator, pos);
+    pos = data.find_first_of(separator, last_pos);
+  }
+  return values;
 }
 
-bool ParseArgs( Configuration *cf, int argc, char **argv )
+//============================================================
+
+int config_input(char * line, int max_size)
+{
+  return Configuration::GetTheConfig()->Input(line, max_size);
+}
+
+bool ParseArgs(Configuration * cf, int argc, char * * argv)
 {
   bool rc = false;
 
@@ -232,22 +274,22 @@ bool ParseArgs( Configuration *cf, int argc, char **argv )
 
 //helpful for the GUI, write out nearly all variables contained in a config file.
 //However, it can't and won't write out  empty strings since the booksim yacc
-//parser won't be abled to parse bland strings
-void Configuration::WriteFile( const string& filename){
+//parser won't be abled to parse blank strings
+void Configuration::WriteFile(string const & filename) {
   
   ostream *config_out= new ofstream(filename.c_str());
   
   
-  for(map<string,char *>::const_iterator i = _str_map.begin(); 
+  for(map<string,string>::const_iterator i = _str_map.begin(); 
       i!=_str_map.end();
       i++){
-    //the parser won't read blanks lolz
+    //the parser won't read empty strings
     if(i->second[0]!='\0'){
       *config_out<<i->first<<" = "<<i->second<<";"<<endl;
     }
   }
   
-  for(map<string, unsigned int>::const_iterator i = _int_map.begin(); 
+  for(map<string, int>::const_iterator i = _int_map.begin(); 
       i!=_int_map.end();
       i++){
     *config_out<<i->first<<" = "<<i->second<<";"<<endl;
@@ -267,11 +309,11 @@ void Configuration::WriteFile( const string& filename){
 
 
 
-void  Configuration::WriteMatlabFile(ostream *config_out) const {
+void Configuration::WriteMatlabFile(ostream * config_out) const {
 
   
   
-  for(map<string,char *>::const_iterator i = _str_map.begin(); 
+  for(map<string,string>::const_iterator i = _str_map.begin(); 
       i!=_str_map.end();
       i++){
     //the parser won't read blanks lolz
@@ -280,7 +322,7 @@ void  Configuration::WriteMatlabFile(ostream *config_out) const {
     }
   }
   
-  for(map<string, unsigned int>::const_iterator i = _int_map.begin(); 
+  for(map<string, int>::const_iterator i = _int_map.begin(); 
       i!=_int_map.end();
       i++){
     *config_out<<"%"<<i->first<<" = "<<i->second<<";"<<endl;

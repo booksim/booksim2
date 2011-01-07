@@ -1,7 +1,7 @@
 // $Id: module.cpp 1839 2010-03-24 02:03:56Z dub $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -35,26 +35,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
-#include "booksim.hpp"
 #include <iostream>
-#include <stdlib.h>
+#include <cstdlib>
+
+#include "booksim.hpp"
 #include "module.hpp"
 
-Module::Module( )
-{
-}
-
 Module::Module( Module *parent, const string& name )
-{
-  SetName( parent, name );
-}
-
-void Module::_AddChild( Module *child )
-{
-  _children.push_back( child );
-}
-
-void Module::SetName( Module *parent, const string& name )
 {
   _name = name;
 
@@ -64,6 +51,11 @@ void Module::SetName( Module *parent, const string& name )
   } else {
     _fullname = name;
   }
+}
+
+void Module::_AddChild( Module *child )
+{
+  _children.push_back( child );
 }
 
 void Module::DisplayHierarchy( int level ) const

@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -32,7 +32,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _ALLOCATOR_HPP_
 
 #include <string>
-#include <list>
+#include <map>
+#include <set>
+#include <vector>
 
 #include "module.hpp"
 #include "config_utils.hpp"
@@ -42,12 +44,9 @@ protected:
   const int _inputs;
   const int _outputs;
 
-  int *_inmatch;
-  int *_outmatch;
+  vector<int> _inmatch;
+  vector<int> _outmatch;
 
-  int *_outmask;
-
-  void _ClearMatching( );
 public:
 
   struct sRequest {
@@ -59,24 +58,26 @@ public:
 
   Allocator( Module *parent, const string& name,
 	     int inputs, int outputs );
-  virtual ~Allocator( );
 
-  virtual void Clear( ) = 0;
+  virtual void Clear( );
   
   virtual int  ReadRequest( int in, int out ) const = 0;
   virtual bool ReadRequest( sRequest &req, int in, int out ) const = 0;
 
   virtual void AddRequest( int in, int out, int label = 1, 
-			   int in_pri = 0, int out_pri = 0 ) = 0;
+			   int in_pri = 0, int out_pri = 0 );
   virtual void RemoveRequest( int in, int out, int label = 1 ) = 0;
   
   virtual void Allocate( ) = 0;
 
-  void MaskOutput( int out, int mask = 1 );
-
   int OutputAssigned( int in ) const;
   int InputAssigned( int out ) const;
+
+  virtual bool OutputHasRequests( int out ) const = 0;
+  virtual bool InputHasRequests( int in ) const = 0;
+
   virtual void PrintRequests( ostream * os = NULL ) const = 0;
+  void PrintGrants( ostream * os = NULL ) const;
 
   static Allocator *NewAllocator( Module *parent, const string& name,
 				  const string &alloc_type, 
@@ -91,12 +92,11 @@ public:
 
 class DenseAllocator : public Allocator {
 protected:
-  sRequest **_request;
+  vector<vector<sRequest> > _request;
 
 public:
   DenseAllocator( Module *parent, const string& name,
 		  int inputs, int outputs );
-  virtual ~DenseAllocator( );
 
   void Clear( );
   
@@ -107,7 +107,11 @@ public:
 		   int in_pri = 0, int out_pri = 0 );
   void RemoveRequest( int in, int out, int label = 1 );
 
+  bool OutputHasRequests( int out ) const;
+  bool InputHasRequests( int in ) const;
+
   void PrintRequests( ostream * os = NULL ) const;
+
 };
 
 //==================================================
@@ -117,16 +121,15 @@ public:
 
 class SparseAllocator : public Allocator {
 protected:
-  list<int> _in_occ;
-  list<int> _out_occ;
+  set<int> _in_occ;
+  set<int> _out_occ;
   
-  list<sRequest> *_in_req;
-  list<sRequest> *_out_req;
+  vector<map<int, sRequest> > _in_req;
+  vector<map<int, sRequest> > _out_req;
 
 public:
   SparseAllocator( Module *parent, const string& name,
 		   int inputs, int outputs );
-  virtual ~SparseAllocator( );
 
   void Clear( );
   
@@ -137,7 +140,11 @@ public:
 		   int in_pri = 0, int out_pri = 0 );
   void RemoveRequest( int in, int out, int label = 1 );
   
+  bool OutputHasRequests( int out ) const;
+  bool InputHasRequests( int in ) const;
+
   void PrintRequests( ostream * os = NULL ) const;
+
 };
 
 #endif

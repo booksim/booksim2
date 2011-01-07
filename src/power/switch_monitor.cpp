@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -28,43 +28,43 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _IQ_ROUTER_BASELINE_HPP_
-#define _IQ_ROUTER_BASELINE_HPP_
+#include "switch_monitor.hpp"
 
-#include <string>
+#include "flit.hpp"
 
-#include "module.hpp"
-#include "iq_router_base.hpp"
+SwitchMonitor::SwitchMonitor( int inputs, int outputs, int classes )
+: _cycles(0), _inputs(inputs), _outputs(outputs), _classes(classes) {
+  _event.resize(inputs * outputs * classes, 0) ;
+}
 
-class Allocator;
+int SwitchMonitor::index( int input, int output, int cl ) const {
+  assert((input >= 0) && (input < _inputs));
+  assert((output >= 0) && (output < _outputs));
+  assert((cl >= 0) && (cl < _classes));
+  return cl + _classes * ( output + _outputs * input ) ;
+}
 
-class IQRouterBaseline : public IQRouterBase {
+void SwitchMonitor::cycle() {
+  _cycles++ ;
+}
 
-private:
+void SwitchMonitor::traversal( int input, int output, Flit const * f ) {
+  _event[ index( input, output, f->cl) ]++ ;
+}
 
-  int  _speculative ;
-  int  _filter_spec_grants ;
-  
-  Allocator *_vc_allocator;
-  Allocator *_sw_allocator;
-  Allocator *_spec_sw_allocator;
-  
-  vector<int> _sw_rr_offset;
+void SwitchMonitor::display(ostream & os) const {
+  for ( int i = 0 ; i < _inputs ; i++ ) {
+    for ( int o = 0 ; o < _outputs ; o++) {
+      os << "[" << i << " -> " << o << "] " ;
+      for ( int c = 0 ; c < _classes ; c++ ) {
+	os << c << ":" << _event[index(i,o,c)] << " " ;
+      }
+      os << endl ;
+    }
+  }
+}
 
-protected:
-
-  void _VCAlloc( );
-  void _SWAlloc( );
-  virtual void _Alloc( );
-  
-public:
-
-  IQRouterBaseline( const Configuration& config,
-	    Module *parent, const string & name, int id,
-	    int inputs, int outputs );
-  
-  virtual ~IQRouterBaseline( );
-  
-};
-
-#endif
+ostream & operator<<( ostream & os, SwitchMonitor const & obj ) {
+  obj.display(os);
+  return os ;
+}

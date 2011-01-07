@@ -1,7 +1,7 @@
 // $Id: flit.cpp 2207 2010-07-08 18:40:17Z qtedq $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -40,54 +40,33 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include "flit.hpp"
 
+stack<Flit *> Flit::_all;
+stack<Flit *> Flit::_free;
+
 ostream& operator<<( ostream& os, const Flit& f )
 {
   os << "  Flit ID: " << f.id << " (" << &f << ")" 
      << " Packet ID: " << f.pid
+     << " Transaction ID: " << f.tid
      << " Type: " << f.type 
-     << " Head: " << f.head << " Tail: " << f.tail << endl;
+     << " Head: " << f.head
+     << " Tail: " << f.tail << endl;
   os << "  Source: " << f.src << "  Dest: " << f.dest << " Intm: "<<f.intm<<endl;
   os << "  Injection time: " << f.time << " Transaction start: " << f.ttime << "Arrival time: " << f.atime << " Phase: "<<f.ph<< endl;
-  os << "  From router "<<f.from_router<< " VC: " << f.vc << endl;
+  os << "  VC: " << f.vc << endl;
   return os;
 }
 
 Flit::Flit() 
 {  
-  type      = ANY_TYPE ;
-  gems_net = -1;
-  vc        = -1 ;
-  head      = false ;
-  tail      = false ;
-  true_tail = false ;
-  time      = -1 ;
-  ttime     = -1 ;
-  atime     = -1 ;
-  sn        = 0 ;
-  rob_time  = 0 ;
-  id        = -1 ;
-  pid       = -1 ;
-  hops      = 0 ;
-  watch     = false ;
-  record    = false ;
-  intm = 0;
-  src = -1;
-  dest = -1;
-  pri = 0;
-  intm =-1;
-  ph = -1;
-  dr = -1;
-  minimal = 1;
-  ring_par = -1;
-  x_then_y = -1;
-  data = NULL;
-  from_router = -1;
+  Reset();
 }  
 
 void Flit::Reset() 
 {  
   type      = ANY_TYPE ;
   vc        = -1 ;
+  cl        = -1 ;
   head      = false ;
   tail      = false ;
   true_tail = false ;
@@ -98,6 +77,7 @@ void Flit::Reset()
   rob_time  = 0 ;
   id        = -1 ;
   pid       = -1 ;
+  tid       = -1 ;
   hops      = 0 ;
   watch     = false ;
   record    = false ;
@@ -110,8 +90,29 @@ void Flit::Reset()
   dr = -1;
   minimal = 1;
   ring_par = -1;
-  x_then_y = -1;
   data = NULL;
-  from_router = -1;
 }  
 
+Flit * Flit::New() {
+  Flit * f;
+  if(_free.empty()) {
+    f = new Flit;
+    _all.push(f);
+  } else {
+    f = _free.top();
+    f->Reset();
+    _free.pop();
+  }
+  return f;
+}
+
+void Flit::Free() {
+  _free.push(this);
+}
+
+void Flit::FreeAll() {
+  while(!_all.empty()) {
+    delete _all.top();
+    _all.pop();
+  }
+}

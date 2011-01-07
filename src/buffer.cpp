@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -28,53 +28,66 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _CMO_HPP_
-#define _CMO_HPP_
+#include <sstream>
 
-#include "network.hpp"
-#include "routefunc.hpp"
+#include "globals.hpp"
+#include "booksim.hpp"
+#include "buffer.hpp"
 
-class CMO : public BSNetwork {
+Buffer::Buffer( const Configuration& config, int outputs, 
+		Module *parent, const string& name ) :
+Module( parent, name ), _shared_count(0)
+{
+  _vc_size = config.GetInt( "vc_buf_size" );
+  _shared_size = config.GetInt( "shared_buf_size" );
 
-  int _c;    
-  // concentration degree --> must be perfectly divisible by this
-  // only two slices
-  // N = _c*8 * 2
+  int num_vcs = config.GetInt( "num_vcs" );
 
+  _vc.resize(num_vcs);
 
-  //   int _wire_delay1;
-  //   int _wire_delay2;
-  //   int _wire_delay3;
-  //   int _wire_delay4;
+  for(int i = 0; i < num_vcs; ++i) {
+    ostringstream vc_name;
+    vc_name << "vc_" << i;
+    _vc[i] = new VC(config, outputs, this, vc_name.str( ) );
+  }
+}
 
-  void _ComputeSize( const Configuration &config );
-  void _BuildNet( const Configuration &config );
+Buffer::~Buffer()
+{
+  for(vector<VC*>::iterator i = _vc.begin(); i != _vc.end(); ++i) {
+    delete *i;
+  }
+}
 
-  int _LeftChannel( int node );
-  int _RightChannel( int node );
-  int _CrossChannel( int node );
-  int _SliceChannel( int node );
-  
-  int _LeftNode( int node );
-  int _RightNode( int node );
-  int _CrossNode( int node );
-  int _SliceNode( int node );
-  
-public:
-  CMO( const Configuration &config, const string & name );
+bool Buffer::AddFlit( int vc, Flit *f )
+{
+  VC * v = _vc[vc];
+  if(v->GetSize() < _vc_size) {
+    return v->AddFlit(f);
+  } else if(_shared_count < _shared_size) {
+    _shared_count++;
+    return v->AddFlit(f);
+  }
+  return false;
+}
 
-  int GetC( ) const;
+Flit *Buffer::RemoveFlit( int vc )
+{
+  VC * v = _vc[vc];
+  if(v->GetSize() > _vc_size) {
+    --_shared_count;
+  }
+  return _vc[vc]->RemoveFlit( );
+}
 
-  double Capacity( ) const;
-  static void RegisterRoutingFunctions();
-  void InsertRandomFaults( const Configuration &config );
-  int MapNode(int physical_node) const;
-  int UnmapNode(int physical_node) const;
-};
+bool Buffer::Full( int vc ) const
+{
+  return (_shared_count >= _shared_size) && _vc[vc]->Full( );
+}
 
-void dim_order_cmo( const Router *r, const Flit *f, int in_channel,
-		    OutputSet *outputs, bool inject );
-void dor_next_cmo( int flitid, int cur, int dest, int in_port,
-		   int *out_port, int *partition,
-		   bool balance );
-#endif
+void Buffer::Display( ) const
+{
+  for(vector<VC*>::const_iterator i = _vc.begin(); i != _vc.end(); ++i) {
+    (*i)->Display();
+  }
+}

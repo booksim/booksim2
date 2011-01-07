@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -28,41 +28,20 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _IQ_ROUTER_COMBINED_HPP_
-#define _IQ_ROUTER_COMBINED_HPP_
-
-#include <string>
+#ifndef _TIMED_MODULE_HPP_
+#define _TIMED_MODULE_HPP_
 
 #include "module.hpp"
-#include "vc.hpp"
-#include "allocator.hpp"
-#include "routefunc.hpp"
-#include "outputset.hpp"
-#include "buffer_state.hpp"
-#include "pipefifo.hpp"
-#include "iq_router_base.hpp"
 
-class IQRouterCombined : public IQRouterBase {
-  
-private:
+class TimedModule : public Module {
 
-  Allocator *_sw_allocator;
-  
-  vector<int> _vc_rr_offset;
-  vector<int> _sw_rr_offset;
-  
-protected:
-
-  virtual void _Alloc( );
-  
 public:
-
-  IQRouterCombined( const Configuration& config,
-	    Module *parent, const string & name, int id,
-	    int inputs, int outputs );
+  TimedModule(Module * parent, string const & name) : Module(parent, name) {}
+  virtual ~TimedModule() {}
   
-  virtual ~IQRouterCombined( );
-  
+  virtual void ReadInputs() = 0;
+  virtual void Evaluate() = 0;
+  virtual void WriteOutputs() = 0;
 };
 
 #endif

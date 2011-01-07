@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -32,14 +32,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _POWER_MODULE_HPP_
 
 #include <map>
+
 #include "module.hpp"
 #include "network.hpp"
 #include "config_utils.hpp"
 #include "trafficmanager.hpp"
 #include "flitchannel.hpp"
-#include "iq_router_base.hpp"
-#include "flit.hpp"
-
+#include "switch_monitor.hpp"
+#include "buffer_monitor.hpp"
 
 struct wire{
   double L;
@@ -52,8 +52,9 @@ class Power_Module : public Module {
 
 protected:
   //network undersimulation
-  BSNetwork * net;
+  Network * net;
   TrafficManager* sim;
+  int classes;
   //all channels are this width
   double channel_width;
   //resimulate all with channel_width decremented by channel_sweep until 0
@@ -67,7 +68,7 @@ protected:
   double numVC;
 
   //store the property of wires based on length
-  map<double, wire*> wire_map;
+  map<double, wire> wire_map;
 
   //////////////////////////////////Constants/////////////////////////////
   //wire length in (mm)
@@ -149,22 +150,22 @@ protected:
   ////////////////////////
 
   //channels
-  void calcChannel(FlitChannel * f);
-  wire* wireOptimize(double l);
+  void calcChannel(const FlitChannel * f);
+  wire const & wireOptimize(double l);
   double powerRepeatedWire(double L, double K, double M, double N);
   double powerRepeatedWireLeak (double K, double M, double N);
   double powerWireClk (double M, double W);
   double powerWireDFF(double M, double W, double alpha);
   
   //memory
-  void calcBuffer(BufferMonitor *bm);
+  void calcBuffer(const BufferMonitor *bm);
   double powerWordLine(double memoryWidth, double memoryDepth);
   double powerMemoryBitRead(double memoryDepth);
   double powerMemoryBitWrite(double memoryDepth);
   double powerMemoryBitLeak(double memoryDepth );
 
   //switch
-  void calcSwitch(SwitchMonitor *sm);
+  void calcSwitch(const SwitchMonitor *sm);
   double powerCrossbar(double width, double inputs, double outputs, double from, double to);
   double powerCrossbarCtrl(double width, double inputs, double outputs);
   double powerCrossbarLeak (double width, double inputs, double outputs);
@@ -180,7 +181,7 @@ protected:
   double areaOutputModule(double Outputs);
 
 public:
-  Power_Module(BSNetwork * net, TrafficManager* parent, const Configuration &config);
+  Power_Module(Network * net, TrafficManager* parent, const Configuration &config);
   ~Power_Module();
 
   void run();

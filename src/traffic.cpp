@@ -1,7 +1,7 @@
 // $Id: traffic.cpp 2326 2010-07-26 17:32:49Z qtedq $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -28,10 +28,11 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "booksim.hpp"
 #include <map>
-#include <stdlib.h>
+#include <cstdlib>
 
+#include "booksim.hpp"
+#include "booksim_config.hpp"
 #include "traffic.hpp"
 #include "network.hpp"
 #include "random_utils.hpp"
@@ -39,8 +40,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 map<string, tTrafficFunction> gTrafficFunctionMap;
 
-int gResetTraffic = 0;
-int gStepTraffic  = 0;
+static int gResetTraffic = 0;
+static int gStepTraffic  = 0;
+
+static int _xr = 1;
 
 void src_dest_bin( int source, int dest, int lg )
 {
@@ -165,10 +168,10 @@ int tornado( int source, int total_nodes )
   int offset = 1;
   int dest = 0;
 
-  for ( int n = 0; n < realgn; ++n ) {
+  for ( int n = 0; n < gN; ++n ) {
     dest += offset *
-      ( ( ( source / offset ) % realgk + ( realgk/2 - 1 ) ) % realgk );
-    offset *= realgk;
+      ( ( ( source / offset ) % (_xr*gK) + ( (_xr*gK)/2 - 1 ) ) % (_xr*gK) );
+    offset *= (_xr*gK);
   }
   //cout<<source<<" "<<dest<<endl;
   return dest;
@@ -181,10 +184,10 @@ int neighbor( int source, int total_nodes )
   int offset = 1;
   int dest = 0;
 
-  for ( int n = 0; n < realgn; ++n ) {
+  for ( int n = 0; n < gN; ++n ) {
     dest += offset *
-      ( ( ( source / offset ) % realgk + 1 ) % realgk );
-    offset *= realgk;
+      ( ( ( source / offset ) % (_xr*gK) + 1 ) % (_xr*gK) );
+    offset *= (_xr*gK);
   }
 
   //cout<<"Source "<<source<<" destination "<<dest<<endl;
@@ -193,8 +196,8 @@ int neighbor( int source, int total_nodes )
 
 //=============================================================
 
-int *gPerm = 0;
-int gPermSeed;
+static vector<int> gPerm;
+static int gPermSeed;
 
 void GenerateRandomPerm( int total_nodes )
 {
@@ -204,15 +207,8 @@ void GenerateRandomPerm( int total_nodes )
   unsigned long prev_rand;
   
   prev_rand = RandomIntLong( );
-  RandomSeed( gPermSeed );
-
-  if ( !gPerm ) {
-    gPerm = new int [total_nodes];
-  }
-
-  for ( i = 0; i < total_nodes; ++i ) {
-    gPerm[i] = -1;
-  }
+  gPerm.resize(total_nodes);
+  gPerm.assign(total_nodes, -1);
 
   for ( i = 0; i < total_nodes; ++i ) {
     ind = RandomInt( total_nodes - 1 - i );
@@ -238,7 +234,7 @@ void GenerateRandomPerm( int total_nodes )
 
 int randperm( int source, int total_nodes )
 {
-  if ( gResetTraffic || !gPerm ) {
+  if ( gResetTraffic || gPerm.empty() ) {
     GenerateRandomPerm( total_nodes );
     gResetTraffic = 0;
   }
@@ -303,8 +299,8 @@ int taper64( int source, int total_nodes )
 
 int badperm_dfly( int source, int total_nodes )
 {
-  int grp_size_routers = powi(realgk, realgn - 1);
-  int grp_size_nodes = grp_size_routers * realgk;
+  int grp_size_routers = powi((_xr*gK), gN - 1);
+  int grp_size_nodes = grp_size_routers * (_xr*gK);
 
   int temp;
   int dest;
@@ -317,8 +313,8 @@ int badperm_dfly( int source, int total_nodes )
 
 int badperm_dflynew( int source, int total_nodes )
 {
-  int grp_size_routers = 2*realgk;
-  int grp_size_nodes = grp_size_routers * realgk;
+  int grp_size_routers = 2*(_xr*gK);
+  int grp_size_nodes = grp_size_routers * (_xr*gK);
 
   int temp;
   int dest;
@@ -329,13 +325,90 @@ int badperm_dflynew( int source, int total_nodes )
   return dest;
 }
 
-void InitializeTrafficMap( )
+int badperm_yarc(int source, int total_nodes){
+  int row = (int)(source/(_xr*gK));
+  
+  return RandomInt((_xr*gK)-1)*(_xr*gK)+row;
+}
+
+//=============================================================
+
+static int _hs_max_val;
+static vector<pair<int, int> > _hs_elems;
+
+int hotspot(int source, int total_nodes){
+  int pct = RandomInt(_hs_max_val);
+  for(size_t i = 0; i < (_hs_elems.size()-1); ++i) {
+    int limit = _hs_elems[i].first;
+    if(limit > pct) {
+      return _hs_elems[i].second;
+    } else {
+      pct -= limit;
+    }
+  }
+  assert(_hs_elems.back().first > pct);
+  return _hs_elems.back().second;
+}
+
+//=============================================================
+
+static int _cp_max_val;
+static vector<pair<int, tTrafficFunction> > _cp_elems;
+
+int combined(int source, int total_nodes){
+  int pct = RandomInt(_cp_max_val);
+  for(size_t i = 0; i < (_cp_elems.size()-1); ++i) {
+    int limit = _cp_elems[i].first;
+    if(limit > pct) {
+      return _cp_elems[i].second(source, total_nodes);
+    } else {
+      pct -= limit;
+    }
+  }
+  assert(_cp_elems.back().first > pct);
+  return _cp_elems.back().second(source, total_nodes);
+}
+
+//=============================================================
+
+void InitializeTrafficMap( const Configuration & config )
 {
+
+  _xr = config.GetInt("xr");
+
+  vector<int> hotspot_nodes = config.GetIntArray("hotspot_nodes");
+  vector<int> hotspot_rates = config.GetIntArray("hotspot_rates");
+  hotspot_rates.resize(hotspot_nodes.size(), hotspot_rates.empty() ? 1 : hotspot_rates.back());
+  _hs_max_val = -1;
+  for(size_t i = 0; i < hotspot_nodes.size(); ++i) {
+    int rate = hotspot_rates[i];
+    _hs_elems.push_back(make_pair(rate, hotspot_nodes[i]));
+    _hs_max_val += rate;
+  }
+  
+  map<string, tTrafficFunction>::const_iterator match;
+
+  vector<string> combined_patterns = config.GetStrArray("combined_patterns");
+  vector<int> combined_rates = config.GetIntArray("combined_rates");
+  combined_rates.resize(combined_patterns.size(), combined_rates.empty() ? 1 : combined_rates.back());
+  _cp_max_val = -1;
+  for(size_t i = 0; i < combined_patterns.size(); ++i) {
+    match = gTrafficFunctionMap.find(combined_patterns[i]);
+    if(match == gTrafficFunctionMap.end()) {
+      cout << "Error: Undefined traffic pattern '" << combined_patterns[i] << "'." << endl;
+      exit(-1);
+    }
+    int rate = combined_rates[i];
+    _cp_elems.push_back(make_pair(rate, match->second));
+    _cp_max_val += rate;
+  }
+
+  gPermSeed = config.GetInt( "perm_seed" );
 
 
   /* Register Traffic functions here */
 
-  gTrafficFunctionMap["uniform"]  = &uniform;
+  gTrafficFunctionMap["uniform"] = &uniform;
 
   // "Bit" patterns
 
@@ -346,18 +419,22 @@ void InitializeTrafficMap( )
 
   // "Digit" patterns
 
-  gTrafficFunctionMap["tornado"]   = &tornado;
-  gTrafficFunctionMap["neighbor"]  = &neighbor;
+  gTrafficFunctionMap["tornado"]  = &tornado;
+  gTrafficFunctionMap["neighbor"] = &neighbor;
 
   // Other patterns
 
-  gTrafficFunctionMap["randperm"]   = &randperm;
+  gTrafficFunctionMap["randperm"] = &randperm;
 
   gTrafficFunctionMap["diagonal"]   = &diagonal;
   gTrafficFunctionMap["asymmetric"] = &asymmetric;
   gTrafficFunctionMap["taper64"]    = &taper64;
 
-  gTrafficFunctionMap["bad_dragon"]    = &badperm_dflynew;
+  gTrafficFunctionMap["bad_dragon"]   = &badperm_dflynew;
+  gTrafficFunctionMap["badperm_yarc"] = &badperm_yarc;
+
+  gTrafficFunctionMap["hotspot"]  = &hotspot;
+  gTrafficFunctionMap["combined"] = &combined;
 
 }
 
@@ -370,42 +447,3 @@ void StepTrafficFunction( )
 {
   gStepTraffic++;
 }
-
-
-tTrafficFunction GetTrafficFunction( const Configuration& config )
-{
-
-  if(config.GetInt( "c" )!=1){
-    int temp =  config.GetInt("xr");
-    realgk = temp*gK;
-    realgn = gN;
-  } else {
-    realgk = gK;
-    realgn = gN;
-  }
-
-  string topo;
-  config.GetStr( "topology", topo );
-
-  map<string, tTrafficFunction>::const_iterator match;
-  tTrafficFunction tf;
-
-  string fn;
-
-  config.GetStr( "traffic", fn, "none" );
-  match = gTrafficFunctionMap.find( fn );
-
-  if ( match != gTrafficFunctionMap.end( ) ) {
-    tf = match->second;
-  } else {
-    cout << "Error: Undefined traffic pattern '" << fn << "'." << endl;
-    exit(-1);
-  }
-
-  gPermSeed = config.GetInt( "perm_seed" );
-
-  //seed the network
-  RandomSeed(config.GetInt("seed"));
-  return tf;
-}
-

@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -28,13 +28,42 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _RNG_HPP_
-#define _RNG_HPP_
+#ifndef _SWITCH_MONITOR_HPP_
+#define _SWITCH_MONITOR_HPP_
 
-void   ran_start(long seed);
-long   ran_next( );
+#include <vector>
+#include <iostream>
 
-void   ranf_start(long seed);
-double ranf_next( );
+using namespace std;
+
+class Flit;
+
+class SwitchMonitor {
+  int  _cycles ;
+  int  _inputs ;
+  int  _outputs ;
+  int  _classes ;
+  vector<int> _event ;
+  int index( int input, int output, int cl ) const ;
+public:
+  SwitchMonitor( int inputs, int outputs, int classes ) ;
+  void cycle() ;
+  vector<int> const & GetActivity() const {
+    return _event;
+  }
+  inline int const & NumInputs() const {
+    return _inputs;
+  }
+  inline int const & NumOutputs() const {
+    return _outputs;
+  }
+  inline int const & NumClasses() const {
+    return _classes;
+  }
+  void traversal( int input, int output, Flit const * f ) ;
+  void display(ostream & os) const;
+} ;
+
+ostream & operator<<( ostream & os, SwitchMonitor const & obj ) ;
 
 #endif

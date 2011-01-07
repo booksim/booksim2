@@ -1,7 +1,7 @@
 // $Id: booksim_config.cpp 2520 2010-09-13 19:57:17Z dub $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -47,40 +47,9 @@ BookSimConfig::BookSimConfig( )
   // Channel length listing file
   AddStrField( "channel_file", "" ) ;
 
-  // Use read/write request reply scheme
-  
-  _int_map["use_read_write"] = 0;
-
-  _int_map["message_classes"] = 1;
-  _int_map["routing_classes"] = 1;
-  _int_map["vc_per_class"] = 1;
-
-  _int_map["read_request_begin_vc"] = 0;
-  _int_map["read_request_end_vc"] = 5;
-
-  _int_map["write_request_begin_vc"] = 2;
-  _int_map["write_request_end_vc"] = 7;
-
-  _int_map["read_reply_begin_vc"] = 8;
-  _int_map["read_reply_end_vc"] = 13;
-
-  _int_map["write_reply_begin_vc"] = 10;
-  _int_map["write_reply_end_vc"] = 15;
 
   // Physical sub-networks
-  _int_map["physical_subnetworks"] = 1;
-
-  // Control Injection of Packets into Replicated Networks
-  _int_map["read_request_subnet"] = 0;
-
-  _int_map["read_reply_subnet"] = 0;
-
-  _int_map["write_request_subnet"] = 0;
-
-  _int_map["write_reply_subnet"] = 0;
-
-  // TCC Simulation Traffic Trace
-  AddStrField( "trace_file", "trace-file.txt" ) ;
+  _int_map["subnets"] = 1;
 
   //==== Topology options =======================
   //important
@@ -108,7 +77,6 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["in_ports"]  = 5;
   _int_map["out_ports"] = 5;
-  _int_map["voq"] = 0; //output queuing
 
   //========================================================
   // Router options
@@ -126,12 +94,14 @@ BookSimConfig::BookSimConfig( )
 
   // Control of virtual channel speculation
   _int_map["speculative"] = 0 ;
-  
-  // what to use to inhibit speculative allocator grants?
-  AddStrField("filter_spec_grants", "confl_nonspec_gnts");
+  _int_map["spec_use_prio"] = 1 ;
+  _int_map["spec_check_elig"] = 0 ;
+  _int_map["spec_mask_by_reqs"] = 0 ;
 
   _int_map["num_vcs"]         = 16;  
   _int_map["vc_buf_size"]     = 8;  
+  _int_map["shared_buf_size"] = 0;
+  _int_map["dynamic_sharing"] = 0;
 
   _int_map["wait_for_tail_credit"] = 0; // reallocate a VC before a tail credit?
   _int_map["vc_busy_when_full"] = 0; // mark VCs as in use when they have no credit available
@@ -170,14 +140,28 @@ BookSimConfig::BookSimConfig( )
 
   //==== Traffic ========================================
 
+  _int_map["classes"] = 1;
+
   AddStrField( "traffic", "uniform" );
+
+  _int_map["class_priority"] = 0;
+  AddStrField("class_priority", ""); // workaraound to allow for vector specification
+
+  AddStrField( "hotspot_nodes", "" );
+  AddStrField( "hotspot_rates", "" );
+
+  AddStrField( "combined_patterns", "" );
+  AddStrField( "combined_rates", "" );
 
   _int_map["perm_seed"] = 0;         // seed value for random permuation trafficpattern generator
 
   _float_map["injection_rate"]       = 0.1; //if 0.0 assumes it is batch mode
+  AddStrField("injection_rate", ""); // workaraound to allow for vector specification
+  
   _int_map["injection_rate_uses_flits"] = 0;
 
   _int_map["const_flits_per_packet"] = 1; //use  read_request_size etc insted
+  AddStrField("const_flits_per_packet", ""); // workaraound to allow for vector specification
 
   AddStrField( "injection_process", "bernoulli" );
 
@@ -190,10 +174,35 @@ BookSimConfig::BookSimConfig( )
   _int_map["batch_count"] = 1;
   _int_map["max_outstanding_requests"] = 4;
 
-  _int_map["read_request_size"]  = 1; //flit per packet
-  _int_map["write_request_size"] = 1; //flit per packet
-  _int_map["read_reply_size"]    = 1; //flit per packet
-  _int_map["write_reply_size"]   = 1; //flit per packet
+  // Use read/write request reply scheme
+  _int_map["use_read_write"] = 0;
+  AddStrField("use_read_write", ""); // workaraound to allow for vector specification
+
+  // Control assignment of packets to VCs
+  _int_map["read_request_begin_vc"] = 0;
+  _int_map["read_request_end_vc"] = 5;
+  _int_map["write_request_begin_vc"] = 2;
+  _int_map["write_request_end_vc"] = 7;
+  _int_map["read_reply_begin_vc"] = 8;
+  _int_map["read_reply_end_vc"] = 13;
+  _int_map["write_reply_begin_vc"] = 10;
+  _int_map["write_reply_end_vc"] = 15;
+
+  // Control Injection of Packets into Replicated Networks
+  _int_map["read_request_subnet"] = 0;
+  _int_map["read_reply_subnet"] = 0;
+  _int_map["write_request_subnet"] = 0;
+  _int_map["write_reply_subnet"] = 0;
+
+  // Set packet length in flits
+  _int_map["read_request_size"]  = 1;
+  AddStrField("read_request_size", ""); // workaraound to allow for vector specification
+  _int_map["write_request_size"] = 1;
+  AddStrField("write_request_size", ""); // workaraound to allow for vector specification
+  _int_map["read_reply_size"]    = 1;
+  AddStrField("read_reply_size", ""); // workaraound to allow for vector specification
+  _int_map["write_reply_size"]   = 1;
+  AddStrField("write_reply_size", ""); // workaraound to allow for vector specification
 
   //==== Simulation parameters ==========================
 
@@ -203,17 +212,30 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField( "sim_type", "latency" );
 
-  _int_map["warmup_periods"] = 3; // number of samples periods to "warm-up" the simulation
+  _int_map["warmup_periods"] = 0; // number of samples periods to "warm-up" the simulation
 
   _int_map["sample_period"] = 1000; // how long between measurements
   _int_map["max_samples"]   = 10;   // maximum number of sample periods in a simulation
 
-  _float_map["latency_thres"] = 500.0; // if avg. latency exceeds the threshold, assume unstable
-  _float_map["warmup_thres"] = 0.05; // consider warmed up once relative change in latency and throughput between successive iterations is smaller than this
+  // whether or not to measure statistics for a given traffic class
+  _int_map["measure_stats"] = 1;
+  AddStrField("measure_stats", ""); // workaround to allow for vector specification
+
+  // if avg. latency exceeds the threshold, assume unstable
+  _float_map["latency_thres"] = 500.0;
+  AddStrField("latency_thres", ""); // workaround to allow for vector specification
+
+   // consider warmed up once relative change in latency / throughput between successive iterations is smaller than this
+  _float_map["warmup_thres"] = 0.05;
+  AddStrField("warmup_thres", ""); // workaround to allow for vector specification
+  _float_map["acc_warmup_thres"] = 0.05;
+  AddStrField("acc_warmup_thres", ""); // workaround to allow for vector specification
 
   // consider converged once relative change in latency / throughput between successive iterations is smaller than this
   _float_map["stopping_thres"] = 0.05;
+  AddStrField("stopping_thres", ""); // workaround to allow for vector specification
   _float_map["acc_stopping_thres"] = 0.05;
+  AddStrField("acc_stopping_thres", ""); // workaround to allow for vector specification
 
   _int_map["sim_count"]     = 1;   // number of simulations to perform
 
@@ -232,11 +254,18 @@ BookSimConfig::BookSimConfig( )
   _int_map["print_csv_results"] = 0;
   _int_map["print_vc_stats"] = 0;
 
+  _int_map["deadlock_warn_timeout"] = 256;
+
   _int_map["drain_measured_only"] = 0;
 
   _int_map["viewer_trace"] = 0;
 
   AddStrField("watch_file", "");
+  
+  AddStrField("watch_flits", "");
+  AddStrField("watch_packets", "");
+  AddStrField("watch_transactions", "");
+
   AddStrField("watch_out", "");
 
   AddStrField("stats_out", "");
@@ -245,7 +274,7 @@ BookSimConfig::BookSimConfig( )
   //==================Power model params=====================
   _int_map["sim_power"] = 0;
   AddStrField("power_output_file","pwr_tmp");
-  AddStrField("tech_file", "../utils/temp");
+  AddStrField("tech_file", "");
   _int_map["channel_width"] = 128;
   _int_map["channel_sweep"] = 0;
 
@@ -254,60 +283,61 @@ BookSimConfig::BookSimConfig( )
 }
 
 
+#ifdef USE_GUI
+
 //A list of important simulator for the booksim gui, anything else not listed here is still included
 //but just not very organized
-vector< pair<string, vector< string> > > *BookSimConfig::GetImportantMap(){
+vector<pair<string, vector<string> > > BookSimConfig::GetImportantMap() {
   //Vector of 5 categories, each category is a vector of potions. Maps don't work because it autosorts
-  vector< pair<string, vector< string> > > *important = new  vector< pair<string, vector< string> > >;
-  important->push_back( make_pair( "Topology", vector<string>() ));
-  (*important)[0].second.push_back("topology");
-  (*important)[0].second.push_back("k");
-  (*important)[0].second.push_back("n");
-  (*important)[0].second.push_back("c");
-  (*important)[0].second.push_back( "routing_function");
-  (*important)[0].second.push_back("use_noc_latency");
+  vector< pair<string, vector< string> > > important;
+  important.push_back( make_pair( "Topology", vector<string>() ));
+  important[0].second.push_back("topology");
+  important[0].second.push_back("k");
+  important[0].second.push_back("n");
+  important[0].second.push_back("c");
+  important[0].second.push_back( "routing_function");
+  important[0].second.push_back("use_noc_latency");
 
-  important->push_back(make_pair("Router", vector<string>()));
-  (*important)[1].second.push_back("router");
-  (*important)[1].second.push_back("num_vcs");
-  (*important)[1].second.push_back("vc_buf_size");
-  (*important)[1].second.push_back("routing_delay");
-  (*important)[1].second.push_back("vc_alloc_delay");
-  (*important)[1].second.push_back("sw_alloc_delay");
-  (*important)[1].second.push_back("st_prepare_delay");
-  (*important)[1].second.push_back("st_final_delay");
+  important.push_back(make_pair("Router", vector<string>()));
+  important[1].second.push_back("router");
+  important[1].second.push_back("num_vcs");
+  important[1].second.push_back("vc_buf_size");
+  important[1].second.push_back("routing_delay");
+  important[1].second.push_back("vc_alloc_delay");
+  important[1].second.push_back("sw_alloc_delay");
+  important[1].second.push_back("st_prepare_delay");
+  important[1].second.push_back("st_final_delay");
 
-  important->push_back(make_pair("Allocator", vector<string>()));
-  (*important)[2].second.push_back("vc_allocator");
-  (*important)[2].second.push_back("vc_alloc_arb_type");
-  (*important)[2].second.push_back("sw_allocator");
-  (*important)[2].second.push_back("sw_alloc_arb_type");
-  (*important)[2].second.push_back( "priority");
-  (*important)[2].second.push_back("speculative");
+  important.push_back(make_pair("Allocator", vector<string>()));
+  important[2].second.push_back("vc_allocator");
+  important[2].second.push_back("vc_alloc_arb_type");
+  important[2].second.push_back("sw_allocator");
+  important[2].second.push_back("sw_alloc_arb_type");
+  important[2].second.push_back( "priority");
+  important[2].second.push_back("speculative");
 
-  important->push_back(make_pair("Simulation", vector<string>()));
- (*important)[3].second.push_back("traffic");
- (*important)[3].second.push_back("injection_rate");
- (*important)[3].second.push_back("injection_rate_uses_flits");
- (*important)[3].second.push_back("sim_type");
- (*important)[3].second.push_back("latency_thres");
- (*important)[3].second.push_back("const_flits_per_packet");
- (*important)[3].second.push_back("injection_process");
- (*important)[3].second.push_back("sample_period");
+  important.push_back(make_pair("Simulation", vector<string>()));
+  important[3].second.push_back("traffic");
+  important[3].second.push_back("injection_rate");
+  important[3].second.push_back("injection_rate_uses_flits");
+  important[3].second.push_back("sim_type");
+  important[3].second.push_back("latency_thres");
+  important[3].second.push_back("const_flits_per_packet");
+  important[3].second.push_back("injection_process");
+  important[3].second.push_back("sample_period");
 
-  important->push_back(make_pair("Statistics", vector<string>()));
-  (*important)[4].second.push_back("print_activity");
-  (*important)[4].second.push_back("print_csv_results");
-  (*important)[4].second.push_back("print_vc_stats");
-  (*important)[4].second.push_back("stats_out");
-  (*important)[4].second.push_back("sim_power");
-  (*important)[4].second.push_back("power_output_file");
-
+  important.push_back(make_pair("Statistics", vector<string>()));
+  important[4].second.push_back("print_activity");
+  important[4].second.push_back("print_csv_results");
+  important[4].second.push_back("print_vc_stats");
+  important[4].second.push_back("stats_out");
+  important[4].second.push_back("sim_power");
+  important[4].second.push_back("power_output_file");
 
   return important;
 }
 
-
+#endif
 
 PowerConfig::PowerConfig( )
 { 

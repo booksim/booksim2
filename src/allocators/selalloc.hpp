@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -31,21 +31,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _SELALLOC_HPP_
 #define _SELALLOC_HPP_
 
+#include <vector>
+
 #include "allocator.hpp"
 
 class SelAlloc : public SparseAllocator {
   int _iter;
 
-  int *_grants;
-  int *_aptrs;
-  int *_gptrs;
+  vector<int> _aptrs;
+  vector<int> _gptrs;
+
+  vector<int> _outmask;
 
 public:
   SelAlloc( Module *parent, const string& name,
 	    int inputs, int outputs, int iters );
-  ~SelAlloc( );
 
   void Allocate( );
+
+  void MaskOutput( int out, int mask = 1 );
+
+  virtual void PrintRequests( ostream * os = NULL ) const;
+
 };
 
 #endif 

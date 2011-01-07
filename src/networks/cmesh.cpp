@@ -1,7 +1,7 @@
 // $Id: cmesh.cpp 2314 2010-07-25 02:06:38Z qtedq $
 
 /*
-Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -45,7 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include <vector>
 #include <sstream>
-#include <assert.h>
+#include <cassert>
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
 #include "cmesh.hpp"
@@ -79,11 +79,13 @@ void CMesh::_ComputeSize( const Configuration &config ) {
   
   ostringstream router_name;
   //how many routers in the x or y direction
-  xcount = config.GetInt("x");
-  ycount = config.GetInt("y");
+  _xcount = config.GetInt("x");
+  _ycount = config.GetInt("y");
+  assert(_xcount == _ycount);
   //configuration of hohw many clients in X and Y per router
-  xrouter = config.GetInt("xr");
-  yrouter = config.GetInt("yr");
+  _xrouter = config.GetInt("xr");
+  _yrouter = config.GetInt("yr");
+  assert(_xrouter == _yrouter);
 
   _express_channels = (config.GetInt("express_channels") == 1);
 
@@ -91,7 +93,7 @@ void CMesh::_ComputeSize( const Configuration &config ) {
   gN = _n = n ;
   gC = _c = c ;
 
-  assert(c == xrouter*yrouter);
+  assert(c == _xrouter*_yrouter);
   
   _sources  = _c * powi( _k, _n); // Source nodes in network
   _dests    = _c * powi( _k, _n); // Destination nodes in network
@@ -148,6 +150,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
 					node,
 					degree_in,
 					degree_out);
+    _timed_modules.push_back(_routers[node]);
     name.str("");
 
     //
@@ -506,69 +509,68 @@ void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel,
 		  OutputSet *outputs, bool inject )
 {
 
-  // Destination Router, Destination Port
-  int dest_router = CMesh::NodeToRouter( f->dest ) ;  
-  int dest_port   = CMesh::NodeToPort( f->dest );
-
-  // Current Router
-  int cur_router = r->GetID();
-
-  int out_port;  
-  outputs->Clear();
-
-  if (dest_router == cur_router) {
-    // Forward to processing element
-    out_port = dest_port;
+  // ( Traffic Class , Routing Order ) -> Virtual Channel Range
+  int vcBegin = 0, vcEnd = gNumVCs-1;
+  if ( f->type == Flit::READ_REQUEST ) {
+    vcBegin = gReadReqBeginVC;
+    vcEnd = gReadReqEndVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    vcBegin = gWriteReqBeginVC;
+    vcEnd = gWriteReqEndVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    vcBegin = gReadReplyBeginVC;
+    vcEnd = gReadReplyEndVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    vcBegin = gWriteReplyBeginVC;
+    vcEnd = gWriteReplyEndVC;
   }
-  else {
-    // Forward to neighbouring router
-    
-    // Tiles send data on channels 0 through 3
-    if (in_channel <= 3) {
-      if ( RandomInt(1) ) {
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
+
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
+
+    // Current Router
+    int cur_router = r->GetID();
+
+    // Destination Router
+    int dest_router = CMesh::NodeToRouter( f->dest ) ;  
+
+    if (dest_router == cur_router) {
+
+      // Forward to processing element
+      out_port = CMesh::NodeToPort( f->dest );      
+
+    } else {
+
+      // Forward to neighbouring router
+
+      //each class must have at least 2 vcs assigned or else xy_yx will deadlock
+      int const available_vcs = (vcEnd - vcBegin + 1) / 2;
+      assert(available_vcs > 0);
+
+      // randomly select dimension order at first hop
+      bool x_then_y = ((in_channel < gC) ?
+		       (RandomInt(1) > 0) :
+		       (f->vc < (vcBegin + available_vcs)));
+
+      if(x_then_y) {
 	out_port = cmesh_xy( cur_router, dest_router );
-	f->x_then_y = true;
+	vcEnd -= available_vcs;
       } else {
 	out_port = cmesh_yx( cur_router, dest_router );
-	f->x_then_y = false;
+	vcBegin += available_vcs;
       }
     }
-    // Use meta-data in flit to determine routing order
-    else {
-      if( f->x_then_y )
-	out_port = cmesh_xy( cur_router, dest_router );
-      else
-	out_port = cmesh_yx( cur_router, dest_router );
-    }
+
   }
 
-  // ( Traffic Class , Routing Order ) -> Virtual Channel Range
-  int vcBegin = 0, vcEnd = gNumVCS-1;
-  int available_vcs = 0;
-  //each class must have ast east 2 vcs assigned or else xy_yx will deadlock
-  if ( f->type == Flit::READ_REQUEST ) {
-    available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
-    vcBegin = gReadReqBeginVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-   available_vcs = (gWriteReqEndVC-gWriteReqBeginVC)+1;
-   vcBegin = gWriteReqBeginVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-   available_vcs = (gReadReplyEndVC-gReadReplyBeginVC)+1;
-   vcBegin = gReadReplyBeginVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-   available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
-   vcBegin = gWriteReplyBeginVC;
-  } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCS;
-    vcBegin = 0;
-  }
-  assert( available_vcs>=2);
-  if(f->x_then_y){
-    vcEnd   =vcBegin +(available_vcs>>1)-1;
-  }else{
-    vcEnd   = vcBegin+(available_vcs-1);
-    vcBegin = vcBegin+(available_vcs>>1);
-  } 
+  outputs->Clear();
+
   outputs->AddRange( out_port , vcBegin, vcEnd );
 }
 
@@ -647,72 +649,68 @@ int cmesh_yx_no_express( int cur, int dest ) {
 void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel, 
 			     OutputSet *outputs, bool inject )
 {
-
-  // Destination Router, Destination Port
-  int dest_router = CMesh::NodeToRouter( f->dest );  
-  int dest_port   = CMesh::NodeToPort( f->dest );
-
-  // Current Router
-  int cur_router = r->GetID();
-
-  int out_port;  
-  outputs->Clear();
-
-  if (dest_router == cur_router) {
-    // Forward to processing element
-    out_port = dest_port;
+  // ( Traffic Class , Routing Order ) -> Virtual Channel Range
+  int vcBegin = 0, vcEnd = gNumVCs-1;
+  if ( f->type == Flit::READ_REQUEST ) {
+    vcBegin = gReadReqBeginVC;
+    vcEnd = gReadReqEndVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    vcBegin = gWriteReqBeginVC;
+    vcEnd = gWriteReqEndVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    vcBegin = gReadReplyBeginVC;
+    vcEnd = gReadReplyEndVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    vcBegin = gWriteReplyBeginVC;
+    vcEnd = gWriteReplyEndVC;
   }
-  else {
-    // Forward to neighbouring router
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
+
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
+
+    // Current Router
+    int cur_router = r->GetID();
+
+    // Destination Router
+    int dest_router = CMesh::NodeToRouter( f->dest );  
+
+    if (dest_router == cur_router) {
+
+      // Forward to processing element
+      out_port = CMesh::NodeToPort( f->dest );
+
+    } else {
+
+      // Forward to neighbouring router
     
-    // Tiles send data on channels 0 through 3
-    if (in_channel <= 3) {
-      if ( RandomInt(1) ) {
+      //each class must have at least 2 vcs assigned or else xy_yx will deadlock
+      int const available_vcs = (vcEnd - vcBegin + 1) / 2;
+      assert(available_vcs > 0);
+
+      // randomly select dimension order at first hop
+      bool x_then_y = ((in_channel < gC) ?
+		       (RandomInt(1) > 0) :
+		       (f->vc < (vcBegin + available_vcs)));
+
+      if(x_then_y) {
 	out_port = cmesh_xy_no_express( cur_router, dest_router );
-	f->x_then_y = true;
+	vcEnd -= available_vcs;
       } else {
 	out_port = cmesh_yx_no_express( cur_router, dest_router );
-	f->x_then_y = false;
+	vcBegin += available_vcs;
       }
     }
-    // Use meta-data in flit to determine routing order
-    else {
-      if( f->x_then_y )
-	out_port = cmesh_xy_no_express( cur_router, dest_router );
-      else
-	out_port = cmesh_yx_no_express( cur_router, dest_router );
-    }
   }
 
-  // ( Traffic Class , Routing Order ) -> Virtual Channel Range
-  int vcBegin = 0, vcEnd = gNumVCS-1;
-  int available_vcs = 0;
-  //each class must have ast east 2 vcs assigned or else xy_yx will deadlock
-  if ( f->type == Flit::READ_REQUEST ) {
-    available_vcs = (gReadReqEndVC-gReadReqBeginVC)+1;
-    vcBegin = gReadReqBeginVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-   available_vcs = (gWriteReqEndVC-gWriteReqBeginVC)+1;
-   vcBegin = gWriteReqBeginVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-   available_vcs = (gReadReplyEndVC-gReadReplyBeginVC)+1;
-   vcBegin = gReadReplyBeginVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-   available_vcs = (gWriteReplyEndVC-gWriteReplyBeginVC)+1;      
-   vcBegin = gWriteReplyBeginVC;
-  } else if ( f->type ==  Flit::ANY_TYPE ) {
-    available_vcs = gNumVCS;
-    vcBegin = 0;
-  }
-  assert( available_vcs>=2);
-  if(f->x_then_y){
-    vcEnd   =vcBegin +(available_vcs>>1)-1;
-  }else{
-    vcEnd   = vcBegin+(available_vcs-1);
-    vcBegin = vcBegin+(available_vcs>>1);
-  } 
+  outputs->Clear();
+
   outputs->AddRange( out_port , vcBegin, vcEnd );
-
 }
 //============================================================
 //
@@ -778,35 +776,52 @@ int cmesh_next( int cur, int dest ) {
 void dor_cmesh( const Router *r, const Flit *f, int in_channel, 
 		OutputSet *outputs, bool inject )
 {
+  // ( Traffic Class , Routing Order ) -> Virtual Channel Range
+  int vcBegin = 0, vcEnd = gNumVCs-1;
+  if ( f->type == Flit::READ_REQUEST ) {
+    vcBegin = gReadReqBeginVC;
+    vcEnd = gReadReqEndVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    vcBegin = gWriteReqBeginVC;
+    vcEnd = gWriteReqEndVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    vcBegin = gReadReplyBeginVC;
+    vcEnd = gReadReplyEndVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    vcBegin = gWriteReplyBeginVC;
+    vcEnd = gWriteReplyEndVC;
+  }
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
-  // Destination Router, Destination Port
-  int dest_router = CMesh::NodeToRouter( f->dest ) ;  
-  int dest_port   = CMesh::NodeToPort( f->dest ) ;
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
+
+    // Current Router
+    int cur_router = r->GetID();
+
+    // Destination Router
+    int dest_router = CMesh::NodeToRouter( f->dest ) ;  
   
-  // Current Router
-  int cur_router = r->GetID();
+    if (dest_router == cur_router) {
 
-  int out_port;  
+      // Forward to processing element
+      out_port = CMesh::NodeToPort( f->dest ) ;
+
+    } else {
+
+      // Forward to neighbouring router
+      out_port = cmesh_next( cur_router, dest_router );
+    }
+  }
+
   outputs->Clear();
 
-  if (dest_router == cur_router) {
-    // Forward to processing element
-    out_port = dest_port;
-  }
-  else {
-    // Forward to neighbouring router
-    out_port = cmesh_next( cur_router, dest_router );
-  }
-  if (f->type == Flit::READ_REQUEST)
-    outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
-  if (f->type == Flit::WRITE_REQUEST)
-    outputs->AddRange( out_port, gWriteReqBeginVC, gWriteReqEndVC );
-  if (f->type ==  Flit::READ_REPLY)
-      outputs->AddRange( out_port, gReadReplyBeginVC, gReadReplyEndVC );
-  if (f->type ==  Flit::WRITE_REPLY)
-    outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
- if (f->type ==  Flit::ANY_TYPE)
-      outputs->AddRange( out_port, 0, gNumVCS-1);
+  outputs->AddRange( out_port, vcBegin, vcEnd);
 }
 
 //============================================================
@@ -845,34 +860,50 @@ int cmesh_next_no_express( int cur, int dest ) {
 void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel, 
 			   OutputSet *outputs, bool inject )
 {
- 
-  // Destination Router, Destination Port
-  int dest_router = CMesh::NodeToRouter( f->dest ) ;  
-  int dest_port   = CMesh::NodeToPort( f->dest );
-  
-  // Current Router
-  int cur_router = r->GetID();
+  // ( Traffic Class , Routing Order ) -> Virtual Channel Range
+  int vcBegin = 0, vcEnd = gNumVCs-1;
+  if ( f->type == Flit::READ_REQUEST ) {
+    vcBegin = gReadReqBeginVC;
+    vcEnd = gReadReqEndVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    vcBegin = gWriteReqBeginVC;
+    vcEnd = gWriteReqEndVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    vcBegin = gReadReplyBeginVC;
+    vcEnd = gReadReplyEndVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    vcBegin = gWriteReplyBeginVC;
+    vcEnd = gWriteReplyEndVC;
+  }
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
-  int out_port;  
-  outputs->Clear();
-  if (dest_router == cur_router) {
-    // Forward to processing element
-    out_port = dest_port;
-  }
-  else {
-    // Forward to neighbouring router
-    out_port = cmesh_next_no_express( cur_router, dest_router );
-  }
-  outputs->AddRange( out_port, 0, gNumVCS - 1 );
-  if (f->type == Flit::READ_REQUEST)
-    outputs->AddRange( out_port, gReadReqBeginVC, gReadReqEndVC );
-  if (f->type == Flit::WRITE_REQUEST)
-    outputs->AddRange( out_port, gWriteReqBeginVC, gWriteReqEndVC );
-  if (f->type ==  Flit::READ_REPLY)
-    outputs->AddRange( out_port, gReadReplyBeginVC, gReadReplyEndVC );
-  if (f->type ==  Flit::WRITE_REPLY)
-    outputs->AddRange( out_port, gWriteReplyBeginVC, gWriteReplyEndVC );
-  if (f->type ==  Flit::ANY_TYPE)
-    outputs->AddRange( out_port, 0, gNumVCS-1 );
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
+
+    // Current Router
+    int cur_router = r->GetID();
+
+    // Destination Router
+    int dest_router = CMesh::NodeToRouter( f->dest ) ;  
   
+    if (dest_router == cur_router) {
+
+      // Forward to processing element
+      out_port = CMesh::NodeToPort( f->dest );
+
+    } else {
+
+      // Forward to neighbouring router
+      out_port = cmesh_next_no_express( cur_router, dest_router );
+    }
+  }
+
+  outputs->Clear();
+
+  outputs->AddRange( out_port, vcBegin, vcEnd );
 }
