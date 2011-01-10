@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #define main rng_main
-#include "rng.C"
+#include "rng.hpp"
 
 long ran_next( )
 {

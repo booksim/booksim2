@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "switch_monitor.hpp"
 #include "iq_router.hpp"
 
-Power_Module::Power_Module(Network * n , TrafficManager* parent, const Configuration &config)
+Power_Module::Power_Module(BSNetwork * n , TrafficManager* parent, const Configuration &config)
   : Module( 0, "power_module" ){
 
   

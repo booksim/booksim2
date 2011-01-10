@@ -1,4 +1,4 @@
-// $Id: main.cpp 2314 2010-07-25 02:06:38Z qtedq $
+// $Id: main.cpp 2842 2010-11-12 03:13:28Z dub $
 
 /*
 Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
@@ -68,15 +68,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "singlenet.hpp"
 #include "kncube.hpp"
 #include "fly.hpp"
-#include "isolated_mesh.hpp"
-#include "cmo.hpp"
 #include "cmesh.hpp"
-#include "cmeshx2.hpp"
 #include "flatfly_onchip.hpp"
 #include "qtree.hpp"
 #include "tree4.hpp"
 #include "fattree.hpp"
-#include "mecs.hpp"
 #include "anynet.hpp"
 #include "dragonfly.hpp"
 ///////////////////////////////////////////////////////////////////////////////
@@ -86,8 +82,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  /* the current traffic manager instance */
 TrafficManager * trafficManager = NULL;
 
- int GetSimTime() {
-   return booksimTime;
+int GetSimTime() {
+  return trafficManager->getTime();
 }
 
 class Stats;
@@ -99,9 +95,8 @@ Stats * GetStats(const std::string & name) {
   return test;
 }
 
-int booksimTime =0;
 /* printing activity factor*/
-bool _print_activity = false;
+bool gPrintActivity;
 
 int gK = 0;//radix
 int gN = 0;//dimension
@@ -127,24 +122,16 @@ int xcount  = 0;
 int ycount  = 0;
 
 //generate nocviewer trace
-bool gTrace = false;
-
-//injection functions
-map<string, tInjectionProcess> gInjectionProcessMap;
-
-//burst rates
-double gBurstAlpha;
-double gBurstBeta;
+bool gTrace;
 
 /*number of flits per packet, when _use_read_write is false*/
 int    gConstPacketSize;
 
-//for on_off injections
-vector<int> gNodeStates;
-
 ostream * gWatchOut;
 
+#ifdef USE_GUI
 bool gGUIMode = false;
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -153,8 +140,8 @@ bool AllocatorSim( const Configuration& config )
   vector<BSNetwork *> net;
   string topo;
 
-  config.GetStr( "topology", topo );
-  short networks = config.GetInt("physical_subnetworks");
+  topo = config.GetStr( "topology");
+  int networks = config.GetInt("physical_subnetworks");
   /*To include a new network, must register the network here
    *add an else if statement with the name of the network
    */
@@ -171,18 +158,12 @@ bool AllocatorSim( const Configuration& config )
     } else if ( topo == "cmesh" ) {
       CMesh::RegisterRoutingFunctions() ;
       net[i] = new CMesh( config, name.str() );
-    } else if ( topo == "cmeshx2" ) {
-      CMeshX2::RegisterRoutingFunctions() ;
-      net[i] = new CMeshX2( config, name.str() );
-    } else if ( topo == "fly" ) {
+    }  else if ( topo == "fly" ) {
       KNFly::RegisterRoutingFunctions() ;
       net[i] = new KNFly( config, name.str() );
     } else if ( topo == "single" ) {
       SingleNet::RegisterRoutingFunctions() ;
       net[i] = new SingleNet( config, name.str() );
-    } else if ( topo == "isolated_mesh" ) {
-      IsolatedMesh::RegisterRoutingFunctions() ;
-      net[i] = new IsolatedMesh( config, name.str() );
     } else if ( topo == "qtree" ) {
       QTree::RegisterRoutingFunctions() ;
       net[i] = new QTree( config, name.str() );
@@ -195,12 +176,6 @@ bool AllocatorSim( const Configuration& config )
     } else if ( topo == "flatfly" ) {
       FlatFlyOnChip::RegisterRoutingFunctions() ;
       net[i] = new FlatFlyOnChip( config, name.str() );
-    } else if ( topo == "cmo"){
-      CMO::RegisterRoutingFunctions() ;
-      net[i] = new CMO(config, name.str());
-    } else if ( topo == "MECS"){
-      MECS::RegisterRoutingFunctions() ;
-      net[i] = new MECS(config, name.str());
     } else if ( topo == "anynet"){
       AnyNet::RegisterRoutingFunctions() ;
       net[i] = new AnyNet(config, name.str());
@@ -222,20 +197,19 @@ bool AllocatorSim( const Configuration& config )
 
 
   string traffic ;
-  config.GetStr( "traffic", traffic ) ;
+  traffic = config.GetStr( "traffic" ) ;
 
   /*tcc and characterize are legacy
    *not sure how to use them 
    */
-  if(trafficManager){
-    delete trafficManager ;
-  }
+
+  assert(trafficManager == NULL);
   trafficManager = new TrafficManager( config, net ) ;
 
   /*Start the simulation run
    */
 
-double total_time; /* Amount of time we've run */
+  double total_time; /* Amount of time we've run */
   struct timeval start_time, end_time; /* Time before/after user code */
   total_time = 0.0;
   gettimeofday(&start_time, NULL);
@@ -260,78 +234,9 @@ double total_time; /* Amount of time we've run */
   for (int i=0; i<networks; ++i)
     delete net[i];
 
+  delete trafficManager;
+  trafficManager = NULL;
+
   return result;
 }
 
-
-// int main( int argc, char **argv )
-// {
-
-//   BookSimConfig config;
-
-// #ifdef USE_GUI
-//   for(int i = 1; i < argc; ++i) {
-//     string arg(argv[i]);
-//     if(arg=="-g"){
-//       gGUIMode = true;
-//       break;
-//     }
-//   }
-// #endif
-//   if ( !ParseArgs( &config, argc, argv ) ) {
-// #ifdef USE_GUI
-//     if(gGUIMode){
-//       cout<< "No config file found"<<endl;
-//       cout<< "Usage: " << argv[0] << " configfile... [param=value...]" << endl;
-//       cout<< "GUI is using default parameters instead"<<endl;
-//     } else {
-// #endif
-//     cerr << "Usage: " << argv[0] << " configfile... [param=value...]" << endl;
-//     return 0;
- 
-// #ifdef USE_GUI
-//     }
-// #endif
-//  } 
-
-  
-//   /*initialize routing, traffic, injection functions
-//    */
-//   InitializeRoutingMap( );
-//   InitializeTrafficMap( );
-//   InitializeInjectionMap( );
-
-//   _print_activity = (config.GetInt("print_activity")==1);
-//   gTrace = (config.GetInt("viewer trace")==1);
-  
-//   string watch_out_file;
-//   config.GetStr( "watch_out", watch_out_file );
-//   if(watch_out_file == "") {
-//     gWatchOut = NULL;
-//   } else if(watch_out_file == "-") {
-//     gWatchOut = &cout;
-//   } else {
-//     gWatchOut = new ofstream(watch_out_file.c_str());
-//   }
-  
-
-//   /*configure and run the simulator
-//    */
-//   bool result;
-//   if(!gGUIMode){
-//    result = AllocatorSim( config );
-//   } else {
-// #ifdef USE_GUI
-//     cout<<"GUI Mode\n";
-//     QApplication app(argc, argv);
-//     BooksimGUI * bs = new BooksimGUI();
-//     //transfer all the contorl and data to the gui, go to bgui.cpp for the rest
-//     bs->RegisterAllocSim(&AllocatorSim,&config);
-//     bs->setGeometry(100, 100, 1200, 355);
-//     bs->show();
-//     return app.exec();
-// #endif
-//   }
-
-//   return result ? -1 : 0;
-// }

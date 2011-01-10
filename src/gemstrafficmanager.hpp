@@ -84,12 +84,12 @@ protected:
   int vc_classes;
   int *vc_ptrs;
 protected:
-  virtual Flit *_NewFlit( );
+
   virtual void _RetireFlit( Flit *f, int dest );
 
 
   
-  virtual int  _IssuePacket( int source, int cl );
+
   virtual void _GeneratePacket( int source, int size, int cl, int time );
 
 
@@ -111,6 +111,7 @@ public:
 private:
   int flit_size;
   int _network_time;
+  int next_report;
 };
 
 #endif

@@ -275,9 +275,13 @@ public:
 
   inline int getTime() { return _time;}
   Stats * getStats(const string & name) { return _stats[name]; }
-
+  
   int inflight(){
-    return  _total_in_flight_packets.size();
+    int t =0;
+    for(int c = 0; c < _classes; ++c) {
+      t+=_total_in_flight_flits[c].size();
+    }
+    return t;
   }
 };
 

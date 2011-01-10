@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 #include <stack>
 
-<<<<<<< .working
+
 #include "Message.h"
 
 #include "booksim.hpp"

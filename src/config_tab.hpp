@@ -54,11 +54,11 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 15 "config.y"
+#line 17 "config.y"
 {
-  char         *name;
-  unsigned int num;
-  double       fnum;
+  char   *name;
+  int    num;
+  double fnum;
 }
 /* Line 1529 of yacc.c.  */
 #line 65 "config.tab.h"

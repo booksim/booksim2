@@ -31,15 +31,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _RANDOM_UTILS_HPP_
 #define _RANDOM_UTILS_HPP_
 
-<<<<<<< .working
- //#include "rng.hpp"
-=======
  // interface to Knuth's RANARRAY RNG
 void   ran_start(long seed);
 long   ran_next( );
 void   ranf_start(long seed);
 double ranf_next( );
->>>>>>> .merge-right.r3168
 
 inline void RandomSeed( long seed ) {
   ran_start( seed );

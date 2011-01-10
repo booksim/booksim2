@@ -36,8 +36,11 @@
 #include "Message.h"
 #include "NetworkMessage.h"
 #include "Network.h"
+#include <limits>
 
+#define REPORT_INTERVAL 100000
 bool InjectConsumer::trigger_wakeup = true;
+
 GEMSTrafficManager::GEMSTrafficManager(  const Configuration &config, const vector<BSNetwork *> & net , int vcc)
   : TrafficManager(config, net)
 {
@@ -46,118 +49,95 @@ GEMSTrafficManager::GEMSTrafficManager(  const Configuration &config, const vect
   memset(vc_ptrs,0, _sources *sizeof(int));
   flit_size = config.GetInt("channel_width");
   _network_time = 0;
+  next_report = REPORT_INTERVAL;
 }
 
 void GEMSTrafficManager::DisplayStats(){
-  int  total_phases  = 0;
-  double cur_latency = _latency_stats[0]->Average( );
-  int dmin;
-  double min, avg;
-  dmin = _ComputeStats( _accepted_flits, &avg, &min );
-  double cur_accepted = avg;
-  _time =  g_eventQueue_ptr->getTime();
-  
-  cout << "I think time is\t"<<_network_time<<endl;
-  cout << "Real ruby time is\t"<< _time<<endl; 
-  cout << "Minimum latency = " << _latency_stats[0]->Min( ) << endl;
-  cout << "Average latency = " << cur_latency << endl;
-  cout << "Maximum latency = " << _latency_stats[0]->Max( ) << endl;
-  cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
-  cout << "Accepted packets = " << min << " at node " << dmin << " (avg nonzero = " << avg << ")" << endl;
-  cout << "Packet count = "<< _latency_stats[0]->NumSamples( )<<endl;
-  cout << "Hop average = "<<_hop_stats->Average( )<<endl;
-  if(_stats_out) {
 
-    *_stats_out << "%==============================================\n";
-    *_stats_out <<"time = "<<_time<<";"<<endl;
-    *_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
-		<< "lat_hist(" << total_phases + 1 << ",:) = "
-		<< *_latency_stats[0] << ";" << endl
-		<< "frag_hist(" << total_phases + 1 << ",:) = "
-		<< *_frag_stats[0] << ";" << endl
-		<< "pair_sent(" << total_phases + 1 << ",:) = [ ";
-    for(int i = 0; i < _sources; ++i) {
-      for(int j = 0; j < _dests; ++j) {
-	*_stats_out << _pair_latency[i*_dests+j]->NumSamples( ) << " ";
+
+  double max_latency_change = 0.0;
+  double max_accepted_change = 0.0;
+  _time =  g_eventQueue_ptr->getTime();
+  for(int c = 0; c < _classes; ++c) {
+    double cur_latency = _latency_stats[c]->Average( );
+    int dmin;
+    double min, avg;
+    dmin = _ComputeStats( _accepted_flits[c], &avg, &min );
+    double cur_accepted = avg;
+
+    cout << "Class " << c+1 << ":" << endl;
+    cout << "Number of packets = "<< _latency_stats[c]->NumSamples()<<endl;
+    cout << "Minimum latency = " << _latency_stats[c]->Min( ) << endl;
+    cout << "Average latency = " << cur_latency << endl;
+    cout << "Maximum latency = " << _latency_stats[c]->Max( ) << endl;
+    cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
+    cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
+    cout << "Total in-flight flits = " << _total_in_flight_flits[c].size() << " (" << _measured_in_flight_flits[c].size() << " measured)" << endl;
+    if(_stats_out) {
+      *_stats_out << "lat(" << c+1 << ") = " << cur_latency << ";" << endl
+		  << "lat_hist(" << c+1 << ",:) = " << *_latency_stats[c] << ";" << endl
+		  << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
+		  << "pair_sent(" << c+1 << ",:) = [ ";
+      for(int i = 0; i < _sources; ++i) {
+	for(int j = 0; j < _dests; ++j) {
+	  *_stats_out << _pair_latency[c][i*_dests+j]->NumSamples( ) << " ";
+	}
       }
-    }
-    *_stats_out << "];" << endl
-		<< "pair_lat(" << total_phases + 1 << ",:) = [ ";
-    for(int i = 0; i < _sources; ++i) {
-      for(int j = 0; j < _dests; ++j) {
-	*_stats_out << _pair_latency[i*_dests+j]->Average( ) << " ";
+      *_stats_out << "];" << endl
+		  << "pair_lat(" << c+1 << ",:) = [ ";
+      for(int i = 0; i < _sources; ++i) {
+	for(int j = 0; j < _dests; ++j) {
+	  *_stats_out << _pair_latency[c][i*_dests+j]->Average( ) << " ";
+	}
       }
-    }
-    *_stats_out << "];" << endl
-		<< "pair_lat(" << total_phases + 1 << ",:) = [ ";
-    for(int i = 0; i < _sources; ++i) {
-      for(int j = 0; j < _dests; ++j) {
-	*_stats_out << _pair_tlat[i*_dests+j]->Average( ) << " ";
+      *_stats_out << "];" << endl
+		  << "pair_lat(" << c+1 << ",:) = [ ";
+      for(int i = 0; i < _sources; ++i) {
+	for(int j = 0; j < _dests; ++j) {
+	  *_stats_out << _pair_tlat[c][i*_dests+j]->Average( ) << " ";
+	}
       }
-    }
-    *_stats_out << "];" << endl
-		<< "sent(" << total_phases + 1 << ",:) = [ ";
-    for ( int d = 0; d < _dests; ++d ) {
-      *_stats_out << _sent_flits[d]->Average( ) << " ";
-    }
-    *_stats_out << "];" << endl
-		<< "accepted(" << total_phases + 1 << ",:) = [ ";
-    for ( int d = 0; d < _dests; ++d ) {
-      *_stats_out << _accepted_flits[d]->Average( ) << " ";
-    }
-    *_stats_out << "];" << endl;
+      *_stats_out << "];" << endl
+		  << "sent(" << c+1 << ",:) = [ ";
+      for ( int d = 0; d < _dests; ++d ) {
+	*_stats_out << _sent_flits[c][d]->Average( ) << " ";
+      }
+      *_stats_out << "];" << endl
+		  << "accepted(" << c+1 << ",:) = [ ";
+      for ( int d = 0; d < _dests; ++d ) {
+	*_stats_out << _accepted_flits[c][d]->Average( ) << " ";
+      }
+      *_stats_out << "];" << endl;
+      *_stats_out << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
+      *_stats_out << "network_time = "<<_network_time<<";"<<endl;
+      *_stats_out << "system_time = "<<_time<<";"<<endl;
+    } 
   }
 }
 
 GEMSTrafficManager::~GEMSTrafficManager( )
 {
-
+  delete[] vc_ptrs;
 }
 
-
-Flit *GEMSTrafficManager::_NewFlit( )
-{
-  if(_flit_pool.empty()){
-    Flit* ftemp = new Flit[  _sources ];
-    for(int i = 0; i<  _sources ; i++){
-      _flit_pool.push_back(&ftemp[i]);
-    }
-  }
-  //the constructor should initialize everything
-  Flit * f = _flit_pool.back();
-  _flit_pool.pop_back();
-  f->id    = _cur_id;
-  _total_in_flight_flits[_cur_id] = f;
-  f->watch = gWatchOut && (_flits_to_watch.count(_cur_id) > 0);
-  ++_cur_id;
-  return f;
-}
 
 void GEMSTrafficManager::_RetireFlit( Flit *f, int dest )
 {
-
   //send to the output message buffer
   if(f){
     if(f->tail){
-      //cout<<"retiring message at "<<dest<<"\t";
-      //cout<<"global time :"<<g_eventQueue_ptr->getTime()<<" message time: "<<f->msg.ref()->getLastEnqueueTime()<<endl;
-      //cout<<"queue available "<< (*output_buffer)[dest][f->gems_net]->areNSlotsAvailable(1)<<endl;
       (*output_buffer)[dest][f->gems_net]->enqueue(f->msg);
     }
   }
   TrafficManager::_RetireFlit(f, dest);
 }
 
-int GEMSTrafficManager::_IssuePacket( int source, int cl )
-{
-  //no need
-}
 
 void GEMSTrafficManager::_GeneratePacket( int source, int stype, 
 					  int vcc, int time )
 {
 
-
+  int cl = 0;
 
   MsgPtr msg_ptr = (*input_buffer)[source][vcc]->peekMsgPtr();
   MsgPtr unmodified_msg_ptr = *(msg_ptr.ref()); 
@@ -165,14 +145,14 @@ void GEMSTrafficManager::_GeneratePacket( int source, int stype,
   NetworkMessage* net_msg_ptr = dynamic_cast<NetworkMessage*>(msg_ptr.ref());
   NetDest msg_destinations = net_msg_ptr->getInternalDestination();
   Vector<NodeID> a = msg_destinations.getAllDest();
-  //cout<<"Node "<<source<<" count "<<msg_destinations.count()<<endl;
-  //cout<<a<<endl;
+
   //bytes
   int size = (int) ceil((double) MessageSizeType_to_int(net_msg_ptr->getMessageSize())*8/flit_size ); 
 
+  //a message has many potential destinations
   for(int dest_index = 0; dest_index<a.size(); dest_index++){
     Flit::FlitType packet_type = Flit::ANY_TYPE;
- 
+    
     int ttime = time;
     int packet_destination = a[dest_index];
     bool record = false;
@@ -184,13 +164,12 @@ void GEMSTrafficManager::_GeneratePacket( int source, int stype,
       Error( "" );
     }
 
-    if ( ( _sim_state == running ) ||
-	 ( ( _sim_state == draining ) && ( time < _drain_time ) ) ) {
-      record = true;
-    }
+    record = true;
 
-    _sub_network = 0;
-  
+    int subnetwork = ((packet_type == Flit::ANY_TYPE) ? 
+		      RandomInt(_subnets-1) :
+		      _subnet_map[packet_type]);
+
     bool watch  = gWatchOut && (_packets_to_watch.count(_cur_pid) > 0);
   
     if ( watch ) { 
@@ -202,57 +181,57 @@ void GEMSTrafficManager::_GeneratePacket( int source, int stype,
     }
   
     for ( int i = 0; i < size; ++i ) {
-      Flit * f = _NewFlit( );
-      f->pid = _cur_pid;
-      f->watch |= watch;
-      f->subnetwork = _sub_network;
+      
+      Flit * f  = Flit::New();
+      f->id     = _cur_id++;
+      assert(_cur_id);
+      f->pid    = _cur_pid;
+      f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
+      f->subnetwork = subnetwork;
       f->src    = source;
       f->time   = time;
       f->ttime  = ttime;
       f->record = record;
+      f->cl     = cl;
       f->gems_net = vcc;
-  
-      //      msg_ptr = *(unmodified_msg_ptr.ref()); 
-
-
+      f->vc = vcc;
       f->msg = *(msg_ptr.ref());
-      //cout<<"msg age "<<f->msg.ref()->getLastEnqueueTime()<<endl;//" add "<<(void*)f->msg<<endl;
 
+      _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
       if(record) {
-	_measured_in_flight_flits[f->id] = f;
+	_measured_in_flight_flits[f->cl].insert(make_pair(f->id, f));
       }
     
       if(gTrace){
 	cout<<"New Flit "<<f->src<<endl;
       }
-      //f->type = packet_type;
-      f->type = (Flit::FlitType)f->gems_net;
+      //      f->type = (Flit::FlitType)f->gems_net;
+
       if ( i == 0 ) { // Head flit
 	f->head = true;
 	//packets are only generated to nodes smaller or equal to limit
 	f->dest = packet_destination;
-	_total_in_flight_packets.insert(pair<int, Flit *>(f->pid, f));
-	if(record) {
-	  _measured_in_flight_packets.insert(pair<int, Flit *>(f->pid, f));
-	}
+
       } else {
 	f->head = false;
 	f->dest = -1;
       }
       switch( _pri_type ) {
       case class_based:
-	f->pri = 0;
+	f->pri = cl;
+	assert(f->pri >= 0);
 	break;
       case age_based:
-	f->pri = _replies_inherit_priority ? -ttime : -time;
+	f->pri = numeric_limits<int>::max() - (_replies_inherit_priority ? ttime : time);
+	assert(f->pri >= 0);
 	break;
       case sequence_based:
-	f->pri = -_packets_sent[source];
+	f->pri = numeric_limits<int>::max() - _packets_sent[source];
+	assert(f->pri >= 0);
 	break;
       default:
 	f->pri = 0;
       }
-
       if ( i == ( size - 1 ) ) { // Tail flit
 	f->tail = true;
       } else {
@@ -270,9 +249,12 @@ void GEMSTrafficManager::_GeneratePacket( int source, int stype,
 		   << "." << endl;
       }
 
-      _partial_packets[source][0][_sub_network].push_back( f );
+      _partial_packets[source][cl].push_back( f );
     }
     ++_cur_pid;
+    assert(_cur_pid);
+    
+
   }
 }
 
@@ -282,21 +264,13 @@ void GEMSTrafficManager::_GeneratePacket( int source, int stype,
 
 void GEMSTrafficManager::GemsInject(){
 
-  // Receive credits and inject new traffic
-  for ( int input = 0; input < _limit; ++input ) {
-    for (int i = 0; i < _duplicate_networks; ++i) {
-      Credit * cred = _net[i]->ReadCredit( input );
-      if ( cred ) {
-        _buf_states[input][i]->ProcessCredit( cred );
-        delete cred;
-      }
-    }
+
     
+  for ( int input = 0; input < _limit; ++input ) {
     for ( int c = 0; c < _classes; ++c ) {
       // Potentially generate packets for any (input,class)
       // that is currently empty
-      if ( (_duplicate_networks > 1) || _partial_packets[input][c][0].empty() ) {
-
+      if ( _partial_packets[input][c].empty() ) {
 	for(int v = 0; v<vc_classes; v++){
 	  //the first virtual network we gonna use
 	  int vshift = (vc_ptrs[input]+1+v)%vc_classes;
@@ -308,51 +282,6 @@ void GEMSTrafficManager::GemsInject(){
 	}
       }
     }
-
-    int c=0;
-    bool write_flit = false;
-    Flit * f;
-    if ( !_partial_packets[input][c][0].empty( ) ) {
-      f = _partial_packets[input][c][0].front( );
-      if ( f->head && f->vc == -1) {
-	//vc class should already be assigned depending on messagebuffer
-	f->vc =  _buf_states[input][0]->FindAvailable((int)f->gems_net) ;
-      }
-      
-      if ( ( f->vc != -1 ) &&
-	   ( !_buf_states[input][0]->IsFullFor( f->vc ) ) ) {
-
-	_partial_packets[input][c][0].pop_front( );
-	_buf_states[input][0]->SendingFlit( f );
-	write_flit = true;
-
-	if(_pri_type == network_age_based) {
-	  f->pri = -_time;
-	}
-
-	if(f->watch) {
-	  *gWatchOut << GetSimTime() << " | "
-		     << "node" << input << " | "
-		     << "Injecting flit " << f->id
-		     << " at time " << _time
-		     << " with priority " << f->pri
-		     << "." << endl;
-	}
-	  
-	// Pass VC "back"
-	if ( !_partial_packets[input][c][0].empty( ) && !f->tail ) {
-	  Flit * nf = _partial_packets[input][c][0].front( );
-	  nf->vc = f->vc;
-	}
-
-	++_injected_flow[input];
-      }
-    }
-    _net[0]->WriteFlit( write_flit ? f : 0, input );
-    if( ( _sim_state == warming_up ) || ( _sim_state == running ) )
-      _sent_flits[input]->AddSample(write_flit);
-    if (write_flit && f->tail) // If a tail flit, reduce the number of packets of this class.
-      _class_array[0][c]--;
   }
   
 }
@@ -362,74 +291,195 @@ void GEMSTrafficManager::_Step( )
 
   _time=g_eventQueue_ptr->getTime();
 
-  GemsInject();
-  
-  //advance networks
-  for (int i = 0; i < _duplicate_networks; ++i) {
-    _net[i]->ReadInputs( );
-    _partial_internal_cycles[i] += _internal_speedup;
-    while( _partial_internal_cycles[i] >= 1.0 ) {
-      _net[i]->InternalStep( );
-      _partial_internal_cycles[i] -= 1.0;
+
+  bool flits_in_flight = false;
+  for(int c = 0; c < _classes; ++c) {
+    flits_in_flight |= !_total_in_flight_flits[c].empty();
+  }
+
+ for ( int source = 0; source < _limit; ++source ) {
+    for ( int subnet = 0; subnet < _subnets; ++subnet ) {
+      Credit * const c = _net[subnet]->ReadCredit( source );
+      if ( c ) {
+	_buf_states[source][subnet]->ProcessCredit(c);
+	c->Free();
+      }
     }
   }
-
-  for (int a = 0; a < _duplicate_networks; ++a) {
-    _net[a]->WriteOutputs( );
-  }
+ vector<map<int, Flit *> > flits(_subnets);
   
-
-
-  for (int i = 0; i < _duplicate_networks; ++i) {
-    // Eject traffic and send credits
-    for ( int output = 0; output < _limit; ++output ) {
-      Flit * f = _net[i]->ReadFlit( output );
-
+  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
+    for ( int dest = 0; dest < _limit; ++dest ) {
+      Flit * const f = _net[subnet]->ReadFlit( dest );
       if ( f ) {
-	++_ejected_flow[output];
-	f->atime = _time;
-        if ( f->watch ) {
+	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
-		     << "node" << output << " | "
+		     << "node" << dest << " | "
 		     << "Ejecting flit " << f->id
 		     << " (packet " << f->pid << ")"
 		     << " from VC " << f->vc
 		     << "." << endl;
-	  *gWatchOut << GetSimTime() << " | "
-		     << "node" << output << " | "
-		     << "Injecting credit for VC " << f->vc << "." << endl;
-        }
-      
-        Credit * cred = new Credit( 1 );
-        cred->vc[0] = f->vc;
-        cred->vc_cnt = 1;
-	cred->dest_router = f->from_router;
-        _net[i]->WriteCredit( cred, output );
-        _RetireFlit( f, output );
-      
-        if( ( _sim_state == warming_up ) || ( _sim_state == running ) )
-	  _accepted_flits[output]->AddSample( 1 );
-      } else {
-        _net[i]->WriteCredit( 0, output );
-        if( ( _sim_state == warming_up ) || ( _sim_state == running ) )
-	  _accepted_flits[output]->AddSample( 0 );
+	}
+	flits[subnet].insert(make_pair(dest, f));
+      }
+      if( ( _sim_state == warming_up ) || ( _sim_state == running ) ) {
+	for(int c = 0; c < _classes; ++c) {
+	  _accepted_flits[c][dest]->AddSample( (f && (f->cl == c)) ? 1 : 0 );
+	}
       }
     }
+    _net[subnet]->ReadInputs( );
+  }
 
-    for(int j = 0; j < _routers; ++j) {
-      _received_flow[i*_routers+j] += _router_map[i][j]->GetReceivedFlits();
-      _sent_flow[i*_routers+j] += _router_map[i][j]->GetSentFlits();
-      _router_map[i][j]->ResetFlitStats();
+
+  GemsInject();
+  
+
+for(int source = 0; source < _limit; ++source) {
+    Flit * f = NULL;
+    for(map<int, pair<int, vector<int> > >::reverse_iterator iter = _class_prio_map.rbegin();
+	iter != _class_prio_map.rend();
+	++iter) {
+      
+      int const & base = iter->second.first;
+      vector<int> const & classes = iter->second.second;
+      int const count = classes.size();
+      
+      for(int j = 1; j <= count; ++j) {
+	
+	int const offset = (base + j) % count;
+	int const c = classes[offset];
+	
+	if(!_partial_packets[source][c].empty()) {
+	  f = _partial_packets[source][c].front();
+	  assert(f);
+
+	  int const subnet = f->subnetwork;
+
+	  BufferState * const dest_buf = _buf_states[source][subnet];
+
+	  if(f->head && f->vc == -1) { // Find first available VC
+	    
+	    OutputSet route_set;
+	    _rf(NULL, f, 0, &route_set, true);
+	    set<OutputSet::sSetElement> const & os = route_set.GetSet();
+	    assert(os.size() == 1);
+	    OutputSet::sSetElement const & se = *os.begin();
+	    assert(se.output_port == 0);
+	    int const & vc_start = se.vc_start;
+	    int const & vc_end = se.vc_end;
+	    int const vc_count = vc_end - vc_start + 1;
+	    for(int i = 1; i <= vc_count; ++i) {
+	      int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
+	      if(dest_buf->IsAvailableFor(vc) && dest_buf->HasCreditFor(vc)) {
+		f->vc = vc;
+		break;
+	      }
+	    }
+	    if(f->vc != -1) {
+	      dest_buf->TakeBuffer(f->vc);
+	      _last_vc[source][subnet][c] = f->vc - vc_start;
+	    }
+	  }
+	  
+	  if((f->vc != -1) && (dest_buf->HasCreditFor(f->vc))) {
+	    
+	    _partial_packets[source][c].pop_front();
+	    dest_buf->SendingFlit(f);
+	    
+	    if(_pri_type == network_age_based) {
+	      f->pri = numeric_limits<int>::max() - _time;
+	      assert(f->pri >= 0);
+	    }
+	    
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | "
+			 << "node" << source << " | "
+			 << "Injecting flit " << f->id
+			 << " into subnet " << subnet
+			 << " at time " << _time
+			 << " with priority " << f->pri
+			 << "." << endl;
+	    }
+	    
+	    // Pass VC "back"
+	    if(!_partial_packets[source][c].empty() && !f->tail) {
+	      Flit * nf = _partial_packets[source][c].front();
+	      nf->vc = f->vc;
+	    }
+	    
+	    ++_injected_flow[source];
+	    
+	    _net[subnet]->WriteFlit(f, source);
+	    
+	    iter->second.first = offset;
+	    
+	    break;
+	    
+	  } else {
+	    f = NULL;
+	  }
+	}
+      }
+      if(f) {
+	break;
+      }
+    }
+    if(((_sim_mode != batch) && (_sim_state == warming_up)) || (_sim_state == running)) {
+      for(int c = 0; c < _classes; ++c) {
+	_sent_flits[c][source]->AddSample((f && (f->cl == c)) ? 1 : 0);
+      }
     }
   }
-  ++_network_time;
-  if(_network_time%100000==0){
-    cout<<"heart beat "<<_network_time<<" "<<endl;
+  for(int subnet = 0; subnet < _subnets; ++subnet) {
+    for(int dest = 0; dest < _limit; ++dest) {
+      map<int, Flit *>::const_iterator iter = flits[subnet].find(dest);
+      if(iter != flits[subnet].end()) {
+	Flit * const & f = iter->second;
+	++_ejected_flow[dest];
+	f->atime = _time;
+	if(f->watch) {
+	  *gWatchOut << GetSimTime() << " | "
+		     << "node" << dest << " | "
+		     << "Injecting credit for VC " << f->vc 
+		     << " into subnet " << subnet 
+		     << "." << endl;
+	}
+	Credit * const c = Credit::New();
+	c->vc.insert(f->vc);
+	_net[subnet]->WriteCredit(c, dest);
+	_RetireFlit(f, dest);
+      }
+    }
+    flits[subnet].clear();
+    _net[subnet]->Evaluate( );
+    _net[subnet]->WriteOutputs( );
   }
+  
+  for (int subnet = 0; subnet < _subnets; ++subnet) {
+    for(int router = 0; router < _routers; ++router) {
+      _received_flow[subnet*_routers+router] += _router_map[subnet][router]->GetReceivedFlits();
+      _sent_flow[subnet*_routers+router] += _router_map[subnet][router]->GetSentFlits();
+      _router_map[subnet][router]->ResetFlitStats();
+    }
+  }
+
+
+
+  ++_network_time;
+
+
+  if(_time>next_report){
+    while(_time>next_report){
+      printf("Booksim report System time %d\tnetwork time %d\n",_time, _network_time);
+      next_report +=REPORT_INTERVAL;
+    }
+    DisplayStats();
+  }
+  assert(_time);
   if(gTrace){
     cout<<"TIME "<<_time<<endl;
   }
-
 }
 
 

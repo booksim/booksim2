@@ -1,69 +1,64 @@
 #Makefile.include for booksim
-BOOKSIM_VPATH := network/booksim:network/booksim/routers:network/booksim/allocators:network/booksim/arbiters:network/booksim/networks
+BOOKSIM_VPATH := network/booksim:network/booksim/routers:network/booksim/allocators:network/booksim/arbiters:network/booksim/networks:network/booksim/power
 BOOKSIM_SRC_CPP = \
-	booksim_config.C\
-	buffer_state.C\
-	config_utils.C\
-	credit.C\
-	flitchannel.C\
-	flit.C\
-	injection.C\
-	misc_utils.C\
-	module.C\
-	outputset.C\
-	power_module.C\
-	random_utils.C\
-	routefunc.C\
-	stats.C\
-	traffic.C\
-	vc.C\
-	allocator.C\
-	islip.C\
-	loa.C\
-	maxsize.C\
-	pim.C\
-	selalloc.C\
-	separable.C\
-	separable_input_first.C\
-	separable_output_first.C\
-	wavefront.C\
-	arbiter.C\
-	matrix_arb.C\
-	prio_arb.C\
-	roundrobin_arb.C\
-	chaos_router.C\
-	event_router.C\
-	iq_router_base.C\
-	iq_router_baseline.C\
-	iq_router_combined.C\
-	iq_router_split.C\
-	MECSChannels.C\
-	MECSCombiner.C\
-	MECSCreditChannel.C\
-	MECSCreditCombiner.C\
-	MECSCreditForwarder.C\
-	MECSForwarder.C\
-	MECSRouter.C\
-	router.C\
-	anynet.C\
-	cmesh.C\
-	cmeshx2.C\
-	cmo.C\
-	dragonfly.C\
-	fattree.C\
-	flatfly_onchip.C\
-	fly.C\
-	isolated_mesh.C\
-	kncube.C\
-	mecs.C\
-	network.C\
-	qtree.C\
-	singlenet.C\
-	tree4.C\
-	trafficmanager.C\
-	configlex.C\
-	config_tab.C\
-	booksim_main.C\
-	BooksimWrapper.C\
-	BooksimConsumer.C\
-	gemstrafficmanager.C\
+booksim_config.C\
+BooksimConsumer.C\
+booksim_main.C\
+BooksimWrapper.C\
+buffer.C\
+buffer_state.C\
+configlex.C\
+config_tab.C\
+config_utils.C\
+credit.C\
+flit.C\
+flitchannel.C\
+gemstrafficmanager.C\
+injection.C\
+misc_utils.C\
+module.C\
+outputset.C\
+packet_reply_info.C\
+rng_double_wrapper.C\
+rng_wrapper.C\
+routefunc.C\
+stats.C\
+traffic.C\
+trafficmanager.C\
+vc.C\
+allocator.C\
+fair_wavefront.C\
+islip.C\
+loa.C\
+maxsize.C\
+pim.C\
+prio_wavefront.C\
+selalloc.C\
+separable.C\
+separable_input_first.C\
+separable_output_first.C\
+wavefront.C\
+arbiter.C\
+matrix_arb.C\
+prio_arb.C\
+roundrobin_arb.C\
+anynet.C\
+cmesh.C\
+dragonfly.C\
+fattree.C\
+flatfly_onchip.C\
+fly.C\
+kncube.C\
+network.C\
+qtree.C\
+singlenet.C\
+tree4.C\
+buffer_monitor.C\
+power_module.C\
+switch_monitor.C\
+chaos_router.C\
+event_router.C\
+iq_router.C\
+router.C\
+
+

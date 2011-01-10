@@ -169,7 +169,7 @@ bool BufferState::IsAvailableFor( int vc ) const
 
 bool BufferState::HasCreditFor( int vc ) const
 {
-
+  
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
   return ( ( _cur_occupied[vc] < _vc_buf_size ) ||
 	   ( ( _shared_occupied < _shared_buf_size ) &&
@@ -178,8 +178,6 @@ bool BufferState::HasCreditFor( int vc ) const
 		 ( _shared_buf_size / _active_vcs ) ) ) ) );
 }
 
-return -1;
-}
 
 int BufferState::Size(int vc) const{
   assert( ( vc >= 0 ) && ( vc < _vcs ) );

@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #define main rng_double_main
-#include "rng_double.C"
+#include "rng-double.hpp"
 
 double ranf_next( )
 {
