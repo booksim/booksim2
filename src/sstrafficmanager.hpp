@@ -62,7 +62,7 @@ protected:
 protected:
   virtual void _RetireFlit( Flit *f, int dest );
   virtual void _GeneratePacket( int source, int size, int cl, int time );
-
+  virtual void printPartialStats(int t , int i);
 
   void SSInject();
 public:

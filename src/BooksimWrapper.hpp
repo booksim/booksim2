@@ -104,6 +104,8 @@ public:
   void reset();
   void print(ostream& out) const;
 
+  virtual void printPartialStats(int i);
+
   Interface* getCore(int i){return _coreInterfaces[i].ptr();}
 private:
 

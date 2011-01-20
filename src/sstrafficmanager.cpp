@@ -7,11 +7,11 @@
 
 extern vector<int> has_message;
 
-#define REPORT_INTERVAL 100000
+#define REPORT_INTERVAL 10000000
 SSTrafficManager::SSTrafficManager(  const Configuration &config, const vector<BSNetwork *> & net )
   : TrafficManager(config, net)
 {
-
+  gWatchOut = &cout;
   vc_classes=0;
   nodes.resize(_limit);
   vc_ptrs = new int[ _sources ];
@@ -25,6 +25,60 @@ SSTrafficManager::SSTrafficManager(  const Configuration &config, const vector<B
 SSTrafficManager::~SSTrafficManager( )
 {
   delete[] vc_ptrs;
+}
+
+
+void SSTrafficManager::printPartialStats(int t, int left){
+  
+  for(int c = 0; c < _classes; ++c) {
+    double cur_latency = _latency_stats[c]->Average( );
+    int dmin;
+    double min, avg;
+    dmin = _ComputeStats( _accepted_flits[c], &avg, &min );
+    double cur_accepted = avg;
+    if(_stats_out) {
+      *_stats_out << "lat_post"<<left<<"(" << c+1 << ") = " << cur_latency << ";" << endl
+		  << "lat_hist_post"<<left<<"(" << c+1 << ",:) = " << *_latency_stats[c] << ";" << endl
+		  << "frag_hist_post"<<left<<"(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
+		  << "pair_sent_post"<<left<<"(" << c+1 << ",:) = [ ";
+      for(unsigned int i = 0; i < _sources; ++i) {
+	for(unsigned int j = 0; j < _dests; ++j) {
+	  *_stats_out << _pair_latency[c][i*_dests+j]->NumSamples( ) << " ";
+	}
+      }
+      *_stats_out << "];" << endl
+		  << "pair_lat_post"<<left<<"(" << c+1 << ",:) = [ ";
+      for(unsigned int i = 0; i < _sources; ++i) {
+	for(unsigned int j = 0; j < _dests; ++j) {
+	  *_stats_out << _pair_latency[c][i*_dests+j]->Average( ) << " ";
+	}
+      }
+      *_stats_out << "];" << endl
+		  << "pair_lat_post"<<left<<"(" << c+1 << ",:) = [ ";
+      for(unsigned int i = 0; i < _sources; ++i) {
+	for(unsigned int j = 0; j < _dests; ++j) {
+	  *_stats_out << _pair_tlat[c][i*_dests+j]->Average( ) << " ";
+	}
+      }
+      *_stats_out << "];" << endl
+		  << "sent_post"<<left<<"(" << c+1 << ",:) = [ ";
+      for ( unsigned int d = 0; d < _dests; ++d ) {
+	*_stats_out << _sent_flits[c][d]->Average( ) << " ";
+      }
+      *_stats_out << "];" << endl
+		  << "accepted_post"<<left<<"(" << c+1 << ",:) = [ ";
+      for ( unsigned int d = 0; d < _dests; ++d ) {
+	*_stats_out << _accepted_flits[c][d]->Average( ) << " ";
+      }
+      *_stats_out << "];" << endl;
+      *_stats_out << "inflight_post"<<left<<"(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
+      *_stats_out << "network_time_post"<<left<<" = "<<_network_time<<";"<<endl;
+      *_stats_out << "system_time_post"<<left<<" = "<<_time<<";"<<endl;
+    }
+	
+    
+  }
+
 }
 
 
@@ -219,11 +273,11 @@ void SSTrafficManager::_GeneratePacket( int source, int stype,
 
     if ( f->watch ) { 
       *gWatchOut << GetSimTime() << " | "
-		  << "node" << source << " | "
-		  << "Enqueuing flit " << f->id
-		  << " (packet " << f->pid
-		  << ") at time " << time
-		  << "." << endl;
+		 << "node" << source << " | "
+		 << "Enqueuing flit " << f->id
+		 << " (packet " << f->pid
+		 << ") at time " << time
+		 << "." << endl;
     }
 
     _partial_packets[source][cl].push_back( f );

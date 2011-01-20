@@ -1845,6 +1845,7 @@ void TrafficManager::DisplayStats() {
 
 //read the watchlist
 void TrafficManager::_LoadWatchList(const string & filename){
+  
   ifstream watch_list;
   watch_list.open(filename.c_str());
   
@@ -1864,6 +1865,6 @@ void TrafficManager::_LoadWatchList(const string & filename){
     }
     
   } else {
-    //cout<<"Unable to open flit watch file, continuing with simulation\n";
+    cout<<"Unable to open flit watch file, continuing with simulation\n";
   }
 }

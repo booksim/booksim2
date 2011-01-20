@@ -241,7 +241,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
 
     // Long express channels traverse k/2 tiles
     //const int longLatency  = _k/2*2 ;
-    int longLatency  = 0 ;
+    int longLatency  = 1 ;
     if(_express_channels){
       longLatency = 4;
     }
@@ -288,8 +288,8 @@ void CMesh::_BuildNet( const Configuration& config ) {
 	_chan[nx_out]->SetLatency( shortLatency  );
 	_chan_cred[nx_out]->SetLatency( shortLatency  );
       } else {
-	_chan[nx_out]->SetLatency( 0  );
-	_chan_cred[nx_out]->SetLatency( 0  );
+	_chan[nx_out]->SetLatency( 1  );
+	_chan_cred[nx_out]->SetLatency( 1  );
       }
     }
     _routers[node]->AddOutputChannel( _chan[nx_out], _chan_cred[nx_out] );

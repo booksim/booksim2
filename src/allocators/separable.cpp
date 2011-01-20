@@ -78,10 +78,12 @@ SeparableAllocator::~SeparableAllocator() {
 
 void SeparableAllocator::Clear() {
   for ( int i = 0 ; i < _inputs ; i++ ) {
-    _input_arb[i]->Clear();
+    if(_input_arb[i]-> _num_reqs)
+      _input_arb[i]->Clear();
   }
   for ( int o = 0; o < _outputs; o++ ) {
-    _output_arb[o]->Clear();
+    if(_output_arb[o]->_num_reqs)
+      _output_arb[o]->Clear();
   }
   SparseAllocator::Clear();
 }

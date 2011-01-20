@@ -277,3 +277,9 @@ void BooksimWrapper::reset(){
 void BooksimWrapper::print(ostream& out) const{
   out<<"BooksimWrapper: not much to report\n";
 }
+
+
+void BooksimWrapper::printPartialStats(int i){
+  trafficManager->printPartialStats(now().value(),i);
+}
+
