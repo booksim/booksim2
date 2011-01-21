@@ -60,6 +60,8 @@ class IQRouter : public Router {
   bool _spec_check_elig;
   bool _spec_mask_by_reqs;
   
+  bool _active;
+
   int _routing_delay;
   int _vc_alloc_delay;
   int _sw_alloc_delay;
@@ -101,8 +103,8 @@ class IQRouter : public Router {
   vector<int> _switch_hold_out;
   vector<int> _switch_hold_vc;
 
-  void _ReceiveFlits( );
-  void _ReceiveCredits( );
+  bool _ReceiveFlits( );
+  bool _ReceiveCredits( );
 
   virtual void _InternalStep( );
 

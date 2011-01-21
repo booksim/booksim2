@@ -4,10 +4,11 @@
 #include <fstream>
 #include "sstrafficmanager.hpp"
 #include "random_utils.hpp"
+#include "memory/cacheState.h"
 
 extern vector<int> has_message;
 
-#define REPORT_INTERVAL 100000
+#define REPORT_INTERVAL 1000000
 SSTrafficManager::SSTrafficManager(  const Configuration &config, const vector<BSNetwork *> & net )
   : TrafficManager(config, net)
 {
@@ -20,6 +21,14 @@ SSTrafficManager::SSTrafficManager(  const Configuration &config, const vector<B
   _network_time = 0;
   next_report = REPORT_INTERVAL;
   channel_width = config.GetInt("channel_width");/*bits*/
+
+
+  packet_size_stat = new Stats( this, "packet_size", 1.0, 40 );
+
+  for(int i = i; i<Memory::CacheRequest::SignalOriginalAck+1; i++){
+    type_pair_sent.push_back( new Stats(this, "type",1.0, _sources*_dests-1));
+  }
+  
 }
 
 SSTrafficManager::~SSTrafficManager( )
@@ -74,6 +83,7 @@ void SSTrafficManager::printPartialStats(int t, int left){
       *_stats_out << "inflight_post"<<left<<"(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
       *_stats_out << "network_time_post"<<left<<" = "<<_network_time<<";"<<endl;
       *_stats_out << "system_time_post"<<left<<" = "<<_time<<";"<<endl;
+      *_stats_out << "packet_size_post"<<left<<" = " << *packet_size_stat<<";"<<endl;
     }
 	
     
@@ -103,6 +113,7 @@ void SSTrafficManager::DisplayStats(){
     cout << "Maximum latency = " << _latency_stats[c]->Max( ) << endl;
     cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
     cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
+    cout << "Average packet size = "<<packet_size_stat->Average()<<endl;
     cout << "Total in-flight flits = " << _total_in_flight_flits[c].size() << " (" << _measured_in_flight_flits[c].size() << " measured)" << endl;
     if(_stats_out) {
       *_stats_out << "lat(" << c+1 << ") = " << cur_latency << ";" << endl
@@ -142,9 +153,14 @@ void SSTrafficManager::DisplayStats(){
       *_stats_out << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
       *_stats_out << "network_time = "<<_network_time<<";"<<endl;
       *_stats_out << "system_time = "<<_time<<";"<<endl;
+      *_stats_out << "packet_size = " << *packet_size_stat<<";"<<endl;
+      
+      for(int i = i; i<Memory::CacheRequest::SignalOriginalAck+1; i++){
+	*_stats_out <<"pari_sent_type"<<i<<" = "<<*type_pair_sent[i]<<";"<<endl;
+      }
+  
+
     }
-	
-    
   }
 
 }
@@ -154,11 +170,23 @@ void SSTrafficManager::DisplayStats(){
 void SSTrafficManager::_RetireFlit( Flit *f, int dest )
 {
 
+ 
+
   //send to the output message buffer
   if(f){
     if(f->tail){
+
       SS_Network::Message* msg = packet_payload[f->pid].ptr();
       assert(msg);
+
+      //      assert(dynamic_cast<Memory::MemoryMessage*> (msg));
+      /* this is a freaking gamble, but I assume all message network sees 
+	 are memeory, this will crash and burn on active messages*/
+
+      Memory::MemoryMessage* mmsg = (Memory::MemoryMessage*)msg;  
+
+      type_pair_sent[(int)mmsg->_request->_type]->AddSample(f->src*_dests+dest);
+
       msg->DeliveryTime = Time(_time);
       nodes[dest]->messageIs(msg,(const Link*)1 /*bypass null check*/);
       packet_payload.erase(f->pid);
@@ -184,6 +212,7 @@ void SSTrafficManager::_GeneratePacket( int source, int stype,
   Flit::FlitType packet_type = Flit::ANY_TYPE;
   /*Size is in bytes, channel width is in bits*/
   int size =ceil(float(msg->Size*8)/float(channel_width));
+  packet_size_stat->AddSample(size);
 
   int ttime = time;
   int packet_destination=msg->Destination->id();

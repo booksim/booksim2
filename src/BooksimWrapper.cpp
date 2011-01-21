@@ -126,7 +126,7 @@ void BooksimInterface::route(){
   manager->_Step(parent->now().value());
 
   //add the network to the nnext cycle
-  if(booksim_inflight!=0 || Credit::outstanding!=0){
+  if(booksim_inflight!=0 ||Credit::outstanding!=0){
     mainbooksima->nextTimeIs((parent->now()+1));
     mainbooksima->statusIs(Activity::nextTimeScheduled);
   } else {
@@ -283,3 +283,8 @@ void BooksimWrapper::printPartialStats(int i){
   trafficManager->printPartialStats(now().value(),i);
 }
 
+void BooksimWrapper::report(Fwk::Log* log){
+
+  trafficManager->DisplayStats();
+
+}

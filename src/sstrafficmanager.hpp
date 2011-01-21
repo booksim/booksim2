@@ -72,7 +72,7 @@ public:
 
 
 
-  void DisplayStats();
+  virtual void DisplayStats();
   void _Step(int time);
   
   inline int getNetworkTime(){
@@ -92,6 +92,12 @@ private:
   int next_report;
 
   int channel_width;/*bits*/
+
+
+private:
+  Stats * packet_size_stat;
+  vector<Stats*> type_pair_sent;
+
 };
 
 #endif

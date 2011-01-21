@@ -52,7 +52,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
-  : Router( config, parent, name, id, inputs, outputs )
+: Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
   _vcs         = config.GetInt( "num_vcs" );
   _classes     = config.GetInt( "classes" );
@@ -202,13 +202,19 @@ IQRouter::~IQRouter( )
   
 void IQRouter::ReadInputs( )
 {
-  _ReceiveFlits( );
-  _ReceiveCredits( );
+  bool have_flits = _ReceiveFlits( );
+  bool have_credits = _ReceiveCredits( );
+  _active = _active || have_flits || have_credits;
 }
 
 void IQRouter::_InternalStep( )
 {
+  if(!_active) {
+    return;
+  }
+
   _InputQueuing( );
+  bool activity = !_proc_credits.empty();
 
   _RouteEvaluate( );
   _VCAllocEvaluate( );
@@ -216,9 +222,15 @@ void IQRouter::_InternalStep( )
   _SwitchEvaluate( );
 
   _RouteUpdate( );
+  activity = activity || !_route_vcs.empty();
   _VCAllocUpdate( );
+  activity = activity || !_vc_alloc_vcs.empty();
   _SWAllocUpdate( );
+  activity = activity || !_sw_alloc_vcs.empty();
   _SwitchUpdate( );
+  activity = activity || !_crossbar_flits.empty();
+
+  _active = activity;
 
   _OutputQueuing( );
 
@@ -237,8 +249,9 @@ void IQRouter::WriteOutputs( )
 // read inputs
 //------------------------------------------------------------------------------
 
-void IQRouter::_ReceiveFlits( )
+bool IQRouter::_ReceiveFlits( )
 {
+  bool activity = false;
   for(int input = 0; input < _inputs; ++input) { 
     Flit * const f = _input_channels[input]->Receive();
     if(f) {
@@ -250,19 +263,24 @@ void IQRouter::_ReceiveFlits( )
 		   << "." << endl;
       }
       _in_queue_flits.insert(make_pair(input, f));
+      activity = true;
     }
   }
+  return activity;
 }
 
-void IQRouter::_ReceiveCredits( )
+bool IQRouter::_ReceiveCredits( )
 {
+  bool activity = false;
   for(int output = 0; output < _outputs; ++output) {  
     Credit * const c = _output_credits[output]->Receive();
     if(c) {
       _proc_credits.push_back(make_pair(GetSimTime() + _credit_delay, 
 					make_pair(c, output)));
+      activity = true;
     }
   }
+  return activity;
 }
 
 
@@ -600,59 +618,6 @@ void IQRouter::_VCAllocEvaluate( )
 		   << " to VC " << vc
 		   << " at input " << input
 		   << "." << endl;
-      }
-    }
-  }
-
-  if(_vc_alloc_delay <= 1) {
-    return;
-  }
-
-  for(deque<pair<int, pair<pair<int, int>, int> > >::iterator iter = _vc_alloc_vcs.begin();
-      iter != _vc_alloc_vcs.end();
-      ++iter) {
-    
-    int const & time = iter->first;
-    assert(time >= 0);
-    if(GetSimTime() < time) {
-      break;
-    }
-    
-    int const & output_and_vc = iter->second.second;
-    
-    if(output_and_vc >= 0) {
-      
-      int const match_output = output_and_vc / _vcs;
-      assert((match_output >= 0) && (match_output < _outputs));
-      int const match_vc = output_and_vc % _vcs;
-      assert((match_vc >= 0) && (match_vc < _vcs));
-      
-      BufferState * const dest_buf = _next_buf[match_output];
-      
-      if(!dest_buf->IsAvailableFor(match_vc)) {
-	
-	int const & input = iter->second.first.first;
-	assert((input >= 0) && (input < _inputs));
-	int const & vc = iter->second.first.second;
-	assert((vc >= 0) && (vc < _vcs));
-	
-	Buffer const * const cur_buf = _buf[input];
-	assert(!cur_buf->Empty(vc));
-	assert(cur_buf->GetState(vc) == VC::vc_alloc);
-	
-	Flit const * const f = cur_buf->FrontFlit(vc);
-	assert(f);
-	assert(f->head);
-	
-	if(f->watch) {
-	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		     << "  Discarding previously generated grant for VC " << vc
-		     << " at input " << input
-		     << ": VC " << match_vc
-		     << " at output " << match_output
-		     << " is no longer available." << endl;
-	}
-	iter->second.second = -1;
       }
     }
   }

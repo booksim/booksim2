@@ -105,6 +105,7 @@ public:
   void print(ostream& out) const;
 
   virtual void printPartialStats(int i);
+  virtual void report(Fwk::Log* log) ; 
 
   Interface* getCore(int i){return _coreInterfaces[i].ptr();}
 private:

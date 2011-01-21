@@ -266,7 +266,7 @@ public:
 
   bool Run( );
 
-  void DisplayStats();
+  virtual void DisplayStats();
   virtual void printPartialStats(int t, int i){}
 
   const Stats * GetOverallLatency(int c = 0) { return _overall_avg_latency[c]; }
