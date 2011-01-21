@@ -50,13 +50,14 @@ public:
   void Free();
   static void FreeAll();
 
+  static int outstanding;
 private:
 
   static stack<Credit *> _all;
   static stack<Credit *> _free;
-
+  
   Credit();
-  ~Credit() {}
+  ~Credit() { }
 
 };
 

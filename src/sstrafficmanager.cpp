@@ -7,7 +7,7 @@
 
 extern vector<int> has_message;
 
-#define REPORT_INTERVAL 10000000
+#define REPORT_INTERVAL 100000
 SSTrafficManager::SSTrafficManager(  const Configuration &config, const vector<BSNetwork *> & net )
   : TrafficManager(config, net)
 {

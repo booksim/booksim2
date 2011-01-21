@@ -14,7 +14,7 @@
 #include "fattree.hpp"
 #include "anynet.hpp"
 #include "dragonfly.hpp"
-
+#include "credit.hpp"
 
 #define bout cout<<"Booksim:"
 
@@ -126,7 +126,7 @@ void BooksimInterface::route(){
   manager->_Step(parent->now().value());
 
   //add the network to the nnext cycle
-  if(booksim_inflight){
+  if(booksim_inflight!=0 || Credit::outstanding!=0){
     mainbooksima->nextTimeIs((parent->now()+1));
     mainbooksima->statusIs(Activity::nextTimeScheduled);
   } else {

@@ -39,6 +39,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 stack<Credit *> Credit::_all;
 stack<Credit *> Credit::_free;
 
+int Credit::outstanding = 0;
+
 Credit::Credit()
 {
   Reset();
@@ -53,6 +55,7 @@ void Credit::Reset()
 }
 
 Credit * Credit::New() {
+  outstanding++;
   Credit * c;
   if(_free.empty()) {
     c = new Credit();
@@ -66,6 +69,7 @@ Credit * Credit::New() {
 }
 
 void Credit::Free() {
+  outstanding--;
   _free.push(this);
 }
 
