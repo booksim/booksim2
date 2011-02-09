@@ -8,7 +8,9 @@
 
 extern vector<int> has_message;
 
-#define REPORT_INTERVAL 1000000
+#define REPORT_INTERVAL 10000000
+#define TRACE_INTERVAL 100000*4
+int last_trace = 0;
 SSTrafficManager::SSTrafficManager(  const Configuration &config, const vector<BSNetwork *> & net )
   : TrafficManager(config, net)
 {
@@ -25,10 +27,19 @@ SSTrafficManager::SSTrafficManager(  const Configuration &config, const vector<B
 
   packet_size_stat = new Stats( this, "packet_size", 1.0, 40 );
 
-  for(int i = i; i<Memory::CacheRequest::SignalOriginalAck+1; i++){
-    type_pair_sent.push_back( new Stats(this, "type",1.0, _sources*_dests-1));
+  for(int i = 0; i<Memory::CacheRequest::SignalOriginalAck+1; i++){
+    type_pair_sent.push_back( new Stats(this, "type",1.0, _sources*_dests));
   }
   
+  string trace_out = config.GetStr("trace_out");
+  if(trace_out!=""){
+    _trace_out = new ofstream(trace_out.c_str());
+    
+  } else {
+    _trace_out == NULL;
+  }
+
+  trace_queue.reserve(3*TRACE_INTERVAL);
 }
 
 SSTrafficManager::~SSTrafficManager( )
@@ -85,7 +96,12 @@ void SSTrafficManager::printPartialStats(int t, int left){
       *_stats_out << "system_time_post"<<left<<" = "<<_time<<";"<<endl;
       *_stats_out << "packet_size_post"<<left<<" = " << *packet_size_stat<<";"<<endl;
     }
-	
+    if(_trace_out!=NULL){
+      for(int i = 0; i<trace_queue.size(); i+=4){
+	*_trace_out<<trace_queue[i]<<"\t"<<trace_queue[i+1]<<"\t"<<trace_queue[i+2]<<"\t"<<trace_queue[i+3]<<"\n";
+      }
+      trace_queue.clear();
+    }
     
   }
 
@@ -155,11 +171,17 @@ void SSTrafficManager::DisplayStats(){
       *_stats_out << "system_time = "<<_time<<";"<<endl;
       *_stats_out << "packet_size = " << *packet_size_stat<<";"<<endl;
       
-      for(int i = i; i<Memory::CacheRequest::SignalOriginalAck+1; i++){
-	*_stats_out <<"pari_sent_type"<<i<<" = "<<*type_pair_sent[i]<<";"<<endl;
+      for(int i = 0; i<Memory::CacheRequest::SignalOriginalAck+1; i++){
+	*_stats_out <<"pair_sent_type"<<i<<" = "<<*type_pair_sent[i]<<";"<<endl;
       }
   
 
+    }
+    if(_trace_out!=NULL){
+      for(int i = 0; i<trace_queue.size(); i+=4){
+	*_trace_out<<trace_queue[i]<<"\t"<<trace_queue[i+1]<<"\t"<<trace_queue[i+2]<<"\t"<<trace_queue[i+3]<<"\n";
+      }
+      trace_queue.clear();
     }
   }
 
@@ -182,8 +204,17 @@ void SSTrafficManager::_RetireFlit( Flit *f, int dest )
       //      assert(dynamic_cast<Memory::MemoryMessage*> (msg));
       /* this is a freaking gamble, but I assume all message network sees 
 	 are memeory, this will crash and burn on active messages*/
-
       Memory::MemoryMessage* mmsg = (Memory::MemoryMessage*)msg;  
+
+
+      if(_trace_out){
+
+	trace_queue.push_back(_time-last_trace);
+	trace_queue.push_back(dest);
+	trace_queue.push_back(f->src);
+	trace_queue.push_back(-((int)mmsg->_request->_type));
+	last_trace = _time;
+      }
 
       type_pair_sent[(int)mmsg->_request->_type]->AddSample(f->src*_dests+dest);
 
@@ -209,15 +240,36 @@ void SSTrafficManager::_GeneratePacket( int source, int stype,
   SS_Network::Message* msg = nodes[source]->message(-1);
 
 
+
+
   Flit::FlitType packet_type = Flit::ANY_TYPE;
   /*Size is in bytes, channel width is in bits*/
   int size =ceil(float(msg->Size*8)/float(channel_width));
   packet_size_stat->AddSample(size);
 
+  
+
   int ttime = time;
   int packet_destination=msg->Destination->id();
+
+  if(packet_destination == source){
+    msg->DeliveryTime = Time(_time);
+    nodes[source]->messageIs(msg,(const Link*)1 /*bypass null check*/);
+    nodes[source]->pop(-1);
+    return;
+  }
   bool record = false;
-  
+
+  if(_trace_out){
+    Memory::MemoryMessage* mmsg = (Memory::MemoryMessage*)msg;  
+    trace_queue.push_back(time-last_trace);
+    trace_queue.push_back(source);
+    trace_queue.push_back(packet_destination);
+    trace_queue.push_back((int)mmsg->_request->_type);
+
+    last_trace = time;
+  }
+
 
 
   if ((packet_destination <0) || (packet_destination >= _dests)) {
@@ -520,6 +572,16 @@ void SSTrafficManager::_Step(int t)
     }
     DisplayStats();
   }
+
+  
+  
+  if(_trace_out!=NULL && trace_queue.size()>=TRACE_INTERVAL){
+    for(int i = 0; i<trace_queue.size(); i+=4){
+      *_trace_out<<trace_queue[i]<<"\t"<<trace_queue[i+1]<<"\t"<<trace_queue[i+2]<<"\t"<<trace_queue[i+3]<<"\n";
+    }
+    trace_queue.clear();
+  }
+  
   assert(_time);
   if(gTrace){
     cout<<"TIME "<<_time<<endl;

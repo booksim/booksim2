@@ -98,6 +98,9 @@ private:
   Stats * packet_size_stat;
   vector<Stats*> type_pair_sent;
 
+  ostream * _trace_out;
+
+  vector<int> trace_queue;
 };
 
 #endif
