@@ -58,7 +58,8 @@ BookSimConfig::BookSimConfig( )
   _int_map["c"] = 1; //concentration
   AddStrField( "routing_function", "none" );
   _int_map["use_noc_latency"] = 1;
-
+  _int_map["default_latency"] = 1;
+  
   //not critical
   _int_map["x"] = 8; //number of routers in X
   _int_map["y"] = 8; //number of routers in Y
@@ -218,6 +219,7 @@ BookSimConfig::BookSimConfig( )
 
   // whether or not to measure statistics for a given traffic class
   _int_map["measure_stats"] = 1;
+  
   AddStrField("measure_stats", ""); // workaround to allow for vector specification
 
   // if avg. latency exceeds the threshold, assume unstable
@@ -268,6 +270,7 @@ BookSimConfig::BookSimConfig( )
   AddStrField("watch_out", "");
 
   AddStrField("stats_out", "");
+  AddStrField("trace_out","");
   AddStrField("flow_out", "");
   
   //==================Power model params=====================
