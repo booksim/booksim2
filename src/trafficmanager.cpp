@@ -1152,10 +1152,11 @@ bool TrafficManager::_SingleSim( )
 
 	  cout << "Total in-flight flits = " << _total_in_flight_flits[c].size() << " (" << _measured_in_flight_flits[c].size() << " measured)" << endl;
 
+	  //c+1 because of matlab arrays starts at 1
 	  if(_stats_out)
-	    *_stats_out << "lat(" << c << ") = " << cur_latency << ";" << endl
-			<< "lat_hist(" << c << ",:) = " << *_latency_stats[c] << ";" << endl
-			<< "frag_hist(" << c << ",:) = " << *_frag_stats[c] << ";" << endl;
+	    *_stats_out << "lat(" << c+1 << ") = " << cur_latency << ";" << endl
+			<< "lat_hist(" << c+1 << ",:) = " << *_latency_stats[c] << ";" << endl
+			<< "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl;
 	} 
       }
     }
@@ -1351,42 +1352,43 @@ bool TrafficManager::_SingleSim( )
 	cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
 	cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 	cout << "Total in-flight flits = " << _total_in_flight_flits[c].size() << " (" << _measured_in_flight_flits[c].size() << " measured)" << endl;
+	//c+1 due to matlab array starting at 1
 	if(_stats_out) {
-	  *_stats_out << "lat(" << c << ") = " << cur_latency << ";" << endl
-		    << "lat_hist(" << c << ",:) = " << *_latency_stats[c] << ";" << endl
-		    << "frag_hist(" << c << ",:) = " << *_frag_stats[c] << ";" << endl
-		    << "pair_sent(" << c << ",:) = [ ";
+	  *_stats_out << "lat(" << c+1 << ") = " << cur_latency << ";" << endl
+		    << "lat_hist(" << c+1 << ",:) = " << *_latency_stats[c] << ";" << endl
+		    << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
+		    << "pair_sent(" << c+1 << ",:) = [ ";
 	  for(int i = 0; i < _sources; ++i) {
 	    for(int j = 0; j < _dests; ++j) {
 	      *_stats_out << _pair_latency[c][i*_dests+j]->NumSamples( ) << " ";
 	    }
 	  }
 	  *_stats_out << "];" << endl
-		      << "pair_lat(" << c << ",:) = [ ";
+		      << "pair_lat(" << c+1 << ",:) = [ ";
 	  for(int i = 0; i < _sources; ++i) {
 	    for(int j = 0; j < _dests; ++j) {
 	      *_stats_out << _pair_latency[c][i*_dests+j]->Average( ) << " ";
 	    }
 	  }
 	  *_stats_out << "];" << endl
-		      << "pair_lat(" << c << ",:) = [ ";
+		      << "pair_lat(" << c+1 << ",:) = [ ";
 	  for(int i = 0; i < _sources; ++i) {
 	    for(int j = 0; j < _dests; ++j) {
 	      *_stats_out << _pair_tlat[c][i*_dests+j]->Average( ) << " ";
 	    }
 	  }
 	  *_stats_out << "];" << endl
-		      << "sent(" << c << ",:) = [ ";
+		      << "sent(" << c+1 << ",:) = [ ";
 	  for ( int d = 0; d < _dests; ++d ) {
 	    *_stats_out << _sent_flits[c][d]->Average( ) << " ";
 	  }
 	  *_stats_out << "];" << endl
-		      << "accepted(" << c << ",:) = [ ";
+		      << "accepted(" << c+1 << ",:) = [ ";
 	  for ( int d = 0; d < _dests; ++d ) {
 	    *_stats_out << _accepted_flits[c][d]->Average( ) << " ";
 	  }
 	  *_stats_out << "];" << endl;
-	  *_stats_out << "inflight(" << c << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
+	  *_stats_out << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
 	}
 	
 	double latency = cur_latency;

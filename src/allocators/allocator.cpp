@@ -246,11 +246,13 @@ SparseAllocator::SparseAllocator( Module *parent, const string& name,
 void SparseAllocator::Clear( )
 {
   for ( int i = 0; i < _inputs; ++i ) {
-    _in_req[i].clear( );
+    if(!_in_req[i].empty())
+      _in_req[i].clear( );
   }
 
   for ( int j = 0; j < _outputs; ++j ) {
-    _out_req[j].clear( );
+    if(!_out_req[j].empty())
+      _out_req[j].clear( );
   }
 
   _in_occ.clear( );
