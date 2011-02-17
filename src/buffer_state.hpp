@@ -39,16 +39,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "config_utils.hpp"
 
 class BufferState : public Module {
-
+  
+  enum eSharingPolicy { unrestricted, variable };
+  
   int  _wait_for_tail_credit;
   int  _vc_busy_when_full;
   int  _vc_buf_size;
   int  _shared_buf_size;
   int  _shared_occupied;
-  bool _dynamic_sharing;
   int  _vcs;
   int  _active_vcs;
-
+  
+  eSharingPolicy _sharing_policy;
+  
   vector<bool> _in_use;
   vector<bool> _tail_sent;
   vector<int> _cur_occupied;

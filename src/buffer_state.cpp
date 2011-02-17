@@ -49,9 +49,17 @@ Module( parent, name ), _shared_occupied(0), _active_vcs(0)
 {
   _vc_buf_size     = config.GetInt( "vc_buf_size" );
   _shared_buf_size = config.GetInt( "shared_buf_size" );
-  _dynamic_sharing = config.GetInt( "dynamic_sharing" );
   _vcs             = config.GetInt( "num_vcs" );
   
+  string sharing_policy = config.GetStr( "sharing_policy" );
+  if ( sharing_policy == "unrestricted" ) {
+    _sharing_policy = unrestricted;
+  } else if ( sharing_policy == "variable" ) {
+    _sharing_policy = variable;
+  } else {
+    Error( "Unknown sharing policy: " + sharing_policy );
+  }
+
   _wait_for_tail_credit = config.GetInt( "wait_for_tail_credit" );
   _vc_busy_when_full = config.GetInt( "vc_busy_when_full" );
 
@@ -173,10 +181,17 @@ bool BufferState::HasCreditFor( int vc ) const
 
 bool BufferState::CanUseShared( int vc ) const
 {
-  return ( !_dynamic_sharing ||
-	   ( _active_vcs == 0 ) ||
-	   ( ( _cur_occupied[vc] - _vc_buf_size ) < 
-	     ( _shared_buf_size / _active_vcs ) ) );
+  switch(_sharing_policy) {
+
+  case unrestricted:
+    return true;
+
+  case variable:
+    return ( ( _active_vcs == 0 ) ||
+	     ( ( _cur_occupied[vc] - _vc_buf_size ) < 
+	       ( _shared_buf_size / _active_vcs ) ) );
+
+  }
 }
 
 int BufferState::Size(int vc) const{
