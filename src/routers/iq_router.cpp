@@ -227,6 +227,7 @@ void IQRouter::_InternalStep( )
   activity = activity || !_vc_alloc_vcs.empty();
   _SWAllocUpdate( );
   activity = activity || !_sw_alloc_vcs.empty();
+  activity = activity || (_hold_switch_for_packet && !_sw_hold_vcs.empty());
   _SwitchUpdate( );
   activity = activity || !_crossbar_flits.empty();
 
