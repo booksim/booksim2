@@ -134,6 +134,7 @@ void BufferState::ProcessCredit( Credit const * const c )
     }
     ++iter;
   }
+  _sharing_policy->ProcessCredit(c);
 }
 
 
@@ -165,6 +166,7 @@ void BufferState::SendingFlit( Flit const * const f )
     _last_id[f->vc] = f->id;
     _last_pid[f->vc] = f->pid;
   }
+  _sharing_policy->SendingFlit(f);
 }
 
 void BufferState::TakeBuffer( int vc )
@@ -180,6 +182,7 @@ void BufferState::TakeBuffer( int vc )
   _tail_sent[vc] = false;
   assert(_active_vcs < _vcs);
   ++_active_vcs;
+  _sharing_policy->TakeBuffer(vc);
 }
 
 bool BufferState::IsFullFor( int vc ) const
