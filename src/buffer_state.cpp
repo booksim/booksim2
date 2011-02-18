@@ -70,7 +70,7 @@ Module( parent, name ), _shared_occupied(0), _active_vcs(0)
   _last_pid.resize(_vcs, -1);
 }
 
-void BufferState::ProcessCredit( Credit const * c )
+void BufferState::ProcessCredit( Credit const * const c )
 {
   assert( c );
 
@@ -107,7 +107,7 @@ void BufferState::ProcessCredit( Credit const * c )
 }
 
 
-void BufferState::SendingFlit( Flit const * f )
+void BufferState::SendingFlit( Flit const * const f )
 {
   assert( f && ( f->vc >= 0 ) && ( f->vc < _vcs ) );
 
