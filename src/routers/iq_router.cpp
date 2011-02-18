@@ -227,6 +227,7 @@ void IQRouter::_InternalStep( )
   activity = activity || !_vc_alloc_vcs.empty();
   _SWAllocUpdate( );
   activity = activity || !_sw_alloc_vcs.empty();
+  activity = activity || (_hold_switch_for_packet && !_sw_hold_vcs.empty());
   _SwitchUpdate( );
   activity = activity || !_crossbar_flits.empty();
 
@@ -1544,6 +1545,10 @@ void IQRouter::_SWAllocUpdate( )
 		out_vc <= iset->vc_end; 
 		++out_vc) {
 	      assert((out_vc >= 0) && (out_vc < _vcs));
+	      
+	      // FIXME: This check should probably be performed in Evaluate(), 
+	      // not Update(), as the latter can cause the outcome to depend on 
+	      // the order of evaluation!
 	      if(dest_buf->IsAvailableFor(out_vc) && 
 		 dest_buf->HasCreditFor(out_vc) &&
 		 ((match_vc < 0) || 

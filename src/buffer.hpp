@@ -44,7 +44,6 @@ class Buffer : public Module {
   int _vc_size;
   int _shared_count;
   int _shared_size;
-  bool _dynamic_sharing;
 
   vector<VC*> _vc;
 
