@@ -1545,6 +1545,10 @@ void IQRouter::_SWAllocUpdate( )
 		out_vc <= iset->vc_end; 
 		++out_vc) {
 	      assert((out_vc >= 0) && (out_vc < _vcs));
+	      
+	      // FIXME: This check should probably be performed in Evaluate(), 
+	      // not Update(), as the latter can cause the outcome to depend on 
+	      // the order of evaluation!
 	      if(dest_buf->IsAvailableFor(out_vc) && 
 		 dest_buf->HasCreditFor(out_vc) &&
 		 ((match_vc < 0) || 
