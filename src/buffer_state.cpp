@@ -39,7 +39,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdlib>
 #include <cassert>
 
-#include "globals.hpp"
 #include "booksim.hpp"
 #include "buffer_state.hpp"
 #include "random_utils.hpp"
@@ -58,9 +57,6 @@ BufferState::SharingPolicy * BufferState::SharingPolicy::NewSharingPolicy(Config
     sp = new UnrestrictedSharingPolicy(buffer_state);
   } else if(sharing_policy == "variable") {
     sp = new VariableSharingPolicy(buffer_state);
-  } else if(sharing_policy == "no_stall") {
-    int time_window = config.GetInt("no_stall_time_window");
-    sp = new NoStallSharingPolicy(buffer_state, time_window);
   } else {
     cout << "Unknown sharing policy: " << sharing_policy << endl;
   }
@@ -77,27 +73,6 @@ BufferState::VariableSharingPolicy::VariableSharingPolicy(BufferState const * co
   : SharingPolicy(buffer_state)
 {
   _max_slots = _GetSharedBufSize();
-}
-
-BufferState::NoStallSharingPolicy::NoStallSharingPolicy(BufferState const * const buffer_state, int time_window)
-  : SharingPolicy(buffer_state), _time_window(time_window)
-{
-  _last_credit_time.resize(_GetNumVCs(), -1);
-}
-
-void BufferState::NoStallSharingPolicy::ProcessCredit(Credit const * const c)
-{
-  for(set<int>::const_iterator iter = c->vc.begin(); iter != c->vc.end(); ++iter) {
-    _last_credit_time[*iter] = GetSimTime();
-  }
-}
-
-int BufferState::NoStallSharingPolicy::MaxSharedSlots(int vc) const
-{
-  return ((!_buffer_state->IsEmptyFor(vc) && 
-	   ((GetSimTime() - _last_credit_time[vc]) > _time_window)) ?
-	  0 :
-	  _GetSharedBufSize());
 }
 
 BufferState::BufferState( const Configuration& config, 
