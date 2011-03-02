@@ -36,7 +36,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class Stats : public Module {
   int    _num_samples;
   double _sample_sum;
-  double _sample_squared_sum;
 
   //bool _reset;
   double _min;
@@ -54,11 +53,9 @@ public:
   void Clear( );
 
   double Average( ) const;
-  double Variance( ) const;
   double Max( ) const;
   double Min( ) const;
   double Sum( ) const;
-  double SquaredSum( ) const;
   int    NumSamples( ) const;
 
   void AddSample( double val );

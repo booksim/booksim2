@@ -48,7 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Stats::Stats( Module *parent, const string &name,
 	      double bin_size, int num_bins ) :
   Module( parent, name ),
-   _num_samples(0), _sample_sum(0.0), _sample_squared_sum(0.0), _min(numeric_limits<double>::max()), _max(-numeric_limits<double>::max()), _num_bins( num_bins ), _bin_size( bin_size ), _hist(_num_bins, 0)
+   _num_samples(0), _sample_sum(0.0), _min(numeric_limits<double>::max()), _max(-numeric_limits<double>::max()), _num_bins( num_bins ), _bin_size( bin_size ), _hist(_num_bins, 0)
 {
 
 }
@@ -57,7 +57,6 @@ void Stats::Clear( )
 {
   _num_samples = 0;
   _sample_sum  = 0.0;
-  _sample_squared_sum = 0.0;
 
   _hist.assign(_num_bins, 0);
 
@@ -70,11 +69,6 @@ void Stats::Clear( )
 double Stats::Average( ) const
 {
   return _sample_sum / (double)_num_samples;
-}
-
-double Stats::Variance( ) const
-{
-  return (_sample_squared_sum * (double)_num_samples - _sample_sum * _sample_sum) / ((double)_num_samples * (double)_num_samples);
 }
 
 double Stats::Min( ) const
@@ -90,11 +84,6 @@ double Stats::Max( ) const
 double Stats::Sum( ) const
 {
   return _sample_sum;
-}
-
-double Stats::SquaredSum( ) const
-{
-  return _sample_squared_sum;
 }
 
 int Stats::NumSamples( ) const

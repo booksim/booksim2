@@ -101,7 +101,6 @@ BookSimConfig::BookSimConfig( )
   _int_map["vc_buf_size"]     = 8;  
   _int_map["shared_buf_size"] = 0;
   AddStrField("sharing_policy", "unrestricted");
-  _int_map["no_stall_time_window"] = 4;
 
   _int_map["wait_for_tail_credit"] = 0; // reallocate a VC before a tail credit?
   _int_map["vc_busy_when_full"] = 0; // mark VCs as in use when they have no credit available
