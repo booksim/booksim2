@@ -55,7 +55,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Allocator::Allocator( Module *parent, const string& name,
 		      int inputs, int outputs ) :
-  Module( parent, name ), _inputs( inputs ), _outputs( outputs )
+Module( parent, name ), _inputs( inputs ), _outputs( outputs ), _dirty( false )
 {
   _inmatch.resize(_inputs, -1);   
   _outmatch.resize(_outputs, -1);
@@ -63,8 +63,11 @@ Allocator::Allocator( Module *parent, const string& name,
 
 void Allocator::Clear( )
 {
-  _inmatch.assign(_inputs, -1);
-  _outmatch.assign(_outputs, -1);
+  if(_dirty) {
+    _inmatch.assign(_inputs, -1);
+    _outmatch.assign(_outputs, -1);
+    _dirty = false;
+  }
 }
 
 void Allocator::AddRequest( int in, int out, int label, int in_pri,
@@ -73,6 +76,7 @@ void Allocator::AddRequest( int in, int out, int label, int in_pri,
   assert( ( in >= 0 ) && ( in < _inputs ) );
   assert( ( out >= 0 ) && ( out < _outputs ) );
   assert( label >= 0 );
+  _dirty = true;
 }
 
 int Allocator::OutputAssigned( int in ) const
