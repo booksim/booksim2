@@ -44,6 +44,8 @@ protected:
   const int _inputs;
   const int _outputs;
 
+  bool _dirty;
+
   vector<int> _inmatch;
   vector<int> _outmatch;
 
