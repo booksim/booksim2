@@ -216,22 +216,47 @@ void IQRouter::_InternalStep( )
   _InputQueuing( );
   bool activity = !_proc_credits.empty();
 
-  _RouteEvaluate( );
-  _VCAllocEvaluate( );
-  _SWHoldEvaluate( );
-  _SWAllocEvaluate( );
-  _SwitchEvaluate( );
+  if(!_route_vcs.empty())
+    _RouteEvaluate( );
+  if(_vc_allocator) {
+    _vc_allocator->Clear();
+    if(!_vc_alloc_vcs.empty())
+      _VCAllocEvaluate( );
+  }
+  if(_hold_switch_for_packet) {
+    if(!_sw_hold_vcs.empty())
+      _SWHoldEvaluate( );
+  }
+  _sw_allocator->Clear();
+  if(_spec_sw_allocator)
+    _spec_sw_allocator->Clear();
+  if(!_sw_alloc_vcs.empty())
+    _SWAllocEvaluate( );
+  if(!_crossbar_flits.empty())
+    _SwitchEvaluate( );
 
-  _RouteUpdate( );
-  activity = activity || !_route_vcs.empty();
-  _VCAllocUpdate( );
-  activity = activity || !_vc_alloc_vcs.empty();
-  _SWHoldUpdate( );
-  activity = activity || (_hold_switch_for_packet && !_sw_hold_vcs.empty());
-  _SWAllocUpdate( );
-  activity = activity || !_sw_alloc_vcs.empty();
-  _SwitchUpdate( );
-  activity = activity || !_crossbar_flits.empty();
+  if(!_route_vcs.empty()) {
+    _RouteUpdate( );
+    activity = activity || !_route_vcs.empty();
+  }
+  if(!_vc_alloc_vcs.empty()) {
+    _VCAllocUpdate( );
+    activity = activity || !_vc_alloc_vcs.empty();
+  }
+  if(_hold_switch_for_packet) {
+    if(!_sw_hold_vcs.empty()) {
+      _SWHoldUpdate( );
+      activity = activity || !_sw_hold_vcs.empty();
+    }
+  }
+  if(!_sw_alloc_vcs.empty()) {
+    _SWAllocUpdate( );
+    activity = activity || !_sw_alloc_vcs.empty();
+  }
+  if(!_crossbar_flits.empty()) {
+    _SwitchUpdate( );
+    activity = activity || !_crossbar_flits.empty();
+  }
 
   _active = activity;
 
@@ -482,12 +507,6 @@ void IQRouter::_RouteUpdate( )
 
 void IQRouter::_VCAllocEvaluate( )
 {
-  if(!_vc_allocator) {
-    return;
-  }
-
-  _vc_allocator->Clear();
-
   bool watched = false;
 
   for(deque<pair<int, pair<pair<int, int>, int> > >::const_iterator iter = _vc_alloc_vcs.begin();
@@ -829,10 +848,6 @@ void IQRouter::_SWHoldEvaluate( )
 
 void IQRouter::_SWHoldUpdate( )
 {
-  if(!_hold_switch_for_packet) {
-    return;
-  }
-
   while(!_sw_hold_vcs.empty()) {
     
     pair<int, pair<pair<int, int>, int> > const & item = _sw_hold_vcs.front();
@@ -1093,10 +1108,6 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 
 void IQRouter::_SWAllocEvaluate( )
 {
-  _sw_allocator->Clear();
-  if(_spec_sw_allocator)
-    _spec_sw_allocator->Clear();
-
   bool watched = false;
 
   for(deque<pair<int, pair<pair<int, int>, int> > >::const_iterator iter = _sw_alloc_vcs.begin();
