@@ -1885,6 +1885,20 @@ int IQRouter::GetBuffer(int i) const {
   return size;
 }
 
+vector<int> IQRouter::GetBuffers(int i) const {
+  assert(i < _inputs);
+
+  vector<int> sizes(_vcs);
+  int const i_start = (i >= 0) ? i : 0;
+  int const i_end = (i >= 0) ? i : (_inputs - 1);
+  for(int input = i_start; input <= i_end; ++input) {
+    for(int vc = 0; vc < _vcs; ++vc) {
+      sizes[vc] += _buf[input]->GetSize(vc);
+    }
+  }
+  return sizes;
+}
+
 int IQRouter::GetReceivedFlits(int i) const {
   assert(i < _inputs);
 
