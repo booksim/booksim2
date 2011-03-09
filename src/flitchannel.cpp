@@ -49,16 +49,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //  $Id$
 // ----------------------------------------------------------------------
 FlitChannel::FlitChannel(Module * parent, string const & name, int classes)
-: Channel<Flit>(parent, name), _idle(0), _classes(classes) {
+: Channel<Flit>(parent, name), _routerSource(-1), _routerSourcePort(-1), 
+   _routerSink(-1), _routerSinkPort(-1), _idle(0), _classes(classes) {
   _active.resize(classes, 0);
 }
 
-void FlitChannel::SetSource(Router * router) {
-  _routerSource = router->GetID();
+void FlitChannel::SetSource(Router * router, int port) {
+  _routerSource = router ? router->GetID() : -1;
+  _routerSinkPort = port;
 }
 
-void FlitChannel::SetSink(Router * router) {
-  _routerSink = router->GetID();
+void FlitChannel::SetSink(Router * router, int port) {
+  _routerSink = router ? router->GetID() : -1;
+  _routerSinkPort = port;
 }
 
 void FlitChannel::Send(Flit * f) {

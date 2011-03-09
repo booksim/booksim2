@@ -73,7 +73,7 @@ void Router::AddInputChannel( FlitChannel *channel, CreditChannel *backchannel )
 {
   _input_channels.push_back( channel );
   _input_credits.push_back( backchannel );
-  channel->SetSink( this ) ;
+  channel->SetSink( this, _input_channels.size() - 1 ) ;
 }
 
 void Router::AddOutputChannel( FlitChannel *channel, CreditChannel *backchannel )
@@ -81,7 +81,7 @@ void Router::AddOutputChannel( FlitChannel *channel, CreditChannel *backchannel 
   _output_channels.push_back( channel );
   _output_credits.push_back( backchannel );
   _channel_faults.push_back( false );
-  channel->SetSource( this ) ;
+  channel->SetSource( this, _output_channels.size() - 1 ) ;
 }
 
 void Router::Evaluate( )
