@@ -94,6 +94,7 @@ void Network::_Alloc( )
     ostringstream name;
     name << Name() << "_fchan_ingress" << s;
     _inject[s] = new FlitChannel(this, name.str(), _classes);
+    _inject[s]->SetSource(NULL, s);
     _timed_modules.push_back(_inject[s]);
     name.str("");
     name << Name() << "_cchan_ingress" << s;
@@ -106,6 +107,7 @@ void Network::_Alloc( )
     ostringstream name;
     name << Name() << "_fchan_egress" << d;
     _eject[d] = new FlitChannel(this, name.str(), _classes);
+    _eject[d]->SetSink(NULL, d);
     _timed_modules.push_back(_eject[d]);
     name.str("");
     name << Name() << "_cchan_egress" << d;
