@@ -98,6 +98,7 @@ public:
   virtual void WriteOutputs( );
 
   void Display( ) const;
+  void DumpChannelMap( ) const;
 
   int NumChannels(){return _channels;}
   const vector<FlitChannel *> & GetInject(){return _inject;}
