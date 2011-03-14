@@ -99,6 +99,7 @@ public:
 
   void Display( ) const;
   void DumpChannelMap( ) const;
+  void DumpNodeMap( ) const;
 
   int NumChannels(){return _channels;}
   const vector<FlitChannel *> & GetInject(){return _inject;}
