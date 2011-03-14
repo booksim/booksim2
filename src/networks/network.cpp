@@ -238,3 +238,13 @@ void Network::DumpChannelMap( ) const
 	 << _eject[c]->GetSink() << ',' 
 	 << _eject[c]->GetSinkPort() << endl;
 }
+
+void Network::DumpNodeMap( ) const
+{
+  cout << "%NM:source_router,dest_router" << endl;
+  assert(_sources == _dests);
+  for(int s = 0; s < _sources; ++s)
+    cout << "%NM:"
+	 << _eject[s]->GetSource() << ','
+	 << _inject[s]->GetSink() << endl;
+}
