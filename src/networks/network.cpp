@@ -209,10 +209,10 @@ double Network::Capacity( ) const
  * neceesary of the network, by default, call display on each router
  * and display the channel utilization rate
  */
-void Network::Display( ) const
+void Network::Display( ostream & os ) const
 {
   for ( int r = 0; r < _size; ++r ) {
-    _routers[r]->Display( );
+    _routers[r]->Display( os );
   }
 }
 

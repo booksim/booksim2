@@ -155,8 +155,8 @@ public:
 
   void SetWatch( bool watch = true );
   bool IsWatched( ) const;
-  void Display( ) const;
-  static void DisplayStats( bool print_csv = false );
+  void Display( ostream & os = cout ) const;
+  static void DisplayStats( bool print_csv = false, ostream & os = cout );
 };
 
 #endif 

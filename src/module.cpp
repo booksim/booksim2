@@ -58,15 +58,15 @@ void Module::_AddChild( Module *child )
   _children.push_back( child );
 }
 
-void Module::DisplayHierarchy( int level ) const
+void Module::DisplayHierarchy( int level, ostream & os ) const
 {
   vector<Module *>::const_iterator mod_iter;
 
   for ( int l = 0; l < level; l++ ) {
-    cout << "  ";  
+    os << "  ";  
   }
 
-  cout << _name << endl;
+  os << _name << endl;
 
   for ( mod_iter = _children.begin( );
 	mod_iter != _children.end( ); mod_iter++ ) {
@@ -85,7 +85,7 @@ void Module::Debug( const string& msg ) const
   cout << "Debug (" << _fullname << ") : " << msg << endl;
 }
 
-void Module::Display( ) const 
+void Module::Display( ostream & os ) const 
 {
-  cout << "Display method not implemented for " << _fullname << endl;
+  os << "Display method not implemented for " << _fullname << endl;
 }

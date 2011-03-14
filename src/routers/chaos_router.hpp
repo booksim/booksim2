@@ -123,7 +123,7 @@ public:
   virtual int GetSentFlits(int i = -1) const {return 0;}
   virtual void ResetFlitStats() {}
 
-  void Display( ) const;
+  void Display( ostream & os = cout ) const;
 };
 
 #endif

@@ -139,7 +139,7 @@ public:
     return _vc[vc]->GetSize( );
   }
 
-  void Display( ) const;
+  void Display( ostream & os = cout ) const;
 };
 
 #endif 

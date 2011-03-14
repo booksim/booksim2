@@ -746,10 +746,10 @@ void EventRouter::_SendCredits( )
   }
 }
 
-void EventRouter::Display( ) const
+void EventRouter::Display( ostream & os ) const
 {
   for ( int input = 0; input < _inputs; ++input ) {
-    _buf[input]->Display( );
+    _buf[input]->Display( os );
   }
 }
 

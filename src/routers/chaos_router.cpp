@@ -671,6 +671,6 @@ void ChaosRouter::_SendCredits( )
   }
 }
 
-void ChaosRouter::Display( ) const
+void ChaosRouter::Display( ostream & os ) const
 {
 }

@@ -1845,10 +1845,10 @@ void IQRouter::_SendCredits( )
 // misc.
 //------------------------------------------------------------------------------
 
-void IQRouter::Display( ) const
+void IQRouter::Display( ostream & os ) const
 {
   for ( int input = 0; input < _inputs; ++input ) {
-    _buf[input]->Display( );
+    _buf[input]->Display( os );
   }
 }
 

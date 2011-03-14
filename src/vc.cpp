@@ -232,36 +232,36 @@ bool VC::IsWatched( ) const
   return _watched;
 }
 
-void VC::Display( ) const
+void VC::Display( ostream & os ) const
 {
   if ( _state != VC::idle ) {
-    cout << FullName() << ": "
-	 << " state: " << VCSTATE[_state];
+    os << FullName() << ": "
+       << " state: " << VCSTATE[_state];
     if(_state == VC::active) {
-      cout << " out_port: " << _out_port
-	   << " out_vc: " << _out_vc;
+      os << " out_port: " << _out_port
+	 << " out_vc: " << _out_vc;
     }
-    cout << " fill: " << _buffer.size();
+    os << " fill: " << _buffer.size();
     if(!_buffer.empty()) {
-      cout << " front: " << _buffer.front()->id;
+      os << " front: " << _buffer.front()->id;
     }
-    cout << " pri: " << _pri;
-    cout << endl;
+    os << " pri: " << _pri;
+    os << endl;
   }
 }
 
-void VC::DisplayStats( bool print_csv )
+void VC::DisplayStats( bool print_csv, ostream & os )
 {
   if(print_csv) {
     for(eVCState state = state_min; state <= state_max; state = eVCState(state+1)) {
-      cout << (double)state_info[state].cycles/(double)total_cycles << ",";
+      os << (double)state_info[state].cycles/(double)total_cycles << ",";
     }
-    cout << (double)occupancy/(double)total_cycles << endl;
+    os << (double)occupancy/(double)total_cycles << endl;
   }
-  cout << "VC state breakdown:" << endl;
+  os << "VC state breakdown:" << endl;
   for(eVCState state = state_min; state <= state_max; state = eVCState(state+1)) {
-    cout << "  " << VCSTATE[state]
-	 << ": " << (double)state_info[state].cycles/(double)total_cycles << endl;
+    os << "  " << VCSTATE[state]
+       << ": " << (double)state_info[state].cycles/(double)total_cycles << endl;
   }
-  cout << "  occupancy: " << (double)occupancy/(double)total_cycles << endl;
+  os << "  occupancy: " << (double)occupancy/(double)total_cycles << endl;
 }
