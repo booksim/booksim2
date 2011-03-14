@@ -129,9 +129,9 @@ void Stats::AddSample( int val )
   AddSample( (double)val );
 }
 
-void Stats::Display( ) const
+void Stats::Display( ostream & os ) const
 {
-  cout << *this << endl;
+  os << *this << endl;
 }
 
 ostream & operator<<(ostream & os, const Stats & s) {

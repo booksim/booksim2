@@ -76,8 +76,8 @@ void SingleNet::_BuildNet( const Configuration &config )
   }
 }
 
-void SingleNet::Display( ) const
+void SingleNet::Display( ostream & os ) const
 {
-  _routers[0]->Display( );
+  _routers[0]->Display( os );
 }
 

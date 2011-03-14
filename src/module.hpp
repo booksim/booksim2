@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 class Module {
 private:
@@ -53,12 +54,12 @@ public:
   inline const string & Name() const { return _name; }
   inline const string & FullName() const { return _fullname; }
 
-  void DisplayHierarchy( int level = 0 ) const;
+  void DisplayHierarchy( int level = 0, ostream & os = cout ) const;
 
   void Error( const string& msg ) const;
   void Debug( const string& msg ) const;
 
-  virtual void Display( ) const;
+  virtual void Display( ostream & os = cout ) const;
 };
 
 #endif
