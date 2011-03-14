@@ -216,35 +216,35 @@ void Network::Display( ) const
   }
 }
 
-void Network::DumpChannelMap( ) const
+void Network::DumpChannelMap( ostream & os, string const & prefix ) const
 {
-  cout << "%CM:source_router,source_port,dest_router,dest_port" << endl;
+  os << prefix << "source_router,source_port,dest_router,dest_port" << endl;
   for(int c = 0; c < _sources; ++c)
-    cout << "%CM:" 
-	 << _inject[c]->GetSource() << ',' 
-	 << _inject[c]->GetSourcePort() << ',' 
-	 << _inject[c]->GetSink() << ',' 
-	 << _inject[c]->GetSinkPort() << endl;
+    os << prefix
+       << _inject[c]->GetSource() << ',' 
+       << _inject[c]->GetSourcePort() << ',' 
+       << _inject[c]->GetSink() << ',' 
+       << _inject[c]->GetSinkPort() << endl;
   for(int c = 0; c < _channels; ++c)
-    cout << "%CM:"
-	 << _chan[c]->GetSource() << ',' 
-	 << _chan[c]->GetSourcePort() << ',' 
-	 << _chan[c]->GetSink() << ',' 
-	 << _chan[c]->GetSinkPort() << endl;
+    os << prefix
+       << _chan[c]->GetSource() << ',' 
+       << _chan[c]->GetSourcePort() << ',' 
+       << _chan[c]->GetSink() << ',' 
+       << _chan[c]->GetSinkPort() << endl;
   for(int c = 0; c < _dests; ++c)
-    cout << "%CM:"
-	 << _eject[c]->GetSource() << ',' 
-	 << _eject[c]->GetSourcePort() << ',' 
-	 << _eject[c]->GetSink() << ',' 
-	 << _eject[c]->GetSinkPort() << endl;
+    os << prefix
+       << _eject[c]->GetSource() << ',' 
+       << _eject[c]->GetSourcePort() << ',' 
+       << _eject[c]->GetSink() << ',' 
+       << _eject[c]->GetSinkPort() << endl;
 }
 
-void Network::DumpNodeMap( ) const
+void Network::DumpNodeMap( ostream & os, string const & prefix ) const
 {
-  cout << "%NM:source_router,dest_router" << endl;
+  os << prefix << "source_router,dest_router" << endl;
   assert(_sources == _dests);
   for(int s = 0; s < _sources; ++s)
-    cout << "%NM:"
-	 << _eject[s]->GetSource() << ','
-	 << _inject[s]->GetSink() << endl;
+    os << prefix
+       << _eject[s]->GetSource() << ','
+       << _inject[s]->GetSink() << endl;
 }

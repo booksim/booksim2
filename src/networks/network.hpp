@@ -98,8 +98,8 @@ public:
   virtual void WriteOutputs( );
 
   void Display( ) const;
-  void DumpChannelMap( ) const;
-  void DumpNodeMap( ) const;
+  void DumpChannelMap( ostream & os = cout, string const & prefix = "" ) const;
+  void DumpNodeMap( ostream & os = cout, string const & prefix = "" ) const;
 
   int NumChannels(){return _channels;}
   const vector<FlitChannel *> & GetInject(){return _inject;}
