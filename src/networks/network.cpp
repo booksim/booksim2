@@ -215,3 +215,26 @@ void Network::Display( ) const
     _routers[r]->Display( );
   }
 }
+
+void Network::DumpChannelMap( ) const
+{
+  cout << "%CM:source_router,source_port,dest_router,dest_port" << endl;
+  for(int c = 0; c < _sources; ++c)
+    cout << "%CM:" 
+	 << _inject[c]->GetSource() << ',' 
+	 << _inject[c]->GetSourcePort() << ',' 
+	 << _inject[c]->GetSink() << ',' 
+	 << _inject[c]->GetSinkPort() << endl;
+  for(int c = 0; c < _channels; ++c)
+    cout << "%CM:"
+	 << _chan[c]->GetSource() << ',' 
+	 << _chan[c]->GetSourcePort() << ',' 
+	 << _chan[c]->GetSink() << ',' 
+	 << _chan[c]->GetSinkPort() << endl;
+  for(int c = 0; c < _dests; ++c)
+    cout << "%CM:"
+	 << _eject[c]->GetSource() << ',' 
+	 << _eject[c]->GetSourcePort() << ',' 
+	 << _eject[c]->GetSink() << ',' 
+	 << _eject[c]->GetSinkPort() << endl;
+}

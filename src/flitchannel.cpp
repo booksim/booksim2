@@ -54,12 +54,12 @@ FlitChannel::FlitChannel(Module * parent, string const & name, int classes)
   _active.resize(classes, 0);
 }
 
-void FlitChannel::SetSource(Router * router, int port) {
+void FlitChannel::SetSource(Router const * const router, int port) {
   _routerSource = router ? router->GetID() : -1;
-  _routerSinkPort = port;
+  _routerSourcePort = port;
 }
 
-void FlitChannel::SetSink(Router * router, int port) {
+void FlitChannel::SetSink(Router const * const router, int port) {
   _routerSink = router ? router->GetID() : -1;
   _routerSinkPort = port;
 }
