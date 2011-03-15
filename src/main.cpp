@@ -102,7 +102,7 @@ bool gGUIMode = false;
 
 /////////////////////////////////////////////////////////////////////////////
 
-bool AllocatorSim( BookSimConfig const & config )
+bool Simulate( BookSimConfig const & config )
 {
   vector<Network *> net;
 
@@ -218,13 +218,13 @@ int main( int argc, char **argv )
     QApplication app(argc, argv);
     BooksimGUI * bs = new BooksimGUI();
     //transfer all the contorl and data to the gui, go to bgui.cpp for the rest
-    bs->RegisterAllocSim(&AllocatorSim,&config);
+    bs->RegisterSimFunc(&Simulate,&config);
     bs->setGeometry(100, 100, 1200, 355);
     bs->show();
     return app.exec();
   }
 #endif
 
-  bool result = AllocatorSim( config );
+  bool result = Simulate( config );
   return result ? -1 : 0;
 }
