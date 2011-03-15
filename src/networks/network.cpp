@@ -41,14 +41,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include "network.hpp"
 
+#include "kncube.hpp"
+#include "fly.hpp"
+#include "cmesh.hpp"
+#include "flatfly_onchip.hpp"
+#include "qtree.hpp"
+#include "tree4.hpp"
+#include "fattree.hpp"
+#include "anynet.hpp"
+#include "dragonfly.hpp"
 
 
 Network::Network( const Configuration &config, const string & name ) :
   TimedModule( 0, name )
 {
   _size     = -1; 
-  _sources  = -1; 
-  _dests    = -1;
+  _nodes    = -1; 
   _channels = -1;
   _classes  = config.GetInt("classes");
 }
@@ -58,11 +66,11 @@ Network::~Network( )
   for ( int r = 0; r < _size; ++r ) {
     if ( _routers[r] ) delete _routers[r];
   }
-  for ( int s = 0; s < _sources; ++s ) {
+  for ( int s = 0; s < _nodes; ++s ) {
     if ( _inject[s] ) delete _inject[s];
     if ( _inject_cred[s] ) delete _inject_cred[s];
   }
-  for ( int d = 0; d < _dests; ++d ) {
+  for ( int d = 0; d < _nodes; ++d ) {
     if ( _eject[d] ) delete _eject[d];
     if ( _eject_cred[d] ) delete _eject_cred[d];
   }
@@ -72,15 +80,61 @@ Network::~Network( )
   }
 }
 
+Network * Network::NewNetwork(const Configuration & config, const string & name)
+{
+  const string topo = config.GetStr( "topology" );
+  Network * n = NULL;
+  if ( topo == "torus" ) {
+    KNCube::RegisterRoutingFunctions() ;
+    n = new KNCube( config, name, false );
+  } else if ( topo == "mesh" ) {
+    KNCube::RegisterRoutingFunctions() ;
+    n = new KNCube( config, name, true );
+  } else if ( topo == "cmesh" ) {
+    CMesh::RegisterRoutingFunctions() ;
+    n = new CMesh( config, name );
+  } else if ( topo == "fly" ) {
+    KNFly::RegisterRoutingFunctions() ;
+    n = new KNFly( config, name );
+  } else if ( topo == "qtree" ) {
+    QTree::RegisterRoutingFunctions() ;
+    n = new QTree( config, name );
+  } else if ( topo == "tree4" ) {
+    Tree4::RegisterRoutingFunctions() ;
+    n = new Tree4( config, name );
+  } else if ( topo == "fattree" ) {
+    FatTree::RegisterRoutingFunctions() ;
+    n = new FatTree( config, name );
+  } else if ( topo == "flatfly" ) {
+    FlatFlyOnChip::RegisterRoutingFunctions() ;
+    n = new FlatFlyOnChip( config, name );
+  } else if ( topo == "anynet"){
+    AnyNet::RegisterRoutingFunctions() ;
+    n = new AnyNet(config, name);
+  } else if ( topo == "dragonflynew"){
+    DragonFlyNew::RegisterRoutingFunctions() ;
+    n = new DragonFlyNew(config, name);
+  } else {
+    cerr << "Unknown topology: " << topo << endl;
+  }
+  
+  /*legacy code that insert random faults in the networks
+   *not sure how to use this
+   */
+  if ( n && ( config.GetInt( "link_failures" ) > 0 ) ) {
+    n->InsertRandomFaults( config );
+  }
+  return n;
+}
+
 void Network::_Alloc( )
 {
   assert( ( _size != -1 ) && 
-	  ( _sources != -1 ) && 
-	  ( _dests != -1 ) && 
+	  ( _nodes != -1 ) && 
 	  ( _channels != -1 ) );
 
   _routers.resize(_size);
-  gNodes = _sources;
+  gNodes = _nodes;
 
   /*booksim used arrays of flits as the channels which makes have capacity of
    *one. To simulate channel latency, flitchannel class has been added
@@ -88,9 +142,9 @@ void Network::_Alloc( )
    *shifts by one
    *credit channels are the necessary counter part
    */
-  _inject.resize(_sources);
-  _inject_cred.resize(_sources);
-  for ( int s = 0; s < _sources; ++s ) {
+  _inject.resize(_nodes);
+  _inject_cred.resize(_nodes);
+  for ( int s = 0; s < _nodes; ++s ) {
     ostringstream name;
     name << Name() << "_fchan_ingress" << s;
     _inject[s] = new FlitChannel(this, name.str(), _classes);
@@ -101,9 +155,9 @@ void Network::_Alloc( )
     _inject_cred[s] = new CreditChannel(this, name.str());
     _timed_modules.push_back(_inject_cred[s]);
   }
-  _eject.resize(_dests);
-  _eject_cred.resize(_dests);
-  for ( int d = 0; d < _dests; ++d ) {
+  _eject.resize(_nodes);
+  _eject_cred.resize(_nodes);
+  for ( int d = 0; d < _nodes; ++d ) {
     ostringstream name;
     name << Name() << "_fchan_egress" << d;
     _eject[d] = new FlitChannel(this, name.str(), _classes);
@@ -126,16 +180,6 @@ void Network::_Alloc( )
     _chan_cred[c] = new CreditChannel(this, name.str());
     _timed_modules.push_back(_chan_cred[c]);
   }
-}
-
-int Network::NumSources( ) const
-{
-  return _sources;
-}
-
-int Network::NumDests( ) const
-{
-  return _dests;
 }
 
 void Network::ReadInputs( )
@@ -167,25 +211,25 @@ void Network::WriteOutputs( )
 
 void Network::WriteFlit( Flit *f, int source )
 {
-  assert( ( source >= 0 ) && ( source < _sources ) );
+  assert( ( source >= 0 ) && ( source < _nodes ) );
   _inject[source]->Send(f);
 }
 
 Flit *Network::ReadFlit( int dest )
 {
-  assert( ( dest >= 0 ) && ( dest < _dests ) );
+  assert( ( dest >= 0 ) && ( dest < _nodes ) );
   return _eject[dest]->Receive();
 }
 
 void Network::WriteCredit( Credit *c, int dest )
 {
-  assert( ( dest >= 0 ) && ( dest < _dests ) );
+  assert( ( dest >= 0 ) && ( dest < _nodes ) );
   _eject_cred[dest]->Send(c);
 }
 
 Credit *Network::ReadCredit( int source )
 {
-  assert( ( source >= 0 ) && ( source < _sources ) );
+  assert( ( source >= 0 ) && ( source < _nodes ) );
   return _inject_cred[source]->Receive();
 }
 
@@ -219,7 +263,7 @@ void Network::Display( ostream & os ) const
 void Network::DumpChannelMap( ostream & os, string const & prefix ) const
 {
   os << prefix << "source_router,source_port,dest_router,dest_port" << endl;
-  for(int c = 0; c < _sources; ++c)
+  for(int c = 0; c < _nodes; ++c)
     os << prefix
        << _inject[c]->GetSource() << ',' 
        << _inject[c]->GetSourcePort() << ',' 
@@ -231,7 +275,7 @@ void Network::DumpChannelMap( ostream & os, string const & prefix ) const
        << _chan[c]->GetSourcePort() << ',' 
        << _chan[c]->GetSink() << ',' 
        << _chan[c]->GetSinkPort() << endl;
-  for(int c = 0; c < _dests; ++c)
+  for(int c = 0; c < _nodes; ++c)
     os << prefix
        << _eject[c]->GetSource() << ',' 
        << _eject[c]->GetSourcePort() << ',' 
@@ -242,8 +286,7 @@ void Network::DumpChannelMap( ostream & os, string const & prefix ) const
 void Network::DumpNodeMap( ostream & os, string const & prefix ) const
 {
   os << prefix << "source_router,dest_router" << endl;
-  assert(_sources == _dests);
-  for(int s = 0; s < _sources; ++s)
+  for(int s = 0; s < _nodes; ++s)
     os << prefix
        << _eject[s]->GetSource() << ','
        << _inject[s]->GetSink() << endl;

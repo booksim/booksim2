@@ -52,8 +52,6 @@ class Tree4 : public Network {
   int _k;
   int _n;
 
-  int *_speedup;
-
   int _channelWidth;
 
   void _ComputeSize( const Configuration& config );

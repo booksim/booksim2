@@ -68,26 +68,20 @@ void Tree4::_ComputeSize( const Configuration& config )
   int h;
 
   _k = config.GetInt( "k" );
+  assert(_k == 4);
   _n = config.GetInt( "n" );
-
-  assert( _k == 4 && _n == 3 );
+  assert(_n == 3);
   
   gK = _k; gN = _n;
   
-  _sources = powi( _k, _n );
-  _dests   = powi( _k, _n );
+  _nodes = powi( _k, _n );
   
-  _speedup = new int[_n];
-  _speedup[0] = _k;
-  _speedup[1] = _k / 2;
-  _speedup[2] = _k / 4;
-
   _size = 0;
   for ( h = 0; h < _n; ++h ) 
-    _size += _speedup[h] * powi( _k, h );
+    _size += (4 >> h) * powi( _k, h );
 
   _channels = 2                  // Two Channels per Connection
-    * _speedup[1] * powi( _k, 1) // Number of Middle Routers
+    * ( 2 * powi( _k, 1) )       // Number of Middle Routers
     * ( 2 * _k );                // Connectivity of Middle Routers
 }
 
@@ -105,7 +99,7 @@ void Tree4::_BuildNet( const Configuration& config )
   int h, pos, nPos, degree, id;
 
   for ( h = 0; h < _n; h++ ) {
-    nPos = _speedup[h] * powi( _k, h );
+    nPos = (4 >> h) * powi( _k, h );
     for ( pos = 0; pos < nPos; ++pos) {
       if ( h < _n-1 ) 
 	degree = 8;
@@ -154,7 +148,7 @@ void Tree4::_BuildNet( const Configuration& config )
 
   // Connections between h = 1 and h = 2 Levels
   int c = 0;
-  nPos = _speedup[1] * powi( _k, 1 );
+  nPos = 2 * powi( _k, 1 );
   for ( pos = 0; pos < nPos; ++pos ) {
     for ( int port = 0; port < _k; ++port ) {
 
@@ -187,7 +181,7 @@ void Tree4::_BuildNet( const Configuration& config )
   }
 
   // Connections between h = 0 and h = 1 Levels
-  nPos = _speedup[0] * powi( _k, 0 );
+  nPos = 4 * powi( _k, 0 );
   for ( pos  = 0; pos < nPos; ++pos ) {
     for ( int port = 0; port < 2 * _k; ++port ) {
       pp = pos;
@@ -222,11 +216,12 @@ void Tree4::_BuildNet( const Configuration& config )
   
 Router*& Tree4::_Router( int height, int pos )
 {
-  assert( height < _n && pos < _speedup[height] * powi( _k, height));
+  assert( height < _n );
+  assert( pos < (4 >> height) * powi( _k, height) );
 
   int i = 0;
   for ( int h = 0; h < height; ++h )
-    i += _speedup[h] * powi( _k, h );
+    i += (4 >> h) * powi( _k, h );
   return _routers[i+pos];
 
 }

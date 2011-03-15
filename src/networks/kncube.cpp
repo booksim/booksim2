@@ -62,8 +62,7 @@ void KNCube::_ComputeSize( const Configuration &config )
   _size     = powi( _k, _n );
   _channels = 2*_n*_size;
 
-  _sources = _size;
-  _dests   = _size;
+  _nodes = _size;
 }
 
 void KNCube::RegisterRoutingFunctions() {
@@ -235,7 +234,6 @@ void KNCube::InsertRandomFaults( const Configuration &config )
 
   int node, chan;
   int i, j, t, n, c;
-  bool *fail_nodes;
   bool available;
 
   bool edge;
@@ -246,7 +244,7 @@ void KNCube::InsertRandomFaults( const Configuration &config )
     prev_seed = RandomIntLong( );
     RandomSeed( config.GetInt( "fail_seed" ) );
 
-    fail_nodes = new bool [_size];
+    vector<bool> fail_nodes(_size);
 
     for ( i = 0; i < _size; ++i ) {
       node = i;
@@ -311,8 +309,6 @@ void KNCube::InsertRandomFaults( const Configuration &config )
       cout << "failure at node " << node << ", channel " 
 	   << chan << endl;
     }
-
-    delete [] fail_nodes;
 
     RandomSeed( prev_seed );
   }

@@ -95,8 +95,7 @@ void CMesh::_ComputeSize( const Configuration &config ) {
 
   assert(c == _xrouter*_yrouter);
   
-  _sources  = _c * powi( _k, _n); // Source nodes in network
-  _dests    = _c * powi( _k, _n); // Destination nodes in network
+  _nodes    = _c * powi( _k, _n); // Number of nodes in network
   _size     = powi( _k, _n);      // Number of routers in network
   _channels = 2 * _n * _size;     // Number of channels in network
 
@@ -127,9 +126,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
   ostringstream name;
   // The following vector is used to check that every
   //  processor in the system is connected to the network
-  bool* channel_vector = new bool [ _sources ] ;
-  for ( int i = 0 ; i < _sources ; i++ ) 
-    channel_vector[i] = false ;
+  vector<bool> channel_vector(_nodes, false) ;
   
   //
   // Routers and Channel
@@ -168,8 +165,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
       for (int x = 0; x < _cX ; x++) {
 	int link = (_k * _cX) * (_cY * y_index + y) + (_cX * x_index + x) ;
 	assert( link >= 0 ) ;
-	assert( link < _sources ) ;
-	assert( link < _dests ) ;
+	assert( link < _nodes ) ;
 	assert( channel_vector[ link ] == false ) ;
 	channel_vector[link] = true ;
 	// Ingress Ports
@@ -351,7 +347,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
   }    
 
   // Check that all processors were connected to the network
-  for ( int i = 0 ; i < _sources ; i++ ) 
+  for ( int i = 0 ; i < _nodes ; i++ ) 
     assert( channel_vector[i] == true ) ;
   
   if(gTrace){

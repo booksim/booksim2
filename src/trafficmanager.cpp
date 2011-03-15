@@ -44,8 +44,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
 
-  _sources = _net[0]->NumSources( );
-  _dests   = _net[0]->NumDests( );
+  _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
 
   //nodes higher than limit do not produce or receive packets
@@ -53,9 +52,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _limit = config.GetInt( "limit" );
   if(_limit == 0){
-    _limit = _sources;
+    _limit = _nodes;
   }
-  assert(_limit<=_sources);
+  assert(_limit<=_nodes);
  
   _subnets = config.GetInt("subnets");
  
@@ -153,7 +152,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _class_priority.resize(_classes, _class_priority.back());
 
-  _last_class.resize(_sources, -1);
+  _last_class.resize(_nodes, -1);
 
   vector<string> inject = config.GetStrArray("injection_process");
   inject.resize(_classes, inject.back());
@@ -169,10 +168,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   // ============ Injection VC states  ============ 
 
-  _buf_states.resize(_sources);
-  _last_vc.resize(_sources);
+  _buf_states.resize(_nodes);
+  _last_vc.resize(_nodes);
 
-  for ( int source = 0; source < _sources; ++source ) {
+  for ( int source = 0; source < _nodes; ++source ) {
     _buf_states[source].resize(_subnets);
     _last_vc[source].resize(_subnets);
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {
@@ -185,13 +184,13 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   // ============ Injection queues ============ 
 
-  _qtime.resize(_sources);
-  _qdrained.resize(_sources);
-  _partial_packets.resize(_sources);
-  _packets_sent.resize(_sources);
-  _requests_outstanding.resize(_sources);
+  _qtime.resize(_nodes);
+  _qdrained.resize(_nodes);
+  _partial_packets.resize(_nodes);
+  _packets_sent.resize(_nodes);
+  _requests_outstanding.resize(_nodes);
 
-  for ( int source = 0; source < _sources; ++source ) {
+  for ( int source = 0; source < _nodes; ++source ) {
     _qtime[source].resize(_classes);
     _qdrained[source].resize(_classes);
     _partial_packets[source].resize(_classes);
@@ -300,32 +299,32 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _stats[tmp_name.str()] = _hop_stats[c];
     tmp_name.str("");
 
-    _pair_latency[c].resize(_sources*_dests);
-    _pair_tlat[c].resize(_sources*_dests);
+    _pair_latency[c].resize(_nodes*_nodes);
+    _pair_tlat[c].resize(_nodes*_nodes);
 
-    _sent_flits[c].resize(_sources);
-    _accepted_flits[c].resize(_dests);
+    _sent_flits[c].resize(_nodes);
+    _accepted_flits[c].resize(_nodes);
     
-    for ( int i = 0; i < _sources; ++i ) {
+    for ( int i = 0; i < _nodes; ++i ) {
       tmp_name << "sent_stat_" << c << "_" << i;
       _sent_flits[c][i] = new Stats( this, tmp_name.str( ) );
       _stats[tmp_name.str()] = _sent_flits[c][i];
       tmp_name.str("");    
       
-      for ( int j = 0; j < _dests; ++j ) {
+      for ( int j = 0; j < _nodes; ++j ) {
 	tmp_name << "pair_latency_stat_" << c << "_" << i << "_" << j;
-	_pair_latency[c][i*_dests+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-	_stats[tmp_name.str()] = _pair_latency[c][i*_dests+j];
+	_pair_latency[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+	_stats[tmp_name.str()] = _pair_latency[c][i*_nodes+j];
 	tmp_name.str("");
 	
 	tmp_name << "pair_tlat_stat_" << c << "_" << i << "_" << j;
-	_pair_tlat[c][i*_dests+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-	_stats[tmp_name.str()] = _pair_tlat[c][i*_dests+j];
+	_pair_tlat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+	_stats[tmp_name.str()] = _pair_tlat[c][i*_nodes+j];
 	tmp_name.str("");
       }
     }
     
-    for ( int i = 0; i < _dests; ++i ) {
+    for ( int i = 0; i < _nodes; ++i ) {
       tmp_name << "accepted_stat_" << c << "_" << i;
       _accepted_flits[c][i] = new Stats( this, tmp_name.str( ) );
       _stats[tmp_name.str()] = _accepted_flits[c][i];
@@ -350,8 +349,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_batch_time = new Stats( this, "overall_batch_time" );
   _stats["overall_batch_time"] = _overall_batch_time;
   
-  _injected_flow.resize(_sources, 0);
-  _ejected_flow.resize(_dests, 0);
+  _injected_flow.resize(_nodes, 0);
+  _ejected_flow.resize(_nodes, 0);
 
   _received_flow.resize(_subnets*_routers, 0);
   _sent_flow.resize(_subnets*_routers, 0);
@@ -362,9 +361,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _total_sims = config.GetInt( "sim_count" );
 
-  _router_map.resize(_subnets);
+  _router.resize(_subnets);
   for (int i=0; i < _subnets; ++i) {
-    _router_map[i] = _net[i]->GetRouters();
+    _router[i] = _net[i]->GetRouters();
   }
 
   //seed the network
@@ -477,7 +476,7 @@ TrafficManager::~TrafficManager( )
 {
 
   for ( int subnet = 0; subnet < _subnets; ++subnet ) {
-    for ( int source = 0; source < _sources; ++source ) {
+    for ( int source = 0; source < _nodes; ++source ) {
       delete _buf_states[source][subnet];
     }
   }
@@ -502,16 +501,16 @@ TrafficManager::~TrafficManager( )
     delete _overall_accepted[c];
     delete _overall_accepted_min[c];
     
-    for ( int source = 0; source < _sources; ++source ) {
+    for ( int source = 0; source < _nodes; ++source ) {
       delete _sent_flits[c][source];
       
-      for ( int dest = 0; dest < _dests; ++dest ) {
-	delete _pair_latency[c][source*_dests+dest];
-	delete _pair_tlat[c][source*_dests+dest];
+      for ( int dest = 0; dest < _nodes; ++dest ) {
+	delete _pair_latency[c][source*_nodes+dest];
+	delete _pair_tlat[c][source*_nodes+dest];
       }
     }
     
-    for ( int dest = 0; dest < _dests; ++dest ) {
+    for ( int dest = 0; dest < _nodes; ++dest ) {
       delete _accepted_flits[c][dest];
     }
     
@@ -617,9 +616,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
       if(reply_class < 0) {
 	_tlat_stats[f->cl]->AddSample( f->atime - f->ttime );
-	_pair_tlat[f->cl][dest*_dests+f->src]->AddSample( f->atime - f->ttime );
+	_pair_tlat[f->cl][dest*_nodes+f->src]->AddSample( f->atime - f->ttime );
       }
-      _pair_latency[f->cl][f->src*_dests+dest]->AddSample( f->atime - f->time );
+      _pair_latency[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->time );
     }
     
     if(f != head) {
@@ -658,8 +657,8 @@ void TrafficManager::_GeneratePacket( int source, int dest, int size,
 				      int cl, int time, int tid, int ttime )
 {
   assert(size > 0);
-  assert((source >= 0) && (source < _sources));
-  assert((dest >= 0) && (dest < _dests));
+  assert((source >= 0) && (source < _nodes));
+  assert((dest >= 0) && (dest < _nodes));
 
   //refusing to generate packets for nodes greater than limit
   if(source >=_limit){
@@ -766,7 +765,7 @@ void TrafficManager::_GeneratePacket( int source, int dest, int size,
 
 void TrafficManager::_Inject(){
 
-  for ( int source = 0; source < _sources; ++source ) {
+  for ( int source = 0; source < _nodes; ++source ) {
     for ( int c = 0; c < _classes; ++c ) {
       // Potentially generate packets for any (source,class)
       // that is currently empty
@@ -778,7 +777,7 @@ void TrafficManager::_Inject(){
 	    bool generated = false;
 	    while( !generated && ( _qtime[source][c] <= _time ) ) {
 	      if(_IssuePacket(source, c)) { //generate a packet
-		int dest = _traffic_function[c](source, _dests);
+		int dest = _traffic_function[c](source, _nodes);
 		int size = _packet_size[c];
 		int time = ((_include_queuing == 1) ? _qtime[source][c] : _time);
 		_GeneratePacket(source, dest, size, c, time, -1, time);
@@ -807,7 +806,7 @@ void TrafficManager::_Step( )
     cout << "WARNING: Possible network deadlock." << endl;
   }
 
-  for ( int source = 0; source < _sources; ++source ) {
+  for ( int source = 0; source < _nodes; ++source ) {
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {
       Credit * const c = _net[subnet]->ReadCredit( source );
       if ( c ) {
@@ -820,7 +819,7 @@ void TrafficManager::_Step( )
   vector<map<int, Flit *> > flits(_subnets);
   
   for ( int subnet = 0; subnet < _subnets; ++subnet ) {
-    for ( int dest = 0; dest < _dests; ++dest ) {
+    for ( int dest = 0; dest < _nodes; ++dest ) {
       Flit * const f = _net[subnet]->ReadFlit( dest );
       if ( f ) {
 	if(f->watch) {
@@ -844,7 +843,7 @@ void TrafficManager::_Step( )
   
   _Inject();
 
-  for(int source = 0; source < _sources; ++source) {
+  for(int source = 0; source < _nodes; ++source) {
     Flit * f = NULL;
 
     int const last_class = _last_class[source];
@@ -941,7 +940,7 @@ void TrafficManager::_Step( )
     }
   }
   for(int subnet = 0; subnet < _subnets; ++subnet) {
-    for(int dest = 0; dest < _dests; ++dest) {
+    for(int dest = 0; dest < _nodes; ++dest) {
       map<int, Flit *>::const_iterator iter = flits[subnet].find(dest);
       if(iter != flits[subnet].end()) {
 	Flit * const & f = iter->second;
@@ -967,9 +966,9 @@ void TrafficManager::_Step( )
   
   for (int subnet = 0; subnet < _subnets; ++subnet) {
     for(int router = 0; router < _routers; ++router) {
-      _received_flow[subnet*_routers+router] += _router_map[subnet][router]->GetReceivedFlits();
-      _sent_flow[subnet*_routers+router] += _router_map[subnet][router]->GetSentFlits();
-      _router_map[subnet][router]->ResetFlitStats();
+      _received_flow[subnet*_routers+router] += _router[subnet][router]->GetReceivedFlits();
+      _sent_flow[subnet*_routers+router] += _router[subnet][router]->GetSentFlits();
+      _router[subnet][router]->ResetFlitStats();
     }
   }
 
@@ -989,7 +988,7 @@ bool TrafficManager::_PacketsOutstanding( ) const
     
     if ( _measured_in_flight_flits[c].empty() ) {
 
-      for ( int s = 0; s < _sources; ++s ) {
+      for ( int s = 0; s < _nodes; ++s ) {
 	if ( _measure_stats[c] && !_qdrained[s][c] ) {
 #ifdef DEBUG_DRAIN
 	  cout << "waiting on queue " << s << " class " << c;
@@ -1022,16 +1021,16 @@ void TrafficManager::_ClearStats( )
     _tlat_stats[c]->Clear( );
     _frag_stats[c]->Clear( );
   
-    for ( int i = 0; i < _sources; ++i ) {
+    for ( int i = 0; i < _nodes; ++i ) {
       _sent_flits[c][i]->Clear( );
       
-      for ( int j = 0; j < _dests; ++j ) {
-	_pair_latency[c][i*_dests+j]->Clear( );
-	_pair_tlat[c][i*_dests+j]->Clear( );
+      for ( int j = 0; j < _nodes; ++j ) {
+	_pair_latency[c][i*_nodes+j]->Clear( );
+	_pair_tlat[c][i*_nodes+j]->Clear( );
       }
     }
 
-    for ( int i = 0; i < _dests; ++i ) {
+    for ( int i = 0; i < _nodes; ++i ) {
       _accepted_flits[c][i]->Clear( );
     }
   
@@ -1048,7 +1047,7 @@ int TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, d
   *min = numeric_limits<double>::max();
   *avg = 0.0;
 
-  for ( int d = 0; d < _dests; ++d ) {
+  for ( int d = 0; d < _nodes; ++d ) {
     double curr = stats[d]->Average( );
     if ( curr < *min ) {
       *min = curr;
@@ -1057,7 +1056,7 @@ int TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, d
     *avg += curr;
   }
 
-  *avg /= (double)_dests;
+  *avg /= (double)_nodes;
 
   return dmin;
 }
@@ -1101,12 +1100,12 @@ bool TrafficManager::_SingleSim( )
   _time = 0;
 
   //remove any pending request from the previous simulations
-  for (int i=0;i<_sources;i++) {
+  for (int i=0;i<_nodes;i++) {
     _requests_outstanding[i].assign(_classes, 0);
   }
 
   //reset queuetime for all sources
-  for ( int s = 0; s < _sources; ++s ) {
+  for ( int s = 0; s < _nodes; ++s ) {
     _qtime[s].assign(_classes, 0);
     _qdrained[s].assign(_classes, false);
   }
@@ -1164,7 +1163,7 @@ bool TrafficManager::_SingleSim( )
 
   } else if(_sim_mode == batch && !_timed_mode){//batch mode   
     while(total_phases < _batch_count) {
-      for (int i = 0; i < _sources; i++) {
+      for (int i = 0; i < _nodes; i++) {
 	_packets_sent[i].assign(_classes, 0);
       }
       _last_id = -1;
@@ -1174,7 +1173,7 @@ bool TrafficManager::_SingleSim( )
       int min_packets_sent = 0;
       while(min_packets_sent < _batch_size){
 	_Step();
-	for(int source = 0; source < _sources; ++source)
+	for(int source = 0; source < _nodes; ++source)
 	  for(int c = 0; c < _classes; ++c)
 	    if(_packets_sent[source][c] < min_packets_sent)
 	      min_packets_sent = _packets_sent[source][c];
@@ -1184,8 +1183,8 @@ bool TrafficManager::_SingleSim( )
 	  *_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
 	  *_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
 	}
-	_injected_flow.assign(_sources, 0);
-	_ejected_flow.assign(_dests, 0);
+	_injected_flow.assign(_nodes, 0);
+	_ejected_flow.assign(_nodes, 0);
 	_received_flow.assign(_subnets*_routers, 0);
 	_sent_flow.assign(_subnets*_routers, 0);
       }
@@ -1212,8 +1211,8 @@ bool TrafficManager::_SingleSim( )
 	  *_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
 	  *_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
 	}
-	_injected_flow.assign(_sources, 0);
-	_ejected_flow.assign(_dests, 0);
+	_injected_flow.assign(_nodes, 0);
+	_ejected_flow.assign(_nodes, 0);
 	_received_flow.assign(_subnets*_routers, 0);
 	_sent_flow.assign(_subnets*_routers, 0);
 	++empty_steps;
@@ -1256,33 +1255,33 @@ bool TrafficManager::_SingleSim( )
 		    << "frag_hist(" << total_phases + 1 << ",:) = "
 		    << *_frag_stats[0] << ";" << endl
 		    << "pair_sent(" << total_phases + 1 << ",:) = [ ";
-	for(int i = 0; i < _sources; ++i) {
-	  for(int j = 0; j < _dests; ++j) {
-	    *_stats_out << _pair_latency[0][i*_dests+j]->NumSamples( ) << " ";
+	for(int i = 0; i < _nodes; ++i) {
+	  for(int j = 0; j < _nodes; ++j) {
+	    *_stats_out << _pair_latency[0][i*_nodes+j]->NumSamples( ) << " ";
 	  }
 	}
 	*_stats_out << "];" << endl
 		    << "pair_lat(" << total_phases + 1 << ",:) = [ ";
-	for(int i = 0; i < _sources; ++i) {
-	  for(int j = 0; j < _dests; ++j) {
-	    *_stats_out << _pair_latency[0][i*_dests+j]->Average( ) << " ";
+	for(int i = 0; i < _nodes; ++i) {
+	  for(int j = 0; j < _nodes; ++j) {
+	    *_stats_out << _pair_latency[0][i*_nodes+j]->Average( ) << " ";
 	  }
 	}
 	*_stats_out << "];" << endl
 		    << "pair_tlat(" << total_phases + 1 << ",:) = [ ";
-	for(int i = 0; i < _sources; ++i) {
-	  for(int j = 0; j < _dests; ++j) {
-	    *_stats_out << _pair_tlat[0][i*_dests+j]->Average( ) << " ";
+	for(int i = 0; i < _nodes; ++i) {
+	  for(int j = 0; j < _nodes; ++j) {
+	    *_stats_out << _pair_tlat[0][i*_nodes+j]->Average( ) << " ";
 	  }
 	}
 	*_stats_out << "];" << endl
 		    << "sent(" << total_phases + 1 << ",:) = [ ";
-	for ( int d = 0; d < _dests; ++d ) {
+	for ( int d = 0; d < _nodes; ++d ) {
 	  *_stats_out << _sent_flits[0][d]->Average( ) << " ";
 	}
 	*_stats_out << "];" << endl
 		    << "accepted(" << total_phases + 1 << ",:) = [ ";
-	for ( int d = 0; d < _dests; ++d ) {
+	for ( int d = 0; d < _nodes; ++d ) {
 	  *_stats_out << _accepted_flits[0][d]->Average( ) << " ";
 	}
 	*_stats_out << "];" << endl;
@@ -1313,8 +1312,8 @@ bool TrafficManager::_SingleSim( )
 	  *_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
 	  *_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
 	}
-	_injected_flow.assign(_sources, 0);
-	_ejected_flow.assign(_dests, 0);
+	_injected_flow.assign(_nodes, 0);
+	_ejected_flow.assign(_nodes, 0);
 	_received_flow.assign(_subnets*_routers, 0);
 	_sent_flow.assign(_subnets*_routers, 0);
       } 
@@ -1358,33 +1357,33 @@ bool TrafficManager::_SingleSim( )
 		    << "lat_hist(" << c+1 << ",:) = " << *_latency_stats[c] << ";" << endl
 		    << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
 		    << "pair_sent(" << c+1 << ",:) = [ ";
-	  for(int i = 0; i < _sources; ++i) {
-	    for(int j = 0; j < _dests; ++j) {
-	      *_stats_out << _pair_latency[c][i*_dests+j]->NumSamples( ) << " ";
+	  for(int i = 0; i < _nodes; ++i) {
+	    for(int j = 0; j < _nodes; ++j) {
+	      *_stats_out << _pair_latency[c][i*_nodes+j]->NumSamples( ) << " ";
 	    }
 	  }
 	  *_stats_out << "];" << endl
 		      << "pair_lat(" << c+1 << ",:) = [ ";
-	  for(int i = 0; i < _sources; ++i) {
-	    for(int j = 0; j < _dests; ++j) {
-	      *_stats_out << _pair_latency[c][i*_dests+j]->Average( ) << " ";
+	  for(int i = 0; i < _nodes; ++i) {
+	    for(int j = 0; j < _nodes; ++j) {
+	      *_stats_out << _pair_latency[c][i*_nodes+j]->Average( ) << " ";
 	    }
 	  }
 	  *_stats_out << "];" << endl
 		      << "pair_lat(" << c+1 << ",:) = [ ";
-	  for(int i = 0; i < _sources; ++i) {
-	    for(int j = 0; j < _dests; ++j) {
-	      *_stats_out << _pair_tlat[c][i*_dests+j]->Average( ) << " ";
+	  for(int i = 0; i < _nodes; ++i) {
+	    for(int j = 0; j < _nodes; ++j) {
+	      *_stats_out << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";
 	    }
 	  }
 	  *_stats_out << "];" << endl
 		      << "sent(" << c+1 << ",:) = [ ";
-	  for ( int d = 0; d < _dests; ++d ) {
+	  for ( int d = 0; d < _nodes; ++d ) {
 	    *_stats_out << _sent_flits[c][d]->Average( ) << " ";
 	  }
 	  *_stats_out << "];" << endl
 		      << "accepted(" << c+1 << ",:) = [ ";
-	  for ( int d = 0; d < _dests; ++d ) {
+	  for ( int d = 0; d < _nodes; ++d ) {
 	    *_stats_out << _accepted_flits[c][d]->Average( ) << " ";
 	  }
 	  *_stats_out << "];" << endl;
@@ -1482,8 +1481,8 @@ bool TrafficManager::_SingleSim( )
 	    *_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
 	    *_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
 	  }
-	  _injected_flow.assign(_sources, 0);
-	  _ejected_flow.assign(_dests, 0);
+	  _injected_flow.assign(_nodes, 0);
+	  _ejected_flow.assign(_nodes, 0);
 	  _received_flow.assign(_subnets*_routers, 0);
 	  _sent_flow.assign(_subnets*_routers, 0);
 	  ++empty_steps;
@@ -1556,8 +1555,8 @@ bool TrafficManager::_SingleSim( )
 	*_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
 	*_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
       }
-      _injected_flow.assign(_sources, 0);
-      _ejected_flow.assign(_dests, 0);
+      _injected_flow.assign(_nodes, 0);
+      _ejected_flow.assign(_nodes, 0);
       _received_flow.assign(_subnets*_routers, 0);
       _sent_flow.assign(_subnets*_routers, 0);
       ++empty_steps;

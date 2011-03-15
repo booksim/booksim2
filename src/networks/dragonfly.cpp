@@ -127,10 +127,9 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
     _a = powi(_p, _n);
 
   _g = _a * _p + 1;
-  _sources = _a * _p * _g;
-  _dests   = _sources;
+  _nodes   = _a * _p * _g;
 
-  _num_of_switch = _sources / _p;
+  _num_of_switch = _nodes / _p;
   _channels = _num_of_switch * (_k - _p); 
   _size = _num_of_switch;
   
@@ -221,8 +220,7 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
   cout << " each switch - total radix =  "<< _k << endl;
   cout << " # of switches = "<<  _num_of_switch << endl;
   cout << " # of channels = "<<  _channels << endl;
-  cout << " # of sources = " << _sources << endl;
-  cout << " # of nodes ( size of network ) = " << _sources << endl;
+  cout << " # of nodes ( size of network ) = " << _nodes << endl;
   cout << " # of groups (_g) = " << _g << endl;
   cout << " # of routers per group (_a) = " << _a << endl;
 

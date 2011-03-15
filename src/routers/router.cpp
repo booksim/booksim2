@@ -115,14 +115,11 @@ bool Router::IsFaultyOutput( int c ) const
 
 /*Router constructor*/
 Router *Router::NewRouter( const Configuration& config,
-			   Module *parent, string name, int id,
+			   Module *parent, const string & name, int id,
 			   int inputs, int outputs )
 {
+  const string type = config.GetStr( "router" );
   Router *r = NULL;
-
-  string type = config.GetStr( "router" );
-  string topo = config.GetStr( "topology" );
-
   if ( type == "iq" ) {
     r = new IQRouter( config, parent, name, id, inputs, outputs );
   } else if ( type == "event" ) {
@@ -130,7 +127,7 @@ Router *Router::NewRouter( const Configuration& config,
   } else if ( type == "chaos" ) {
     r = new ChaosRouter( config, parent, name, id, inputs, outputs );
   } else {
-    cout << "Unknown router type " << type << endl;
+    cerr << "Unknown router type: " << type << endl;
   }
   /*For additional router, add another else if statement*/
   /*Original booksim specifies the router using "flow_control"

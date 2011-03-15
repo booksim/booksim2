@@ -52,8 +52,7 @@ class Network : public TimedModule {
 protected:
 
   int _size;
-  int _sources;
-  int _dests;
+  int _nodes;
   int _channels;
   int _classes;
 
@@ -79,14 +78,15 @@ public:
   Network( const Configuration &config, const string & name );
   virtual ~Network( );
 
+  static Network *NewNetwork( const Configuration &config, const string & name );
+
   virtual void WriteFlit( Flit *f, int source );
   virtual Flit *ReadFlit( int dest );
 
   virtual void    WriteCredit( Credit *c, int dest );
   virtual Credit *ReadCredit( int source );
 
-  int  NumSources( ) const;
-  int  NumDests( ) const;
+  inline int NumNodes( ) const {return _nodes;}
 
   virtual void InsertRandomFaults( const Configuration &config );
   void OutChannelFault( int r, int c, bool fault = true );
@@ -101,12 +101,12 @@ public:
   void DumpChannelMap( ostream & os = cout, string const & prefix = "" ) const;
   void DumpNodeMap( ostream & os = cout, string const & prefix = "" ) const;
 
-  int NumChannels(){return _channels;}
+  int NumChannels() const {return _channels;}
   const vector<FlitChannel *> & GetInject(){return _inject;}
   const vector<FlitChannel *> & GetEject(){return _eject;}
   const vector<FlitChannel *> & GetChannels(){return _chan;}
   const vector<Router *> & GetRouters(){return _routers;}
-  int NumRouters(){return _size;}
+  int NumRouters() const {return _size;}
 };
 
 #endif 
