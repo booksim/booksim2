@@ -74,8 +74,7 @@ void Tree4::_ComputeSize( const Configuration& config )
   
   gK = _k; gN = _n;
   
-  _sources = powi( _k, _n );
-  _dests   = powi( _k, _n );
+  _nodes = powi( _k, _n );
   
   _speedup = new int[_n];
   _speedup[0] = _k;

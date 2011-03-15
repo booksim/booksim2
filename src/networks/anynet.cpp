@@ -95,8 +95,7 @@ void AnyNet::_ComputeSize( const Configuration &config ){
   }
 
   _size = router_list[1].size();
-  _sources = node_list.size();
-  _dests = _sources;
+  _nodes = node_list.size();
   routing_table = new map<int, int>[_size];
 
 
@@ -202,7 +201,7 @@ void AnyNet::buildRoutingTable(){
   routing_table = new map<int,int>[_size];
 
   for(int i = 0; i<_size; i++){
-    for(int j = 0; j<_sources; j++){
+    for(int j = 0; j<_nodes; j++){
       int outport;
       //find a path from router i to node j
       /* Easy case

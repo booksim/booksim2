@@ -98,10 +98,9 @@ void FlatFlyOnChip::_ComputeSize( const Configuration &config )
   
   assert(_c == _xrouter*_yrouter);
 
-  _sources = powi( _k, _n )*_c;   //network size
-  _dests   = powi( _k, _n )*_c;
+  _nodes = powi( _k, _n )*_c;   //network size
 
-  _num_of_switch = _sources / _c;
+  _num_of_switch = _nodes / _c;
   _channels = _num_of_switch * (_r - _c); 
   _size = _num_of_switch;
 
@@ -129,7 +128,7 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
   cout << " each switch - total radix =  "<< _r << endl;
   cout << " # of switches = "<<  _num_of_switch << endl;
   cout << " # of channels = "<<  _channels << endl;
-  cout << " # of nodes ( size of network ) = " << _sources << endl;
+  cout << " # of nodes ( size of network ) = " << _nodes << endl;
 
   for ( int node = 0; node < _num_of_switch; ++node ) {
 

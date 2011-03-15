@@ -62,8 +62,7 @@ void KNCube::_ComputeSize( const Configuration &config )
   _size     = powi( _k, _n );
   _channels = 2*_n*_size;
 
-  _sources = _size;
-  _dests   = _size;
+  _nodes = _size;
 }
 
 void KNCube::RegisterRoutingFunctions() {

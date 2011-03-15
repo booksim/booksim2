@@ -52,14 +52,13 @@ void KNFly::_ComputeSize( const Configuration &config )
 
   gK = _k; gN = _n;
 
-  _sources = powi( _k, _n );
-  _dests   = powi( _k, _n );
+  _nodes = powi( _k, _n );
 
   // n stages of k^(n-1) k x k switches
   _size     = _n*powi( _k, _n-1 );
 
   // n-1 sets of wiring between the stages
-  _channels = (_n-1)*_sources;
+  _channels = (_n-1)*_nodes;
 }
 
 void KNFly::_BuildNet( const Configuration &config )
@@ -125,7 +124,7 @@ void KNFly::_BuildNet( const Configuration &config )
 
 int KNFly::_OutChannel( int stage, int addr, int port ) const
 {
-  return stage*_sources + addr*_k + port;
+  return stage*_nodes + addr*_k + port;
 }
 
 int KNFly::_InChannel( int stage, int addr, int port ) const
@@ -146,7 +145,7 @@ int KNFly::_InChannel( int stage, int addr, int port ) const
   in_addr = addr - zero_digit*shift + last_digit*shift;
   in_port = zero_digit;
 
-  return (stage-1)*_sources + in_addr*_k + in_port;
+  return (stage-1)*_nodes + in_addr*_k + in_port;
 }
 
 int KNFly::GetN( ) const
