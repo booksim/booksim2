@@ -63,18 +63,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 ///////////////////////////////////////////////////////////////////////////////
-//include new network here//
-
-#include "kncube.hpp"
-#include "fly.hpp"
-#include "cmesh.hpp"
-#include "flatfly_onchip.hpp"
-#include "qtree.hpp"
-#include "tree4.hpp"
-#include "fattree.hpp"
-#include "anynet.hpp"
-#include "dragonfly.hpp"
-///////////////////////////////////////////////////////////////////////////////
 //Global declarations
 //////////////////////
 
@@ -118,7 +106,6 @@ bool AllocatorSim( BookSimConfig const & config )
 {
   vector<Network *> net;
 
-  string topo = config.GetStr( "topology" );
   int subnets = config.GetInt("subnets");
   /*To include a new network, must register the network here
    *add an else if statement with the name of the network
@@ -127,47 +114,7 @@ bool AllocatorSim( BookSimConfig const & config )
   for (int i = 0; i < subnets; ++i) {
     ostringstream name;
     name << "network_" << i;
-    if ( topo == "torus" ) {
-      KNCube::RegisterRoutingFunctions() ;
-      net[i] = new KNCube( config, name.str(), false );
-    } else if ( topo == "mesh" ) {
-      KNCube::RegisterRoutingFunctions() ;
-      net[i] = new KNCube( config, name.str(), true );
-    } else if ( topo == "cmesh" ) {
-      CMesh::RegisterRoutingFunctions() ;
-      net[i] = new CMesh( config, name.str() );
-    } else if ( topo == "fly" ) {
-      KNFly::RegisterRoutingFunctions() ;
-      net[i] = new KNFly( config, name.str() );
-    } else if ( topo == "qtree" ) {
-      QTree::RegisterRoutingFunctions() ;
-      net[i] = new QTree( config, name.str() );
-    } else if ( topo == "tree4" ) {
-      Tree4::RegisterRoutingFunctions() ;
-      net[i] = new Tree4( config, name.str() );
-    } else if ( topo == "fattree" ) {
-      FatTree::RegisterRoutingFunctions() ;
-      net[i] = new FatTree( config, name.str() );
-    } else if ( topo == "flatfly" ) {
-      FlatFlyOnChip::RegisterRoutingFunctions() ;
-      net[i] = new FlatFlyOnChip( config, name.str() );
-    } else if ( topo == "anynet"){
-      AnyNet::RegisterRoutingFunctions() ;
-      net[i] = new AnyNet(config, name.str());
-    } else if ( topo == "dragonflynew"){
-      DragonFlyNew::RegisterRoutingFunctions() ;
-      net[i] = new DragonFlyNew(config, name.str());
-    }else {
-      cerr << "Unknown topology " << topo << endl;
-      exit(-1);
-    }
-
-  /*legacy code that insert random faults in the networks
-   *not sure how to use this
-   */
-  if ( config.GetInt( "link_failures" ) > 0 ) {
-      net[i]->InsertRandomFaults( config );
-    }
+    net[i] = Network::NewNetwork( config, name.str() );
   }
 
   /*tcc and characterize are legacy
