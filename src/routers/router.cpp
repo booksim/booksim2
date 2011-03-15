@@ -118,11 +118,8 @@ Router *Router::NewRouter( const Configuration& config,
 			   Module *parent, const string & name, int id,
 			   int inputs, int outputs )
 {
+  const string type = config.GetStr( "router" );
   Router *r = NULL;
-
-  string type = config.GetStr( "router" );
-  string topo = config.GetStr( "topology" );
-
   if ( type == "iq" ) {
     r = new IQRouter( config, parent, name, id, inputs, outputs );
   } else if ( type == "event" ) {
