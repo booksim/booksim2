@@ -53,8 +53,7 @@ class PacketReplyInfo;
 
 class TrafficManager : public Module {
 protected:
-  int _sources;
-  int _dests;
+  int _nodes;
   int _routers;
 
   vector<Network *> _net;

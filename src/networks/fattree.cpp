@@ -85,8 +85,7 @@ void FatTree::_ComputeSize( const Configuration& config )
 
   
   
-  _sources = powi( _k, _n );
-  _dests   = powi( _k, _n );
+  _nodes = powi( _k, _n );
 
   _size = _n * powi( _k , _n - 1 );
   _channels = 2 * 2 * _k * powi( _k , _n-1 ); 

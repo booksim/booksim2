@@ -67,8 +67,7 @@ void QTree::_ComputeSize( const Configuration& config )
 
   gK = _k; gN = _n;
 
-  _sources = powi( _k, _n );
-  _dests   = powi( _k, _n );
+  _nodes = powi( _k, _n );
 
   _size = 0;
   for (int i = 0; i < _n; i++)

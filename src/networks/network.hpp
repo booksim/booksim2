@@ -52,8 +52,7 @@ class Network : public TimedModule {
 protected:
 
   int _size;
-  int _sources;
-  int _dests;
+  int _nodes;
   int _channels;
   int _classes;
 
@@ -87,8 +86,7 @@ public:
   virtual void    WriteCredit( Credit *c, int dest );
   virtual Credit *ReadCredit( int source );
 
-  int  NumSources( ) const;
-  int  NumDests( ) const;
+  inline int NumNodes( ) const {return _nodes;}
 
   virtual void InsertRandomFaults( const Configuration &config );
   void OutChannelFault( int r, int c, bool fault = true );

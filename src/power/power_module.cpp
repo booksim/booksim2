@@ -475,13 +475,14 @@ void Power_Module::run(){
   vector<FlitChannel *> eject = net->GetEject();
   vector<FlitChannel *> chan = net->GetChannels();
   
-  for(int i = 0; i<net->NumSources(); i++){
+  for(int i = 0; i<net->NumNodes(); i++){
     calcChannel(inject[i]);
   }
 
-  for(int i = 0; i<net->NumDests(); i++){
+  for(int i = 0; i<net->NumNodes(); i++){
     calcChannel(eject[i]);
   }
+
   for(int i = 0; i<net->NumChannels();i++){
     calcChannel(chan[i]);
   }
