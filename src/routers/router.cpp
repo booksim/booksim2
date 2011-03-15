@@ -130,7 +130,7 @@ Router *Router::NewRouter( const Configuration& config,
   } else if ( type == "chaos" ) {
     r = new ChaosRouter( config, parent, name, id, inputs, outputs );
   } else {
-    cout << "Unknown router type " << type << endl;
+    cerr << "Unknown router type: " << type << endl;
   }
   /*For additional router, add another else if statement*/
   /*Original booksim specifies the router using "flow_control"

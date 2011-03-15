@@ -115,8 +115,8 @@ Network * Network::NewNetwork(const Configuration & config, const string & name)
   } else if ( topo == "dragonflynew"){
     DragonFlyNew::RegisterRoutingFunctions() ;
     n = new DragonFlyNew(config, name);
-  }else {
-    cerr << "Unknown topology " << topo << endl;
+  } else {
+    cerr << "Unknown topology: " << topo << endl;
   }
   
   /*legacy code that insert random faults in the networks
