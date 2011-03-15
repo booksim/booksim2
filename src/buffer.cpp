@@ -85,9 +85,9 @@ bool Buffer::Full( int vc ) const
   return (_shared_count >= _shared_size) && _vc[vc]->Full( );
 }
 
-void Buffer::Display( ) const
+void Buffer::Display( ostream & os ) const
 {
   for(vector<VC*>::const_iterator i = _vc.begin(); i != _vc.end(); ++i) {
-    (*i)->Display();
+    (*i)->Display(os);
   }
 }

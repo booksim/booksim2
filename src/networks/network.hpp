@@ -97,7 +97,9 @@ public:
   virtual void Evaluate( );
   virtual void WriteOutputs( );
 
-  void Display( ) const;
+  void Display( ostream & os = cout ) const;
+  void DumpChannelMap( ostream & os = cout, string const & prefix = "" ) const;
+  void DumpNodeMap( ostream & os = cout, string const & prefix = "" ) const;
 
   int NumChannels(){return _channels;}
   const vector<FlitChannel *> & GetInject(){return _inject;}

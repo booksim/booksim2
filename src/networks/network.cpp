@@ -94,6 +94,7 @@ void Network::_Alloc( )
     ostringstream name;
     name << Name() << "_fchan_ingress" << s;
     _inject[s] = new FlitChannel(this, name.str(), _classes);
+    _inject[s]->SetSource(NULL, s);
     _timed_modules.push_back(_inject[s]);
     name.str("");
     name << Name() << "_cchan_ingress" << s;
@@ -106,6 +107,7 @@ void Network::_Alloc( )
     ostringstream name;
     name << Name() << "_fchan_egress" << d;
     _eject[d] = new FlitChannel(this, name.str(), _classes);
+    _eject[d]->SetSink(NULL, d);
     _timed_modules.push_back(_eject[d]);
     name.str("");
     name << Name() << "_cchan_egress" << d;
@@ -207,9 +209,42 @@ double Network::Capacity( ) const
  * neceesary of the network, by default, call display on each router
  * and display the channel utilization rate
  */
-void Network::Display( ) const
+void Network::Display( ostream & os ) const
 {
   for ( int r = 0; r < _size; ++r ) {
-    _routers[r]->Display( );
+    _routers[r]->Display( os );
   }
+}
+
+void Network::DumpChannelMap( ostream & os, string const & prefix ) const
+{
+  os << prefix << "source_router,source_port,dest_router,dest_port" << endl;
+  for(int c = 0; c < _sources; ++c)
+    os << prefix
+       << _inject[c]->GetSource() << ',' 
+       << _inject[c]->GetSourcePort() << ',' 
+       << _inject[c]->GetSink() << ',' 
+       << _inject[c]->GetSinkPort() << endl;
+  for(int c = 0; c < _channels; ++c)
+    os << prefix
+       << _chan[c]->GetSource() << ',' 
+       << _chan[c]->GetSourcePort() << ',' 
+       << _chan[c]->GetSink() << ',' 
+       << _chan[c]->GetSinkPort() << endl;
+  for(int c = 0; c < _dests; ++c)
+    os << prefix
+       << _eject[c]->GetSource() << ',' 
+       << _eject[c]->GetSourcePort() << ',' 
+       << _eject[c]->GetSink() << ',' 
+       << _eject[c]->GetSinkPort() << endl;
+}
+
+void Network::DumpNodeMap( ostream & os, string const & prefix ) const
+{
+  os << prefix << "source_router,dest_router" << endl;
+  assert(_sources == _dests);
+  for(int s = 0; s < _sources; ++s)
+    os << prefix
+       << _eject[s]->GetSource() << ','
+       << _inject[s]->GetSink() << endl;
 }

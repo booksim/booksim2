@@ -119,7 +119,7 @@ public:
   bool IsAvailableFor( int vc = 0 ) const;
   bool HasCreditFor( int vc = 0 ) const;
   int Size (int vc = 0) const;
-  void Display( ) const;
+  void Display( ostream & os = cout ) const;
 };
 
 #endif 

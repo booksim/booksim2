@@ -239,7 +239,7 @@ protected:
 
   bool _SingleSim( );
 
-  void _DisplayRemaining( ) const;
+  void _DisplayRemaining( ostream & os = cout ) const;
   
   void _LoadWatchList(const string & filename);
 
@@ -249,7 +249,7 @@ public:
 
   bool Run( );
 
-  void DisplayStats();
+  void DisplayStats( ostream & os = cout );
 
   const Stats * GetOverallLatency(int c = 0) { return _overall_avg_latency[c]; }
   const Stats * GetAccepted(int c = 0) { return _overall_accepted[c]; }

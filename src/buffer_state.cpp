@@ -174,8 +174,6 @@ void BufferState::TakeBuffer( int vc )
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
 
   if ( _in_use[vc] ) {
-    cout << "TakeBuffer( " << vc << " )" << endl;
-    Display( );
     Error( "Buffer taken while in use" );
   }
   _in_use[vc]    = true;
@@ -220,14 +218,14 @@ int BufferState::Size(int vc) const{
   return  _cur_occupied[vc];
 }
 
-void BufferState::Display( ) const
+void BufferState::Display( ostream & os ) const
 {
-  cout << FullName() << " :" << endl;
-  cout << " shared_occupied = " << _shared_occupied << endl;
+  os << FullName() << " :" << endl;
+  os << " shared_occupied = " << _shared_occupied << endl;
   for ( int v = 0; v < _vcs; ++v ) {
-    cout << "  buffer class " << v << endl;
-    cout << "    in_use = " << _in_use[v] 
-	 << " tail_sent = " << _tail_sent[v] << endl;
-    cout << "    occupied = " << _cur_occupied[v] << endl;
+    os << "  buffer class " << v << endl;
+    os << "    in_use = " << _in_use[v] 
+       << " tail_sent = " << _tail_sent[v] << endl;
+    os << "    occupied = " << _cur_occupied[v] << endl;
   }
 }

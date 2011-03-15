@@ -57,15 +57,20 @@ class FlitChannel : public Channel<Flit> {
 public:
   FlitChannel(Module * parent, string const & name, int classes);
 
-  void SetSource(Router * router) ;
+  void SetSource(Router const * const router, int port) ;
   inline int const & GetSource() const {
     return _routerSource;
   }
-  void SetSink(Router * router) ;
+  inline int const & GetSourcePort() const {
+    return _routerSourcePort;
+  }
+  void SetSink(Router const * const router, int port) ;
   inline int const & GetSink() const {
     return _routerSink;
   }
-
+  inline int const & GetSinkPort() const {
+    return _routerSinkPort;
+  }
   inline vector<int> const & GetActivity() const {
     return _active;
   }
@@ -85,8 +90,9 @@ private:
   ////////////////////////////////////////
 
   int _routerSource;
+  int _routerSourcePort;
   int _routerSink;
-  
+  int _routerSinkPort;
 
   // Statistics for Activity Factors
   vector<int> _active;
