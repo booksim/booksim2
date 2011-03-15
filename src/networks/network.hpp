@@ -101,12 +101,12 @@ public:
   void DumpChannelMap( ostream & os = cout, string const & prefix = "" ) const;
   void DumpNodeMap( ostream & os = cout, string const & prefix = "" ) const;
 
-  int NumChannels(){return _channels;}
+  int NumChannels() const {return _channels;}
   const vector<FlitChannel *> & GetInject(){return _inject;}
   const vector<FlitChannel *> & GetEject(){return _eject;}
   const vector<FlitChannel *> & GetChannels(){return _chan;}
   const vector<Router *> & GetRouters(){return _routers;}
-  int NumRouters(){return _size;}
+  int NumRouters() const {return _size;}
 };
 
 #endif 
