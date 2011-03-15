@@ -167,7 +167,7 @@ public:
   ~BooksimGUI(){}
   
   //allocsime is called by the gui instead of main, 
-  void RegisterAllocSim(booksimfunc, BookSimConfig * cf);
+  void RegisterSimFunc(booksimfunc, BookSimConfig * cf);
 public slots:
   void run();
   void checksimulation();
