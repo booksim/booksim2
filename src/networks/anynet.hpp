@@ -43,9 +43,9 @@ class AnyNet : public Network {
   string file_name;
   //associtation between  nodes and routers
   map<int, int > node_list;
-  map<int,  map<int, int>* >* router_list;
+  vector<map<int,  map<int, int>* > > router_list;
   //stores minimal routing information from every router to every node
-  map<int, int>* routing_table;
+  vector<map<int, int> > routing_table;
 
   void _ComputeSize( const Configuration &config );
   void _BuildNet( const Configuration &config );
@@ -55,6 +55,7 @@ class AnyNet : public Network {
 
 public:
   AnyNet( const Configuration &config, const string & name );
+  ~AnyNet();
 
   int GetN( ) const{ return -1;}
   int GetK( ) const{ return -1;}

@@ -48,9 +48,18 @@ AnyNet::AnyNet( const Configuration &config, const string & name )
   _ComputeSize( config );
   _Alloc( );
   _BuildNet( config );
-  
+  router_list.resize(2);
 }
 
+AnyNet::~AnyNet(){
+  for(int i = 0; i < 2; ++i) {
+    for(map<int, map<int, int>* >::iterator iter = router_list[i].begin();
+	iter != router_list[i].end();
+	++iter) {
+      delete iter->second;
+    }
+  }
+}
 
 void AnyNet::_ComputeSize( const Configuration &config ){
   file_name = config.GetStr("network_file");
@@ -96,8 +105,6 @@ void AnyNet::_ComputeSize( const Configuration &config ){
 
   _size = router_list[1].size();
   _nodes = node_list.size();
-  routing_table = new map<int, int>[_size];
-
 
 }
 
@@ -198,7 +205,7 @@ void min_anynet( const Router *r, const Flit *f, int in_channel,
 
 void AnyNet::buildRoutingTable(){
   cout<<"==========================Router to Router =====================\n";  
-  routing_table = new map<int,int>[_size];
+  routing_table.resize(_size);
 
   for(int i = 0; i<_size; i++){
     for(int j = 0; j<_nodes; j++){
@@ -231,7 +238,7 @@ void AnyNet::buildRoutingTable(){
       (routing_table[i])[j] = outport;
     }
   }
-  global_routing_table = routing_table;
+  global_routing_table = &routing_table[0];
 }
 
 int AnyNet::findPath(int router, int dest, int* hop_count,map<int, bool>* visited){
@@ -282,7 +289,6 @@ void AnyNet::readFile(){
 
   ifstream network_list;
   string line;
-  router_list = new map<int,  map<int, int>* >[2];
 
   network_list.open(file_name.c_str());
   if(!network_list.is_open()){
