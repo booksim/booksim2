@@ -74,7 +74,7 @@ public:
 	  int inputs, int outputs );
 
   static Router *NewRouter( const Configuration& config,
-			    Module *parent, string name, int id,
+			    Module *parent, const string & name, int id,
 			    int inputs, int outputs );
 
   void AddInputChannel( FlitChannel *channel, CreditChannel *backchannel );
