@@ -126,9 +126,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
   ostringstream name;
   // The following vector is used to check that every
   //  processor in the system is connected to the network
-  bool* channel_vector = new bool [ _nodes ] ;
-  for ( int i = 0 ; i < _nodes ; i++ ) 
-    channel_vector[i] = false ;
+  vector<bool> channel_vector(_nodes, false) ;
   
   //
   // Routers and Channel
