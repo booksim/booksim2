@@ -58,7 +58,7 @@ protected:
   int _routers;
 
   vector<Network *> _net;
-  vector<vector<Router *> > _router_map;
+  vector<vector<Router *> > _router;
 
   // ============ Traffic ============ 
 
@@ -123,7 +123,7 @@ protected:
 
   int _subnets;
 
-  vector<int> _subnet_map;
+  vector<int> _subnet;
 
   // ============ deadlock ==========
 

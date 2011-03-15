@@ -60,11 +60,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
  
   _subnets = config.GetInt("subnets");
  
-  _subnet_map.resize(Flit::NUM_FLIT_TYPES);
-  _subnet_map[Flit::READ_REQUEST] = config.GetInt("read_request_subnet");
-  _subnet_map[Flit::READ_REPLY] = config.GetInt("read_reply_subnet");
-  _subnet_map[Flit::WRITE_REQUEST] = config.GetInt("write_request_subnet");
-  _subnet_map[Flit::WRITE_REPLY] = config.GetInt("write_reply_subnet");
+  _subnet.resize(Flit::NUM_FLIT_TYPES);
+  _subnet[Flit::READ_REQUEST] = config.GetInt("read_request_subnet");
+  _subnet[Flit::READ_REPLY] = config.GetInt("read_reply_subnet");
+  _subnet[Flit::WRITE_REQUEST] = config.GetInt("write_request_subnet");
+  _subnet[Flit::WRITE_REPLY] = config.GetInt("write_reply_subnet");
 
   // ============ Message priorities ============ 
 
@@ -385,9 +385,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _total_sims = config.GetInt( "sim_count" );
 
-  _router_map.resize(_subnets);
+  _router.resize(_subnets);
   for (int i=0; i < _subnets; ++i) {
-    _router_map[i] = _net[i]->GetRouters();
+    _router[i] = _net[i]->GetRouters();
   }
 
   //seed the network
@@ -827,7 +827,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 
   int subnetwork = ((packet_type == Flit::ANY_TYPE) ? 
 		    RandomInt(_subnets-1) :
-		    _subnet_map[packet_type]);
+		    _subnet[packet_type]);
   
   if ( watch ) { 
     *gWatchOut << GetSimTime() << " | "
@@ -1113,9 +1113,9 @@ void TrafficManager::_Step( )
   
   for (int subnet = 0; subnet < _subnets; ++subnet) {
     for(int router = 0; router < _routers; ++router) {
-      _received_flow[subnet*_routers+router] += _router_map[subnet][router]->GetReceivedFlits();
-      _sent_flow[subnet*_routers+router] += _router_map[subnet][router]->GetSentFlits();
-      _router_map[subnet][router]->ResetFlitStats();
+      _received_flow[subnet*_routers+router] += _router[subnet][router]->GetReceivedFlits();
+      _sent_flow[subnet*_routers+router] += _router[subnet][router]->GetSentFlits();
+      _router[subnet][router]->ResetFlitStats();
     }
   }
 
