@@ -41,6 +41,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include "network.hpp"
 
+#include "kncube.hpp"
+#include "fly.hpp"
+#include "cmesh.hpp"
+#include "flatfly_onchip.hpp"
+#include "qtree.hpp"
+#include "tree4.hpp"
+#include "fattree.hpp"
+#include "anynet.hpp"
+#include "dragonfly.hpp"
 
 
 Network::Network( const Configuration &config, const string & name ) :
@@ -70,6 +79,53 @@ Network::~Network( )
     if ( _chan[c] ) delete _chan[c];
     if ( _chan_cred[c] ) delete _chan_cred[c];
   }
+}
+
+Network * Network::NewNetwork(const Configuration & config, const string & name)
+{
+  const string topo = config.GetStr( "topology" );
+  Network * n = NULL;
+  if ( topo == "torus" ) {
+    KNCube::RegisterRoutingFunctions() ;
+    n = new KNCube( config, name, false );
+  } else if ( topo == "mesh" ) {
+    KNCube::RegisterRoutingFunctions() ;
+    n = new KNCube( config, name, true );
+  } else if ( topo == "cmesh" ) {
+    CMesh::RegisterRoutingFunctions() ;
+    n = new CMesh( config, name );
+  } else if ( topo == "fly" ) {
+    KNFly::RegisterRoutingFunctions() ;
+    n = new KNFly( config, name );
+  } else if ( topo == "qtree" ) {
+    QTree::RegisterRoutingFunctions() ;
+    n = new QTree( config, name );
+  } else if ( topo == "tree4" ) {
+    Tree4::RegisterRoutingFunctions() ;
+    n = new Tree4( config, name );
+  } else if ( topo == "fattree" ) {
+    FatTree::RegisterRoutingFunctions() ;
+    n = new FatTree( config, name );
+  } else if ( topo == "flatfly" ) {
+    FlatFlyOnChip::RegisterRoutingFunctions() ;
+    n = new FlatFlyOnChip( config, name );
+  } else if ( topo == "anynet"){
+    AnyNet::RegisterRoutingFunctions() ;
+    n = new AnyNet(config, name);
+  } else if ( topo == "dragonflynew"){
+    DragonFlyNew::RegisterRoutingFunctions() ;
+    n = new DragonFlyNew(config, name);
+  }else {
+    cerr << "Unknown topology " << topo << endl;
+  }
+  
+  /*legacy code that insert random faults in the networks
+   *not sure how to use this
+   */
+  if ( n && ( config.GetInt( "link_failures" ) > 0 ) ) {
+    n->InsertRandomFaults( config );
+  }
+  return n;
 }
 
 void Network::_Alloc( )
