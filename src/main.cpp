@@ -65,7 +65,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///////////////////////////////////////////////////////////////////////////////
 //include new network here//
 
-#include "singlenet.hpp"
 #include "kncube.hpp"
 #include "fly.hpp"
 #include "cmesh.hpp"
@@ -140,9 +139,6 @@ bool AllocatorSim( BookSimConfig const & config )
     } else if ( topo == "fly" ) {
       KNFly::RegisterRoutingFunctions() ;
       net[i] = new KNFly( config, name.str() );
-    } else if ( topo == "single" ) {
-      SingleNet::RegisterRoutingFunctions() ;
-      net[i] = new SingleNet( config, name.str() );
     } else if ( topo == "qtree" ) {
       QTree::RegisterRoutingFunctions() ;
       net[i] = new QTree( config, name.str() );

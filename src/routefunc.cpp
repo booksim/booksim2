@@ -571,36 +571,6 @@ void xy_yx_mesh( const Router *r, const Flit *f,
 
 //=============================================================
 
-
-
-
-void singlerf( const Router *, const Flit *f, int, OutputSet *outputs, bool inject )
-{
-  int output = inject ? 0 : f->dest;
-
-  int vcBegin = 0, vcEnd = gNumVCs-1;
-  if ( f->type == Flit::READ_REQUEST ) {
-    vcBegin = gReadReqBeginVC;
-    vcEnd = gReadReqEndVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-    vcBegin = gWriteReqBeginVC;
-    vcEnd = gWriteReqEndVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-    vcBegin = gReadReplyBeginVC;
-    vcEnd = gReadReplyEndVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-    vcBegin = gWriteReplyBeginVC;
-    vcEnd = gWriteReplyEndVC;
-  }
-  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
-
-  outputs->Clear( );
-
-  outputs->AddRange( output, vcBegin, vcEnd);
-}
-
-//=============================================================
-
 int dor_next_mesh( int cur, int dest, bool descending )
 {
   if ( cur == dest ) {
@@ -1942,8 +1912,6 @@ void InitializeRoutingMap( const Configuration & config )
   gRoutingFunctionMap["dest_tag_crossbar"]   = &dest_tag_crossbar ;
   // End Balfour-Schultz
   // ===================================================
-
-  gRoutingFunctionMap["single_single"]   = &singlerf;
 
   gRoutingFunctionMap["dim_order_mesh"]  = &dim_order_mesh;
   gRoutingFunctionMap["dim_order_ni_mesh"]  = &dim_order_ni_mesh;
