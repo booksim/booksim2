@@ -236,10 +236,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   // ============ Statistics ============ 
 
-  _latency_stats.resize(_classes);
-  _overall_min_latency.resize(_classes);
-  _overall_avg_latency.resize(_classes);
-  _overall_max_latency.resize(_classes);
+  _plat_stats.resize(_classes);
+  _overall_min_plat.resize(_classes);
+  _overall_avg_plat.resize(_classes);
+  _overall_max_plat.resize(_classes);
 
   _tlat_stats.resize(_classes);
   _overall_min_tlat.resize(_classes);
@@ -251,7 +251,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_avg_frag.resize(_classes);
   _overall_max_frag.resize(_classes);
 
-  _pair_latency.resize(_classes);
+  _pair_plat.resize(_classes);
   _pair_tlat.resize(_classes);
   
   _hop_stats.resize(_classes);
@@ -264,22 +264,22 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   for ( int c = 0; c < _classes; ++c ) {
     ostringstream tmp_name;
-    tmp_name << "latency_stat_" << c;
-    _latency_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _latency_stats[c];
+    tmp_name << "plat_stat_" << c;
+    _plat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _plat_stats[c];
     tmp_name.str("");
 
-    tmp_name << "overall_min_latency_stat_" << c;
-    _overall_min_latency[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_min_latency[c];
+    tmp_name << "overall_min_plat_stat_" << c;
+    _overall_min_plat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _overall_min_plat[c];
     tmp_name.str("");  
-    tmp_name << "overall_avg_latency_stat_" << c;
-    _overall_avg_latency[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_avg_latency[c];
+    tmp_name << "overall_avg_plat_stat_" << c;
+    _overall_avg_plat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _overall_avg_plat[c];
     tmp_name.str("");  
-    tmp_name << "overall_max_latency_stat_" << c;
-    _overall_max_latency[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_max_latency[c];
+    tmp_name << "overall_max_plat_stat_" << c;
+    _overall_max_plat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _overall_max_plat[c];
     tmp_name.str("");  
 
     tmp_name << "tlat_stat_" << c;
@@ -322,7 +322,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _stats[tmp_name.str()] = _hop_stats[c];
     tmp_name.str("");
 
-    _pair_latency[c].resize(_nodes*_nodes);
+    _pair_plat[c].resize(_nodes*_nodes);
     _pair_tlat[c].resize(_nodes*_nodes);
 
     _sent_flits[c].resize(_nodes);
@@ -335,9 +335,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
       tmp_name.str("");    
       
       for ( int j = 0; j < _nodes; ++j ) {
-	tmp_name << "pair_latency_stat_" << c << "_" << i << "_" << j;
-	_pair_latency[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-	_stats[tmp_name.str()] = _pair_latency[c][i*_nodes+j];
+	tmp_name << "pair_plat_stat_" << c << "_" << i << "_" << j;
+	_pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+	_stats[tmp_name.str()] = _pair_plat[c][i*_nodes+j];
 	tmp_name.str("");
 	
 	tmp_name << "pair_tlat_stat_" << c << "_" << i << "_" << j;
@@ -505,10 +505,10 @@ TrafficManager::~TrafficManager( )
   }
   
   for ( int c = 0; c < _classes; ++c ) {
-    delete _latency_stats[c];
-    delete _overall_min_latency[c];
-    delete _overall_avg_latency[c];
-    delete _overall_max_latency[c];
+    delete _plat_stats[c];
+    delete _overall_min_plat[c];
+    delete _overall_avg_plat[c];
+    delete _overall_max_plat[c];
 
     delete _tlat_stats[c];
     delete _overall_min_tlat[c];
@@ -528,7 +528,7 @@ TrafficManager::~TrafficManager( )
       delete _sent_flits[c][source];
       
       for ( int dest = 0; dest < _nodes; ++dest ) {
-	delete _pair_latency[c][source*_nodes+dest];
+	delete _pair_plat[c][source*_nodes+dest];
 	delete _pair_tlat[c][source*_nodes+dest];
       }
     }
@@ -645,14 +645,14 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       _hop_stats[f->cl]->AddSample( f->hops );
 
       if((_slowest_flit[f->cl] < 0) ||
-	 (_latency_stats[f->cl]->Max() < (f->atime - f->time)))
+	 (_plat_stats[f->cl]->Max() < (f->atime - f->time)))
 	_slowest_flit[f->cl] = f->id;
-      _latency_stats[f->cl]->AddSample( f->atime - f->time);
+      _plat_stats[f->cl]->AddSample( f->atime - f->time);
       _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
 	_tlat_stats[f->cl]->AddSample( f->atime - f->ttime );
    
-      _pair_latency[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->time );
+      _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->time );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY)
 	_pair_tlat[f->cl][dest*_nodes+f->src]->AddSample( f->atime - f->ttime );
       else if(f->type == Flit::ANY_TYPE)
@@ -1163,7 +1163,7 @@ void TrafficManager::_ClearStats( )
 
   for ( int c = 0; c < _classes; ++c ) {
 
-    _latency_stats[c]->Clear( );
+    _plat_stats[c]->Clear( );
     _tlat_stats[c]->Clear( );
     _frag_stats[c]->Clear( );
   
@@ -1171,7 +1171,7 @@ void TrafficManager::_ClearStats( )
       _sent_flits[c][i]->Clear( );
       
       for ( int j = 0; j < _nodes; ++j ) {
-	_pair_latency[c][i*_nodes+j]->Clear( );
+	_pair_plat[c][i*_nodes+j]->Clear( );
 	_pair_tlat[c][i*_nodes+j]->Clear( );
       }
     }
@@ -1284,15 +1284,15 @@ bool TrafficManager::_SingleSim( )
 	    continue;
 	  }
 
-	  double cur_latency = _latency_stats[c]->Average( );
+	  double cur_latency = _plat_stats[c]->Average( );
 	  double min, avg;
 	  int dmin = _ComputeStats( _accepted_flits[c], &avg, &min );
 	  
 	  cout << "Class " << c << ":" << endl;
 
-	  cout << "Minimum latency = " << _latency_stats[c]->Min( ) << endl;
+	  cout << "Minimum latency = " << _plat_stats[c]->Min( ) << endl;
 	  cout << "Average latency = " << cur_latency << endl;
-	  cout << "Maximum latency = " << _latency_stats[c]->Max( ) << endl;
+	  cout << "Maximum latency = " << _plat_stats[c]->Max( ) << endl;
 	  cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
 	  cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 
@@ -1301,7 +1301,7 @@ bool TrafficManager::_SingleSim( )
 	  //c+1 because of matlab arrays starts at 1
 	  if(_stats_out)
 	    *_stats_out << "lat(" << c+1 << ") = " << cur_latency << ";" << endl
-			<< "lat_hist(" << c+1 << ",:) = " << *_latency_stats[c] << ";" << endl
+			<< "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
 			<< "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl;
 	} 
       }
@@ -1384,34 +1384,34 @@ bool TrafficManager::_SingleSim( )
       cout << _sim_state << endl;
       if(_stats_out)
 	*_stats_out << "%=================================" << endl;
-      double cur_latency = _latency_stats[0]->Average( );
+      double cur_latency = _plat_stats[0]->Average( );
       double min, avg;
       int dmin = _ComputeStats( _accepted_flits[0], &avg, &min );
       
       cout << "Batch duration = " << _time - start_time << endl;
-      cout << "Minimum latency = " << _latency_stats[0]->Min( ) << endl;
+      cout << "Minimum latency = " << _plat_stats[0]->Min( ) << endl;
       cout << "Average latency = " << cur_latency << endl;
-      cout << "Maximum latency = " << _latency_stats[0]->Max( ) << endl;
+      cout << "Maximum latency = " << _plat_stats[0]->Max( ) << endl;
       cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
       cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
       if(_stats_out) {
 	*_stats_out << "batch_time(" << total_phases + 1 << ") = " << _time << ";" << endl
 		    << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
 		    << "lat_hist(" << total_phases + 1 << ",:) = "
-		    << *_latency_stats[0] << ";" << endl
+		    << *_plat_stats[0] << ";" << endl
 		    << "frag_hist(" << total_phases + 1 << ",:) = "
 		    << *_frag_stats[0] << ";" << endl
 		    << "pair_sent(" << total_phases + 1 << ",:) = [ ";
 	for(int i = 0; i < _nodes; ++i) {
 	  for(int j = 0; j < _nodes; ++j) {
-	    *_stats_out << _pair_latency[0][i*_nodes+j]->NumSamples( ) << " ";
+	    *_stats_out << _pair_plat[0][i*_nodes+j]->NumSamples( ) << " ";
 	  }
 	}
 	*_stats_out << "];" << endl
 		    << "pair_lat(" << total_phases + 1 << ",:) = [ ";
 	for(int i = 0; i < _nodes; ++i) {
 	  for(int j = 0; j < _nodes; ++j) {
-	    *_stats_out << _pair_latency[0][i*_nodes+j]->Average( ) << " ";
+	    *_stats_out << _pair_plat[0][i*_nodes+j]->Average( ) << " ";
 	  }
 	}
 	*_stats_out << "];" << endl
@@ -1479,7 +1479,7 @@ bool TrafficManager::_SingleSim( )
 	  continue;
 	}
 
-	double cur_latency = _latency_stats[c]->Average( );
+	double cur_latency = _plat_stats[c]->Average( );
 	int dmin;
 	double min, avg;
 	dmin = _ComputeStats( _accepted_flits[c], &avg, &min );
@@ -1492,28 +1492,28 @@ bool TrafficManager::_SingleSim( )
 
 	cout << "Class " << c << ":" << endl;
 
-	cout << "Minimum latency = " << _latency_stats[c]->Min( ) << endl;
+	cout << "Minimum latency = " << _plat_stats[c]->Min( ) << endl;
 	cout << "Average latency = " << cur_latency << endl;
-	cout << "Maximum latency = " << _latency_stats[c]->Max( ) << endl;
+	cout << "Maximum latency = " << _plat_stats[c]->Max( ) << endl;
 	cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
 	cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 	cout << "Total in-flight flits = " << _total_in_flight_flits[c].size() << " (" << _measured_in_flight_flits[c].size() << " measured)" << endl;
 	//c+1 due to matlab array starting at 1
 	if(_stats_out) {
 	  *_stats_out << "lat(" << c+1 << ") = " << cur_latency << ";" << endl
-		    << "lat_hist(" << c+1 << ",:) = " << *_latency_stats[c] << ";" << endl
+		    << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
 		    << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
 		    << "pair_sent(" << c+1 << ",:) = [ ";
 	  for(int i = 0; i < _nodes; ++i) {
 	    for(int j = 0; j < _nodes; ++j) {
-	      *_stats_out << _pair_latency[c][i*_nodes+j]->NumSamples( ) << " ";
+	      *_stats_out << _pair_plat[c][i*_nodes+j]->NumSamples( ) << " ";
 	    }
 	  }
 	  *_stats_out << "];" << endl
 		      << "pair_lat(" << c+1 << ",:) = [ ";
 	  for(int i = 0; i < _nodes; ++i) {
 	    for(int j = 0; j < _nodes; ++j) {
-	      *_stats_out << _pair_latency[c][i*_nodes+j]->Average( ) << " ";
+	      *_stats_out << _pair_plat[c][i*_nodes+j]->Average( ) << " ";
 	    }
 	  }
 	  *_stats_out << "];" << endl
@@ -1538,7 +1538,7 @@ bool TrafficManager::_SingleSim( )
 	}
 	
 	double latency = cur_latency;
-	double count = (double)_latency_stats[c]->NumSamples();
+	double count = (double)_plat_stats[c]->NumSamples();
 	  
 	map<int, Flit *>::const_iterator iter;
 	for(iter = _total_in_flight_flits[c].begin(); 
@@ -1646,8 +1646,8 @@ bool TrafficManager::_SingleSim( )
 		continue;
 	      }
 
-	      double acc_latency = _latency_stats[c]->Sum();
-	      double acc_count = (double)_latency_stats[c]->NumSamples();
+	      double acc_latency = _plat_stats[c]->Sum();
+	      double acc_count = (double)_plat_stats[c]->NumSamples();
 
 	      map<int, Flit *>::const_iterator iter;
 	      for(iter = _total_in_flight_flits[c].begin(); 
@@ -1743,9 +1743,9 @@ bool TrafficManager::Run( )
 	continue;
       }
 
-      _overall_min_latency[c]->AddSample( _latency_stats[c]->Min( ) );
-      _overall_avg_latency[c]->AddSample( _latency_stats[c]->Average( ) );
-      _overall_max_latency[c]->AddSample( _latency_stats[c]->Max( ) );
+      _overall_min_plat[c]->AddSample( _plat_stats[c]->Min( ) );
+      _overall_avg_plat[c]->AddSample( _plat_stats[c]->Average( ) );
+      _overall_max_plat[c]->AddSample( _plat_stats[c]->Max( ) );
       _overall_min_tlat[c]->AddSample( _tlat_stats[c]->Min( ) );
       _overall_avg_tlat[c]->AddSample( _tlat_stats[c]->Average( ) );
       _overall_max_tlat[c]->AddSample( _tlat_stats[c]->Max( ) );
@@ -1787,9 +1787,9 @@ void TrafficManager::DisplayStats( ostream & os ) {
 	 << "," << _use_read_write[c]
 	 << "," << _packet_size[c]
 	 << "," << _load[c]
-	 << "," << _overall_min_latency[c]->Average( )
-	 << "," << _overall_avg_latency[c]->Average( )
-	 << "," << _overall_max_latency[c]->Average( )
+	 << "," << _overall_min_plat[c]->Average( )
+	 << "," << _overall_avg_plat[c]->Average( )
+	 << "," << _overall_max_plat[c]->Average( )
 	 << "," << _overall_min_tlat[c]->Average( )
 	 << "," << _overall_avg_tlat[c]->Average( )
 	 << "," << _overall_max_tlat[c]->Average( )
@@ -1804,12 +1804,12 @@ void TrafficManager::DisplayStats( ostream & os ) {
 
     os << "====== Traffic class " << c << " ======" << endl;
     
-    os << "Overall minimum latency = " << _overall_min_latency[c]->Average( )
-       << " (" << _overall_min_latency[c]->NumSamples( ) << " samples)" << endl;
-    os << "Overall average latency = " << _overall_avg_latency[c]->Average( )
-       << " (" << _overall_avg_latency[c]->NumSamples( ) << " samples)" << endl;
-    os << "Overall maximum latency = " << _overall_max_latency[c]->Average( )
-       << " (" << _overall_max_latency[c]->NumSamples( ) << " samples)" << endl;
+    os << "Overall minimum latency = " << _overall_min_plat[c]->Average( )
+       << " (" << _overall_min_plat[c]->NumSamples( ) << " samples)" << endl;
+    os << "Overall average latency = " << _overall_avg_plat[c]->Average( )
+       << " (" << _overall_avg_plat[c]->NumSamples( ) << " samples)" << endl;
+    os << "Overall maximum latency = " << _overall_max_plat[c]->Average( )
+       << " (" << _overall_max_plat[c]->NumSamples( ) << " samples)" << endl;
     os << "Overall minimum transaction latency = " << _overall_min_tlat[c]->Average( )
        << " (" << _overall_min_tlat[c]->NumSamples( ) << " samples)" << endl;
     os << "Overall average transaction latency = " << _overall_avg_tlat[c]->Average( )
