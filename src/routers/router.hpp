@@ -103,7 +103,7 @@ public:
   virtual int GetBuffer(int i = -1) const = 0;
   virtual int GetReceivedFlits(int i = -1) const = 0;
   virtual int GetSentFlits(int i = -1) const = 0;
-  virtual void ResetFlitStats() = 0;
+  virtual void ResetStats() = 0;
 
   inline int NumOutputs() const {return _outputs;}
 };

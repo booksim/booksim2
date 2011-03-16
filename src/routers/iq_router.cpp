@@ -164,7 +164,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
   _received_flits.resize(_inputs);
   _sent_flits.resize(_outputs);
-  ResetFlitStats();
+  ResetStats();
 
   int classes = config.GetInt("classes");
   _bufferMonitor = new BufferMonitor(inputs, classes);
@@ -1921,7 +1921,7 @@ int IQRouter::GetSentFlits(int o) const {
   return count;
 }
 
-void IQRouter::ResetFlitStats() {
+void IQRouter::ResetStats() {
   for(int i = 0; i < _inputs; ++i)
     _received_flits[i] = 0;
   for(int o = 0; o < _outputs; ++o)

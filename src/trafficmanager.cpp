@@ -1114,7 +1114,7 @@ void TrafficManager::_Step( )
     for(int router = 0; router < _routers; ++router) {
       _received_flow[subnet*_routers+router] += _router[subnet][router]->GetReceivedFlits();
       _sent_flow[subnet*_routers+router] += _router[subnet][router]->GetSentFlits();
-      _router[subnet][router]->ResetFlitStats();
+      _router[subnet][router]->ResetStats();
     }
   }
 
