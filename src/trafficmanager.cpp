@@ -1062,7 +1062,7 @@ void TrafficManager::_Step( )
 	      nf->vc = f->vc;
 	    }
 	    
-	    ++_injected_flow[source];
+	    if(_flow_out) ++_injected_flow[source];
 	    
 	    _net[subnet]->WriteFlit(f, source);
 	    
@@ -1090,7 +1090,7 @@ void TrafficManager::_Step( )
       map<int, Flit *>::const_iterator iter = flits[subnet].find(dest);
       if(iter != flits[subnet].end()) {
 	Flit * const & f = iter->second;
-	++_ejected_flow[dest];
+	if(_flow_out) ++_ejected_flow[dest];
 	f->atime = _time;
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
@@ -1110,11 +1110,13 @@ void TrafficManager::_Step( )
     _net[subnet]->WriteOutputs( );
   }
   
-  for (int subnet = 0; subnet < _subnets; ++subnet) {
-    for(int router = 0; router < _routers; ++router) {
-      _received_flow[subnet*_routers+router] += _router[subnet][router]->GetReceivedFlits();
-      _sent_flow[subnet*_routers+router] += _router[subnet][router]->GetSentFlits();
-      _router[subnet][router]->ResetStats();
+  if(_flow_out) {
+    for (int subnet = 0; subnet < _subnets; ++subnet) {
+      for(int router = 0; router < _routers; ++router) {
+	_received_flow[subnet*_routers+router] += _router[subnet][router]->GetReceivedFlits();
+	_sent_flow[subnet*_routers+router] += _router[subnet][router]->GetSentFlits();
+	_router[subnet][router]->ResetStats();
+      }
     }
   }
 
@@ -1329,11 +1331,11 @@ bool TrafficManager::_SingleSim( )
 	  *_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
 	  *_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
 	  *_flow_out << "packets_sent(" << _time << ",:) = " << _packets_sent << ";" << endl;
+	  _injected_flow.assign(_nodes, 0);
+	  _ejected_flow.assign(_nodes, 0);
+	  _received_flow.assign(_subnets*_routers, 0);
+	  _sent_flow.assign(_subnets*_routers, 0);
 	}
-	_injected_flow.assign(_nodes, 0);
-	_ejected_flow.assign(_nodes, 0);
-	_received_flow.assign(_subnets*_routers, 0);
-	_sent_flow.assign(_subnets*_routers, 0);
       }
       cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) sent. Time used is " << _time - start_time << " cycles." << endl;
       cout << "Draining the Network...................\n";
@@ -1357,11 +1359,11 @@ bool TrafficManager::_SingleSim( )
 	  *_flow_out << "ejected_flow(" << _time << ",:) = " << _ejected_flow << ";" << endl;
 	  *_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
 	  *_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
+	  _injected_flow.assign(_nodes, 0);
+	  _ejected_flow.assign(_nodes, 0);
+	  _received_flow.assign(_subnets*_routers, 0);
+	  _sent_flow.assign(_subnets*_routers, 0);
 	}
-	_injected_flow.assign(_nodes, 0);
-	_ejected_flow.assign(_nodes, 0);
-	_received_flow.assign(_subnets*_routers, 0);
-	_sent_flow.assign(_subnets*_routers, 0);
 	++empty_steps;
 	
 	if ( empty_steps % 1000 == 0 ) {
@@ -1458,11 +1460,11 @@ bool TrafficManager::_SingleSim( )
 	  *_flow_out << "ejected_flow(" << _time << ",:) = " << _ejected_flow << ";" << endl;
 	  *_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
 	  *_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
+	  _injected_flow.assign(_nodes, 0);
+	  _ejected_flow.assign(_nodes, 0);
+	  _received_flow.assign(_subnets*_routers, 0);
+	  _sent_flow.assign(_subnets*_routers, 0);
 	}
-	_injected_flow.assign(_nodes, 0);
-	_ejected_flow.assign(_nodes, 0);
-	_received_flow.assign(_subnets*_routers, 0);
-	_sent_flow.assign(_subnets*_routers, 0);
       } 
       
       cout << _sim_state << endl;
@@ -1627,11 +1629,11 @@ bool TrafficManager::_SingleSim( )
 	    *_flow_out << "ejected_flow(" << _time << ",:) = " << _ejected_flow << ";" << endl;
 	    *_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
 	    *_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
+	    _injected_flow.assign(_nodes, 0);
+	    _ejected_flow.assign(_nodes, 0);
+	    _received_flow.assign(_subnets*_routers, 0);
+	    _sent_flow.assign(_subnets*_routers, 0);
 	  }
-	  _injected_flow.assign(_nodes, 0);
-	  _ejected_flow.assign(_nodes, 0);
-	  _received_flow.assign(_subnets*_routers, 0);
-	  _sent_flow.assign(_subnets*_routers, 0);
 	  ++empty_steps;
 	  
 	  if ( empty_steps % 1000 == 0 ) {
@@ -1701,11 +1703,11 @@ bool TrafficManager::_SingleSim( )
 	*_flow_out << "ejected_flow(" << _time << ",:) = " << _ejected_flow << ";" << endl;
 	*_flow_out << "received_flow(" << _time << ",:) = " << _received_flow << ";" << endl;
 	*_flow_out << "sent_flow(" << _time << ",:) = " << _sent_flow << ";" << endl;
+	_injected_flow.assign(_nodes, 0);
+	_ejected_flow.assign(_nodes, 0);
+	_received_flow.assign(_subnets*_routers, 0);
+	_sent_flow.assign(_subnets*_routers, 0);
       }
-      _injected_flow.assign(_nodes, 0);
-      _ejected_flow.assign(_nodes, 0);
-      _received_flow.assign(_subnets*_routers, 0);
-      _sent_flow.assign(_subnets*_routers, 0);
       ++empty_steps;
 
       if ( empty_steps % 1000 == 0 ) {
