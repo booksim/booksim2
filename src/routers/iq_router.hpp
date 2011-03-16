@@ -156,7 +156,7 @@ public:
   virtual vector<int> GetBuffers(int i = -1) const;
   virtual int GetReceivedFlits(int i = -1) const;
   virtual int GetSentFlits(int o = -1) const;
-  virtual void ResetFlitStats();
+  virtual void ResetStats();
 
   SwitchMonitor const * const GetSwitchMonitor() const {return _switchMonitor;}
   BufferMonitor const * const GetBufferMonitor() const {return _bufferMonitor;}

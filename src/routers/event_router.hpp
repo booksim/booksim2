@@ -176,7 +176,7 @@ public:
   virtual int GetBuffer(int i = -1) const {return 0;}
   virtual int GetReceivedFlits(int i = -1) const {return 0;}
   virtual int GetSentFlits(int i = -1) const {return 0;}
-  virtual void ResetFlitStats() {}
+  virtual void ResetStats() {}
 
   void Display( ostream & os = cout ) const;
 };
