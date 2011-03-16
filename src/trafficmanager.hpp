@@ -178,11 +178,6 @@ protected:
   Stats * _batch_time;
   Stats * _overall_batch_time;
 
-  vector<int> _injected_flow;
-  vector<int> _ejected_flow;
-  vector<int> _received_flow;
-  vector<int> _sent_flow;
-
   vector<int> _slowest_flit;
 
   map<string, Stats *> _stats;
@@ -235,6 +230,7 @@ protected:
 
   //flits to watch
   ostream * _stats_out;
+
   ostream * _flow_out;
 
   // ============ Internal methods ============ 
