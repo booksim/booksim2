@@ -93,12 +93,6 @@ void Router::Evaluate( )
   }
 }
 
-int Router::GetID( ) const
-{
-  return _id;
-}
-
-
 void Router::OutChannelFault( int c, bool fault )
 {
   assert( ( c >= 0 ) && ( (size_t)c < _channel_faults.size( ) ) );
