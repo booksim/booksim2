@@ -54,7 +54,6 @@ class BufferMonitor;
 class IQRouter : public Router {
 
   int _vcs;
-  int _classes;
 
   bool _speculative;
   bool _spec_check_elig;

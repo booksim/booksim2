@@ -51,6 +51,8 @@ protected:
   int _inputs;
   int _outputs;
   
+  int _classes;
+
   int _input_speedup;
   int _output_speedup;
   
@@ -66,8 +68,8 @@ protected:
   vector<CreditChannel *> _output_credits;
   vector<bool>            _channel_faults;
 
-  int _received_flits;
-  int _sent_flits;
+  vector<int> _received_flits;
+  vector<int> _sent_flits;
 
   virtual void _InternalStep() = 0;
 
@@ -105,14 +107,16 @@ public:
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const = 0;
   virtual int GetBuffer(int i = -1) const = 0;
 
-  inline int GetReceivedFlits() {
-    int const r = _received_flits;
-    _received_flits = 0;
+  inline int GetReceivedFlits(int c) {
+    assert((c >= 0) && (c < _classes));
+    int const r = _received_flits[c];
+    _received_flits[c] = 0;
     return r;
   }
-  inline int GetSentFlits() {
-    int const s = _sent_flits;
-    _sent_flits = 0;
+  inline int GetSentFlits(int c) {
+    assert((c >= 0) && (c < _classes));
+    int const s = _sent_flits[c];
+    _sent_flits[c] = 0;
     return s;
   }
 

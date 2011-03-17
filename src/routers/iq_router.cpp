@@ -55,7 +55,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 : Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
   _vcs         = config.GetInt( "num_vcs" );
-  _classes     = config.GetInt( "classes" );
   _speculative = (config.GetInt("speculative") > 0);
   _spec_check_elig = (config.GetInt("spec_check_elig") > 0);
   _spec_mask_by_reqs = (config.GetInt("spec_mask_by_reqs") > 0);
@@ -279,7 +278,7 @@ bool IQRouter::_ReceiveFlits( )
   for(int input = 0; input < _inputs; ++input) { 
     Flit * const f = _input_channels[input]->Receive();
     if(f) {
-      ++_received_flits;
+      ++_received_flits[f->cl];
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "Received flit " << f->id
@@ -1810,7 +1809,7 @@ void IQRouter::_SendFlits( )
       Flit * const f = _output_buffer[output].front( );
       assert(f);
       _output_buffer[output].pop( );
-      ++_sent_flits;
+      ++_sent_flits[f->cl];
       if(f->watch)
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		    << "Sending flit " << f->id

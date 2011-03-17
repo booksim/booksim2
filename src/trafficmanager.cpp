@@ -837,7 +837,7 @@ void TrafficManager::_Step( )
   
   _Inject();
 
-  vector<int> injected_flow(_subnets*_nodes);
+  vector<int> injected_flow(_classes*_subnets*_nodes);
 
   for(int source = 0; source < _nodes; ++source) {
     
@@ -939,7 +939,7 @@ void TrafficManager::_Step( )
 	}
 	
 	++flits_sent_by_class[c];
-	if(_flow_out) ++injected_flow[subnet*_nodes+source];
+	if(_flow_out) ++injected_flow[(c*_subnets+subnet)*_nodes+source];
 	
 	_net[f->subnetwork]->WriteFlit(f, source);
 
@@ -952,14 +952,14 @@ void TrafficManager::_Step( )
     }
   }
 
-  vector<int> ejected_flow(_subnets*_nodes);
+  vector<int> ejected_flow(_classes*_subnets*_nodes);
 
   for(int subnet = 0; subnet < _subnets; ++subnet) {
     for(int dest = 0; dest < _nodes; ++dest) {
       map<int, Flit *>::const_iterator iter = flits[subnet].find(dest);
       if(iter != flits[subnet].end()) {
 	Flit * const & f = iter->second;
-	if(_flow_out) ++ejected_flow[subnet*_nodes+dest];
+	if(_flow_out) ++ejected_flow[(f->cl*_subnets+subnet)*_nodes+dest];
 	f->atime = _time;
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
@@ -983,14 +983,16 @@ void TrafficManager::_Step( )
     *_flow_out << "injected_flow(" << _time << ",:) = " << injected_flow << ";" << endl;
     *_flow_out << "ejected_flow(" << _time << ",:) = " << ejected_flow << ";" << endl;
     *_flow_out << "received_flow(" << _time << ",:) = [ ";
-    for (int subnet = 0; subnet < _subnets; ++subnet)
-      for(int router = 0; router < _routers; ++router)
-	*_flow_out << _router[subnet][router]->GetReceivedFlits() << " ";
+    for(int c = 0; c < _classes; ++c)
+      for (int subnet = 0; subnet < _subnets; ++subnet)
+	for(int router = 0; router < _routers; ++router)
+	  *_flow_out << _router[subnet][router]->GetReceivedFlits(c) << " ";
     *_flow_out << "];" << endl;
     *_flow_out << "sent_flow(" << _time << ",:) = [";
-    for (int subnet = 0; subnet < _subnets; ++subnet)
-      for(int router = 0; router < _routers; ++router)
-	*_flow_out << _router[subnet][router]->GetSentFlits() << " ";
+    for(int c = 0; c < _classes; ++c)
+      for (int subnet = 0; subnet < _subnets; ++subnet)
+	for(int router = 0; router < _routers; ++router)
+	  *_flow_out << _router[subnet][router]->GetSentFlits(c) << " ";
     *_flow_out << "];" << endl;
   }
 
