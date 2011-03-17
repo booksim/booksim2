@@ -983,7 +983,7 @@ void TrafficManager::_Step( )
   
   _Inject();
 
-  vector<int> injected_flow(_subnets*_nodes);
+  vector<int> injected_flits(_subnets*_nodes);
 
   for(int source = 0; source < _nodes; ++source) {
     
@@ -1069,7 +1069,7 @@ void TrafficManager::_Step( )
 	    
 	    ++flits_sent_by_class[c];
 	    ++flits_sent_by_subnet[subnet];
-	    if(_flow_out) ++injected_flow[subnet*_nodes+source];
+	    if(_flow_out) ++injected_flits[subnet*_nodes+source];
 
 	    _net[subnet]->WriteFlit(f, source);
 	    
@@ -1086,14 +1086,14 @@ void TrafficManager::_Step( )
     }
   }
 
-  vector<int> ejected_flow(_subnets*_nodes);
+  vector<int> ejected_flits(_subnets*_nodes);
 
   for(int subnet = 0; subnet < _subnets; ++subnet) {
     for(int dest = 0; dest < _nodes; ++dest) {
       map<int, Flit *>::const_iterator iter = flits[subnet].find(dest);
       if(iter != flits[subnet].end()) {
 	Flit * const & f = iter->second;
-	if(_flow_out) ++ejected_flow[subnet*_nodes+dest];
+	if(_flow_out) ++ejected_flits[subnet*_nodes+dest];
 	f->atime = _time;
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
@@ -1115,19 +1115,19 @@ void TrafficManager::_Step( )
   
   if(_flow_out) {
 
-    vector<int> received_flow(_subnets*_routers);
-    vector<int> sent_flow(_subnets*_routers);
+    vector<int> received_flits(_subnets*_routers);
+    vector<int> sent_flits(_subnets*_routers);
 
     for (int subnet = 0; subnet < _subnets; ++subnet) {
       for(int router = 0; router < _routers; ++router) {
-	received_flow[subnet*_routers+router] = _router[subnet][router]->GetReceivedFlits();
-	sent_flow[subnet*_routers+router] = _router[subnet][router]->GetSentFlits();
+	received_flits[subnet*_routers+router] = _router[subnet][router]->GetReceivedFlits();
+	sent_flits[subnet*_routers+router] = _router[subnet][router]->GetSentFlits();
       }
     }
-    *_flow_out << "injected_flow(" << _time << ",:) = " << injected_flow << ";" << endl;
-    *_flow_out << "received_flow(" << _time << ",:) = " << received_flow << ";" << endl;
-    *_flow_out << "sent_flow(" << _time << ",:) = " << sent_flow << ";" << endl;;
-    *_flow_out << "ejected_flow(" << _time << ",:) = " << ejected_flow << ";" << endl;
+    *_flow_out << "injected_flits(" << _time << ",:) = " << injected_flits << ";" << endl;
+    *_flow_out << "received_flits(" << _time << ",:) = " << received_flits << ";" << endl;
+    *_flow_out << "sent_flits(" << _time << ",:) = " << sent_flits << ";" << endl;;
+    *_flow_out << "ejected_flits(" << _time << ",:) = " << ejected_flits << ";" << endl;
   }
 
   ++_time;
