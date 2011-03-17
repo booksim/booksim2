@@ -984,6 +984,7 @@ void TrafficManager::_Step( )
     vector<int> received_flits(_classes*_subnets*_routers);
     vector<int> sent_flits(_classes*_subnets*_routers);
     vector<int> stored_flits(_classes*_subnets*_routers);
+    vector<int> active_packets(_classes*_subnets*_routers);
 
     for (int subnet = 0; subnet < _subnets; ++subnet) {
       for(int router = 0; router < _routers; ++router) {
@@ -991,6 +992,7 @@ void TrafficManager::_Step( )
 	  received_flits[(c*_subnets+subnet)*_routers+router] = _router[subnet][router]->GetReceivedFlits(c);
 	  sent_flits[(c*_subnets+subnet)*_routers+router] = _router[subnet][router]->GetSentFlits(c);
 	  stored_flits[(c*_subnets+subnet)*_routers+router] = _router[subnet][router]->GetStoredFlits(c);
+	  active_packets[(c*_subnets+subnet)*_routers+router] = _router[subnet][router]->GetActivePackets(c);
 	}
       }
     }
@@ -999,6 +1001,7 @@ void TrafficManager::_Step( )
     *_flow_out << "stored_flits(" << _time << ",:) = " << stored_flits << ";" << endl;
     *_flow_out << "sent_flits(" << _time << ",:) = " << sent_flits << ";" << endl;;
     *_flow_out << "ejected_flits(" << _time << ",:) = " << ejected_flits << ";" << endl;
+    *_flow_out << "active_packets(" << _time << ",:) = " << active_packets << ";" << endl;
   }
 
   ++_time;

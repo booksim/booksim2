@@ -212,12 +212,6 @@ bool BufferState::HasCreditFor( int vc ) const
 	       _sharing_policy->MaxSharedSlots(vc) ) ) );
 }
 
-int BufferState::Size(int vc) const{
-  assert( ( vc >= 0 ) && ( vc < _vcs ) );
-
-  return  _cur_occupied[vc];
-}
-
 void BufferState::Display( ostream & os ) const
 {
   os << FullName() << " :" << endl;

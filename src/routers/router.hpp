@@ -72,6 +72,8 @@ protected:
   vector<int> _stored_flits;
   vector<int> _sent_flits;
 
+  vector<int> _active_packets;
+
   virtual void _InternalStep() = 0;
 
 public:
@@ -125,6 +127,11 @@ public:
     return s;
   }
   
+  inline int GetActivePackets(int c) const {
+    assert((c >= 0) && (c < _classes));
+    return _active_packets[c];
+  }
+
   inline int NumOutputs() const {return _outputs;}
 };
 

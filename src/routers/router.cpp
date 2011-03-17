@@ -69,6 +69,7 @@ TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
   _received_flits.resize(_classes);
   _stored_flits.resize(_classes);
   _sent_flits.resize(_classes);
+  _active_packets.resize(_classes);
 }
 
 void Router::AddInputChannel( FlitChannel *channel, CreditChannel *backchannel )
