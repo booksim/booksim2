@@ -896,9 +896,8 @@ void TrafficManager::_Step( )
       int const & subnet = f->subnetwork;
       int const & c = f->cl;
 
-      BufferState * const dest_buf = _buf_states[source][subnet];
       if(f->head) {
-	dest_buf->TakeBuffer(f->vc);
+	_buf_states[source][subnet]->TakeBuffer(f->vc);
 	_last_vc[source][subnet][c] = f->vc;
       }
 
