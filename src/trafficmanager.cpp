@@ -987,8 +987,8 @@ void TrafficManager::_Step( )
     for (int subnet = 0; subnet < _subnets; ++subnet) {
       for(int router = 0; router < _routers; ++router) {
 	for(int c = 0; c < _classes; ++c) {
-	  received_flits[subnet*_routers+router] = _router[subnet][router]->GetReceivedFlits(c);
-	  sent_flits[subnet*_routers+router] = _router[subnet][router]->GetSentFlits(c);
+	  received_flits[(c*_subnets+subnet)*_routers+router] = _router[subnet][router]->GetReceivedFlits(c);
+	  sent_flits[(c*_subnets+subnet)*_routers+router] = _router[subnet][router]->GetSentFlits(c);
 	}
       }
     }
