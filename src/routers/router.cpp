@@ -67,6 +67,7 @@ TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
   _classes          = config.GetInt( "classes" );
 
   _received_flits.resize(_classes);
+  _stored_flits.resize(_classes);
   _sent_flits.resize(_classes);
 }
 
