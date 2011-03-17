@@ -67,6 +67,7 @@ protected:
   vector<bool>            _channel_faults;
 
   int _received_flits;
+  int _stored_flits;
   int _sent_flits;
 
   virtual void _InternalStep() = 0;
@@ -110,12 +111,15 @@ public:
     _received_flits = 0;
     return r;
   }
+  inline int GetStoredFlits() const {
+    return _stored_flits;
+  }
   inline int GetSentFlits() {
     int const s = _sent_flits;
     _sent_flits = 0;
     return s;
   }
-
+  
   inline int NumOutputs() const {return _outputs;}
 };
 

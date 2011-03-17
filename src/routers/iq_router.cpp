@@ -346,6 +346,7 @@ void IQRouter::_InputQueuing( )
     if(!cur_buf->AddFlit(vc, f)) {
       Error( "VC buffer overflow" );
     }
+    ++_stored_flits;
     _bufferMonitor->write(input, f) ;
 
     if(cur_buf->GetState(vc) == VC::idle) {
@@ -904,6 +905,7 @@ void IQRouter::_SWHoldUpdate( )
       }
       
       cur_buf->RemoveFlit(vc);
+      --_stored_flits;
       _bufferMonitor->read(input, f) ;
       
       f->hops++;
@@ -1620,6 +1622,7 @@ void IQRouter::_SWAllocUpdate( )
       }
 
       cur_buf->RemoveFlit(vc);
+      --_stored_flits;
       _bufferMonitor->read(input, f) ;
 
       f->hops++;
