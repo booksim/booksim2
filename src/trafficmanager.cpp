@@ -1114,18 +1114,20 @@ void TrafficManager::_Step( )
   }
   
   if(_flow_out) {
+
+    vector<int> received_flow(_subnets*_routers);
+    vector<int> sent_flow(_subnets*_routers);
+
+    for (int subnet = 0; subnet < _subnets; ++subnet) {
+      for(int router = 0; router < _routers; ++router) {
+	received_flow[subnet*_routers+router] = _router[subnet][router]->GetReceivedFlits();
+	sent_flow[subnet*_routers+router] = _router[subnet][router]->GetSentFlits();
+      }
+    }
     *_flow_out << "injected_flow(" << _time << ",:) = " << injected_flow << ";" << endl;
+    *_flow_out << "received_flow(" << _time << ",:) = " << received_flow << ";" << endl;
+    *_flow_out << "sent_flow(" << _time << ",:) = " << sent_flow << ";" << endl;;
     *_flow_out << "ejected_flow(" << _time << ",:) = " << ejected_flow << ";" << endl;
-    *_flow_out << "received_flow(" << _time << ",:) = [ ";
-    for (int subnet = 0; subnet < _subnets; ++subnet)
-      for(int router = 0; router < _routers; ++router)
-	*_flow_out << _router[subnet][router]->GetReceivedFlits() << " ";
-    *_flow_out << "];" << endl;
-    *_flow_out << "sent_flow(" << _time << ",:) = [";
-    for (int subnet = 0; subnet < _subnets; ++subnet)
-      for(int router = 0; router < _routers; ++router)
-	*_flow_out << _router[subnet][router]->GetSentFlits() << " ";
-    *_flow_out << "];" << endl;
   }
 
   ++_time;
