@@ -883,10 +883,6 @@ void TrafficManager::_Step( )
 	      break;
 	    }
 	  }
-	  if(cf->vc != -1) {
-	    dest_buf->TakeBuffer(cf->vc);
-	    _last_vc[source][subnet][c] = cf->vc;
-	  }
 	}
 	  
 	if((cf->vc != -1) && (!dest_buf->IsFullFor(cf->vc))) {
@@ -897,10 +893,19 @@ void TrafficManager::_Step( )
 
     if(f) {
 
-      _last_class[source] = f->cl;
+      int const & subnet = f->subnetwork;
+      int const & c = f->cl;
 
-      _partial_packets[source][f->cl].pop_front();
-      _buf_states[source][f->subnetwork]->SendingFlit(f);
+      BufferState * const dest_buf = _buf_states[source][subnet];
+      if(f->head) {
+	dest_buf->TakeBuffer(f->vc);
+	_last_vc[source][subnet][c] = f->vc;
+      }
+
+      _last_class[source] = c;
+
+      _partial_packets[source][c].pop_front();
+      _buf_states[source][subnet]->SendingFlit(f);
 
       if(_pri_type == network_age_based) {
 	f->pri = numeric_limits<int>::max() - _time;
@@ -911,11 +916,11 @@ void TrafficManager::_Step( )
 	*gWatchOut << GetSimTime() << " | "
 		   << "node" << source << " | "
 		   << "Injecting flit " << f->id
-		   << " into subnet " << f->subnetwork
+		   << " into subnet " << subnet
 		   << " at time " << _time
 		   << " with priority " << f->pri
 		   << " (packet " << f->pid
-		   << ", class = " << f->cl
+		   << ", class = " << c
 		   << ", src = " << f->src 
 		   << ", dest = " << f->dest
 		   << ")." << endl;
@@ -923,14 +928,14 @@ void TrafficManager::_Step( )
       }
 	    
       // Pass VC "back"
-      if(!_partial_packets[source][f->cl].empty() && !f->tail) {
-	Flit * nf = _partial_packets[source][f->cl].front();
+      if(!_partial_packets[source][c].empty() && !f->tail) {
+	Flit * nf = _partial_packets[source][c].front();
 	nf->vc = f->vc;
       }
 	    
       ++_injected_flow[source];
 	    
-      _net[f->subnetwork]->WriteFlit(f, source);
+      _net[subnet]->WriteFlit(f, source);
 	    
     }
     if(((_sim_mode != batch) && (_sim_state == warming_up)) || (_sim_state == running)) {
