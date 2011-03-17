@@ -118,7 +118,12 @@ public:
   bool IsEmptyFor( int vc = 0 ) const;
   bool IsAvailableFor( int vc = 0 ) const;
   bool HasCreditFor( int vc = 0 ) const;
-  int Size (int vc = 0) const;
+  
+  inline int Size (int vc = 0) const {
+    assert((vc >= 0) && (vc < _vcs));
+    return  _cur_occupied[vc];
+  }
+  
   void Display( ostream & os = cout ) const;
 };
 
