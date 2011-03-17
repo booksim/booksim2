@@ -162,10 +162,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _switch_hold_out.resize(_outputs*_output_speedup, -1);
   _switch_hold_vc.resize(_inputs*_input_speedup, -1);
 
-  _received_flits.resize(_inputs);
-  _sent_flits.resize(_outputs);
-  ResetFlitStats();
-
   int classes = config.GetInt("classes");
   _bufferMonitor = new BufferMonitor(inputs, classes);
   _switchMonitor = new SwitchMonitor(inputs, outputs, classes);
@@ -283,7 +279,7 @@ bool IQRouter::_ReceiveFlits( )
   for(int input = 0; input < _inputs; ++input) { 
     Flit * const f = _input_channels[input]->Receive();
     if(f) {
-      ++_received_flits[input];
+      ++_received_flits;
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "Received flit " << f->id
@@ -1814,7 +1810,7 @@ void IQRouter::_SendFlits( )
       Flit * const f = _output_buffer[output].front( );
       assert(f);
       _output_buffer[output].pop( );
-      ++_sent_flits[output];
+      ++_sent_flits;
       if(f->watch)
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		    << "Sending flit " << f->id
@@ -1897,33 +1893,4 @@ vector<int> IQRouter::GetBuffers(int i) const {
     }
   }
   return sizes;
-}
-
-int IQRouter::GetReceivedFlits(int i) const {
-  assert(i < _inputs);
-
-  int count = 0;
-  int const i_start = (i >= 0) ? i : 0;
-  int const i_end = (i >= 0) ? i : (_inputs - 1);
-  for(int input = i_start; input <= i_end; ++input)
-    count += _received_flits[input];
-  return count;
-}
-
-int IQRouter::GetSentFlits(int o) const {
-  assert(o < _outputs);
-
-  int count = 0;
-  int const o_start = (o >= 0) ? o : 0;
-  int const o_end = (o >= 0) ? o : (_outputs - 1);
-  for(int output = o_start; output <= o_end; ++output)
-    count += _sent_flits[output];
-  return count;
-}
-
-void IQRouter::ResetFlitStats() {
-  for(int i = 0; i < _inputs; ++i)
-    _received_flits[i] = 0;
-  for(int o = 0; o < _outputs; ++o)
-    _sent_flits[o] = 0;
 }

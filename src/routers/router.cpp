@@ -55,10 +55,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Router::Router( const Configuration& config,
 		Module *parent, const string & name, int id,
 		int inputs, int outputs ) :
-  TimedModule( parent, name ),
-  _id( id ),
-  _inputs( inputs ),
-  _outputs( outputs )
+TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
+   _partial_internal_cycles(0.0), _received_flits(0), _sent_flits(0)
 {
   _crossbar_delay   = ( config.GetInt( "st_prepare_delay" ) + 
 			config.GetInt( "st_final_delay" ) );
@@ -66,7 +64,6 @@ Router::Router( const Configuration& config,
   _input_speedup    = config.GetInt( "input_speedup" );
   _output_speedup   = config.GetInt( "output_speedup" );
   _internal_speedup = config.GetFloat( "internal_speedup" );
-  _partial_internal_cycles = 0.0;
 }
 
 void Router::AddInputChannel( FlitChannel *channel, CreditChannel *backchannel )
@@ -92,12 +89,6 @@ void Router::Evaluate( )
     _partial_internal_cycles -= 1.0;
   }
 }
-
-int Router::GetID( ) const
-{
-  return _id;
-}
-
 
 void Router::OutChannelFault( int c, bool fault )
 {

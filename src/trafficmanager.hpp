@@ -134,10 +134,10 @@ protected:
   
   // ============ Statistics ============
 
-  vector<Stats *> _latency_stats;     
-  vector<Stats *> _overall_min_latency;  
-  vector<Stats *> _overall_avg_latency;  
-  vector<Stats *> _overall_max_latency;  
+  vector<Stats *> _plat_stats;     
+  vector<Stats *> _overall_min_plat;  
+  vector<Stats *> _overall_avg_plat;  
+  vector<Stats *> _overall_max_plat;  
 
   vector<Stats *> _tlat_stats;     
   vector<Stats *> _overall_min_tlat;  
@@ -149,7 +149,7 @@ protected:
   vector<Stats *> _overall_avg_frag;
   vector<Stats *> _overall_max_frag;
 
-  vector<vector<Stats *> > _pair_latency;
+  vector<vector<Stats *> > _pair_plat;
   vector<vector<Stats *> > _pair_tlat;
   vector<Stats *> _hop_stats;
 
@@ -160,11 +160,6 @@ protected:
   
   Stats * _batch_time;
   Stats * _overall_batch_time;
-
-  vector<int> _injected_flow;
-  vector<int> _ejected_flow;
-  vector<int> _received_flow;
-  vector<int> _sent_flow;
 
   vector<int> _slowest_flit;
 
@@ -218,6 +213,7 @@ protected:
 
   //flits to watch
   ostream * _stats_out;
+
   ostream * _flow_out;
 
   // ============ Internal methods ============ 
@@ -250,7 +246,7 @@ public:
 
   void DisplayStats( ostream & os = cout );
 
-  const Stats * GetOverallLatency(int c = 0) { return _overall_avg_latency[c]; }
+  const Stats * GetOverallLatency(int c = 0) { return _overall_avg_plat[c]; }
   const Stats * GetAccepted(int c = 0) { return _overall_accepted[c]; }
   const Stats * GetAcceptedMin(int c = 0) { return _overall_accepted_min[c]; }
   const Stats * GetHops(int c = 0) { return _hop_stats[c]; }

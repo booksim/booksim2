@@ -66,6 +66,9 @@ protected:
   vector<CreditChannel *> _output_credits;
   vector<bool>            _channel_faults;
 
+  int _received_flits;
+  int _sent_flits;
+
   virtual void _InternalStep() = 0;
 
 public:
@@ -80,6 +83,15 @@ public:
   void AddInputChannel( FlitChannel *channel, CreditChannel *backchannel );
   void AddOutputChannel( FlitChannel *channel, CreditChannel *backchannel );
  
+  inline FlitChannel * GetInputChannel( int input ) const {
+    assert((input >= 0) && (input < _inputs));
+    return _input_channels[input];
+  }
+  inline FlitChannel * GetOutputChannel( int output ) const {
+    assert((output >= 0) && (output < _outputs));
+    return _output_channels[output];
+  }
+
   virtual void ReadInputs( ) = 0;
   virtual void Evaluate( );
   virtual void WriteOutputs( ) = 0;
@@ -87,16 +99,24 @@ public:
   void OutChannelFault( int c, bool fault = true );
   bool IsFaultyOutput( int c ) const;
 
-  int GetID( ) const;
+  inline int GetID( ) const {return _id;}
 
 
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const = 0;
   virtual int GetBuffer(int i = -1) const = 0;
-  virtual int GetReceivedFlits(int i = -1) const = 0;
-  virtual int GetSentFlits(int i = -1) const = 0;
-  virtual void ResetFlitStats() = 0;
 
-  int NumOutputs(){return _outputs;}
+  inline int GetReceivedFlits() {
+    int const r = _received_flits;
+    _received_flits = 0;
+    return r;
+  }
+  inline int GetSentFlits() {
+    int const s = _sent_flits;
+    _sent_flits = 0;
+    return s;
+  }
+
+  inline int NumOutputs() const {return _outputs;}
 };
 
 #endif
