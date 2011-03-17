@@ -1204,6 +1204,7 @@ bool TrafficManager::_SingleSim( )
 	    if(_packets_sent[source][c] < min_packets_sent)
 	      min_packets_sent = _packets_sent[source][c];
 	if(_flow_out) {
+	  *_flow_out << "packets_sent(" << _time << ",:) = " << _packets_sent << ";" << endl;
 	}
       }
       cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) sent. Time used is " << _time - start_time << " cycles." << endl;
