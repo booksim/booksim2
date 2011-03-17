@@ -1126,9 +1126,6 @@ void TrafficManager::_Step( )
       for(int router = 0; router < _routers; ++router)
 	*_flow_out << _router[subnet][router]->GetSentFlits() << " ";
     *_flow_out << "];" << endl;
-    for (int subnet = 0; subnet < _subnets; ++subnet)
-      for(int router = 0; router < _routers; ++router)
-	_router[subnet][router]->ResetStats();
   }
 
   ++_time;
