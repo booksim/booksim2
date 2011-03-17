@@ -70,6 +70,8 @@ protected:
   int _stored_flits;
   int _sent_flits;
 
+  int _active_packets;
+
   virtual void _InternalStep() = 0;
 
 public:
@@ -120,6 +122,10 @@ public:
     return s;
   }
   
+  inline int GetActivePackets() const {
+    return _active_packets;
+  }
+
   inline int NumOutputs() const {return _outputs;}
 };
 
