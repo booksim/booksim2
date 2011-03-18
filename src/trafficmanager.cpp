@@ -996,12 +996,12 @@ void TrafficManager::_Step( )
 	}
       }
     }
-    *_flow_out << "injected_flits(" << _time << ",:) = " << injected_flits << ";" << endl;
-    *_flow_out << "received_flits(" << _time << ",:) = " << received_flits << ";" << endl;
-    *_flow_out << "stored_flits(" << _time << ",:) = " << stored_flits << ";" << endl;
-    *_flow_out << "sent_flits(" << _time << ",:) = " << sent_flits << ";" << endl;;
-    *_flow_out << "ejected_flits(" << _time << ",:) = " << ejected_flits << ";" << endl;
-    *_flow_out << "active_packets(" << _time << ",:) = " << active_packets << ";" << endl;
+    *_flow_out << "injected_flits(" << _time + 1 << ",:) = " << injected_flits << ";" << endl;
+    *_flow_out << "received_flits(" << _time + 1 << ",:) = " << received_flits << ";" << endl;
+    *_flow_out << "stored_flits(" << _time + 1 << ",:) = " << stored_flits << ";" << endl;
+    *_flow_out << "sent_flits(" << _time + 1 << ",:) = " << sent_flits << ";" << endl;;
+    *_flow_out << "ejected_flits(" << _time + 1 << ",:) = " << ejected_flits << ";" << endl;
+    *_flow_out << "active_packets(" << _time + 1 << ",:) = " << active_packets << ";" << endl;
   }
 
   ++_time;
