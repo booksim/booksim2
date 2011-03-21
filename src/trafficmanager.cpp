@@ -1122,10 +1122,12 @@ void TrafficManager::_Step( )
 
     for (int subnet = 0; subnet < _subnets; ++subnet) {
       for(int router = 0; router < _routers; ++router) {
-	received_flits[subnet*_routers+router] = _router[subnet][router]->GetReceivedFlits();
-	sent_flits[subnet*_routers+router] = _router[subnet][router]->GetSentFlits();
-	stored_flits[subnet*_routers+router] = _router[subnet][router]->GetStoredFlits();
-	active_packets[subnet*_routers+router] = _router[subnet][router]->GetActivePackets();
+	Router * r = _router[subnet][router];
+	received_flits[subnet*_routers+router] = r->GetReceivedFlits();
+	sent_flits[subnet*_routers+router] = r->GetSentFlits();
+	stored_flits[subnet*_routers+router] = r->GetStoredFlits();
+	active_packets[subnet*_routers+router] = r->GetActivePackets();
+	r->ResetStats();
       }
     }
     *_flow_out << "injected_flits(" << _time + 1 << ",:) = " << injected_flits << ";" << endl;

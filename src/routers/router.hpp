@@ -108,22 +108,23 @@ public:
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const = 0;
   virtual int GetBuffer(int i = -1) const = 0;
 
-  inline int GetReceivedFlits() {
-    int const r = _received_flits;
-    _received_flits = 0;
-    return r;
+  inline int GetReceivedFlits() const {
+    return _received_flits;
   }
   inline int GetStoredFlits() const {
     return _stored_flits;
   }
-  inline int GetSentFlits() {
-    int const s = _sent_flits;
-    _sent_flits = 0;
-    return s;
+  inline int GetSentFlits() const {
+    return _sent_flits;
   }
   
   inline int GetActivePackets() const {
     return _active_packets;
+  }
+
+  inline void ResetStats() {
+    _received_flits = 0;
+    _sent_flits = 0;
   }
 
   inline int NumOutputs() const {return _outputs;}
