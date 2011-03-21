@@ -109,13 +109,9 @@ void Stats::AddSample( double val )
   _num_samples++;
   _sample_sum += val;
 
-  if(_num_samples == 0) {
-    _min = val;
-    _max = val;
-  } else {
-    if(val > _max) _max = val;
-    if(val < _min) _min = val;
-  }
+
+  _max = (val > _max)? val : _max;
+  _min = (val < _min)? val : _min;
 
   //double clamp between 0 and num_bins-1
   b = (int)fmax(floor( val / _bin_size ), 0.0);
