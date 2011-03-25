@@ -67,8 +67,12 @@ TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
   _classes          = config.GetInt( "classes" );
 
   _received_flits.resize(_classes);
+  for(int c = 0; c < _classes; ++c)
+    _received_flits[c].resize(_inputs);
   _stored_flits.resize(_classes);
   _sent_flits.resize(_classes);
+  for(int c = 0; c < _classes; ++c)
+    _sent_flits[c].resize(_outputs);
   _active_packets.resize(_classes);
 }
 
