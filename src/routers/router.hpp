@@ -124,7 +124,7 @@ public:
 
   inline void ResetStats() {
     _received_flits.assign(_received_flits.size(), 0);
-    _sent_flits.assign(_received_flits.size(), 0);
+    _sent_flits.assign(_sent_flits.size(), 0);
   }
 
   inline int NumOutputs() const {return _outputs;}
