@@ -1115,10 +1115,10 @@ void TrafficManager::_Step( )
   
   if(_flow_out) {
 
-    vector<int> received_flits(_subnets*_routers);
-    vector<int> sent_flits(_subnets*_routers);
-    vector<int> stored_flits(_subnets*_routers);
-    vector<int> active_packets(_subnets*_routers);
+    vector<vector<int> > received_flits(_subnets*_routers);
+    vector<vector<int> > sent_flits(_subnets*_routers);
+    vector<vector<int> > stored_flits(_subnets*_routers);
+    vector<vector<int> > active_packets(_subnets*_routers);
 
     for (int subnet = 0; subnet < _subnets; ++subnet) {
       for(int router = 0; router < _routers; ++router) {
