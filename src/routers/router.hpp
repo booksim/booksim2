@@ -108,7 +108,7 @@ public:
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const = 0;
   virtual int GetBuffer(int i = -1) const = 0;
 
-  inline vector<int> const GetReceivedFlits() const {
+  inline vector<int> const & GetReceivedFlits() const {
     return _received_flits;
   }
   inline vector<int> const & GetStoredFlits() const {
