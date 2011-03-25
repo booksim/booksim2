@@ -166,6 +166,8 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _bufferMonitor = new BufferMonitor(inputs, classes);
   _switchMonitor = new SwitchMonitor(inputs, outputs, classes);
 
+  _stored_flits.resize(_inputs, 0);
+  _active_packets.resize(_inputs, 0);
 }
 
 IQRouter::~IQRouter( )
@@ -279,7 +281,7 @@ bool IQRouter::_ReceiveFlits( )
   for(int input = 0; input < _inputs; ++input) { 
     Flit * const f = _input_channels[input]->Receive();
     if(f) {
-      ++_received_flits;
+      ++_received_flits[input];
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "Received flit " << f->id
@@ -346,8 +348,8 @@ void IQRouter::_InputQueuing( )
     if(!cur_buf->AddFlit(vc, f)) {
       Error( "VC buffer overflow" );
     }
-    ++_stored_flits;
-    if(f->head) ++_active_packets;
+    ++_stored_flits[input];
+    if(f->head) ++_active_packets[input];
     _bufferMonitor->write(input, f) ;
 
     if(cur_buf->GetState(vc) == VC::idle) {
@@ -906,8 +908,8 @@ void IQRouter::_SWHoldUpdate( )
       }
       
       cur_buf->RemoveFlit(vc);
-      --_stored_flits;
-      if(f->tail) --_active_packets;
+      --_stored_flits[input];
+      if(f->tail) --_active_packets[input];
       _bufferMonitor->read(input, f) ;
       
       f->hops++;
@@ -1624,8 +1626,8 @@ void IQRouter::_SWAllocUpdate( )
       }
 
       cur_buf->RemoveFlit(vc);
-      --_stored_flits;
-      if(f->tail) --_active_packets;
+      --_stored_flits[input];
+      if(f->tail) --_active_packets[input];
       _bufferMonitor->read(input, f) ;
 
       f->hops++;
@@ -1816,7 +1818,7 @@ void IQRouter::_SendFlits( )
       Flit * const f = _output_buffer[output].front( );
       assert(f);
       _output_buffer[output].pop( );
-      ++_sent_flits;
+      ++_sent_flits[output];
       if(f->watch)
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		    << "Sending flit " << f->id

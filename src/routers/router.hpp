@@ -66,11 +66,11 @@ protected:
   vector<CreditChannel *> _output_credits;
   vector<bool>            _channel_faults;
 
-  int _received_flits;
-  int _stored_flits;
-  int _sent_flits;
+  vector<int> _received_flits;
+  vector<int> _stored_flits;
+  vector<int> _sent_flits;
 
-  int _active_packets;
+  vector<int> _active_packets;
 
   virtual void _InternalStep() = 0;
 
@@ -108,23 +108,23 @@ public:
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const = 0;
   virtual int GetBuffer(int i = -1) const = 0;
 
-  inline int GetReceivedFlits() const {
+  inline vector<int> const GetReceivedFlits() const {
     return _received_flits;
   }
-  inline int GetStoredFlits() const {
+  inline vector<int> const & GetStoredFlits() const {
     return _stored_flits;
   }
-  inline int GetSentFlits() const {
+  inline vector<int> const & GetSentFlits() const {
     return _sent_flits;
   }
   
-  inline int GetActivePackets() const {
+  inline vector<int> const & GetActivePackets() const {
     return _active_packets;
   }
 
   inline void ResetStats() {
-    _received_flits = 0;
-    _sent_flits = 0;
+    _received_flits.assign(_received_flits.size(), 0);
+    _sent_flits.assign(_received_flits.size(), 0);
   }
 
   inline int NumOutputs() const {return _outputs;}
