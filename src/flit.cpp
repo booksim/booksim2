@@ -70,14 +70,17 @@ void Flit::Reset()
   head      = false ;
   tail      = false ;
   true_tail = false ;
+  spec = false;
   time      = -1 ;
   ttime     = -1 ;
   atime     = -1 ;
+  exptime =-1;
   sn        = 0 ;
   rob_time  = 0 ;
   id        = -1 ;
   pid       = -1 ;
   tid       = -1 ;
+  flid = -1;
   hops      = 0 ;
   watch     = false ;
   record    = false ;

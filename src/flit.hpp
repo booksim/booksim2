@@ -55,10 +55,12 @@ public:
   bool head;
   bool tail;
   bool true_tail;
-  
+  bool spec;
+
   int  time;
   int  ttime;
   int  atime;
+  int exptime;
 
   int  sn;
   int  rob_time;
@@ -66,6 +68,7 @@ public:
   int  id;
   int  pid;
   int  tid;
+  int flid;
 
   bool record;
 

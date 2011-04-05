@@ -1,31 +1,31 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
-All rights reserved.
+  Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+  All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
+  Redistribution and use in source and binary forms, with or without modification,
+  are permitted provided that the following conditions are met:
 
-Redistributions of source code must retain the above copyright notice, this list
-of conditions and the following disclaimer.
-Redistributions in binary form must reproduce the above copyright notice, this 
-list of conditions and the following disclaimer in the documentation and/or 
-other materials provided with the distribution.
-Neither the name of the Stanford University nor the names of its contributors 
-may be used to endorse or promote products derived from this software without 
-specific prior written permission.
+  Redistributions of source code must retain the above copyright notice, this list
+  of conditions and the following disclaimer.
+  Redistributions in binary form must reproduce the above copyright notice, this 
+  list of conditions and the following disclaimer in the documentation and/or 
+  other materials provided with the distribution.
+  Neither the name of the Stanford University nor the names of its contributors 
+  may be used to endorse or promote products derived from this software without 
+  specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR 
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR 
+  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
+  ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <sstream>
@@ -41,12 +41,33 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
+#define INJECT_BUFFER_SIZE 40
+
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
-: Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
+  : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
 
   _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
+
+  if(gReservation){
+    _reservation_lists.resize(_nodes);
+    _reservation_robs.resize(_nodes);
+    _response_packets.resize(_nodes);
+    _flow_status.resize(_nodes);
+    _flow_counter.resize(_nodes,0);
+    
+  }
+  _inject_buffers.resize(_nodes);
+  for(int i = 0; i<_nodes; i++){
+    _inject_buffers[i].resize(config.GetInt("num_vcs"));
+    for(int j = 0; j<config.GetInt("num_vcs"); j++){
+      _inject_buffers[i][j].reserve(INJECT_BUFFER_SIZE);
+    }
+  }
+  _dest_vc_lookup.resize(_nodes);
+  _flow_size = config.GetInt("flow_size");
+
 
   //nodes higher than limit do not produce or receive packets
   //for default limit = sources
@@ -154,6 +175,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   if(config.GetInt("injection_rate_uses_flits")) {
     for(int c = 0; c < _classes; ++c)
       _load[c] /= (double)_packet_size[c];
+    _load[c] /=_flow_size;
   }
 
   _traffic = config.GetStrArray("traffic");
@@ -548,6 +570,8 @@ TrafficManager::~TrafficManager( )
 
 void TrafficManager::_RetireFlit( Flit *f, int dest )
 {
+
+
   _deadlock_timer = 0;
 
   assert(_total_in_flight_flits[f->cl].count(f->id) > 0);
@@ -696,7 +720,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
       } 
     } else { //normal
       if ((_packets_sent[source] >= _batch_size && !_timed_mode) || 
-		 (_requestsOutstanding[source] >= _maxOutstanding)) {
+	  (_requestsOutstanding[source] >= _maxOutstanding)) {
 	result = 0;
       } else {
 	result = _packet_size[cl];
@@ -824,10 +848,10 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   
   if ( watch ) { 
     *gWatchOut << GetSimTime() << " | "
-		<< "node" << source << " | "
-		<< "Enqueuing packet " << pid
-		<< " at time " << time
-		<< "." << endl;
+	       << "node" << source << " | "
+	       << "Enqueuing packet " << pid
+	       << " at time " << time
+	       << "." << endl;
   }
   
   for ( int i = 0; i < size; ++i ) {
@@ -888,11 +912,11 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 
     if ( f->watch ) { 
       *gWatchOut << GetSimTime() << " | "
-		  << "node" << source << " | "
-		  << "Enqueuing flit " << f->id
-		  << " (packet " << f->pid
-		  << ") at time " << time
-		  << "." << endl;
+		 << "node" << source << " | "
+		 << "Enqueuing flit " << f->id
+		 << " (packet " << f->pid
+		 << ") at time " << time
+		 << "." << endl;
     }
 
     _partial_packets[source][cl].push_back( f );
@@ -908,14 +932,17 @@ void TrafficManager::_Inject(){
       if ( _partial_packets[input][c].empty() ) {
 	bool generated = false;
 	  
+
 	if ( !_empty_network ) {
 	  while( !generated && ( _qtime[input][c] <= _time ) ) {
 	    int stype = _IssuePacket( input, c );
 
 	    if ( stype != 0 ) { //generate a packet
-	      _GeneratePacket( input, stype, c, 
-			       _include_queuing==1 ? 
-			       _qtime[input][c] : _time );
+	      for(int i = 0; i<_flow_size; i++){
+		_GeneratePacket( input, stype, c, 
+				 _include_queuing==1 ? 
+				 _qtime[input][c] : _time );
+	      }
 	      generated = true;
 	    }
 	    //this is not a request packet
@@ -989,7 +1016,19 @@ void TrafficManager::_Step( )
     
     vector<int> flits_sent_by_class(_classes);
     vector<int> flits_sent_by_subnet(_subnets);
-    
+
+    //special take priority
+    if(gReservation_response_packets[source].empty()){
+      if(dest_buf->IsAvailableFor(0) && dest_buf->HasCreditFor(0)){
+	Flit* f = 	_response_packets[source].front();
+	dest_buf->SendingFlit(f);
+	_net[subnet]->WriteFlit(f, source);
+	flits_sent_by_subnet[subnet]++ 
+	_response_packets[source].pop_front();
+	
+      }
+    }
+
     for(map<int, pair<int, vector<int> > >::reverse_iterator iter = _class_prio_map.rbegin();
 	iter != _class_prio_map.rend();
 	++iter) {
@@ -1006,6 +1045,9 @@ void TrafficManager::_Step( )
 	if(!_partial_packets[source][c].empty()) {
 	  Flit * f = _partial_packets[source][c].front();
 	  assert(f);
+	  //intermediate buffer
+	  if(f->head);
+
 
 	  int const subnet = f->subnetwork;
 	  if(flits_sent_by_subnet[subnet] > 0) {
@@ -1015,21 +1057,39 @@ void TrafficManager::_Step( )
 	  BufferState * const dest_buf = _buf_states[source][subnet];
 
 	  if(f->head && f->vc == -1) { // Find first available VC
-	    
-	    OutputSet route_set;
-	    _rf(NULL, f, 0, &route_set, true);
-	    set<OutputSet::sSetElement> const & os = route_set.GetSet();
-	    assert(os.size() == 1);
-	    OutputSet::sSetElement const & se = *os.begin();
-	    assert(se.output_port == 0);
-	    int const & vc_start = se.vc_start;
-	    int const & vc_end = se.vc_end;
-	    int const vc_count = vc_end - vc_start + 1;
-	    for(int i = 1; i <= vc_count; ++i) {
-	      int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
-	      if(dest_buf->IsAvailableFor(vc) && dest_buf->HasCreditFor(vc)) {
-		f->vc = vc;
-		break;
+	    if(_dest_vc_lookup[source].find(f->dest)==_dest_vc_lookup[source].end()){
+	      OutputSet route_set;
+	      _rf(NULL, f, 0, &route_set, true);
+	      set<OutputSet::sSetElement> const & os = route_set.GetSet();
+	      assert(os.size() == 1);
+	      OutputSet::sSetElement const & se = *os.begin();
+	      assert(se.output_port == 0);
+	      int const & vc_start = se.vc_start;
+	      int const & vc_end = se.vc_end;
+	      int const vc_count = vc_end - vc_start + 1;
+	      for(int i = 1; i <= vc_count; ++i) {
+		int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
+		if(dest_buf->IsAvailableFor(vc) && dest_buf->HasCreditFor(vc)) {
+		  f->vc = vc;
+		  _dest_vc_lookup[source].insert(pair<int, int>(f->dest, vc));
+		  if(gReservation){//create an flow
+		    int flid = _flow_counter[source];
+		    _flow_status[source].insert(pair<int, int>(flid, 0));
+		    f->flid = flid;
+		    f->spec = true;
+		    _flow_counter[source]++;
+		  }
+		  break;
+		}
+	      }
+	    } else {
+	      f->vc = _dest_vc_lookup[source].find(f->dest)->second;
+	      if(gReservation){//create an flow
+		int flid = _flow_counter[source];
+		_flow_status[source].insert(pair<int, int>(flid, 0));
+		f->flid = flid;
+		f->spec = true;
+		_flow_counter[source]++;
 	      }
 	    }
 	    if(f->vc == -1)
@@ -1037,6 +1097,12 @@ void TrafficManager::_Step( )
 
 	    dest_buf->TakeBuffer(f->vc);
 	    _last_vc[source][subnet][c] = f->vc - vc_start;
+	  } 
+
+	  if(gReservation && !f->head){//continuing speculative flow
+	    if(_flow_status[source][f->flid]==0){
+	      f->spec = true;
+	    }
 	  }
 	  
 	  assert(f->vc != -1);
@@ -1065,6 +1131,7 @@ void TrafficManager::_Step( )
 	    if(!_partial_packets[source][c].empty() && !f->tail) {
 	      Flit * nf = _partial_packets[source][c].front();
 	      nf->vc = f->vc;
+	      nf->flid = f->flid;
 	    }
 	    
 	    ++flits_sent_by_class[c];
@@ -1493,9 +1560,9 @@ bool TrafficManager::_SingleSim( )
 	//c+1 due to matlab array starting at 1
 	if(_stats_out) {
 	  *_stats_out << "lat(" << c+1 << ") = " << cur_latency << ";" << endl
-		    << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
-		    << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
-		    << "pair_sent(" << c+1 << ",:) = [ ";
+		      << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
+		      << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
+		      << "pair_sent(" << c+1 << ",:) = [ ";
 	  for(int i = 0; i < _nodes; ++i) {
 	    for(int j = 0; j < _nodes; ++j) {
 	      *_stats_out << _pair_plat[c][i*_nodes+j]->NumSamples( ) << " ";

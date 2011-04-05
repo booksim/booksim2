@@ -40,6 +40,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 BookSimConfig::BookSimConfig( )
 { 
+
+  _int_map["hotspot_reservation"] = 0;
+  _int_map["expiration_time"] = 10;
+  _int_map["speculative_reorder"] = 0;
+  _int_map["flow_size"] = 1;
+
   //========================================================
   // Network options
   //========================================================

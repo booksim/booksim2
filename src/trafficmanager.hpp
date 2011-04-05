@@ -64,6 +64,8 @@ protected:
   int    _classes;
 
   vector<double> _load;
+  vector<int> _flow_reminder;
+  int _flow_size;
 
   vector<int>    _packet_size;
 
@@ -148,15 +150,29 @@ protected:
   vector<vector<list<Flit*> > > _voq;
   vector<list<int> > _active_list;
   vector<vector<bool> > _active_vc;
+
+  //==============hot spot reservation=====================
+  //receiver
+  vector<vector<int> > _reservation_lists;
+  vector<map<int, vector<Flit* > > > _reservation_robs;
+  vector<list<Flit *> > _response_packets;
+
+  //sender
+  vector<vector< vector<Flit*> > > _inject_buffers;
+  vector<map<int, int> > _flow_status;
+  vector<int> _flow_counter;
+  vector<map<int, int>  >_dest_vc_lookup;
   
+
   // ============ Statistics ============
 
   vector<Stats *> _plat_stats;     
   vector<Stats *> _overall_min_plat;  
   vector<Stats *> _overall_avg_plat;  
+
   vector<Stats *> _overall_max_plat;  
 
-  vector<Stats *> _tlat_stats;     
+  vector<Stats *> _tlat_stats;    
   vector<Stats *> _overall_min_tlat;  
   vector<Stats *> _overall_avg_tlat;  
   vector<Stats *> _overall_max_tlat;  

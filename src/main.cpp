@@ -96,6 +96,8 @@ bool gTrace;
 
 ostream * gWatchOut;
 
+bool gReservation = false;
+
 #ifdef USE_GUI
 bool gGUIMode = false;
 #endif
@@ -208,6 +210,7 @@ int main( int argc, char **argv )
     gWatchOut = new ofstream(watch_out_file.c_str());
   }
   
+  gReservation = (config.GetInt("hotspot_reservation")==1);
 
   /*configure and run the simulator
    */
