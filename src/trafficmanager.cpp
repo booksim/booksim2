@@ -227,7 +227,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _measured_in_flight_flits.resize(_classes);
   _retired_packets.resize(_classes);
 
-  _packets_sent.resize(_nodes);
+  _sent_packets.resize(_nodes);
   _batch_size = config.GetInt( "batch_size" );
   _batch_count = config.GetInt( "batch_count" );
   _repliesPending.resize(_nodes);
@@ -477,15 +477,51 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     config.WriteMatlabFile(_stats_out);
   }
   
-  string flow_out_file = config.GetStr( "flow_out" );
-  if(flow_out_file == "") {
-    _flow_out = NULL;
-  } else if(flow_out_file == "-") {
-    _flow_out = &cout;
-  } else {
-    _flow_out = new ofstream(flow_out_file.c_str());
+  _flow_out = config.GetInt("flow_out");
+  if(_flow_out) {
+    string sent_packets_out_file = config.GetStr( "sent_packets_out" );
+    if(sent_packets_out_file == "") {
+      _sent_packets_out = NULL;
+    } else {
+      _sent_packets_out = new ofstream(sent_packets_out_file.c_str());
+    }
+    string active_packets_out_file = config.GetStr( "active_packets_out" );
+    if(active_packets_out_file == "") {
+      _active_packets_out = NULL;
+    } else {
+      _active_packets_out = new ofstream(active_packets_out_file.c_str());
+    }
+    string injected_flits_out_file = config.GetStr( "injected_flits_out" );
+    if(injected_flits_out_file == "") {
+      _injected_flits_out = NULL;
+    } else {
+      _injected_flits_out = new ofstream(injected_flits_out_file.c_str());
+    }
+    string ejected_flits_out_file = config.GetStr( "ejected_flits_out" );
+    if(ejected_flits_out_file == "") {
+      _ejected_flits_out = NULL;
+    } else {
+      _ejected_flits_out = new ofstream(ejected_flits_out_file.c_str());
+    }
+    string received_flits_out_file = config.GetStr( "received_flits_out" );
+    if(received_flits_out_file == "") {
+      _received_flits_out = NULL;
+    } else {
+      _received_flits_out = new ofstream(received_flits_out_file.c_str());
+    }
+    string sent_flits_out_file = config.GetStr( "sent_flits_out" );
+    if(sent_flits_out_file == "") {
+      _sent_flits_out = NULL;
+    } else {
+      _sent_flits_out = new ofstream(sent_flits_out_file.c_str());
+    }
+    string stored_flits_out_file = config.GetStr( "stored_flits_out" );
+    if(stored_flits_out_file == "") {
+      _stored_flits_out = NULL;
+    } else {
+      _stored_flits_out = new ofstream(stored_flits_out_file.c_str());
+    }
   }
-
 
 }
 
@@ -538,7 +574,16 @@ TrafficManager::~TrafficManager( )
   
   if(gWatchOut && (gWatchOut != &cout)) delete gWatchOut;
   if(_stats_out && (_stats_out != &cout)) delete _stats_out;
-  if(_flow_out && (_flow_out != &cout)) delete _flow_out;
+
+  if(_flow_out) {
+    if(_sent_packets_out) delete _sent_packets_out;
+    if(_active_packets_out) delete _active_packets_out;
+    if(_injected_flits_out) delete _injected_flits_out;
+    if(_ejected_flits_out) delete _ejected_flits_out;
+    if(_received_flits_out) delete _received_flits_out;
+    if(_sent_flits_out) delete _sent_flits_out;
+    if(_stored_flits_out) delete _stored_flits_out;
+  }
 
   PacketReplyInfo::FreeAll();
   Flit::FreeAll();
@@ -683,7 +728,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	result = _repliesPending[source].front();
 	_repliesPending[source].pop_front();
 	
-      } else if ((_packets_sent[source] >= _batch_size && !_timed_mode) || 
+      } else if ((_sent_packets[source] >= _batch_size && !_timed_mode) || 
 		 (_requestsOutstanding[source] >= _maxOutstanding)) {
 	result = 0;
       } else {
@@ -691,16 +736,16 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	//coin toss to determine request type.
 	result = (RandomFloat() < 0.5) ? -2 : -1;
 	
-	_packets_sent[source]++;
+	_sent_packets[source]++;
 	_requestsOutstanding[source]++;
       } 
     } else { //normal
-      if ((_packets_sent[source] >= _batch_size && !_timed_mode) || 
+      if ((_sent_packets[source] >= _batch_size && !_timed_mode) || 
 		 (_requestsOutstanding[source] >= _maxOutstanding)) {
 	result = 0;
       } else {
 	result = _packet_size[cl];
-	_packets_sent[source]++;
+	_sent_packets[source]++;
 	//here is means, how many flits can be waiting in the queue
 	_requestsOutstanding[source]++;
       } 
@@ -872,7 +917,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       assert(f->pri >= 0);
       break;
     case sequence_based:
-      f->pri = numeric_limits<int>::max() - _packets_sent[source];
+      f->pri = numeric_limits<int>::max() - _sent_packets[source];
       assert(f->pri >= 0);
       break;
     default:
@@ -1130,12 +1175,12 @@ void TrafficManager::_Step( )
 	r->ResetStats();
       }
     }
-    *_flow_out << "injected_flits(" << _time + 1 << ",:) = " << injected_flits << ";" << endl;
-    *_flow_out << "received_flits(" << _time + 1 << ",:) = " << received_flits << ";" << endl;
-    *_flow_out << "stored_flits(" << _time + 1 << ",:) = " << stored_flits << ";" << endl;
-    *_flow_out << "sent_flits(" << _time + 1 << ",:) = " << sent_flits << ";" << endl;;
-    *_flow_out << "ejected_flits(" << _time + 1 << ",:) = " << ejected_flits << ";" << endl;
-    *_flow_out << "active_packets(" << _time + 1 << ",:) = " << active_packets << ";" << endl;
+    if(_injected_flits_out) *_injected_flits_out << injected_flits << endl;
+    if(_received_flits_out) *_received_flits_out << received_flits << endl;
+    if(_stored_flits_out) *_stored_flits_out << stored_flits << endl;
+    if(_sent_flits_out) *_sent_flits_out << sent_flits << endl;;
+    if(_ejected_flits_out) *_ejected_flits_out << ejected_flits << endl;
+    if(_active_packets_out) *_active_packets_out << active_packets << endl;
   }
 
   ++_time;
@@ -1330,21 +1375,21 @@ bool TrafficManager::_SingleSim( )
 
   } else if(_sim_mode == batch && !_timed_mode){//batch mode   
     while(total_phases < _batch_count) {
-      _packets_sent.assign(_nodes, 0);
+      _sent_packets.assign(_nodes, 0);
       _last_id = -1;
       _last_pid = -1;
       _sim_state = running;
       int start_time = _time;
-      int min_packets_sent = 0;
-      while(min_packets_sent < _batch_size){
+      int min_sent_packets = 0;
+      while(min_sent_packets < _batch_size){
 	_Step();
-	min_packets_sent = _packets_sent[0];
+	min_sent_packets = _sent_packets[0];
 	for(int i = 1; i < _nodes; ++i) {
-	  if(_packets_sent[i] < min_packets_sent)
-	    min_packets_sent = _packets_sent[i];
+	  if(_sent_packets[i] < min_sent_packets)
+	    min_sent_packets = _sent_packets[i];
 	}
-	if(_flow_out) {
-	  *_flow_out << "packets_sent(" << _time << ",:) = " << _packets_sent << ";" << endl;
+	if(_sent_packets_out) {
+	  *_sent_packets_out << "sent_packets(" << _time << ",:) = " << _sent_packets << ";" << endl;
 	}
       }
       cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) sent. Time used is " << _time - start_time << " cycles." << endl;

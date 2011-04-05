@@ -131,6 +131,11 @@ void Stats::Display( ostream & os ) const
 }
 
 ostream & operator<<(ostream & os, const Stats & s) {
-  os << s._hist;
+  vector<int> const & v = s._hist;
+  os << "[ ";
+  for(size_t i = 0; i < v.size(); ++i) {
+    os << v[i] << " ";
+  }
+  os << "]";
   return os;
 }
