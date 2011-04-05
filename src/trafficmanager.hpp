@@ -117,7 +117,7 @@ protected:
 
   // ============ batch mode ==========================
 
-  vector<vector<int> > _packets_sent;
+  vector<vector<int> > _sent_packets;
   int _batch_size;
   int _batch_count;
   vector<vector<int> > _requests_outstanding;
@@ -214,7 +214,15 @@ protected:
   //flits to watch
   ostream * _stats_out;
 
-  ostream * _flow_out;
+  bool _flow_out;
+
+  ostream * _sent_packets_out;
+  ostream * _active_packets_out;
+  ostream * _injected_flits_out;
+  ostream * _ejected_flits_out;
+  ostream * _received_flits_out;
+  ostream * _sent_flits_out;
+  ostream * _stored_flits_out;
 
   // ============ Internal methods ============ 
 protected:
@@ -255,5 +263,14 @@ public:
   Stats * getStats(const string & name) { return _stats[name]; }
 
 };
+
+template<class T>
+ostream & operator<<(ostream & os, const vector<T> & v) {
+  for(size_t i = 0; i < v.size() - 1; ++i) {
+    os << v[i] << ",";
+  }
+  os << v[v.size()-1];
+  return os;
+}
 
 #endif

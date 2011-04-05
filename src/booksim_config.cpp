@@ -255,7 +255,15 @@ BookSimConfig::BookSimConfig( )
   AddStrField("watch_out", "");
 
   AddStrField("stats_out", "");
-  AddStrField("flow_out", "");
+
+  _int_map["flow_out"] = 0;
+  AddStrField("sent_packets_out", "");
+  AddStrField("active_packets_out", "");
+  AddStrField("injected_flits_out", "");
+  AddStrField("ejected_flits_out", "");
+  AddStrField("received_flits_out", "");
+  AddStrField("sent_flits_out", "");
+  AddStrField("stored_flits_out", "");
   
   //==================Power model params=====================
   _int_map["sim_power"] = 0;
