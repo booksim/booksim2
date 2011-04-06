@@ -60,6 +60,7 @@ map<string, tRoutingFunction> gRoutingFunctionMap;
 /* Global information used by routing functions */
 
 int gNumVCs;
+int gResVCs;
 
 /* Add more functions here
  *
@@ -1882,7 +1883,8 @@ void InitializeRoutingMap( const Configuration & config )
 {
 
   gNumVCs = config.GetInt( "num_vcs" );
-
+  gResVCs = config.GetInt( "res_vcs" );
+  assert(gResVCs+1<gNumVCs); //+1 is for the special vc used when gReservation==true
   //
   // traffic class partitions
   //

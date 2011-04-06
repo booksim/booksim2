@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _NETWORK_HPP_
 #define _NETWORK_HPP_
 
+#include <map>
 #include <vector>
 #include <deque>
 
@@ -55,10 +56,12 @@ protected:
   int _nodes;
   int _channels;
   int _classes;
+  int _num_vcs;
 
   vector<Router *> _routers;
 
   vector<FlitChannel *> _inject;
+  map<FlitChannel*,   vector< Flit* > > _special_inject;
   vector<CreditChannel *> _inject_cred;
 
   vector<FlitChannel *> _eject;
@@ -79,7 +82,9 @@ public:
   virtual ~Network( );
 
   static Network *NewNetwork( const Configuration &config, const string & name );
-
+  
+  virtual Flit* GetSpecial(FlitChannel* fc, int vc);
+  virtual void WriteSpecialFlit(Flit*f, int source);
   virtual void WriteFlit( Flit *f, int source );
   virtual Flit *ReadFlit( int dest );
 

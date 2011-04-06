@@ -43,13 +43,17 @@
 
 #define INJECT_BUFFER_SIZE 40
 
+int dest_insert = 0;
+int dest_remove = 0;
+
+
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
   : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
 
   _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
-
+  _num_vcs = config.GetInt("num_vcs");
   if(gReservation){
     _reservation_lists.resize(_nodes);
     _reservation_robs.resize(_nodes);
@@ -58,12 +62,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _flow_counter.resize(_nodes,0);
     
   }
-  _inject_buffers.resize(_nodes);
+  _injection_buffer.resize(_nodes);
   for(int i = 0; i<_nodes; i++){
-    _inject_buffers[i].resize(config.GetInt("num_vcs"));
-    for(int j = 0; j<config.GetInt("num_vcs"); j++){
-      _inject_buffers[i][j].reserve(INJECT_BUFFER_SIZE);
-    }
+    _injection_buffer[i].resize(_num_vcs);
   }
   _dest_vc_lookup.resize(_nodes);
   _flow_size = config.GetInt("flow_size");
@@ -79,7 +80,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   assert(_limit<=_nodes);
  
   _subnets = config.GetInt("subnets");
- 
+  assert(_subnets == 1);
   _subnet.resize(Flit::NUM_FLIT_TYPES);
   _subnet[Flit::READ_REQUEST] = config.GetInt("read_request_subnet");
   _subnet[Flit::READ_REPLY] = config.GetInt("read_reply_subnet");
@@ -124,7 +125,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   // ============ Traffic ============ 
 
   _classes = config.GetInt("classes");
-
   _use_read_write = config.GetIntArray("use_read_write");
   if(_use_read_write.empty()) {
     _use_read_write.push_back(config.GetInt("use_read_write"));
@@ -173,9 +173,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _load.resize(_classes, _load.back());
 
   if(config.GetInt("injection_rate_uses_flits")) {
-    for(int c = 0; c < _classes; ++c)
+    for(int c = 0; c < _classes; ++c){
       _load[c] /= (double)_packet_size[c];
-    _load[c] /=_flow_size;
+      _load[c] /=_flow_size;
+    }
   }
 
   _traffic = config.GetStrArray("traffic");
@@ -221,15 +222,17 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _buf_states.resize(_nodes);
   _last_vc.resize(_nodes);
-
+  _last_interm.resize(_nodes);
   for ( int source = 0; source < _nodes; ++source ) {
     _buf_states[source].resize(_subnets);
     _last_vc[source].resize(_subnets);
+    _last_interm[source].resize(_subnets);
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {
       ostringstream tmp_name;
       tmp_name << "terminal_buf_state_" << source << "_" << subnet;
       _buf_states[source][subnet] = new BufferState( config, this, tmp_name.str( ) );
-      _last_vc[source][subnet].resize(_classes, -1);
+      _last_vc[source][subnet].resize(_classes, 0);
+      _last_interm[source][subnet].resize(_classes, -1);
     }
   }
 
@@ -904,6 +907,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     }
     if ( i == ( size - 1 ) ) { // Tail flit
       f->tail = true;
+      f->dest =  packet_destination;
     } else {
       f->tail = false;
     }
@@ -1018,14 +1022,12 @@ void TrafficManager::_Step( )
     vector<int> flits_sent_by_subnet(_subnets);
 
     //special take priority
-    if(gReservation_response_packets[source].empty()){
-      if(dest_buf->IsAvailableFor(0) && dest_buf->HasCreditFor(0)){
+    if(gReservation&&_response_packets[source].empty()){
+      if(_injection_buffer[source][0].size()<INJECT_BUFFER_SIZE){
 	Flit* f = 	_response_packets[source].front();
-	dest_buf->SendingFlit(f);
-	_net[subnet]->WriteFlit(f, source);
-	flits_sent_by_subnet[subnet]++ 
 	_response_packets[source].pop_front();
-	
+	_injection_buffer[source][0].push_back(f);
+	continue;
       }
     }
 
@@ -1046,18 +1048,11 @@ void TrafficManager::_Step( )
 	  Flit * f = _partial_packets[source][c].front();
 	  assert(f);
 	  //intermediate buffer
-	  if(f->head);
-
-
-	  int const subnet = f->subnetwork;
-	  if(flits_sent_by_subnet[subnet] > 0) {
-	    continue;
-	  }
-
-	  BufferState * const dest_buf = _buf_states[source][subnet];
-
-	  if(f->head && f->vc == -1) { // Find first available VC
-	    if(_dest_vc_lookup[source].find(f->dest)==_dest_vc_lookup[source].end()){
+	  int buf_id = -1;
+	  if(f->head){
+	    //no previous destination, almost same as original
+	    if(_dest_vc_lookup[source].find(f->dest)==
+	       _dest_vc_lookup[source].end()){
 	      OutputSet route_set;
 	      _rf(NULL, f, 0, &route_set, true);
 	      set<OutputSet::sSetElement> const & os = route_set.GetSet();
@@ -1068,91 +1063,138 @@ void TrafficManager::_Step( )
 	      int const & vc_end = se.vc_end;
 	      int const vc_count = vc_end - vc_start + 1;
 	      for(int i = 1; i <= vc_count; ++i) {
-		int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
-		if(dest_buf->IsAvailableFor(vc) && dest_buf->HasCreditFor(vc)) {
-		  f->vc = vc;
-		  _dest_vc_lookup[source].insert(pair<int, int>(f->dest, vc));
-		  if(gReservation){//create an flow
-		    int flid = _flow_counter[source];
-		    _flow_status[source].insert(pair<int, int>(flid, 0));
-		    f->flid = flid;
-		    f->spec = true;
-		    _flow_counter[source]++;
-		  }
+		int const vc = vc_start + (_last_interm[source][0][c] + i) % vc_count;
+		if(_injection_buffer[source][vc].empty()|| 
+		   (_injection_buffer[source][vc].back()->tail &&
+		    _injection_buffer[source][vc].size()<INJECT_BUFFER_SIZE)){
+		  buf_id = vc; //
+		  _last_interm[source][0][c] = vc- vc_start;
 		  break;
-		}
+		}		 
 	      }
-	    } else {
-	      f->vc = _dest_vc_lookup[source].find(f->dest)->second;
+	    } else { //destination is already in the system
+	      buf_id = _dest_vc_lookup[source].find(f->dest)->second;
+	      assert(buf_id!=-1);
+	    }
+	  } else { //body packets alreayd has a passed down vc
+	    buf_id = f->vc;
+	  }
+	  if(buf_id==-1){
+	    assert(f->head);
+	    continue;
+	  }
+
+	  if(_injection_buffer[source][buf_id].size()<INJECT_BUFFER_SIZE){
+	    if(f->head){
+	      assert(buf_id!=-1);
+	      f->vc=buf_id;
+	      dest_insert++;
+	      _dest_vc_lookup[source].insert(pair<int, int>(f->dest, f->vc));
+	      
 	      if(gReservation){//create an flow
 		int flid = _flow_counter[source];
 		_flow_status[source].insert(pair<int, int>(flid, 0));
 		f->flid = flid;
-		f->spec = true;
 		_flow_counter[source]++;
 	      }
 	    }
-	    if(f->vc == -1)
-	      continue;
-
-	    dest_buf->TakeBuffer(f->vc);
-	    _last_vc[source][subnet][c] = f->vc - vc_start;
-	  } 
-
-	  if(gReservation && !f->head){//continuing speculative flow
-	    if(_flow_status[source][f->flid]==0){
-	      f->spec = true;
-	    }
+	    _injection_buffer[source][buf_id].push_back(f);
+	    _partial_packets[source][c].pop_front();
+	  } else { //did not find an eligible buffer
+	    continue;
 	  }
 	  
-	  assert(f->vc != -1);
-
-	  if(dest_buf->HasCreditFor(f->vc)) {
-	    
-	    _partial_packets[source][c].pop_front();
-	    dest_buf->SendingFlit(f);
-	    
-	    if(_pri_type == network_age_based) {
-	      f->pri = numeric_limits<int>::max() - _time;
-	      assert(f->pri >= 0);
-	    }
-	    
-	    if(f->watch) {
-	      *gWatchOut << GetSimTime() << " | "
-			 << "node" << source << " | "
-			 << "Injecting flit " << f->id
-			 << " into subnet " << subnet
-			 << " at time " << _time
-			 << " with priority " << f->pri
-			 << "." << endl;
-	    }
-	    
-	    // Pass VC "back"
-	    if(!_partial_packets[source][c].empty() && !f->tail) {
-	      Flit * nf = _partial_packets[source][c].front();
-	      nf->vc = f->vc;
-	      nf->flid = f->flid;
-	    }
-	    
-	    ++flits_sent_by_class[c];
-	    ++flits_sent_by_subnet[subnet];
-	    if(_flow_out) ++injected_flits[subnet*_nodes+source];
-
-	    _net[subnet]->WriteFlit(f, source);
-	    
-	    iter->second.first = offset;
-	    
+	  //this should not trigger
+	  int const subnet = f->subnetwork;
+	  if(flits_sent_by_subnet[subnet] > 0) {
+	    assert(false);
+	    continue;
 	  }
+
+	    // Pass VC "back"
+	  if(!_partial_packets[source][c].empty() && !f->tail) {
+	    Flit * nf = _partial_packets[source][c].front();
+	    nf->vc = f->vc;
+	    nf->flid = f->flid;
+	  }
+	  
+	  ++flits_sent_by_class[c];
+	  ++flits_sent_by_subnet[subnet];
+	  if(_flow_out) ++injected_flits[subnet*_nodes+source]; 
+	  iter->second.first = offset;
+	  
 	}
       }
     }
+
     if(((_sim_mode != batch) && (_sim_state == warming_up)) || (_sim_state == running)) {
       for(int c = 0; c < _classes; ++c) {
 	_sent_flits[c][source]->AddSample(flits_sent_by_class[c]);
       }
     }
   }
+  
+  //drain the intermediate buffers
+  for(int source = 0; source < _nodes; ++source) {
+    BufferState * const dest_buf = _buf_states[source][0];
+    for(int vc = 0; vc<_num_vcs; vc++){
+      //transfer from intermediate to injection port
+      if(_injection_buffer[source][vc].empty()){
+	continue;
+      }
 
+      Flit * f =NULL;
+      //special for header
+      if(_injection_buffer[source][vc].front()->head){
+	if(dest_buf->IsAvailableFor(vc) &&
+	   dest_buf->HasCreditFor(vc)){
+	  f= _injection_buffer[source][vc].front(); 
+	  assert(f->vc !=-1);
+	  dest_buf->TakeBuffer(f->vc); 
+	  dest_buf->SendingFlit(f);
+	}
+      } else { //body 
+	if( dest_buf->HasCreditFor(vc)){
+	  f= _injection_buffer[source][vc].front(); 
+	  assert(f->vc !=-1);
+	  dest_buf->SendingFlit(f);
+	}
+      }
+
+      if(f!=NULL){
+	if(gReservation){//reservation. speculative
+	  if(_flow_status[source][f->flid]==0){
+	    f->spec = true;
+	    //can't pop this because of speculation
+	    //_injection_buffer[source][vc].pop_front();
+	  } else { //reservation, nonspeculative
+	    f->spec = false;
+	    _injection_buffer[source][vc].pop_front();
+	    if(f->tail){
+	      assert(_dest_vc_lookup[source].find(f->dest)!=
+		     _dest_vc_lookup[source].end());
+	      _dest_vc_lookup[source].erase(_dest_vc_lookup[source].find(f->dest));
+	    }
+	  }
+	} else { //normal transfer 
+	  
+	  _injection_buffer[source][vc].pop_front();
+	  if(f->tail){
+	    if(_dest_vc_lookup[source].find(f->dest)==
+	       _dest_vc_lookup[source].end()){
+	      assert(false);
+	    }
+
+	    dest_remove++;
+	    _dest_vc_lookup[source].erase(_dest_vc_lookup[source].find(f->dest));
+	  }
+	}
+	_net[0]->WriteSpecialFlit(f, source);
+	
+      }
+    }
+  }
+  
   vector<int> ejected_flits(_subnets*_nodes);
 
   for(int subnet = 0; subnet < _subnets; ++subnet) {

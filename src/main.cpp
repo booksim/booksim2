@@ -102,11 +102,12 @@ bool gReservation = false;
 bool gGUIMode = false;
 #endif
 
+
+vector<Network *> net;
 /////////////////////////////////////////////////////////////////////////////
 
 bool Simulate( BookSimConfig const & config )
 {
-  vector<Network *> net;
 
   int subnets = config.GetInt("subnets");
   /*To include a new network, must register the network here

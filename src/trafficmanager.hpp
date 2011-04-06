@@ -54,6 +54,7 @@ class PacketReplyInfo;
 class TrafficManager : public Module {
 protected:
   int _nodes;
+  int _num_vcs;
   int _routers;
 
   vector<Network *> _net;
@@ -64,7 +65,6 @@ protected:
   int    _classes;
 
   vector<double> _load;
-  vector<int> _flow_reminder;
   int _flow_size;
 
   vector<int>    _packet_size;
@@ -104,6 +104,7 @@ protected:
 
   vector<vector<BufferState *> > _buf_states;
   vector<vector<vector<int> > > _last_vc;
+  vector<vector<vector<int> > > _last_interm;
 
   // ============ Routing ============ 
 
@@ -158,10 +159,10 @@ protected:
   vector<list<Flit *> > _response_packets;
 
   //sender
-  vector<vector< vector<Flit*> > > _inject_buffers;
+  vector<vector< list<Flit*> > > _injection_buffer;
   vector<map<int, int> > _flow_status;
   vector<int> _flow_counter;
-  vector<map<int, int>  >_dest_vc_lookup;
+  vector<multimap<int, int>  >_dest_vc_lookup;
   
 
   // ============ Statistics ============

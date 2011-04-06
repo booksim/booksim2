@@ -47,6 +47,7 @@ public:
 		  WRITE_REPLY   = 3,
                   ANY_TYPE      = 4 };
   FlitType type;
+  int res_type;
 
   int vc;
 

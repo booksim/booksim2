@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cassert>
 #include <limits>
 
+#include "network.hpp"
 #include "globals.hpp"
 #include "random_utils.hpp"
 #include "vc.hpp"
@@ -49,6 +50,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "allocator.hpp"
 #include "switch_monitor.hpp"
 #include "buffer_monitor.hpp"
+
+
+extern vector< Network * > net;
+
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
@@ -279,17 +284,28 @@ bool IQRouter::_ReceiveFlits( )
 {
   bool activity = false;
   for(int input = 0; input < _inputs; ++input) { 
-    Flit * const f = _input_channels[input]->Receive();
-    if(f) {
-      ++_received_flits[input];
-      if(f->watch) {
-	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		   << "Received flit " << f->id
-		   << " from channel at input " << input
-		   << "." << endl;
+    if( _input_channels[input]->GetSource() == -1){
+      Flit * f;
+      for(int vc = 0; vc< _vcs; vc++){
+	f = net[0]->GetSpecial( _input_channels[input],vc);
+	if(f){
+	  _in_queue_flits.insert(make_pair(input, f));
+	}
       }
-      _in_queue_flits.insert(make_pair(input, f));
       activity = true;
+    } else {
+      Flit * const f = _input_channels[input]->Receive();
+      if(f) {
+	++_received_flits[input];
+	if(f->watch) {
+	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		     << "Received flit " << f->id
+		     << " from channel at input " << input
+		     << "." << endl;
+	}
+	_in_queue_flits.insert(make_pair(input, f));
+	activity = true;
+      }
     }
   }
   return activity;

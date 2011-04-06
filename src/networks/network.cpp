@@ -59,6 +59,7 @@ Network::Network( const Configuration &config, const string & name ) :
   _nodes    = -1; 
   _channels = -1;
   _classes  = config.GetInt("classes");
+  _num_vcs = config.GetInt("num_vcs");
 }
 
 Network::~Network( )
@@ -143,6 +144,7 @@ void Network::_Alloc( )
    *credit channels are the necessary counter part
    */
   _inject.resize(_nodes);
+
   _inject_cred.resize(_nodes);
   for ( int s = 0; s < _nodes; ++s ) {
     ostringstream name;
@@ -155,6 +157,12 @@ void Network::_Alloc( )
     _inject_cred[s] = new CreditChannel(this, name.str());
     _timed_modules.push_back(_inject_cred[s]);
   }
+  for(int i = 0; i<_nodes; i++){
+    _special_inject.insert(pair<FlitChannel*, vector<Flit*> >( _inject[i], 
+							       vector<Flit*>()));
+    _special_inject[ _inject[i] ].resize(_num_vcs, NULL);
+  }
+
   _eject.resize(_nodes);
   _eject_cred.resize(_nodes);
   for ( int d = 0; d < _nodes; ++d ) {
@@ -209,8 +217,22 @@ void Network::WriteOutputs( )
   }
 }
 
+Flit* Network::GetSpecial(FlitChannel* fc, int vc){
+  Flit* f = _special_inject[fc ][vc];
+  _special_inject[fc ][vc] = NULL;
+    return f;
+}
+void Network::WriteSpecialFlit( Flit *f, int source )
+{
+
+  assert( ( source >= 0 ) && ( source < _nodes ) );
+  _special_inject[ _inject[source] ][f->vc] = f;
+  // _inject[source]->Send(f);
+}
+
 void Network::WriteFlit( Flit *f, int source )
 {
+  assert(false); //dont' use this, use write special flits
   assert( ( source >= 0 ) && ( source < _nodes ) );
   _inject[source]->Send(f);
 }

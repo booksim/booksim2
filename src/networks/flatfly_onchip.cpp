@@ -498,19 +498,40 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
 		  OutputSet *outputs, bool inject )
 {
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
+  
   int vcBegin = 0, vcEnd = gNumVCs-1;
-  if ( f->type == Flit::READ_REQUEST ) {
-    vcBegin = gReadReqBeginVC;
-    vcEnd = gReadReqEndVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-    vcBegin = gWriteReqBeginVC;
-    vcEnd = gWriteReqEndVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-    vcBegin = gReadReplyBeginVC;
-    vcEnd = gReadReplyEndVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-    vcBegin = gWriteReplyBeginVC;
-    vcEnd = gWriteReplyEndVC;
+  if(!gReservation){
+    if ( f->type == Flit::READ_REQUEST ) {
+      vcBegin = gReadReqBeginVC;
+      vcEnd = gReadReqEndVC;
+    } else if ( f->type == Flit::WRITE_REQUEST ) {
+      vcBegin = gWriteReqBeginVC;
+      vcEnd = gWriteReqEndVC;
+    } else if ( f->type ==  Flit::READ_REPLY ) {
+      vcBegin = gReadReplyBeginVC;
+      vcEnd = gReadReplyEndVC;
+    } else if ( f->type ==  Flit::WRITE_REPLY ) {
+      vcBegin = gWriteReplyBeginVC;
+      vcEnd = gWriteReplyEndVC;
+    }
+  } else {
+    if(f->res_type == 1){//special packets
+      vcBegin = 0;
+      vcEnd = 0;
+    } else { //normal packets
+      if(inject){ //inject channel use any vcs
+	vcBegin = 1;
+	vcEnd = gNumVCs-1;
+      } else { //normal channel must segregate
+	if(f->spec){
+	  vcBegin = 1;
+	  vcEnd = (1+gResVCs)-1;
+	} else {
+	  vcBegin = (1+gResVCs);
+	  vcEnd = (gNumVCs-1);
+	}
+      }
+    }
   }
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
