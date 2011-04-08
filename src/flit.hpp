@@ -55,7 +55,7 @@ public:
 
   bool head;
   bool tail;
-  bool true_tail;
+  bool flow_tail;
   bool spec;
 
   int  time;
@@ -93,6 +93,7 @@ public:
   mutable int ring_par;
 
   // Fields for arbitrary data
+  int payload;
   void* data ;
 
   void Reset();

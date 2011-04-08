@@ -171,6 +171,9 @@ void BufferState::SendingFlit( Flit const * const f )
 
 void BufferState::TakeBuffer( int vc )
 {
+  if(!( ( vc >= 0 ) && ( vc < _vcs ) )){
+    cout<<vc<<endl;
+  }
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
 
   if ( _in_use[vc] ) {

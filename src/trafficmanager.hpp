@@ -48,6 +48,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "outputset.hpp"
 #include "injection.hpp"
 
+#define FLOW_STATUS_NACK 2
+#define FLOW_STATUS_SPEC 1
+#define FLOW_STATUS_NORM 0
+
+#define RES_TYPE_ACK 3
+#define RES_TYPE_NACK 2
+#define RES_TYPE_GRANT 1
+#define RES_TYPE_NORM 0
+
+#define RES_STATUS_NONE 0
+#define RES_STATUS_ASSIGNED 1
+#define RES_STATUS_REORDER 2
+
+struct flow{
+  int flid;				       
+  int status;
+  int spec_sent;
+  int position;
+  int vc;
+  int rtime;
+};
+
 //register the requests to a node
 class PacketReplyInfo;
 
@@ -145,7 +167,6 @@ protected:
 
   int _last_id;
   int _last_pid;
-
   // ============voq mode =============================
 
   vector<vector<list<Flit*> > > _voq;
@@ -154,16 +175,15 @@ protected:
 
   //==============hot spot reservation=====================
   //receiver
-  vector<vector<int> > _reservation_lists;
+  vector<map<int, int> > _reservation_status;
   vector<map<int, vector<Flit* > > > _reservation_robs;
   vector<list<Flit *> > _response_packets;
+  vector<int> _reservation_schedule;
 
   //sender
   vector<vector< list<Flit*> > > _injection_buffer;
-  vector<map<int, int> > _flow_status;
-  vector<int> _flow_counter;
   vector<multimap<int, int>  >_dest_vc_lookup;
-  
+  vector<map<int, flow*> > _flow_lookup;
 
   // ============ Statistics ============
 
@@ -232,6 +252,7 @@ protected:
   vector<double> _warmup_threshold;
   vector<double> _acc_warmup_threshold;
 
+  int _cur_flid;
   int _cur_id;
   int _cur_pid;
   int _cur_tid;
@@ -272,6 +293,7 @@ protected:
   
   void _LoadWatchList(const string & filename);
 
+  Flit* IssueSpecial(int src, Flit* ff);
 public:
   TrafficManager( const Configuration &config, const vector<Network *> & net );
   ~TrafficManager( );

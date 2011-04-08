@@ -70,13 +70,13 @@ void Flit::Reset()
   cl        = -1 ;
   head      = false ;
   tail      = false ;
-  true_tail = false ;
+  flow_tail = false ;
   spec = false;
   time      = -1 ;
   ttime     = -1 ;
   atime     = -1 ;
   exptime =-1;
-  sn        = 0 ;
+  sn        = -1 ;
   rob_time  = 0 ;
   id        = -1 ;
   pid       = -1 ;
@@ -95,6 +95,7 @@ void Flit::Reset()
   minimal = 1;
   ring_par = -1;
   data = 0;
+  payload = -1;
 }  
 
 Flit * Flit::New() {

@@ -515,7 +515,7 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
       vcEnd = gWriteReplyEndVC;
     }
   } else {
-    if(f->res_type == 1){//special packets
+    if(f->res_type != 0){//special packets
       vcBegin = 0;
       vcEnd = 0;
     } else { //normal packets
@@ -533,7 +533,8 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
       }
     }
   }
-  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
+  //this assertion is not used, packets are allowed to jump class
+  //  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
   int out_port;
 
