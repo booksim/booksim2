@@ -51,6 +51,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define FLOW_STATUS_NACK 2
 #define FLOW_STATUS_SPEC 1
 #define FLOW_STATUS_NORM 0
+#define FLOW_STATUS_WAIT 4
 
 #define RES_TYPE_ACK 3
 #define RES_TYPE_NACK 2
@@ -62,14 +63,39 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define RES_STATUS_REORDER 2
 
 struct flow{
-  int flid;				       
-  int status;
-  int spec_sent;
-  int position;
+  int flid;
   int vc;
   int rtime;
 };
 
+class FlowBuffer{
+public:
+  FlowBuffer();
+  ~FlowBuffer();
+
+  Flit* front();
+  flow* front_flow();
+  Flit* back();
+  Flit* get_spec(int flid);
+  int size();
+  bool empty();
+  bool full();
+  void push_flow(flow* f);
+  void pop_flow();
+  void push_back(Flit * f);
+  void pop_front();
+  bool remove_packet();
+  void reset();  
+
+  Flit** _flit_buffer;
+  list<flow* > _flow_buffer;
+  int _head;
+  int _tail;
+  int _size;
+  int _capacity;			       
+  int _status;
+  int _spec_position;
+};
 //register the requests to a node
 class PacketReplyInfo;
 
@@ -181,7 +207,7 @@ protected:
   vector<int> _reservation_schedule;
 
   //sender
-  vector<vector< list<Flit*> > > _injection_buffer;
+  FlowBuffer** _injection_buffer;
   vector<multimap<int, int>  >_dest_vc_lookup;
   vector<map<int, flow*> > _flow_lookup;
 
