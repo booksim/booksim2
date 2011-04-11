@@ -1046,7 +1046,7 @@ void TrafficManager::_Step( )
     if(_injected_flits_out) *_injected_flits_out << injected_flits << endl;
     if(_received_flits_out) *_received_flits_out << received_flits << endl;
     if(_stored_flits_out) *_stored_flits_out << stored_flits << endl;
-    if(_sent_flits_out) *_sent_flits_out << sent_flits << endl;;
+    if(_sent_flits_out) *_sent_flits_out << sent_flits << endl;
     if(_ejected_flits_out) *_ejected_flits_out << ejected_flits << endl;
     if(_active_packets_out) *_active_packets_out << active_packets << endl;
   }
