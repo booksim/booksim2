@@ -696,7 +696,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	fl = _injection_buffer[dest][vc_index].front_flow();
 	assert(fl->flid == f->flid);
 	//flit to be acked could have already been sent normally
-	if(_injection_buffer[dest][fl->vc].front()->sn == f->sn){
+	if(_injection_buffer[dest][fl->vc].front() && //really late ack
+	   _injection_buffer[dest][fl->vc].front()->sn == f->sn){
 	  assert(_injection_buffer[dest][fl->vc].front()->head);
 	  //entire flow delivered speculatively
 	  if(_injection_buffer[dest][fl->vc].remove_packet()){
