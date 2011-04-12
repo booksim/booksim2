@@ -52,6 +52,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define FLOW_STATUS_SPEC 1
 #define FLOW_STATUS_NORM 0
 #define FLOW_STATUS_WAIT 4
+#define FLOW_STATUS_NACK_TRANSITION 5
+#define FLOW_STATUS_GRANT_TRANSITION 6
 
 #define RES_TYPE_ACK 3
 #define RES_TYPE_NACK 2
@@ -80,6 +82,7 @@ public:
   int size();
   bool empty();
   bool full();
+  void inc_spec();
   void push_flow(flow* f);
   void pop_flow();
   void push_back(Flit * f);

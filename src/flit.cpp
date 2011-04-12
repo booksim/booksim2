@@ -64,6 +64,7 @@ Flit::Flit()
 
 void Flit::Reset() 
 {  
+  inuse = false;
   res_type = 0;
   type      = ANY_TYPE ;
   vc        = -1 ;
@@ -105,13 +106,16 @@ Flit * Flit::New() {
     _all.push(f);
   } else {
     f = _free.top();
+    assert(!f->inuse);
     f->Reset();
     _free.pop();
   }
+  f->inuse = true;
   return f;
 }
 
 void Flit::Free() {
+  this->inuse = false;
   _free.push(this);
 }
 

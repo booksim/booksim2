@@ -39,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class Flit {
 
 public:
+  bool inuse;
 
   const static int NUM_FLIT_TYPES = 5;
   enum FlitType { READ_REQUEST  = 0, 

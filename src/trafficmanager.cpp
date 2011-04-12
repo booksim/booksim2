@@ -41,11 +41,9 @@
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
-#define INJECTION_BUFFER_SIZE 40
+#define INJECTION_BUFFER_SIZE 400
 #define MAX(X,Y) (X>Y?(X):(Y))
-int dest_insert = 0;
 int dest_remove = 0;
-
 
 FlowBuffer::FlowBuffer(){
   _head = 0; _tail = 0; _size = 0; _capacity = INJECTION_BUFFER_SIZE;
@@ -58,7 +56,11 @@ FlowBuffer::~FlowBuffer(){
 }
 
 void FlowBuffer::reset(){
-  _spec_position = 0; _status= FLOW_STATUS_SPEC;
+  _spec_position = _head; _status= FLOW_STATUS_SPEC;
+}
+
+void FlowBuffer::inc_spec(){
+  _spec_position = (_spec_position+1)%_capacity;
 }
 Flit* FlowBuffer::front() { 
   if(_size == 0){
@@ -77,14 +79,11 @@ Flit* FlowBuffer::back(){
   if(_size == 0){
     return NULL;
   } else {
-    return _flit_buffer[_tail-1];
+    return _flit_buffer[(_tail+_capacity-1)%_capacity];
   }
 }
 Flit* FlowBuffer::get_spec(int flid){
-  assert(_status==FLOW_STATUS_SPEC);
-  if(_size==_spec_position ) 
-    return NULL;
-  Flit* f = _flit_buffer[(_head+_spec_position)%_capacity];
+  Flit* f = _flit_buffer[_spec_position];
   if(f && f->flid!=flid){
     f = NULL;
   }
@@ -129,6 +128,7 @@ bool FlowBuffer::remove_packet(){
     //end of packet or end of the buffer
     done = _flit_buffer[pointer]->tail;
     _flit_buffer[pointer]->Free();
+  
     _flit_buffer[pointer] = NULL;
     _head = (_head+1)%_capacity; 
     _size--;
@@ -684,6 +684,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 {
   //TODO OOO acks
   //cout<<"retiring at "<<dest<<" "<<f->id<<" "<<f->flid<<" "<<f->sn<<endl;
+
   if(gReservation){
     flow* fl = NULL;
     int vc_index;
@@ -693,17 +694,17 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       if(_flow_lookup[dest].find(f->flid)!=_flow_lookup[dest].end()){
 	vc_index = _flow_lookup[dest][f->flid]->vc;
 	fl = _injection_buffer[dest][vc_index].front_flow();
+	assert(fl->flid == f->flid);
 	//flit to be acked could have already been sent normally
 	if(_injection_buffer[dest][fl->vc].front()->sn == f->sn){
+	  assert(_injection_buffer[dest][fl->vc].front()->head);
 	  //entire flow delivered speculatively
 	  if(_injection_buffer[dest][fl->vc].remove_packet()){
 	    //cout<<"erase flow "<<f->flid<<endl;
-	    delete _flow_lookup[dest][f->flid];
-	    _flow_lookup[dest].erase(f->flid);
 	    _injection_buffer[dest][fl->vc].pop_flow();
 	    _injection_buffer[dest][fl->vc].reset();
-	  } else {
-	    _injection_buffer[dest][fl->vc]._spec_position--;
+	    delete _flow_lookup[dest][f->flid];
+	    _flow_lookup[dest].erase(f->flid);
 	  }
 	}
 	
@@ -712,43 +713,45 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       return;
       break;
     case RES_TYPE_NACK:
-      vc_index = _flow_lookup[dest][f->flid]->vc;
-      fl = _injection_buffer[dest][vc_index].front_flow();
-      assert(fl!=NULL && fl->flid == f->flid);
-      //don't nack during normal/wait state
-      if(_injection_buffer[dest][fl->vc]._status==FLOW_STATUS_NORM ||
-	 _injection_buffer[dest][fl->vc]._status!=FLOW_STATUS_WAIT ){
-      } else {
-	_injection_buffer[dest][fl->vc]._status = FLOW_STATUS_NACK;
-	_injection_buffer[dest][fl->vc]._spec_position = f->sn;
+      //nacks could return after all packets already sent normally
+      if(_flow_lookup[dest].find(f->flid)!=_flow_lookup[dest].end()){
+	vc_index = _flow_lookup[dest][f->flid]->vc;
+	fl = _injection_buffer[dest][vc_index].front_flow();
+	assert(fl!=NULL && fl->flid == f->flid);
+	//only move to nack from spec
+	if(_injection_buffer[dest][fl->vc]._status==FLOW_STATUS_SPEC){
+	  _injection_buffer[dest][fl->vc]._status = FLOW_STATUS_NACK_TRANSITION;
+	}
+	
       }
-    
       f->Free();
       return;
       break;
     case RES_TYPE_GRANT: 
       //grant  and free the first flit
-      vc_index = _flow_lookup[dest][f->flid]->vc;
-      fl = _injection_buffer[dest][vc_index].front_flow();
-      assert(fl);
-      //cout<<"granted\n";
-      assert(_injection_buffer[dest][fl->vc]._status!= FLOW_STATUS_WAIT && 
-	     _injection_buffer[dest][fl->vc]._status!= FLOW_STATUS_NORM);
-      if(_injection_buffer[dest][fl->vc].remove_packet()){//single flit flows
-	//cout<<"erase flow "<<f->flid<<endl;
-	delete _flow_lookup[dest][f->flid];
-	_flow_lookup[dest].erase(f->flid);
-	_injection_buffer[dest][fl->vc].pop_flow();
-	_injection_buffer[dest][fl->vc].reset();
-      } else {
-	_injection_buffer[dest][fl->vc]._spec_position--;
-	fl->rtime = f->payload;
-	if(_time<fl->rtime){
-	  _injection_buffer[dest][fl->vc]._status = FLOW_STATUS_WAIT;
+      //nacks could return after all packets already sent normally
+      if(_flow_lookup[dest].find(f->flid)!=_flow_lookup[dest].end()){
+	vc_index = _flow_lookup[dest][f->flid]->vc;
+	fl = _injection_buffer[dest][vc_index].front_flow();
+	assert(fl);
+	assert(_injection_buffer[dest][fl->vc]._status!= FLOW_STATUS_WAIT && 
+	       _injection_buffer[dest][fl->vc]._status!= FLOW_STATUS_NORM &&
+	       _injection_buffer[dest][fl->vc]._status!= FLOW_STATUS_GRANT_TRANSITION);
+	assert(_injection_buffer[dest][fl->vc].front()->sn == f->sn);
+	assert(_injection_buffer[dest][fl->vc].front()->head);
+	if(_injection_buffer[dest][fl->vc].remove_packet()){//single flit flows
+
+	  _injection_buffer[dest][fl->vc].pop_flow();
+	  _injection_buffer[dest][fl->vc].reset();
+	  delete _flow_lookup[dest][f->flid];
+	  _flow_lookup[dest].erase(f->flid);
 	} else {
-	  _injection_buffer[dest][fl->vc]._status = FLOW_STATUS_NORM;
-	}  
-      }   
+	  fl->rtime = f->payload;
+	  _injection_buffer[dest][fl->vc]._status = FLOW_STATUS_GRANT_TRANSITION;
+	}   
+      } else {
+	assert(false);
+      }
       f->Free();
       return;
       break;
@@ -766,14 +769,18 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	    _response_packets[dest].push_back(ff);
 	    _reservation_robs[dest].insert(pair<int, vector<Flit*> >(f->flid, vector<Flit*>()));
 	    _reservation_robs[dest][f->flid].push_back(f);
-
+	   
 	  } else if(_reservation_robs[dest].find(f->flid)!= _reservation_robs[dest].end() &&
 _reservation_robs[dest][f->flid].back()->sn+1 == f->sn ){
 	    //inorder and following sequence numbe
+	    assert(f->sn>0);
 	    _reservation_robs[dest][f->flid].push_back(f);
+	   
 	    //send ack, shoudl ideally send ack when tail arrives
+	    //sending with the head's sn
 	    if(f->tail){
 	      Flit* ff = IssueSpecial(dest,f);
+	      ff->sn = f->payload;//head flit sn
 	      ff->res_type = RES_TYPE_ACK;
 	      _response_packets[dest].push_back(ff);
 	    }
@@ -790,6 +797,7 @@ _reservation_robs[dest][f->flid].back()->sn+1 == f->sn ){
 			 << "out of order(0) spec flit " << f->id
 			 << "." << endl;
 	    }
+	    
 	    f->Free();
 	    return;
 	  }
@@ -802,13 +810,14 @@ _reservation_robs[dest][f->flid].back()->sn+1 == f->sn ){
 		ff->res_type = RES_TYPE_NACK;
 		_response_packets[dest].push_back(ff);
 	      }
-	      f->Free();
+	      
 	      if(f->watch){
 		*gWatchOut << GetSimTime() << " | "
 			   << "node" << dest << " | "
 			   << "out of order(1) spec flit " << f->id
 			   << "." << endl;
 	      }
+	      f->Free();
 	      return;
 	    } else {//reserve and send time
 	      _reservation_status[dest].insert(pair<int, int>(f->flid, RES_STATUS_ASSIGNED));
@@ -821,6 +830,7 @@ _reservation_robs[dest][f->flid].back()->sn+1 == f->sn ){
 	      _response_packets[dest].push_back(ff);
 	      _reservation_robs[dest].insert(pair<int, vector<Flit*> >(f->flid, vector<Flit*>()));
 	      _reservation_robs[dest][f->flid].push_back(f);
+	   
 	    }
 	  } else { //lost body flits
 	    assert(false);
@@ -832,10 +842,12 @@ _reservation_robs[dest][f->flid].back()->sn+1 == f->sn ){
 	    f->sn<= _reservation_robs[dest][f->flid].back()->sn){
 	  if(f->watch){
 	    *gWatchOut << GetSimTime() << " | "
-		       << "node" << dest << " | "
-		       << "duplicate normal flit " << f->id
+		       << " node" << dest << " | "
+		       << " duplicate normal flit " << f->id
+		       << " sn "<<f->sn<<" vs registered "<<_reservation_robs[dest][f->flid].back()->sn
 		       << "." << endl;
 	  }
+	  
 	  f->Free();
 	  return;
 	}
@@ -843,11 +855,13 @@ _reservation_robs[dest][f->flid].back()->sn+1 == f->sn ){
       
       //free flow book keepings
       if(f->flow_tail){
-	_reservation_status[dest].erase(f->flid);
-	for(int i = 0; i<_reservation_robs[dest].size(); i++){
-	  _reservation_robs[dest][f->flid][i]->Free();
+	int saved_flid = f->flid;
+	_reservation_status[dest].erase(saved_flid);
+	for(int i = 0; i<_reservation_robs[dest][saved_flid].size(); i++){
+	  _reservation_robs[dest][saved_flid][i]->Free();
 	}
-	_reservation_robs[dest].erase(f->flid);
+	_reservation_robs[dest][saved_flid].clear();
+	_reservation_robs[dest].erase(saved_flid);
 	//cout<<"erase"<<f->flid<<endl;
       }
       break;
@@ -863,9 +877,15 @@ _reservation_robs[dest][f->flid].back()->sn+1 == f->sn ){
     }
   }
 
-
+  //this occurs, when the normal flit retires before the speculative
+  //really really out of order
+  if(_total_in_flight_flits[f->cl].count(f->id) == 0){
+    assert(f->spec);
+    return;
+  }
   //Regular retire flit
   _deadlock_timer = 0;
+
   assert(_total_in_flight_flits[f->cl].count(f->id) > 0);
   _total_in_flight_flits[f->cl].erase(f->id);
   
@@ -1069,166 +1089,166 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   if(source >=_limit){
     return ;
   }
-
-  Flit::FlitType packet_type = Flit::ANY_TYPE;
-  int size = _packet_size[cl]; //input size 
-  int ttime = time;
-  int pid = _cur_pid++;
-  assert(_cur_pid);
-  int tid = _cur_tid;
   int packet_destination = _traffic_function[cl](source, _limit);
-  bool record = false;
-  bool watch = gWatchOut && ((_packets_to_watch.count(pid) > 0) ||
-			     (_transactions_to_watch.count(tid) > 0));
-  if(_use_read_write[cl]){
-    if(stype < 0) {
-      if (stype ==-1) {
-	packet_type = Flit::READ_REQUEST;
-	size = _read_request_size[cl];
-      } else if (stype == -2) {
-	packet_type = Flit::WRITE_REQUEST;
-	size = _write_request_size[cl];
-      } else {
-	ostringstream err;
-	err << "Invalid packet type: " << packet_type;
-	Error( err.str( ) );
+
+  int sequence_number =0;
+  for(int f_index = 0; f_index<_flow_size; f_index++){
+    Flit::FlitType packet_type = Flit::ANY_TYPE;
+    int size = _packet_size[cl]; //input size 
+    int ttime = time;
+    int pid = _cur_pid++;
+    assert(_cur_pid);
+    int tid = _cur_tid;
+    bool record = false;
+    bool watch = gWatchOut && ((_packets_to_watch.count(pid) > 0) ||
+			       (_transactions_to_watch.count(tid) > 0));
+    if(_use_read_write[cl]){
+      if(stype < 0) {
+	if (stype ==-1) {
+	  packet_type = Flit::READ_REQUEST;
+	  size = _read_request_size[cl];
+	} else if (stype == -2) {
+	  packet_type = Flit::WRITE_REQUEST;
+	  size = _write_request_size[cl];
+	} else {
+	  ostringstream err;
+	  err << "Invalid packet type: " << packet_type;
+	  Error( err.str( ) );
+	}
+	if ( watch ) { 
+	  *gWatchOut << GetSimTime() << " | "
+		     << "node" << source << " | "
+		     << "Beginning transaction " << tid
+		     << " at time " << time
+		     << "." << endl;
+	}
+	++_cur_tid;
+	assert(_cur_tid);
+      } else  {
+	map<int, PacketReplyInfo*>::iterator iter = _repliesDetails.find(stype);
+	PacketReplyInfo* rinfo = iter->second;
+      
+	if (rinfo->type == Flit::READ_REQUEST) {//read reply
+	  size = _read_reply_size[cl];
+	  packet_type = Flit::READ_REPLY;
+	} else if(rinfo->type == Flit::WRITE_REQUEST) {  //write reply
+	  size = _write_reply_size[cl];
+	  packet_type = Flit::WRITE_REPLY;
+	} else {
+	  ostringstream err;
+	  err << "Invalid packet type: " << rinfo->type;
+	  Error( err.str( ) );
+	}
+	packet_destination = rinfo->source;
+	tid = rinfo->tid;
+	time = rinfo->time;
+	ttime = rinfo->ttime;
+	record = rinfo->record;
+	_repliesDetails.erase(iter);
+	rinfo->Free();
       }
-      if ( watch ) { 
-	*gWatchOut << GetSimTime() << " | "
-		   << "node" << source << " | "
-		   << "Beginning transaction " << tid
-		   << " at time " << time
-		   << "." << endl;
-      }
+    } else {
       ++_cur_tid;
       assert(_cur_tid);
-    } else  {
-      map<int, PacketReplyInfo*>::iterator iter = _repliesDetails.find(stype);
-      PacketReplyInfo* rinfo = iter->second;
-      
-      if (rinfo->type == Flit::READ_REQUEST) {//read reply
-	size = _read_reply_size[cl];
-	packet_type = Flit::READ_REPLY;
-      } else if(rinfo->type == Flit::WRITE_REQUEST) {  //write reply
-	size = _write_reply_size[cl];
-	packet_type = Flit::WRITE_REPLY;
-      } else {
-	ostringstream err;
-	err << "Invalid packet type: " << rinfo->type;
-	Error( err.str( ) );
-      }
-      packet_destination = rinfo->source;
-      tid = rinfo->tid;
-      time = rinfo->time;
-      ttime = rinfo->ttime;
-      record = rinfo->record;
-      _repliesDetails.erase(iter);
-      rinfo->Free();
     }
-  } else {
-    ++_cur_tid;
-    assert(_cur_tid);
-  }
 
-  if ((packet_destination <0) || (packet_destination >= _nodes)) {
-    ostringstream err;
-    err << "Incorrect packet destination " << packet_destination
-	<< " for stype " << packet_type;
-    Error( err.str( ) );
-  }
+    if ((packet_destination <0) || (packet_destination >= _nodes)) {
+      ostringstream err;
+      err << "Incorrect packet destination " << packet_destination
+	  << " for stype " << packet_type;
+      Error( err.str( ) );
+    }
 
-  if ( ( _sim_state == running ) ||
-       ( ( _sim_state == draining ) && ( time < _drain_time ) ) ) {
-    record = _measure_stats[cl];
-  }
+    if ( ( _sim_state == running ) ||
+	 ( ( _sim_state == draining ) && ( time < _drain_time ) ) ) {
+      record = _measure_stats[cl];
+    }
 
-  int subnetwork = ((packet_type == Flit::ANY_TYPE) ? 
-		    RandomInt(_subnets-1) :
-		    _subnet[packet_type]);
+    int subnetwork = ((packet_type == Flit::ANY_TYPE) ? 
+		      RandomInt(_subnets-1) :
+		      _subnet[packet_type]);
   
-  if ( watch ) { 
-    *gWatchOut << GetSimTime() << " | "
-	       << "node" << source << " | "
-	       << "Enqueuing packet " << pid
-	       << " at time " << time
-	       << "." << endl;
-  }
-  
-  int sequency_number =0;
-  for(int f_index = 0; f_index<_flow_size; f_index++){
-
-  for ( int i = 0; i < size; ++i ) {
-    Flit * f  = Flit::New();
-    if(gReservation){f ->flid = _cur_flid; f->res_type= RES_TYPE_NORM;}
-    f->id     = _cur_id++;
-    assert(_cur_id);
-    f->pid    = pid;
-    f->tid    = tid;
-    f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
-    f->subnetwork = subnetwork;
-    f->src    = source;
-    f->time   = time;
-    f->ttime  = ttime;
-    f->record = record;
-    f->cl     = cl;
-    f->sn = sequency_number++;
-    if(f->id == 10807)
-      f->watch = true;
-
-    _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
-    if(record) {
-      _measured_in_flight_flits[f->cl].insert(make_pair(f->id, f));
-    }
-    
-    if(gTrace){
-      cout<<"New Flit "<<f->src<<endl;
-    }
-    f->type = packet_type;
-
-    if ( i == 0 ) { // Head flit
-      f->head = true;
-      //packets are only generated to nodes smaller or equal to limit
-      f->dest = packet_destination;
-    } else {
-      f->head = false;
-      f->dest = -1;
-    }
-    switch( _pri_type ) {
-    case class_based:
-      f->pri = _class_priority[cl];
-      assert(f->pri >= 0);
-      break;
-    case age_based:
-      f->pri = numeric_limits<int>::max() - (_replies_inherit_priority ? ttime : time);
-      assert(f->pri >= 0);
-      break;
-    case sequence_based:
-      f->pri = numeric_limits<int>::max() - _packets_sent[source];
-      assert(f->pri >= 0);
-      break;
-    default:
-      f->pri = 0;
-    }
-    if ( i == ( size - 1 ) ) { // Tail flit
-      f->tail = true;
-      f->dest =  packet_destination;
-    } else {
-      f->tail = false;
-    }
-    
-    f->vc  = -1;
-
-    if ( f->watch ) { 
+    if ( watch ) { 
       *gWatchOut << GetSimTime() << " | "
 		 << "node" << source << " | "
-		 << "Enqueuing flit " << f->id
-		 << " (packet " << f->pid
-		 << ") at time " << time
+		 << "Enqueuing packet " << pid
+		 << " at time " << time
 		 << "." << endl;
     }
+  
 
-    _partial_packets[source][cl].push_back( f );
-  }
+    for ( int i = 0; i < size; ++i ) {
+      Flit * f  = Flit::New();
+      if(gReservation){f ->flid = _cur_flid; f->res_type= RES_TYPE_NORM;}
+      f->id     = _cur_id++;
+      assert(_cur_id);
+      f->pid    = pid;
+      f->tid    = tid;
+      f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
+      f->subnetwork = subnetwork;
+      f->src    = source;
+      f->time   = time;
+      f->ttime  = ttime;
+      f->record = record;
+      f->cl     = cl;
+      f->sn = sequence_number++;
+      if(f->id == -1)
+	f->watch = true;
+      _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
+      if(record) {
+	_measured_in_flight_flits[f->cl].insert(make_pair(f->id, f));
+      }
+    
+      if(gTrace){
+	cout<<"New Flit "<<f->src<<endl;
+      }
+      f->type = packet_type;
+
+      if ( i == 0 ) { // Head flit
+	f->head = true;
+	//packets are only generated to nodes smaller or equal to limit
+	f->dest = packet_destination;
+      } else {
+	f->head = false;
+	f->dest = -1;
+      }
+      switch( _pri_type ) {
+      case class_based:
+	f->pri = _class_priority[cl];
+	assert(f->pri >= 0);
+	break;
+      case age_based:
+	f->pri = numeric_limits<int>::max() - (_replies_inherit_priority ? ttime : time);
+	assert(f->pri >= 0);
+	break;
+      case sequence_based:
+	f->pri = numeric_limits<int>::max() - _packets_sent[source];
+	assert(f->pri >= 0);
+	break;
+      default:
+	f->pri = 0;
+      }
+      if ( i == ( size - 1 ) ) { // Tail flit
+	f->payload = f->sn-size+1;
+	f->tail = true;
+	f->dest =  packet_destination;
+      } else {
+	f->tail = false;
+      }
+    
+      f->vc  = -1;
+
+      if ( f->watch ) { 
+	*gWatchOut << GetSimTime() << " | "
+		   << "node" << source << " | "
+		   << "Enqueuing flit " << f->id
+		   << " (packet " << f->pid
+		   << ") at time " << time
+		   << "." << endl;
+      }
+
+      _partial_packets[source][cl].push_back( f );
+    }
   }
   if(gReservation){//create an flow
     //    cout<<"creating a flow at"<<source<<"\n";
@@ -1358,7 +1378,6 @@ void TrafficManager::_Step( )
 	int const c = classes[offset];
 	
 
-
 	if(!_partial_packets[source][c].empty()) {
 	  Flit * f = _partial_packets[source][c].front();
 	  assert(f);
@@ -1383,7 +1402,7 @@ void TrafficManager::_Step( )
 		int const vc = vc_start + (_last_interm[source][0][c] + i) % vc_count;
 		if(_injection_buffer[source][vc].empty()|| 
 		   (_injection_buffer[source][vc].back()->tail &&
-		    _injection_buffer[source][vc].size()<INJECTION_BUFFER_SIZE)){
+		    !_injection_buffer[source][vc].full())){
 		  buf_id = vc; //
 		  _last_interm[source][0][c] = vc- vc_start;
 		  break;
@@ -1400,6 +1419,7 @@ void TrafficManager::_Step( )
 	  } else { //body packets alreayd has a passed down vc
 	    buf_id = f->vc;
 	  }
+	  //no vc acquired
 	  if(buf_id==-1){
 	    assert(f->head);
 	    continue;
@@ -1407,14 +1427,11 @@ void TrafficManager::_Step( )
 
 	  if(!_injection_buffer[source][buf_id].full()){
 	    if(f->head){
-	      assert(buf_id!=-1);
 	      f->vc=buf_id;
-	      dest_insert++;
 	      if(!gReservation){
 		_dest_vc_lookup[source].insert(pair<int, int>(f->dest, f->vc));
 	      } else {
 		if(_flow_lookup[source][f->flid]->vc ==-1){
-		  //		  cout<<"flow "<<f->flid<<" assigned vc "<<buf_id<<endl;
 		  _flow_lookup[source][f->flid]->vc = buf_id;
 		  _injection_buffer[source][buf_id].push_flow(_flow_lookup[source][f->flid]);
 		}
@@ -1424,6 +1441,7 @@ void TrafficManager::_Step( )
 	      *gWatchOut << GetSimTime() << " | "
 			 << "node" << source << " | "
 			 << "Enqueuing flit " << f->id
+			 << "flow "<<f->flid
 			 << " at intermediate buffer "<<buf_id
 			 << "." << endl;
 	    }
@@ -1450,14 +1468,12 @@ void TrafficManager::_Step( )
 	  ++flits_sent_by_class[c];
 	  ++flits_sent_by_subnet[subnet];
 	  if(_flow_out) ++injected_flits[subnet*_nodes+source]; 
-	  iter->second.first = offset;
-	  
+	  iter->second.first = offset;	  
 	}
       }
     }
   }
   
-
   //drain the intermediate buffers
   for(int source = 0; source < _nodes; ++source) {
     BufferState * const dest_buf = _buf_states[source][0];
@@ -1485,18 +1501,38 @@ void TrafficManager::_Step( )
 	}
 	//find the injecting flit
 	flow* fl = _injection_buffer[source][vc].front_flow();
+	assert(fl);
+      fuckingshit:
 	switch(_injection_buffer[source][vc]._status){
-	case FLOW_STATUS_NACK:
-	  continue;
+	case FLOW_STATUS_GRANT_TRANSITION:
+	case FLOW_STATUS_NACK_TRANSITION:
 	case FLOW_STATUS_SPEC:
-	  f = Flit::New();
-	 
 	  if(_injection_buffer[source][vc].get_spec(fl->flid)==NULL){
+	    //no new packets or end of current flow
 	    continue;
 	  }
-	  memcpy(f, _injection_buffer[source][vc].get_spec(fl->flid), sizeof(Flit));
-
-	  break;
+	  if( _injection_buffer[source][vc].get_spec(fl->flid)->head && 
+	      _injection_buffer[source][vc]._status==FLOW_STATUS_NACK_TRANSITION){
+	    //transition to nack, continue to next case statement
+	    _injection_buffer[source][vc]._status = FLOW_STATUS_NACK;
+	  }  else if( _injection_buffer[source][vc].get_spec(fl->flid)->head && 
+		      _injection_buffer[source][vc]._status==FLOW_STATUS_GRANT_TRANSITION){
+	    //transition to normal, back back to the begining of case
+	    if(_time<fl->rtime){
+	      _injection_buffer[source][vc]._status = FLOW_STATUS_WAIT;
+	    } else {
+	      _injection_buffer[source][vc]._status = FLOW_STATUS_NORM;
+	    }  
+	    f = NULL;
+	    goto fuckingshit;
+	  }else {
+	    //regular speculative packets gets duplicated 
+	    f = Flit::New();
+	    memcpy(f, _injection_buffer[source][vc].get_spec(fl->flid), sizeof(Flit));
+	    break;
+	  }
+	case FLOW_STATUS_NACK:
+	  continue;
 	case FLOW_STATUS_WAIT:
 	  if(_time<fl->rtime){
 	    continue;
@@ -1505,8 +1541,7 @@ void TrafficManager::_Step( )
 	  _injection_buffer[source][vc]._status = FLOW_STATUS_NORM;
 	case FLOW_STATUS_NORM:
 	  f = _injection_buffer[source][vc].front();
-
-	  //TODO need too replicate  packet, because the vc
+	  //grant occurs in between packets
 	  break;
 	default:
 	  assert(false);
@@ -1533,14 +1568,16 @@ void TrafficManager::_Step( )
 	}
 	//sending and book keeping
 	if(f!=NULL){
+
 	  switch(_injection_buffer[source][vc]._status){
-	  case FLOW_STATUS_NACK:
+	  case FLOW_STATUS_NACK://unreachable
 	    assert(false);
 	    break;
+	  case FLOW_STATUS_GRANT_TRANSITION:
+	  case FLOW_STATUS_NACK_TRANSITION:
 	  case FLOW_STATUS_SPEC:
 	    f->spec = true;
-	    assert(f->sn ==  _injection_buffer[source][vc]._spec_position);
-	    _injection_buffer[source][vc]._spec_position++;
+	    _injection_buffer[source][vc].inc_spec();
 	    if(f->watch){
 	      *gWatchOut << GetSimTime() << " | "
 			 << "intermediate buffer" << source << " | "
@@ -1564,15 +1601,17 @@ void TrafficManager::_Step( )
 	    _injection_buffer[source][vc].pop_front();
 	    if(f->flow_tail){
 	      //	      cout<<"erase flow\n";
-	      delete _flow_lookup[source][f->flid];
-	      _flow_lookup[source].erase(f->flid);
+
 	      _injection_buffer[source][vc].pop_flow();
 	      _injection_buffer[source][vc].reset();
+	      delete _flow_lookup[source][f->flid];
+	      _flow_lookup[source].erase(f->flid);
 	    }
 	    break;
 	  default:
 	    assert(false);
 	  }	  
+
 	  _net[0]->WriteSpecialFlit(f, source);
 	  _sent_flits[0][source]->AddSample(1);
 	}
