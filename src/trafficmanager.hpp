@@ -47,27 +47,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "routefunc.hpp"
 #include "outputset.hpp"
 #include "injection.hpp"
+#include "reservation.hpp"
 
-#define FLOW_STATUS_NACK 2
-#define FLOW_STATUS_SPEC 1
-#define FLOW_STATUS_NORM 0
-#define FLOW_STATUS_WAIT 4
-#define FLOW_STATUS_NACK_TRANSITION 5
-#define FLOW_STATUS_GRANT_TRANSITION 6
-
-#define RES_TYPE_ACK 3
-#define RES_TYPE_NACK 2
-#define RES_TYPE_GRANT 1
-#define RES_TYPE_NORM 0
-
-#define RES_STATUS_NONE 0
-#define RES_STATUS_ASSIGNED 1
-#define RES_STATUS_REORDER 2
 
 struct flow{
+  bool spec_sent;
   int flid;
   int vc;
   int rtime;
+  int flow_size;
 };
 
 class FlowBuffer{
@@ -147,7 +135,7 @@ protected:
 
   // ============ Message priorities ============ 
 
-  enum ePriority { class_based, age_based, network_age_based, local_age_based, queue_length_based, hop_count_based, sequence_based, none };
+  enum ePriority { class_based, age_based, network_age_based, local_age_based, queue_length_based, hop_count_based, sequence_based, other, none };
 
   ePriority _pri_type;
 
@@ -323,7 +311,10 @@ protected:
   void _LoadWatchList(const string & filename);
 
   Flit* IssueSpecial(int src, Flit* ff);
+  void RemoveFlow(int source, int vc, int flid);
 public:
+
+  void DropPacket(int source, Flit* f);
   TrafficManager( const Configuration &config, const vector<Network *> & net );
   ~TrafficManager( );
 

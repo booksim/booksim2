@@ -50,10 +50,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "allocator.hpp"
 #include "switch_monitor.hpp"
 #include "buffer_monitor.hpp"
-
-
+#include "reservation.hpp"
+#include "trafficmanager.hpp"
 extern vector< Network * > net;
-
+extern TrafficManager * trafficManager;
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
@@ -173,6 +173,13 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
   _stored_flits.resize(_inputs, 0);
   _active_packets.resize(_inputs, 0);
+  
+  dropped_pid = new int*[_inputs];
+  for(int i = 0; i<_inputs; i++){
+    dropped_pid[i] = new int[_vcs];
+    for(int j = 0; j<_vcs; j++)
+      dropped_pid[i][j] = -1;
+  }
 }
 
 IQRouter::~IQRouter( )
@@ -280,6 +287,34 @@ void IQRouter::WriteOutputs( )
 // read inputs
 //------------------------------------------------------------------------------
 
+Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
+  return f;
+  if(f && f->res_type == RES_TYPE_SPEC){
+    bool drop = false;
+    if(f->head){
+      if(f->exptime<GetSimTime()){
+	trafficManager->DropPacket(input, f);
+	//send drop nack
+	drop = true;
+	dropped_pid[input][f->vc] = f->pid;
+      }
+    } else {
+      if(f->pid == dropped_pid[input][f->vc]){//body
+	drop = true;
+      }
+    }
+    if(drop){
+      //send dropped credit since the packet is removed from the buffer
+      if(_out_queue_credits.count(input) == 0) {
+	_out_queue_credits.insert(make_pair(input, Credit::New()));
+      }
+      _out_queue_credits.find(input)->second->vc.insert(f->vc);
+      f->Free();
+      return NULL;
+    }
+  }
+  return f;
+}
 bool IQRouter::_ReceiveFlits( )
 {
   bool activity = false;
@@ -288,13 +323,15 @@ bool IQRouter::_ReceiveFlits( )
       Flit * f;
       for(int vc = 0; vc< _vcs; vc++){
 	f = net[0]->GetSpecial( _input_channels[input],vc);
+	f = _ExpirationCheck(f, input);
 	if(f){
 	  _in_queue_flits.insert(make_pair(input, f));
+	  activity = true;
 	}
       }
-      activity = true;
     } else {
-      Flit * const f = _input_channels[input]->Receive();
+      Flit *  f = _input_channels[input]->Receive();
+      f = _ExpirationCheck(f, input);
       if(f) {
 	++_received_flits[input];
 	if(f->watch) {
@@ -1057,7 +1094,7 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 	prio += numeric_limits<int>::min();
       }
     }
-    
+
     Allocator::sRequest req;
     
     if(allocator->ReadRequest(req, expanded_input, expanded_output)) {

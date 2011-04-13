@@ -52,7 +52,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "tree4.hpp"
 #include "qtree.hpp"
 #include "cmesh.hpp"
-
+#include "reservation.hpp"
 
 
 map<string, tRoutingFunction> gRoutingFunctionMap;
@@ -1884,7 +1884,9 @@ void InitializeRoutingMap( const Configuration & config )
 
   gNumVCs = config.GetInt( "num_vcs" );
   gResVCs = config.GetInt( "res_vcs" );
-  assert(gResVCs+1<gNumVCs); //+1 is for the special vc used when gReservation==true
+  if(config.GetInt("hotspot_reservation")==1){
+    assert(gResVCs+RES_RESERVED_VCS<gNumVCs); //+ is for the special vc used when gReservation==true
+  }
   //
   // traffic class partitions
   //

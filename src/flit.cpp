@@ -72,12 +72,12 @@ void Flit::Reset()
   head      = false ;
   tail      = false ;
   flow_tail = false ;
-  spec = false;
   time      = -1 ;
   ttime     = -1 ;
   atime     = -1 ;
   exptime =-1;
   sn        = -1 ;
+  head_sn = -1;
   rob_time  = 0 ;
   id        = -1 ;
   pid       = -1 ;

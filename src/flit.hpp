@@ -48,29 +48,31 @@ public:
 		  WRITE_REPLY   = 3,
                   ANY_TYPE      = 4 };
   FlitType type;
+
   int res_type;
+  bool flow_tail;
+  int exptime;
+  int  sn;
+  int flid;
+  int payload;
+  int head_sn;
+
 
   int vc;
-
   int cl;
 
   bool head;
   bool tail;
-  bool flow_tail;
-  bool spec;
 
   int  time;
   int  ttime;
   int  atime;
-  int exptime;
 
-  int  sn;
   int  rob_time;
 
   int  id;
   int  pid;
   int  tid;
-  int flid;
 
   bool record;
 
@@ -94,7 +96,6 @@ public:
   mutable int ring_par;
 
   // Fields for arbitrary data
-  int payload;
   void* data ;
 
   void Reset();

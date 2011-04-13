@@ -58,7 +58,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
 #include "globals.hpp"
-
+#include "reservation.hpp"
 
 
 //#define DEBUG_FLATFLY
@@ -515,23 +515,27 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
       vcEnd = gWriteReplyEndVC;
     }
   } else {
-    if(f->res_type != 0){//special packets
+    if(f->res_type == RES_TYPE_RES){//special packets
       vcBegin = 0;
       vcEnd = 0;
-    } else { //normal packets
+    } else if(f->res_type == RES_TYPE_NORM){ //normal packets
       if(inject){ //inject channel use any vcs
-	vcBegin = 1;
+	vcBegin = RES_RESERVED_VCS;
 	vcEnd = gNumVCs-1;
       } else { //normal channel must segregate
-	if(f->spec){
-	  vcBegin = 1;
-	  vcEnd = (1+gResVCs)-1;
+	if(f->res_type == RES_TYPE_SPEC){
+	  vcBegin = RES_RESERVED_VCS;
+	  vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
 	} else {
-	  vcBegin = (1+gResVCs);
+	  vcBegin = (RES_RESERVED_VCS+gResVCs);
 	  vcEnd = (gNumVCs-1);
 	}
       }
+    } else { //ack, nack, grant
+      vcBegin = 1;
+      vcEnd = 1;
     }
+
   }
   //this assertion is not used, packets are allowed to jump class
   //  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));

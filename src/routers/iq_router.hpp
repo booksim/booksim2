@@ -65,7 +65,7 @@ class IQRouter : public Router {
   int _routing_delay;
   int _vc_alloc_delay;
   int _sw_alloc_delay;
-  
+  int** dropped_pid;
   multimap<int, Flit *> _in_queue_flits;
 
   deque<pair<int, pair<Credit *, int> > > _proc_credits;
@@ -100,6 +100,7 @@ class IQRouter : public Router {
   vector<int> _switch_hold_out;
   vector<int> _switch_hold_vc;
 
+  Flit* _ExpirationCheck(Flit* f, int input);
   bool _ReceiveFlits( );
   bool _ReceiveCredits( );
 
