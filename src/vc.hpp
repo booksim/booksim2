@@ -48,7 +48,6 @@ public:
   static const char * const VCSTATE[];
   
 private:
-  int _size;
 
   deque<Flit *> _buffer;
   
@@ -101,11 +100,6 @@ public:
   inline bool Empty( ) const
   {
     return _buffer.empty( );
-  }
-
-  inline bool Full( ) const
-  {
-    return (int)_buffer.size( ) == _size;
   }
 
   inline VC::eVCState GetState( ) const
