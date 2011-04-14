@@ -140,6 +140,11 @@ public:
     return _vc[vc]->IsWatched( );
   }
 
+  inline int GetSize( ) const
+  {
+    return _occupancy;
+  }
+
   inline int GetSize( int vc ) const
   {
     return _vc[vc]->GetSize( );
