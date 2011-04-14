@@ -36,12 +36,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Buffer::Buffer( const Configuration& config, int outputs, 
 		Module *parent, const string& name ) :
-Module( parent, name ), _shared_count(0)
+Module( parent, name ), _occupancy(0)
 {
-  _vc_size = config.GetInt( "vc_buf_size" );
-  _shared_size = config.GetInt( "shared_buf_size" );
-
   int num_vcs = config.GetInt( "num_vcs" );
+
+  _size = config.GetInt( "buf_size" );
+  if(_size < 0) {
+    _size = num_vcs * config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
+  }
 
   _vc.resize(num_vcs);
 
@@ -61,27 +63,11 @@ Buffer::~Buffer()
 
 void Buffer::AddFlit( int vc, Flit *f )
 {
-  VC * v = _vc[vc];
-  if(v->GetSize() < _vc_size) {
-    v->AddFlit(f);
-  } else if(_shared_count < _shared_size) {
-    _shared_count++;
-    v->AddFlit(f);
+  if(_occupancy >= _size) {
+    Error("Flit buffer overflow.");
   }
-}
-
-Flit *Buffer::RemoveFlit( int vc )
-{
-  VC * v = _vc[vc];
-  if(v->GetSize() > _vc_size) {
-    --_shared_count;
-  }
-  return _vc[vc]->RemoveFlit( );
-}
-
-bool Buffer::Full( int vc ) const
-{
-  return (_shared_count >= _shared_size) && _vc[vc]->Full( );
+  ++_occupancy;
+  _vc[vc]->AddFlit(f);
 }
 
 void Buffer::Display( ostream & os ) const
