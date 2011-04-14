@@ -326,10 +326,7 @@ void EventRouter::_IncomingFlits( )
       cur_buf = _buf[input];
       int vc = f->vc;
 
-      if ( !cur_buf->AddFlit( vc, f ) ) {
-	cout << "Error processing flit:" << endl << *f;
-	Error( "VC buffer overflow" );
-      }
+      cur_buf->AddFlit( vc, f );
 
       // Head flit arriving at idle VC
       if ( !_active[input][vc] ) {
