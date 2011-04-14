@@ -104,7 +104,7 @@ void BufferState::ProcessCredit( Credit const * const c )
 {
   assert( c );
 
-  set<int>::iterator iter = c->vc.begin();
+  vector<int>::const_iterator iter = c->vc.begin();
   while(iter != c->vc.end()) {
 
     assert( ( *iter >= 0 ) && ( *iter < _vcs ) );

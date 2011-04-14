@@ -43,7 +43,8 @@
 
 #define INJECTION_BUFFER_SIZE 400
 #define MAX(X,Y) (X>Y?(X):(Y))
-int dest_remove = 0;
+
+map<int, vector<int> > gDropStats;
 
 FlowBuffer::FlowBuffer(){
   _head = 0; _tail = 0; _size = 0; _capacity = INJECTION_BUFFER_SIZE;
@@ -781,8 +782,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       break;
     case RES_TYPE_SPEC:
       if(_reservation_status[dest].count(f->flid)){ //reservation already exists
-	if((f->head && f->sn ==0)|| //first packet
+	if((f->head && f->sn ==0)||
 	   (_reservation_robs[dest].count(f->flid)!=0&&//spec not too late
+	    !_reservation_robs[dest][f->flid].empty() &&
 	    _reservation_robs[dest][f->flid].back()->sn+1 == f->sn) ){ //inorder
 	  _reservation_robs[dest][f->flid].push_back(f);
 	  //send ack, shoudl ideally send ack when tail arrives
@@ -859,7 +861,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     case RES_TYPE_NORM:
       //duplication  speculative version already succeced ignore
       if( _reservation_robs[dest].count(f->flid) ==0 ||
-	  f->sn<= _reservation_robs[dest][f->flid].back()->sn){
+	  (!_reservation_robs[dest][f->flid].empty() &&
+	   f->sn<= _reservation_robs[dest][f->flid].back()->sn)){
 	if(f->watch){
 	  *gWatchOut << GetSimTime() << " | "
 		     << " node" << dest << " | "
@@ -1210,6 +1213,10 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       f->record = record;
       f->cl     = cl;
       f->sn = sequence_number++;
+
+      if(f->id == -1){
+	f->watch=true;;
+      }
       _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
       if(record) {
 	_measured_in_flight_flits[f->cl].insert(make_pair(f->id, f));
@@ -1692,7 +1699,6 @@ void TrafficManager::_Step( )
 	  _injection_buffer[source][vc].pop_front();
 	  if(f->tail){
 	    assert(_dest_vc_lookup[source].count(f->dest));
-	    dest_remove++;
 	    _dest_vc_lookup[source].erase(_dest_vc_lookup[source].find(f->dest));
 	  }
 	  _net[0]->WriteSpecialFlit(f, source);
@@ -1720,7 +1726,7 @@ void TrafficManager::_Step( )
 		     << "." << endl;
 	}
 	Credit * const c = Credit::New();
-	c->vc.insert(f->vc);
+	c->vc.push_back(f->vc);
 	_net[subnet]->WriteCredit(c, dest);
 	_RetireFlit(f, dest);
       }
@@ -2145,6 +2151,14 @@ bool TrafficManager::_SingleSim( )
 	  }
 	  *_stats_out << "];" << endl;
 	  *_stats_out << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
+	  
+	  for(int i = 0; i<_routers; i++){
+	    *_stats_out <<"drop_router"<<i<<"=[";
+	    for(int j = 0; j<gDropStats[i].size(); j++){
+	      *_stats_out<<gDropStats[i][j]<<" ";
+	    }
+	    *_stats_out <<"];"<<endl;
+	  }
 	}
 	
 	double latency = cur_latency;

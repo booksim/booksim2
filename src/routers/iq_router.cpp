@@ -54,11 +54,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "trafficmanager.hpp"
 extern vector< Network * > net;
 extern TrafficManager * trafficManager;
+extern map<int, vector<int> > gDropStats;
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
 : Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
+  gDropStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
+  gDropStats[id].resize(inputs,0);
+
   _vcs         = config.GetInt( "num_vcs" );
   _classes     = config.GetInt( "classes" );
   _speculative = (config.GetInt("speculative") > 0);
@@ -288,13 +292,12 @@ void IQRouter::WriteOutputs( )
 //------------------------------------------------------------------------------
 
 Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
-  return f;
   if(f && f->res_type == RES_TYPE_SPEC){
     bool drop = false;
     if(f->head){
       if(f->exptime<GetSimTime()){
-	trafficManager->DropPacket(input, f);
 	//send drop nack
+	trafficManager->DropPacket(input, f);
 	drop = true;
 	dropped_pid[input][f->vc] = f->pid;
       }
@@ -304,11 +307,12 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
       }
     }
     if(drop){
+      gDropStats[_id][input]++;
       //send dropped credit since the packet is removed from the buffer
       if(_out_queue_credits.count(input) == 0) {
 	_out_queue_credits.insert(make_pair(input, Credit::New()));
       }
-      _out_queue_credits.find(input)->second->vc.insert(f->vc);
+      _out_queue_credits.find(input)->second->vc.push_back(f->vc);
       f->Free();
       return NULL;
     }
@@ -975,7 +979,7 @@ void IQRouter::_SWHoldUpdate( )
       if(_out_queue_credits.count(input) == 0) {
 	_out_queue_credits.insert(make_pair(input, Credit::New()));
       }
-      _out_queue_credits.find(input)->second->vc.insert(vc);
+      _out_queue_credits.find(input)->second->vc.push_back(vc);
       
       if(cur_buf->Empty(vc)) {
 	if(f->watch) {
@@ -1693,7 +1697,7 @@ void IQRouter::_SWAllocUpdate( )
       if(_out_queue_credits.count(input) == 0) {
 	_out_queue_credits.insert(make_pair(input, Credit::New()));
       }
-      _out_queue_credits.find(input)->second->vc.insert(vc);
+      _out_queue_credits.find(input)->second->vc.push_back(vc);
 
       if(cur_buf->Empty(vc)) {
 	if(f->tail) {
