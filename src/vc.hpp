@@ -89,7 +89,7 @@ public:
       Module *parent, const string& name );
   ~VC();
 
-  bool AddFlit( Flit *f );
+  void AddFlit( Flit *f );
   inline Flit *FrontFlit( ) const
   {
     return _buffer.empty() ? NULL : _buffer.front();
@@ -119,7 +119,7 @@ public:
   }
 
 
-  void     SetState( eVCState s );
+  void SetState( eVCState s );
 
   const OutputSet *GetRouteSet( ) const;
 
