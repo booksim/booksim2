@@ -56,6 +56,8 @@ struct flow{
   int vc;
   int rtime;
   int flow_size;
+  bool collect;
+  int create_time;
 };
 
 class FlowBuffer{
@@ -201,6 +203,7 @@ protected:
   FlowBuffer** _injection_buffer;
   vector<multimap<int, int>  >_dest_vc_lookup;
   vector<map<int, flow*> > _flow_lookup;
+  map<int, flow*> _flow_master;
 
   // ============ Statistics ============
 
