@@ -16,7 +16,6 @@
 
 #define RES_STATUS_NONE 0
 #define RES_STATUS_ASSIGNED 1
-#define RES_STATUS_REORDER 2
 
 #define FLIT_PRI_RES 1
 #define FLIT_PRI_GRANT 3

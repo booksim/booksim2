@@ -41,6 +41,7 @@
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
+#define WATCH_FLID 535
 #define INJECTION_BUFFER_SIZE 400
 #define MAX(X,Y) (X>Y?(X):(Y))
 
@@ -786,7 +787,6 @@ void TrafficManager::DropPacket(int src, Flit* f){
   ff->vc = 1;
   if(f->watch){
     ff->watch=true;;
-    cout<<  _response_packets[src].size()<<endl;
   }
   _response_packets[src].push_back(ff);
 }
@@ -843,11 +843,10 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	vc_index = _flow_lookup[dest][f->flid]->vc;
 	fl = _injection_buffer[dest][vc_index].front_flow();
 	//only move to nack from spec
-  if(fl->flid == 1072){
-	    cout<<"nack"<<endl;
-	  }
 	if(_injection_buffer[dest][fl->vc]._status==FLOW_STATUS_SPEC){
-	 
+	  if(f->flid == WATCH_FLID){
+	    cout<<"\n\nnack\n\n";
+	  }
 	  _injection_buffer[dest][fl->vc]._status = FLOW_STATUS_NACK_TRANSITION;
 	  gEffectiveNack[dest]++;
 	}
@@ -857,6 +856,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       break;
     case RES_TYPE_GRANT: 
       //grant 
+      if(f->flid == WATCH_FLID){
+	cout<<"\n\ngrant\n\n";
+      }
       if(_flow_lookup[dest].count(f->flid)){
 	gEffectiveGrant[dest]++;
 	vc_index = _flow_lookup[dest][f->flid]->vc;
@@ -868,12 +870,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	assert(_injection_buffer[dest][fl->vc].front()->sn == f->sn);
 	assert(_injection_buffer[dest][fl->vc].front()->head);
 
+	if(f->flid == WATCH_FLID){
+	  cout<<"\n\nreally grant\n\n";
+	}
 	fl->rtime = f->payload;
-	  if(fl->flid == 1072){
-	    cout<<"\n\ngrant\n\n"<<endl;
-	  }
 	  if(_injection_buffer[dest][fl->vc]._spec_sent == fl->flow_size){
-	    cout<<"boo "<<fl->flid<<"\n";
 	    _injection_buffer[dest][fl->vc]._status = FLOW_STATUS_WAIT;
 	  } else {
 	    _injection_buffer[dest][fl->vc]._status = FLOW_STATUS_GRANT_TRANSITION;
@@ -885,12 +886,15 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	}
       } else {
 	//this maybe wrong, if grant returns after all the acks
-	assert(false);
+	//assert(false);
       }
       f->Free();
       return;
       break;
     case RES_TYPE_RES:
+      if(f->flid == WATCH_FLID){
+	cout<<"\n\nres\n\n";
+      }
       gResReceived[dest]++;
       //if reservation exist, then res came out of order, ignore respacket
       if(_reservation_status[dest].count(f->flid)==0){
@@ -903,7 +907,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	} else {
 	  gScheduleTDelta1[dest]->AddSample(_reservation_schedule[dest] - _time);
 	}
-
+     if(f->flid == WATCH_FLID){
+	cout<<"\n\nres\n\n";
+     }
 	ff->payload  = MAX(_time, _reservation_schedule[dest]);
 	assert(f->payload!=-1);
 	_reservation_schedule[dest] = ff->payload+f->payload;
@@ -977,8 +983,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	    _response_packets[dest].push_back(ff);
 	    gAckIssued[dest]++;
 	  }
-	}  else { //out of order send nack
-	  _reservation_status[dest].insert(pair<int, int>(f->flid, RES_STATUS_REORDER));	      
+	}  else { //out of order send nack	      
 	  if(f->head){
 	    Flit* ff = IssueSpecial(dest,f);
 	    ff->res_type = RES_TYPE_NACK;
@@ -1363,7 +1368,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       f->cl     = cl;
       f->sn = sequence_number++;
       //watchwatch
-      if(f->id == 178518){
+      if(f->id == 88918){
 	f->watch=true;;
       }
       _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
@@ -1715,7 +1720,12 @@ void TrafficManager::_Step( )
 	    f = Flit::New();
 	    memcpy(f, _injection_buffer[source][vc].get_spec(fl->flid), sizeof(Flit));
 	    if(f->sn == 0 && !fl->spec_sent){
+	    
 	      Flit* ff = IssueSpecial(source,f);
+	      if(f->flid == WATCH_FLID){
+		cout<<"\n\nres issue "<<ff->id<<"\n\n";
+		ff->watch = true;
+	      }
 	      ff->res_type = RES_TYPE_RES;
 	      ff->pri = FLIT_PRI_RES;
 	      ff->payload = fl->flow_size;
