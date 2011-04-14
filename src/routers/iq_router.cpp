@@ -297,6 +297,12 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
     if(f->head){
       if(f->exptime<GetSimTime()){
 	//send drop nack
+	if(f->watch){
+	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		     << "drop flit " << f->id
+		     << " from channel at input " << input
+		     << "." << endl;
+	}
 	trafficManager->DropPacket(input, f);
 	drop = true;
 	dropped_pid[input][f->vc] = f->pid;

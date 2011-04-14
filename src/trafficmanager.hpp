@@ -79,6 +79,7 @@ public:
   void pop_front();
   bool remove_packet();
   void reset();  
+  void nack();
 
   Flit** _flit_buffer;
   list<flow* > _flow_buffer;
@@ -88,6 +89,7 @@ public:
   int _capacity;			       
   int _status;
   int _spec_position;
+  int _spec_sent;
 };
 //register the requests to a node
 class PacketReplyInfo;

@@ -74,7 +74,6 @@ public:
   inline vector<int> const & GetActivity() const {
     return _active;
   }
-
   // Send flit 
   virtual void Send(Flit * flit);
 

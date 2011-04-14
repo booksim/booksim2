@@ -65,6 +65,7 @@ void FlitChannel::SetSink(Router const * const router, int port) {
 }
 
 void FlitChannel::Send(Flit * f) {
+
   if(f) {
     ++_active[f->cl];
   } else {
