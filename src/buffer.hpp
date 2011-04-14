@@ -53,7 +53,7 @@ public:
 	  Module *parent, const string& name );
   ~Buffer();
 
-  bool AddFlit( int vc, Flit *f );
+  void AddFlit( int vc, Flit *f );
 
   Flit *RemoveFlit( int vc );
   

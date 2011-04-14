@@ -87,7 +87,7 @@ VC::~VC()
   delete _route_set;
 }
 
-bool VC::AddFlit( Flit *f )
+void VC::AddFlit( Flit *f )
 {
   assert(f);
 
@@ -97,7 +97,6 @@ bool VC::AddFlit( Flit *f )
       err << "Received flit " << f->id << " with unexpected packet ID: " << f->pid 
 	  << " (expected: " << _expected_pid << ")";
       Error(err.str());
-      return false;
     } else if(f->tail) {
       _expected_pid = -1;
     }
@@ -107,7 +106,6 @@ bool VC::AddFlit( Flit *f )
     
   if((int)_buffer.size() >= _size) {
     Error("Flit buffer overflow.");
-    return false;
   }
 
   // update flit priority before adding to VC buffer
@@ -121,7 +119,6 @@ bool VC::AddFlit( Flit *f )
 
   _buffer.push_back(f);
   UpdatePriority();
-  return true;
 }
 
 Flit *VC::RemoveFlit( )

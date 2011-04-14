@@ -345,9 +345,7 @@ void IQRouter::_InputQueuing( )
       }
       *gWatchOut << ")." << endl;
     }
-    if(!cur_buf->AddFlit(vc, f)) {
-      Error( "VC buffer overflow" );
-    }
+    cur_buf->AddFlit(vc, f);
     ++_stored_flits[input];
     if(f->head) ++_active_packets[input];
     _bufferMonitor->write(input, f) ;
