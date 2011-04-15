@@ -25,4 +25,7 @@
 #define FLIT_PRI_SPEC 0
 
 #define RES_RESERVED_VCS 2
+
+
+#define INJECTION_BUFFER_SIZE 400
 #endif
