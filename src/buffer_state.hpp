@@ -59,13 +59,8 @@ class BufferState : public Module {
   class SharedBufferPolicy : public BufferPolicy {
   protected:
     int _shared_buf_size;
-    SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name);
-  };
-
-  class UnrestrictedBufferPolicy : public SharedBufferPolicy {
   public:
-    UnrestrictedBufferPolicy(Configuration const & config, BufferState * parent,
-			     const string & name);
+    SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name);
     virtual void UpdateState() {}
     virtual int MaxSharedSlots(int vc = 0) const;
   };
@@ -88,7 +83,7 @@ class BufferState : public Module {
   int  _vcs;
   int  _active_vcs;
   
-  BufferPolicy * _sharing_policy;
+  BufferPolicy * _buffer_policy;
   
   vector<bool> _in_use;
   vector<bool> _tail_sent;
