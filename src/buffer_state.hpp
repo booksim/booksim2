@@ -41,26 +41,26 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class BufferState : public Module {
   
-  friend class SharingPolicy;
+  friend class BufferPolicy;
 
-  class SharingPolicy : public Module {
+  class BufferPolicy : public Module {
   protected:
     BufferState const * const _buffer_state;
     inline int _GetSharedBufSize() const { return _buffer_state->_shared_buf_size; }
   public:
-    SharingPolicy(BufferState * parent, const string & name);
+    BufferPolicy(BufferState * parent, const string & name);
     virtual void ProcessCredit(Credit const * const c) = 0;
     virtual void SendingFlit(Flit const * const f) = 0;
     virtual void TakeBuffer(int vc = 0) = 0;
     virtual int MaxSharedSlots(int vc = 0) const = 0;
-    static SharingPolicy * NewSharingPolicy(Configuration const & config, 
+    static BufferPolicy * NewBufferPolicy(Configuration const & config, 
 					    BufferState * parent, 
 					    const string & name);
   };
 
-  class UnrestrictedSharingPolicy : public SharingPolicy {
+  class UnrestrictedBufferPolicy : public BufferPolicy {
   public:
-    UnrestrictedSharingPolicy(BufferState * parent, const string & name);
+    UnrestrictedBufferPolicy(BufferState * parent, const string & name);
     virtual void ProcessCredit(Credit const * const c) {}
     virtual void SendingFlit(Flit const * const f) {}
     virtual void TakeBuffer(int vc = 0) {}
@@ -69,9 +69,9 @@ class BufferState : public Module {
     }
   };
 
-  friend class VariableSharingPolicy;
+  friend class VariableBufferPolicy;
 
-  class VariableSharingPolicy : public SharingPolicy {
+  class VariableBufferPolicy : public BufferPolicy {
   private:
     int _max_slots;
   protected:
@@ -80,7 +80,7 @@ class BufferState : public Module {
       _max_slots = _GetSharedBufSize() / max(_GetActiveVCs(), 1);
     }
   public:
-    VariableSharingPolicy(BufferState * parent, const string & name);
+    VariableBufferPolicy(BufferState * parent, const string & name);
     virtual void ProcessCredit(Credit const * const c) {_UpdateMaxSlots(); }
     virtual void SendingFlit(Flit const * const f) { _UpdateMaxSlots(); }
     virtual void TakeBuffer(int vc = 0) { _UpdateMaxSlots(); }
@@ -95,7 +95,7 @@ class BufferState : public Module {
   int  _vcs;
   int  _active_vcs;
   
-  SharingPolicy * _sharing_policy;
+  BufferPolicy * _sharing_policy;
   
   vector<bool> _in_use;
   vector<bool> _tail_sent;

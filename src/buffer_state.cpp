@@ -43,34 +43,34 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "buffer_state.hpp"
 #include "random_utils.hpp"
 
-BufferState::SharingPolicy::SharingPolicy(BufferState * parent, const string & name)
+BufferState::BufferPolicy::BufferPolicy(BufferState * parent, const string & name)
 : Module(parent, name), _buffer_state(parent)
 {
   
 }
 
-BufferState::SharingPolicy * BufferState::SharingPolicy::NewSharingPolicy(Configuration const & config, BufferState * parent, const string & name)
+BufferState::BufferPolicy * BufferState::BufferPolicy::NewBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
 {
-  SharingPolicy * sp = NULL;
+  BufferPolicy * sp = NULL;
   string sharing_policy = config.GetStr("sharing_policy");
   if(sharing_policy == "unrestricted") {
-    sp = new UnrestrictedSharingPolicy(parent, name);
+    sp = new UnrestrictedBufferPolicy(parent, name);
   } else if(sharing_policy == "variable") {
-    sp = new VariableSharingPolicy(parent, name);
+    sp = new VariableBufferPolicy(parent, name);
   } else {
     cout << "Unknown sharing policy: " << sharing_policy << endl;
   }
   return sp;
 }
 
-BufferState::UnrestrictedSharingPolicy::UnrestrictedSharingPolicy(BufferState * parent, const string & name)
-  : SharingPolicy(parent, name)
+BufferState::UnrestrictedBufferPolicy::UnrestrictedBufferPolicy(BufferState * parent, const string & name)
+  : BufferPolicy(parent, name)
 {
 
 }
 
-BufferState::VariableSharingPolicy::VariableSharingPolicy(BufferState * parent, const string & name)
-  : SharingPolicy(parent, name)
+BufferState::VariableBufferPolicy::VariableBufferPolicy(BufferState * parent, const string & name)
+  : BufferPolicy(parent, name)
 {
   _max_slots = _GetSharedBufSize();
 }
@@ -83,7 +83,7 @@ Module( parent, name ), _shared_occupied(0), _active_vcs(0)
   _shared_buf_size = config.GetInt( "shared_buf_size" );
   _vcs             = config.GetInt( "num_vcs" );
   
-  _sharing_policy = SharingPolicy::NewSharingPolicy(config, this, "policy");
+  _sharing_policy = BufferPolicy::NewBufferPolicy(config, this, "policy");
 
   _wait_for_tail_credit = config.GetInt( "wait_for_tail_credit" );
   _vc_busy_when_full = config.GetInt( "vc_busy_when_full" );
