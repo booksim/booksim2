@@ -156,14 +156,15 @@ protected:
   //==============hot spot reservation=====================
   //receiver
   vector<map<int, int> > _reservation_status;
-  vector<map<int, vector<Flit* > > > _reservation_robs;
+  vector<map<int, int> > _reservation_count;
+  vector<map<int, map<int, Flit* > > > _reservation_robs;
   vector<list<Flit *> > _response_packets;
   vector<int> _reservation_schedule;
 
   //sender
   FlowBuffer** _injection_buffer;
   vector<multimap<int, int>  >_dest_vc_lookup;
-  vector<map<int, flow*> > _flow_lookup;
+  vector<map<int, flow*> > _flow_vc_lookup;
   map<int, flow*> _flow_master;
 
   // ============ Statistics ============
@@ -275,7 +276,7 @@ protected:
   void _LoadWatchList(const string & filename);
 
   Flit* IssueSpecial(int src, Flit* ff);
-  void RemoveFlow(int source, int vc, int flid);
+  void RemoveSrcFlow(int source, int vc, int flid);
 public:
 
   void DropPacket(int source, Flit* f);

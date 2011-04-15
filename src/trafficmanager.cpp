@@ -41,7 +41,7 @@
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
-#define WATCH_FLID 535
+#define WATCH_FLID -1
 #define MAX(X,Y) (X>Y?(X):(Y))
 
 map<int, vector<int> > gDropStats;
@@ -76,6 +76,11 @@ Stats** gRobSize;
 Stats** gResponseSize;
 Stats* gFlowStat;
 
+//TODO special lat hist
+Stats* gResLat;
+Stats* gNackLat;
+Stats* gAckLat;
+Stats* gGrantLat;
 
 int gExpirationTime = 0;
 
@@ -92,7 +97,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _injection_buffer[i] = new FlowBuffer[_num_vcs];
   }
   _dest_vc_lookup.resize(_nodes);
-  _flow_lookup.resize(_nodes);
+  _flow_vc_lookup.resize(_nodes);
   _flow_size = config.GetInt("flow_size");
 
 
@@ -159,6 +164,20 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     }
     tmp_name << "flow_hist_";
     gFlowStat = new Stats(this, tmp_name.str( ), 1.0, 10000 );
+    tmp_name.str("");
+
+    tmp_name << "res_hist_";
+    gResLat = new Stats(this, tmp_name.str( ), 1.0, 1000 );
+    tmp_name.str("");
+    tmp_name << "ack_hist_";
+    gAckLat = new Stats(this, tmp_name.str( ), 1.0, 1000 );
+    tmp_name.str("");
+    tmp_name << "nack_hist_";
+    gNackLat = new Stats(this, tmp_name.str( ), 1.0, 1000 );
+    tmp_name.str("");
+    tmp_name << "grant_hist_";
+    gGrantLat = new Stats(this, tmp_name.str( ), 1.0, 1000 );
+    tmp_name.str("");
   }
 
 
@@ -687,82 +706,98 @@ void TrafficManager::DropPacket(int src, Flit* f){
   ff->pri = FLIT_PRI_NACK;
   ff->vc = 1;
   if(f->watch){
-    ff->watch=true;;
+    ff->watch=true;
   }
   _response_packets[src].push_back(ff);
 }
 
-void TrafficManager::RemoveFlow(int source, int vc, int flid){
-  flow * fl = _flow_lookup[source][flid];
-  //cout<<"erase flow "<<f->flid<<endl;
-  gFlowStat->AddSample(_time-fl->create_time);
+
+void TrafficManager::RemoveSrcFlow(int source, int vc, int flid){
+  flow * fl = _flow_vc_lookup[source][flid];
   _injection_buffer[source][vc].pop_flow();
   _injection_buffer[source][vc].reset();
   if(fl->collect){
-    delete _flow_lookup[source][flid];
+    delete _flow_vc_lookup[source][flid];
+    _flow_master.erase(flid);
   } else {
     fl->collect = true;
   }
-  _flow_lookup[source].erase(flid);
-
+  _flow_vc_lookup[source].erase(flid);
 }
 
 void TrafficManager::_RetireFlit( Flit *f, int dest )
 {
   //TODO OOO acks
-  //cout<<"retiring at "<<dest<<" "<<f->id<<" "<<f->flid<<" "<<f->sn<<endl;
 
   if(gReservation){
     flow* fl = NULL;
-    int vc_index;
+    int vc_index=-1;
+
     switch(f->res_type){
     case RES_TYPE_ACK:
       gAckReceived[dest]++;
+      gAckLat->AddSample(_time-f->time);
       //acks could return after all packets already sent normally
-      if(_flow_lookup[dest].count(f->flid)){
-	vc_index = _flow_lookup[dest][f->flid]->vc;
+      if(_flow_vc_lookup[dest].count(f->flid)){
+	vc_index = _flow_vc_lookup[dest][f->flid]->vc;
 	fl = _injection_buffer[dest][vc_index].front_flow();
 	assert(fl->flid == f->flid);
-	assert(_injection_buffer[dest][fl->vc].front());
-	if(_injection_buffer[dest][fl->vc].front()->sn == f->sn){
+	//the packet could have been popped normally
+	if(_injection_buffer[dest][fl->vc].front() &&
+	  _injection_buffer[dest][fl->vc].front()->sn == f->sn){
+	  gEffectiveAck[dest]++;
+	  if(f->flid == WATCH_FLID){
+	    cout<<"\nack "<<f->sn<<"\n";
+	  }
 	  assert(_injection_buffer[dest][fl->vc].front()->head);
 	  //entire flow delivered speculatively
-	  gEffectiveAck[dest]++;
 	  if(_injection_buffer[dest][fl->vc].remove_packet()){
-	    RemoveFlow(dest, fl->vc, fl->flid);
+	    RemoveSrcFlow(dest, fl->vc, fl->flid);
 	  }
-	}
-	
+	}	
       }
       f->Free();
       return;
       break;
     case RES_TYPE_NACK:
       gNackReceived[dest]++;
+      gNackLat->AddSample(_time-f->time);
       //nacks could return after all packets already sent normally
-      if(_flow_lookup[dest].count(f->flid)){
-	vc_index = _flow_lookup[dest][f->flid]->vc;
+      if(_flow_vc_lookup[dest].count(f->flid)){
+	vc_index = _flow_vc_lookup[dest][f->flid]->vc;
 	fl = _injection_buffer[dest][vc_index].front_flow();
+	assert(fl->flid == f->flid);
 	//only move to nack from spec
 	if(_injection_buffer[dest][fl->vc]._status==FLOW_STATUS_SPEC){
+	  gEffectiveNack[dest]++;
 	  if(f->flid == WATCH_FLID){
-	    cout<<"\n\nnack\n\n";
+	    cout<<"\nnack "<<f->sn<<"\n";
 	  }
 	  _injection_buffer[dest][fl->vc]._status = FLOW_STATUS_NACK_TRANSITION;
-	  gEffectiveNack[dest]++;
+	} else {
+	  if(f->flid == WATCH_FLID){
+	    cout<<"\nnack "<<f->sn<<" already out of spec \n";
+	  }
 	}
       }
       f->Free();
       return;
       break;
     case RES_TYPE_GRANT: 
-      //grant 
-      if(f->flid == WATCH_FLID){
-	cout<<"\n\ngrant\n\n";
-      }
-      if(_flow_lookup[dest].count(f->flid)){
+      gGrantLat->AddSample(_time-f->time);
+      //this could if all acks have returned before the grant
+      if(_flow_vc_lookup[dest].count(f->flid)){
 	gEffectiveGrant[dest]++;
-	vc_index = _flow_lookup[dest][f->flid]->vc;
+	if(f->flid == WATCH_FLID){
+	  cout<<"\ngrant\n";
+	}
+	if(_time>f->payload){
+	  gReserveTDelta1[dest]->AddSample(_time-f->payload);
+	} else {
+	  gReserveTDelta1[dest]->AddSample(f->payload-_time);
+	}
+
+	vc_index = _flow_vc_lookup[dest][f->flid]->vc;
 	fl = _injection_buffer[dest][vc_index].front_flow();
 	assert(fl);
 	assert(_injection_buffer[dest][fl->vc]._status!= FLOW_STATUS_WAIT && 
@@ -771,65 +806,71 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	assert(_injection_buffer[dest][fl->vc].front()->sn == f->sn);
 	assert(_injection_buffer[dest][fl->vc].front()->head);
 
-	if(f->flid == WATCH_FLID){
-	  cout<<"\n\nreally grant\n\n";
-	}
+
 	fl->rtime = f->payload;
-	  if(_injection_buffer[dest][fl->vc]._spec_sent == fl->flow_size){
-	    _injection_buffer[dest][fl->vc]._status = FLOW_STATUS_WAIT;
-	  } else {
-	    _injection_buffer[dest][fl->vc]._status = FLOW_STATUS_GRANT_TRANSITION;
-	  }
-	if(_time>fl->rtime){
-	  gReserveTDelta1[dest]->AddSample(_time-fl->rtime);
+
+	//it could be allt he packets are in flight speculatively, skip transition phase
+	if(_injection_buffer[dest][fl->vc]._spec_sent == fl->flow_size){
+	  _injection_buffer[dest][fl->vc]._status = FLOW_STATUS_WAIT;
 	} else {
-	  gReserveTDelta1[dest]->AddSample(fl->rtime-_time);
+	  _injection_buffer[dest][fl->vc]._status = FLOW_STATUS_GRANT_TRANSITION;
 	}
       } else {
-	//this maybe wrong, if grant returns after all the acks
-	//assert(false);
+	if(f->flid == WATCH_FLID){
+	  cout<<"\nvery delayed grant\n";
+	}
       }
       f->Free();
       return;
       break;
     case RES_TYPE_RES:
-      if(f->flid == WATCH_FLID){
-	cout<<"\n\nres\n\n";
-      }
       gResReceived[dest]++;
-      //if reservation exist, then res came out of order, ignore respacket
-      if(_reservation_status[dest].count(f->flid)==0){
+      gResLat->AddSample(_time-f->time);
+      //could be flit 0 already arrived then reservation already exists
+      if(_reservation_status[dest].count(f->flid)==0 ||
+	 _reservation_status[dest][f->flid] == RES_STATUS_REORDER){
+	if(f->flid == WATCH_FLID){
+	  cout<<"\nreservation\n";
+	}
 	gEffectiveRes[dest]++;
-	_reservation_status[dest].insert(pair<int, int>(f->flid, RES_STATUS_ASSIGNED));
-	//issue grant
-	Flit* ff = IssueSpecial(dest,f);
 	if(_time> _reservation_schedule[dest]){
 	  gScheduleTDelta1[dest]->AddSample(_time- _reservation_schedule[dest]);
 	} else {
 	  gScheduleTDelta1[dest]->AddSample(_reservation_schedule[dest] - _time);
 	}
-     if(f->flid == WATCH_FLID){
-	cout<<"\n\nres\n\n";
-     }
+	
+	if(_reservation_status[dest].count(f->flid)==0){
+	  _reservation_status[dest].insert(pair<int, int>(f->flid, RES_STATUS_ASSIGNED));	
+	} else {
+	  _reservation_status[dest][f->flid] =  RES_STATUS_ASSIGNED;
+	}
+	Flit* ff = IssueSpecial(dest,f);
+
 	ff->payload  = MAX(_time, _reservation_schedule[dest]);
-	assert(f->payload!=-1);
 	_reservation_schedule[dest] = ff->payload+f->payload;
 	ff->res_type = RES_TYPE_GRANT;
 	ff->pri = FLIT_PRI_GRANT;
 	ff->vc = 1;
 	_response_packets[dest].push_back(ff);
-	_reservation_robs[dest].insert(pair<int, vector<Flit*> >(f->flid, vector<Flit*>()));
+      } else {
+	if(f->flid == WATCH_FLID){
+	  cout<<"\ndelayed reservation\n";
+	}
       }
       f->Free();
       return;
       break;
     case RES_TYPE_SPEC:
       if(_reservation_status[dest].count(f->flid)){ //reservation already exists
-	if((f->head && f->sn ==0)||
-	   (_reservation_robs[dest].count(f->flid)!=0&&//spec not too late
-	    !_reservation_robs[dest][f->flid].empty() &&
-	    _reservation_robs[dest][f->flid].back()->sn+1 == f->sn) ){ //inorder
-	  _reservation_robs[dest][f->flid].push_back(f);
+	if(_reservation_robs[dest].count(f->flid)==0){ //first packet to arrive
+	  //TODO reorder not allowed
+	  //if(f->sn == 0) //inorder case
+	  _reservation_robs[dest].insert(pair<int, map<int, Flit* > >(f->flid, map<int, Flit* >()));
+	}
+
+	//could be that normal flit already arrived before spec
+	if(_reservation_robs[dest][f->flid].count(f->sn)==0){
+	  _reservation_robs[dest][f->flid].insert(pair<int, Flit*>(f->sn, f));
 	  //send ack, shoudl ideally send ack when tail arrives
 	  if(f->tail){
 	    Flit* ff = IssueSpecial(dest,f);
@@ -841,29 +882,18 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	    _response_packets[dest].push_back(ff);
 	    gAckIssued[dest]++;
 	  }
-	} else { //out of order send nack
-	  if(f->head){
-	    Flit* ff = IssueSpecial(dest,f);
-	    ff->res_type = RES_TYPE_NACK;
-	    ff->pri = FLIT_PRI_NACK;
-	    ff->vc = 1;
-	    _response_packets[dest].push_back(ff);
-	    gDestNacked[dest]++;
-	  }
-	  if(f->watch){
-	    *gWatchOut << GetSimTime() << " | "
-		       << "node" << dest << " | "
-		       << "out of order(0) spec flit " << f->id
-		       << "." << endl;
-	  }
-	    
+	} else {
+	  //no need to send nack since the flow is already in grant state
 	  f->Free();
 	  return;
-	}
+	}	
       } else {//new reservation, could happen if reservation gets delayed
-	if(f->head && f->sn == 0){
+	if(f->sn == 0){
 	  _reservation_status[dest].insert(pair<int, int>(f->flid, RES_STATUS_ASSIGNED));
 	  //issue grant
+	  if(f->flid == WATCH_FLID){
+	    cout<<"\nflit 0 reservation\n";
+	  }
 	  Flit* ff = IssueSpecial(dest,f);
 	  ff->payload  = MAX(_time, _reservation_schedule[dest]);
 	  assert(f->payload!=-1);
@@ -872,9 +902,10 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	  ff->pri = FLIT_PRI_GRANT;
 	  ff->vc = 1;
 	  _response_packets[dest].push_back(ff);
-	  _reservation_robs[dest].insert(pair<int, vector<Flit*> >(f->flid, vector<Flit*>()));
-	  _reservation_robs[dest][f->flid].push_back(f);
-	  if(f->tail){ //this is for single flit packets
+	  _reservation_robs[dest].insert(pair<int, map<int, Flit*> >(f->flid, map<int, Flit*>()));
+	  _reservation_robs[dest][f->flid].insert(pair<int, Flit*>(f->sn, f));
+	  //this is for single flit packets
+	  if(f->tail){ 
 	    Flit* ff = IssueSpecial(dest,f);
 	    assert(f->head_sn!=-1);
 	    ff->sn = f->head_sn;//head flit sn
@@ -906,16 +937,25 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       break;
     case RES_TYPE_NORM:
       //duplication  speculative version already succeced ignore
-      if( _reservation_robs[dest].count(f->flid) ==0 ||
-	  (!_reservation_robs[dest][f->flid].empty() &&
-	   f->sn<= _reservation_robs[dest][f->flid].back()->sn)){
-	if(f->watch){
-	  *gWatchOut << GetSimTime() << " | "
-		     << " node" << dest << " | "
-		     << " duplicate normal flit " << f->id
-		     << " sn "<<f->sn<<" vs registered "<<_reservation_robs[dest][f->flid].back()->sn
-		     << "." << endl;
+      if(_reservation_status[dest].count(f->flid) !=0){
+	//check the rob
+	if(!_reservation_robs[dest][f->flid].empty() &&
+	   _reservation_robs[dest][f->flid].count(f->sn)!=0){
+	  if(f->watch){
+	    *gWatchOut << GetSimTime() << " | "
+		       << " node" << dest << " | "
+		       << " duplicate normal flit " << f->id
+		       << " sn "<<f->sn
+		       << "." << endl;
+	  }
+	  gDupReceivedNorm[dest]++; 
+	  f->Free();
+	  return;
+	} else {
+	  //this is a place holder
+	  _reservation_robs[dest][f->flid].insert(pair<int, Flit*>(f->sn, 0)); 
 	}
+      } else { //came in way too late
 	gDupReceivedNorm[dest]++; 
 	f->Free();
 	return;
@@ -925,21 +965,31 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       assert(false);
     }
 
+    //TODO if reservation is really really really delayed, it could show up and the flow already gone
+    //shouldn't cause errors just unfreed bookkeepings in _reservation_status
     //free flow book keepings
-    if(f->flow_tail){
+    if(_reservation_robs[dest].count(f->flid)!=0 &&
+       _flow_master.count(f->flid)!=0 &&
+       _reservation_robs[dest][f->flid].size() == _flow_master[f->flid]->flow_size){
       int saved_flid = f->flid;
       fl = _flow_master[saved_flid];
       gFlowStat->AddSample(_time-fl->create_time);
+      if(fl->flid == WATCH_FLID)
+	cout<<"\nerase reservation\n";
       if(fl->collect){
 	delete _flow_master[saved_flid];
+	_flow_master.erase(saved_flid);
       } else {
 	fl->collect = true;
       }
       _reservation_status[dest].erase(saved_flid);
-      for(int i = 0; i<_reservation_robs[dest][saved_flid].size(); i++){
-	_reservation_robs[dest][saved_flid][i]->Free();
-      }
       gRobSize[dest]->AddSample((int)_reservation_robs[dest][saved_flid].size());
+      for(map<int, Flit*>::iterator i = _reservation_robs[dest][saved_flid].begin(); 
+	  i!= _reservation_robs[dest][saved_flid].end();
+	  i++){
+	if(i->second)
+	  i->second->Free();
+      }
       _reservation_robs[dest][saved_flid].clear();
       _reservation_robs[dest].erase(saved_flid);
     }
@@ -1269,7 +1319,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       f->cl     = cl;
       f->sn = sequence_number++;
       //watchwatch
-      if(f->id == 88918){
+      if(f->id == -1){
 	f->watch=true;;
       }
       _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
@@ -1333,7 +1383,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     //    cout<<"creating a flow at"<<source<<"\n";
     int flid = _cur_flid++;
     flow* fl = new flow;
-    _flow_lookup[source].insert(pair<int, flow*>(flid, fl));
+    _flow_vc_lookup[source].insert(pair<int, flow*>(flid, fl));
     _flow_master.insert(pair<int, flow*>(flid, fl));
     fl->flid = flid;
     fl->rtime = -1;
@@ -1342,9 +1392,8 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     fl->create_time = _time;
     fl->collect = false;
     fl->flow_size = _partial_packets[source][cl].size(); 
-    _partial_packets[source][cl].back()->flow_tail = true;
     _partial_packets[source][cl].front()->payload = fl->flow_size;
-    
+    _partial_packets[source][cl].back()->flow_tail = true;
   }
 }
 
@@ -1475,7 +1524,7 @@ void TrafficManager::_Step( )
 	  int buf_id = -1;
 	  if(f->head){
 	    //no previous destination, almost same as original
-	    if( (gReservation &&_flow_lookup[source][f->flid]->vc==-1) ||
+	    if( (gReservation &&_flow_vc_lookup[source][f->flid]->vc==-1) ||
 		(!gReservation && //case for flow separation
 		 _dest_vc_lookup[source].count(f->dest)== 0)){
 	      OutputSet route_set;
@@ -1499,7 +1548,7 @@ void TrafficManager::_Step( )
 	      }
 	    } else { //destination is already in the system
 	      if(gReservation){
-		buf_id = _flow_lookup[source][f->flid]->vc;
+		buf_id = _flow_vc_lookup[source][f->flid]->vc;
 	      } else {
 		buf_id = _dest_vc_lookup[source].find(f->dest)->second;
 	      }
@@ -1519,9 +1568,9 @@ void TrafficManager::_Step( )
 	      if(!gReservation){
 		_dest_vc_lookup[source].insert(pair<int, int>(f->dest, f->vc));
 	      } else {
-		if(_flow_lookup[source][f->flid]->vc ==-1){
-		  _flow_lookup[source][f->flid]->vc = buf_id;
-		  _injection_buffer[source][buf_id].push_flow(_flow_lookup[source][f->flid]);
+		if(_flow_vc_lookup[source][f->flid]->vc ==-1){
+		  _flow_vc_lookup[source][f->flid]->vc = buf_id;
+		  _injection_buffer[source][buf_id].push_flow(_flow_vc_lookup[source][f->flid]);
 		}
 	      }
 	    }
@@ -1540,14 +1589,6 @@ void TrafficManager::_Step( )
 	  } else { //did not find an eligible buffer
 	    continue;
 	  }
-	  
-	  //this should not trigger
-	  int const subnet = f->subnetwork;
-	  if(flits_sent_by_subnet[subnet] > 0) {
-	    assert(false);
-	    continue;
-	  }
-
 	    // Pass VC "back"
 	  if(!_partial_packets[source][c].empty() && !f->tail) {
 	    Flit * nf = _partial_packets[source][c].front();
@@ -1556,20 +1597,21 @@ void TrafficManager::_Step( )
 	  }
 	  
 	  ++flits_sent_by_class[c];
-	  ++flits_sent_by_subnet[subnet];
-	  if(_flow_out) ++injected_flits[subnet*_nodes+source]; 
+	  ++flits_sent_by_subnet[0];
+	  if(_flow_out) ++injected_flits[0*_nodes+source]; 
 	  iter->second.first = offset;	  
 	}
       }
     }
   }
   
+
   //drain the intermediate buffers
   for(int source = 0; source < _nodes; ++source) {
     BufferState * const dest_buf = _buf_states[source][0];
     Flit * f = NULL;
     if(gReservation){
-      //special vc
+      //ack nack grant
       if( !_injection_buffer[source][1].empty()){
 	f = _injection_buffer[source][1].front(); 
 	assert(f);
@@ -1620,11 +1662,12 @@ void TrafficManager::_Step( )
 	    //regular speculative packets gets duplicated 
 	    f = Flit::New();
 	    memcpy(f, _injection_buffer[source][vc].get_spec(fl->flid), sizeof(Flit));
+	    //issue reservation
 	    if(f->sn == 0 && !fl->spec_sent){
 	    
 	      Flit* ff = IssueSpecial(source,f);
 	      if(f->flid == WATCH_FLID){
-		cout<<"\n\nres issue "<<ff->id<<"\n\n";
+		cout<<"\nres issue "<<ff->id<<"\n";
 		ff->watch = true;
 	      }
 	      ff->res_type = RES_TYPE_RES;
@@ -1633,6 +1676,7 @@ void TrafficManager::_Step( )
 	      ff->dest = f->dest;
 	      ff->vc = 0;
 	      fl->spec_sent = true;
+	      //well guess this could happen is too many reservations
 	      assert(!_injection_buffer[source][0].full());
 	      _injection_buffer[source][0].push_back(ff);
 	    }
@@ -1658,6 +1702,7 @@ void TrafficManager::_Step( )
 
 	}
 	assert(f);
+
 	//vc bookkeeping
 	if(f->head){
 	  if(dest_buf->IsAvailableFor(vc) &&
@@ -1676,9 +1721,9 @@ void TrafficManager::_Step( )
 	    f = NULL;
 	  }
 	}
+
 	//sending and book keeping
 	if(f!=NULL){
-
 	  switch(_injection_buffer[source][vc]._status){
 	  case FLOW_STATUS_NACK://unreachable
 	    assert(false);
@@ -1730,7 +1775,7 @@ void TrafficManager::_Step( )
 	    f->pri = FLIT_PRI_NORM;
 	    _injection_buffer[source][vc].pop_front();
 	    if(f->flow_tail){
-	      RemoveFlow(source, vc, f->flid);
+	      RemoveSrcFlow(source, vc, f->flid);
 	    }
 	    break;
 	  default:
@@ -1741,7 +1786,8 @@ void TrafficManager::_Step( )
 	  _sent_flits[0][source]->AddSample(1);
 	}
       }
-      //reservation packet
+
+      //reservation vc
       if( !_injection_buffer[source][0].empty()){
 	f = _injection_buffer[source][0].front(); 
 	assert(f);
