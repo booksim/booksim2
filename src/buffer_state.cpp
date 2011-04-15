@@ -58,7 +58,7 @@ BufferState::BufferPolicy * BufferState::BufferPolicy::NewBufferPolicy(Configura
   } else if(buffer_policy == "variable") {
     sp = new VariableBufferPolicy(config, parent, name);
   } else {
-    cout << "Unknown sharing policy: " << buffer_policy << endl;
+    cout << "Unknown buffer policy: " << buffer_policy << endl;
   }
   return sp;
 }
