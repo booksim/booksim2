@@ -43,7 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "buffer_state.hpp"
 #include "random_utils.hpp"
 
-BufferState::BufferPolicy::BufferPolicy(BufferState * parent, const string & name)
+BufferState::BufferPolicy::BufferPolicy(Configuration const & config, BufferState * parent, const string & name)
 : Module(parent, name), _buffer_state(parent)
 {
   
@@ -54,25 +54,49 @@ BufferState::BufferPolicy * BufferState::BufferPolicy::NewBufferPolicy(Configura
   BufferPolicy * sp = NULL;
   string sharing_policy = config.GetStr("sharing_policy");
   if(sharing_policy == "unrestricted") {
-    sp = new UnrestrictedBufferPolicy(parent, name);
+    sp = new UnrestrictedBufferPolicy(config, parent, name);
   } else if(sharing_policy == "variable") {
-    sp = new VariableBufferPolicy(parent, name);
+    sp = new VariableBufferPolicy(config, parent, name);
   } else {
     cout << "Unknown sharing policy: " << sharing_policy << endl;
   }
   return sp;
 }
 
-BufferState::UnrestrictedBufferPolicy::UnrestrictedBufferPolicy(BufferState * parent, const string & name)
-  : BufferPolicy(parent, name)
+BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
+  : BufferPolicy(config, parent, name)
+{
+  _shared_buf_size = config.GetInt("shared_buf_size");
+}
+
+BufferState::UnrestrictedBufferPolicy::UnrestrictedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
+  : SharedBufferPolicy(config, parent, name)
 {
 
 }
 
-BufferState::VariableBufferPolicy::VariableBufferPolicy(BufferState * parent, const string & name)
-  : BufferPolicy(parent, name)
+int BufferState::UnrestrictedBufferPolicy::MaxSharedSlots(int vc) const
 {
-  _max_slots = _GetSharedBufSize();
+  return _shared_buf_size;
+}
+
+BufferState::VariableBufferPolicy::VariableBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
+  : SharedBufferPolicy(config, parent, name), _max_slots(_shared_buf_size)
+{
+  
+}
+
+void BufferState::VariableBufferPolicy::UpdateState() {
+  _max_slots = _shared_buf_size;
+  int active_vcs = _buffer_state->ActiveVCs();
+  if(active_vcs > 0) {
+    _max_slots /= active_vcs;
+  }
+}
+
+int BufferState::VariableBufferPolicy::MaxSharedSlots(int vc) const
+{
+  return _max_slots;
 }
 
 BufferState::BufferState( const Configuration& config, 
@@ -134,7 +158,7 @@ void BufferState::ProcessCredit( Credit const * const c )
     }
     ++iter;
   }
-  _sharing_policy->ProcessCredit(c);
+  _sharing_policy->UpdateState();
 }
 
 
@@ -166,7 +190,7 @@ void BufferState::SendingFlit( Flit const * const f )
     _last_id[f->vc] = f->id;
     _last_pid[f->vc] = f->pid;
   }
-  _sharing_policy->SendingFlit(f);
+  _sharing_policy->UpdateState();
 }
 
 void BufferState::TakeBuffer( int vc )
@@ -180,7 +204,7 @@ void BufferState::TakeBuffer( int vc )
   _tail_sent[vc] = false;
   assert(_active_vcs < _vcs);
   ++_active_vcs;
-  _sharing_policy->TakeBuffer(vc);
+  _sharing_policy->UpdateState();
 }
 
 bool BufferState::IsFullFor( int vc ) const
