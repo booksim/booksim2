@@ -41,9 +41,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class Buffer : public Module {
   
-  int _vc_size;
-  int _shared_count;
-  int _shared_size;
+  int _occupancy;
+  int _size;
 
   vector<VC*> _vc;
 
@@ -55,7 +54,11 @@ public:
 
   void AddFlit( int vc, Flit *f );
 
-  Flit *RemoveFlit( int vc );
+  inline Flit *RemoveFlit( int vc )
+  {
+    _vc[vc]->RemoveFlit( );
+    --_occupancy;
+  }
   
   inline Flit *FrontFlit( int vc ) const
   {
@@ -67,7 +70,10 @@ public:
     return _vc[vc]->Empty( );
   }
 
-  bool Full( int vc ) const;
+  inline bool Full( ) const
+  {
+    return _occupancy >= _size;
+  }
 
   inline VC::eVCState GetState( int vc ) const
   {
@@ -132,6 +138,11 @@ public:
   inline bool IsWatched( int vc ) const
   {
     return _vc[vc]->IsWatched( );
+  }
+
+  inline int GetSize( ) const
+  {
+    return _occupancy;
   }
 
   inline int GetSize( int vc ) const

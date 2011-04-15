@@ -62,8 +62,6 @@ VC::VC( const Configuration& config, int outputs,
     _vc_alloc_cycles(0), _active_cycles(0), _idle_cycles(0), _routing_cycles(0),
     _pri(0), _watched(false), _expected_pid(-1), _last_id(-1), _last_pid(-1)
 {
-  _size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
-
   _route_set = new OutputSet( );
 
   string priority = config.GetStr( "priority" );
@@ -104,10 +102,6 @@ void VC::AddFlit( Flit *f )
     _expected_pid = f->pid;
   }
     
-  if((int)_buffer.size() >= _size) {
-    Error("Flit buffer overflow.");
-  }
-
   // update flit priority before adding to VC buffer
   if(_pri_type == local_age_based) {
     f->pri = numeric_limits<int>::max() - GetSimTime();
