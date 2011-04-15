@@ -41,8 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class BufferState : public Module {
   
-  friend class BufferPolicy;
-
   class BufferPolicy : public Module {
   protected:
     BufferState const * const _buffer_state;
