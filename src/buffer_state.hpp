@@ -47,8 +47,11 @@ class BufferState : public Module {
   public:
     BufferPolicy(Configuration const & config, BufferState * parent, 
 		 const string & name);
-    virtual void UpdateState() = 0;
-    virtual int MaxSharedSlots(int vc = 0) const = 0;
+    virtual void AllocVC(int vc = 0) = 0;
+    virtual void FreeVC(int vc = 0) = 0;
+    virtual void AllocSlotFor(int vc = 0) = 0;
+    virtual void FreeSlotFor(int vc = 0) = 0;
+    virtual bool IsFullFor(int vc = 0) const = 0;
     static BufferPolicy * NewBufferPolicy(Configuration const & config, 
 					    BufferState * parent, 
 					    const string & name);
@@ -56,28 +59,33 @@ class BufferState : public Module {
 
   class SharedBufferPolicy : public BufferPolicy {
   protected:
+    int _vc_buf_size;
     int _shared_buf_size;
+    int _shared_occupied;
   public:
     SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name);
-    virtual void UpdateState() {}
-    virtual int MaxSharedSlots(int vc = 0) const;
+    virtual void AllocVC(int vc = 0) {}
+    virtual void FreeVC(int vc = 0) {}
+    virtual void AllocSlotFor(int vc = 0);
+    virtual void FreeSlotFor(int vc = 0);
+    virtual bool IsFullFor(int vc = 0) const;
   };
 
   class VariableBufferPolicy : public SharedBufferPolicy {
   private:
-    int _max_slots;
+    int _max_slots_per_vc;
   public:
     VariableBufferPolicy(Configuration const & config, BufferState * parent, 
 			 const string & name);
-    virtual void UpdateState();
-    virtual int MaxSharedSlots(int vc = 0) const;
+    virtual void AllocVC(int vc = 0);
+    virtual void FreeVC(int vc = 0);
+    virtual bool IsFullFor(int vc = 0) const;
   };
     
   int  _wait_for_tail_credit;
   int  _vc_busy_when_full;
-  int  _vc_buf_size;
-  int  _shared_buf_size;
-  int  _shared_occupied;
+  int  _size;
+  int  _occupancy;
   int  _vcs;
   int  _active_vcs;
   
@@ -85,7 +93,7 @@ class BufferState : public Module {
   
   vector<bool> _in_use;
   vector<bool> _tail_sent;
-  vector<int> _cur_occupied;
+  vector<int> _vc_occupancy;
   vector<int> _last_id;
   vector<int> _last_pid;
 
@@ -101,17 +109,18 @@ public:
 
   void TakeBuffer( int vc = 0 );
 
-  bool IsFullFor( int vc = 0 ) const;
+  inline bool IsFullFor( int vc = 0 ) const {
+    return _buffer_policy->IsFullFor(vc);
+  }
   bool IsEmptyFor( int vc = 0 ) const;
   bool IsAvailableFor( int vc = 0 ) const;
-  bool HasCreditFor( int vc = 0 ) const;
   
   inline int ActiveVCs() const {
     return _active_vcs;
   }
   inline int Size (int vc = 0) const {
     assert((vc >= 0) && (vc < _vcs));
-    return  _cur_occupied[vc];
+    return  _vc_occupancy[vc];
   }
   
   void Display( ostream & os = cout ) const;
