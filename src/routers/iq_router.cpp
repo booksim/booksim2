@@ -292,6 +292,7 @@ void IQRouter::WriteOutputs( )
 //------------------------------------------------------------------------------
 
 Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
+  Flit* drop_f = NULL;
   if(f && f->res_type == RES_TYPE_SPEC){
     bool drop = false;
     if(f->head){
@@ -303,7 +304,8 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
 		     << " from channel at input " << input
 		     << "." << endl;
 	}
-	trafficManager->DropPacket(input, f);
+	drop_f = trafficManager->DropPacket(input, f);
+	drop_f->vc = f->vc;
 	drop = true;
 	dropped_pid[input][f->vc] = f->pid;
       }
@@ -315,12 +317,14 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
     if(drop){
       gDropStats[_id][input]++;
       //send dropped credit since the packet is removed from the buffer
-      if(_out_queue_credits.count(input) == 0) {
-	_out_queue_credits.insert(make_pair(input, Credit::New()));
+      if(drop_f==NULL){
+	if(_out_queue_credits.count(input) == 0) {
+	  _out_queue_credits.insert(make_pair(input, Credit::New()));
+	}
+	_out_queue_credits.find(input)->second->vc.push_back(f->vc);
       }
-      _out_queue_credits.find(input)->second->vc.push_back(f->vc);
       f->Free();
-      return NULL;
+      return drop_f;
     }
   }
   return f;
@@ -333,7 +337,8 @@ bool IQRouter::_ReceiveFlits( )
       Flit * f;
       for(int vc = 0; vc< _vcs; vc++){
 	f = net[0]->GetSpecial( _input_channels[input],vc);
-	f = _ExpirationCheck(f, input);
+	if(gReservation)
+	  f = _ExpirationCheck(f, input);
 	if(f){
 	  _in_queue_flits.insert(make_pair(input, f));
 	  activity = true;

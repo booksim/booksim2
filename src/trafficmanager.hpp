@@ -279,7 +279,7 @@ protected:
   void RemoveSrcFlow(int source, int vc, int flid);
 public:
 
-  void DropPacket(int source, Flit* f);
+  Flit* DropPacket(int source, Flit* f);
   TrafficManager( const Configuration &config, const vector<Network *> & net );
   ~TrafficManager( );
 
