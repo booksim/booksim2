@@ -56,8 +56,8 @@ public:
 
   inline Flit *RemoveFlit( int vc )
   {
-    _vc[vc]->RemoveFlit( );
     --_occupancy;
+    return _vc[vc]->RemoveFlit( );
   }
   
   inline Flit *FrontFlit( int vc ) const
