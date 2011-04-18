@@ -53,7 +53,9 @@ BufferState::BufferPolicy * BufferState::BufferPolicy::NewBufferPolicy(Configura
 {
   BufferPolicy * sp = NULL;
   string buffer_policy = config.GetStr("buffer_policy");
-  if(buffer_policy == "shared") {
+  if(buffer_policy == "private") {
+    sp = new PrivateBufferPolicy(config, parent, name);
+  } else if(buffer_policy == "shared") {
     sp = new SharedBufferPolicy(config, parent, name);
   } else if(buffer_policy == "variable") {
     sp = new VariableBufferPolicy(config, parent, name);
@@ -63,11 +65,44 @@ BufferState::BufferPolicy * BufferState::BufferPolicy::NewBufferPolicy(Configura
   return sp;
 }
 
-BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-  : BufferPolicy(config, parent, name), _shared_occupied(0)
+BufferState::PrivateBufferPolicy::PrivateBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
+  : BufferPolicy(config, parent, name)
 {
+  _vc_buf_size = config.GetInt("buf_size") / config.GetInt("num_vcs");
+  if(_vc_buf_size <= 0) {
+    _vc_buf_size = config.GetInt("vc_buf_size");
+  }
+}
+
+void BufferState::PrivateBufferPolicy::AllocSlotFor(int vc)
+{
+  if(_buffer_state->Size(vc) > _vc_buf_size) {
+    Error("Buffer overflow.");
+  }
+}
+
+bool BufferState::PrivateBufferPolicy::IsFullFor(int vc) const
+{
+  return (_buffer_state->Size(vc) >= _vc_buf_size);
+}
+
+BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
+  : PrivateBufferPolicy(config, parent, name), _shared_occupied(0)
+{
+  int num_vcs = config.GetInt("num_vcs");
+
   _vc_buf_size = config.GetInt("vc_buf_size");
-  _shared_buf_size = config.GetInt("shared_buf_size");
+  if(_vc_buf_size < 0) {
+    _shared_buf_size = config.GetInt("shared_buf_size");
+    _vc_buf_size = (config.GetInt("buf_size") - _shared_buf_size) / num_vcs;
+  } else {
+    int buf_size = config.GetInt("buf_size");
+    if(buf_size < 0) {
+      _shared_buf_size = config.GetInt("shared_buf_size");
+    } else {
+      _shared_buf_size = buf_size - num_vcs * _vc_buf_size;
+    }
+  }
 }
 
 void BufferState::SharedBufferPolicy::AllocSlotFor(int vc)
@@ -125,7 +160,10 @@ BufferState::BufferState( const Configuration& config, Module *parent, const str
   Module( parent, name ), _occupancy(0), _active_vcs(0)
 {
   _vcs = config.GetInt( "num_vcs" );
-  _size = _vcs * config.GetInt("vc_buf_size") + config.GetInt("shared_buf_size");
+  _size = config.GetInt("buf_size");
+  if(_size < 0) {
+    _size = _vcs * config.GetInt("vc_buf_size") + config.GetInt("shared_buf_size");
+  }
 
   _buffer_policy = BufferPolicy::NewBufferPolicy(config, this, "policy");
 
