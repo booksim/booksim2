@@ -67,7 +67,11 @@ BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config
   : BufferPolicy(config, parent, name), _shared_occupied(0)
 {
   _vc_buf_size = config.GetInt("vc_buf_size");
-  _shared_buf_size = config.GetInt("shared_buf_size");
+  int num_vcs = config.GetInt("num_vcs");
+  _shared_buf_size = config.GetInt("buf_size") - num_vcs * _vc_buf_size;
+  if(_shared_buf_size < 0) {
+    _shared_buf_size = config.GetInt("shared_buf_size");
+  }
 }
 
 void BufferState::SharedBufferPolicy::AllocSlotFor(int vc)
