@@ -41,7 +41,7 @@
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
-#define WATCH_FLID 14563
+#define WATCH_FLID -1
 #define MAX(X,Y) (X>Y?(X):(Y))
 
 map<int, vector<int> > gDropStats;
@@ -704,7 +704,7 @@ Flit* TrafficManager::IssueSpecial(int src, Flit* ff){
 }
 
 Flit* TrafficManager::DropPacket(int src, Flit* f){
-  Flit* ff = IssueSpecial(src, f);
+  Flit* ff = IssueSpecial(f->src, f);
   ff->res_type = RES_TYPE_NACK;
   ff->pri = FLIT_PRI_NACK;
   ff->vc = 1;
@@ -1030,6 +1030,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     if(f->res_type == RES_TYPE_SPEC){
        gDupReceivedSpec[dest]++;
     } else {
+      //this probabably leaks memory
       gDupReceivedNorm[dest]++; 
     }
     return;
@@ -1756,8 +1757,8 @@ void TrafficManager::_Step( )
 	  case FLOW_STATUS_GRANT_TRANSITION:
 	  case FLOW_STATUS_NACK_TRANSITION:
 	  case FLOW_STATUS_SPEC:
-	    if(f->head)
-	      gSpecSent[source]++;
+
+	    gSpecSent[source]++;
 	    f->res_type = RES_TYPE_SPEC;
 	    f->pri = FLIT_PRI_SPEC;
 	    //reservation packet don't expire
@@ -1798,6 +1799,7 @@ void TrafficManager::_Step( )
 			 << " at vc "<<vc
 			 << "." << endl;
 	    }
+	    
 	    gNormSent[source]++;
 	    f->res_type = RES_TYPE_NORM;
 	    f->pri = FLIT_PRI_NORM;
@@ -2035,7 +2037,7 @@ void TrafficManager::_ClearStats( )
     gTimeInNorm.resize(_nodes,0); 
 
     for(int i = 0; i<_routers; i++){
-      for(unsigned int j = 0; j<    gDropStats[i].size(); i++){
+      for(unsigned int j = 0; j<    gDropStats[i].size(); j++){
 	gDropStats[i][j] = 0;
       }
     }
