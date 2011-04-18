@@ -1428,7 +1428,6 @@ bool TrafficManager::_SingleSim( )
       }
       while(Credit::OutStanding()!=0){
 	++empty_steps;
-	cout<<Credit::OutStanding()<<endl;
 	_Step();
       }
       cout << endl;
@@ -1747,7 +1746,6 @@ bool TrafficManager::_SingleSim( )
     //wait until all the credits are drained as well
     while(Credit::OutStanding()!=0){
       ++empty_steps;
-      cout<<Credit::OutStanding()<<endl;
       _Step();
     }
     _empty_network = false;
