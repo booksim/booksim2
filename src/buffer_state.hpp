@@ -53,17 +53,30 @@ class BufferState : public Module {
     virtual void FreeSlotFor(int vc = 0) = 0;
     virtual bool IsFullFor(int vc = 0) const = 0;
     static BufferPolicy * NewBufferPolicy(Configuration const & config, 
-					    BufferState * parent, 
-					    const string & name);
+					  BufferState * parent, 
+					  const string & name);
   };
-
-  class SharedBufferPolicy : public BufferPolicy {
+  
+  class PrivateBufferPolicy : public BufferPolicy {
   protected:
     int _vc_buf_size;
+  public:
+    PrivateBufferPolicy(Configuration const & config, BufferState * parent, 
+			const string & name);
+    virtual void AllocVC(int vc = 0) {}
+    virtual void FreeVC(int vc = 0) {}
+    virtual void AllocSlotFor(int vc = 0);
+    virtual void FreeSlotFor(int vc = 0) {}
+    virtual bool IsFullFor(int vc = 0) const;
+  };
+  
+  class SharedBufferPolicy : public PrivateBufferPolicy {
+  protected:
     int _shared_buf_size;
     int _shared_occupied;
   public:
-    SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name);
+    SharedBufferPolicy(Configuration const & config, BufferState * parent, 
+		       const string & name);
     virtual void AllocVC(int vc = 0) {}
     virtual void FreeVC(int vc = 0) {}
     virtual void AllocSlotFor(int vc = 0);
@@ -75,7 +88,7 @@ class BufferState : public Module {
   private:
     int _max_slots_per_vc;
   public:
-    VariableBufferPolicy(Configuration const & config, BufferState * parent, 
+    VariableBufferPolicy(Configuration const & config, BufferState * parent,
 			 const string & name);
     virtual void AllocVC(int vc = 0);
     virtual void FreeVC(int vc = 0);
