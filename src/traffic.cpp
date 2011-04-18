@@ -335,7 +335,7 @@ int badperm_yarc(int source, int total_nodes){
 
 static int _hs_max_val;
 static vector<pair<int, int> > _hs_elems;
-
+map<int, int> hs_lookup;
 int hotspot(int source, int total_nodes){
   int pct = RandomInt(_hs_max_val);
   for(size_t i = 0; i < (_hs_elems.size()-1); ++i) {
@@ -350,6 +350,13 @@ int hotspot(int source, int total_nodes){
   return _hs_elems.back().second;
 }
 
+int background_uniform(int source, int total_nodes){
+  int e = RandomInt(total_nodes-1);
+  while(hs_lookup.count(e)!=0){
+    e = RandomInt(total_nodes-1);
+  }
+  return e;
+}
 //=============================================================
 
 static int _cp_max_val;
@@ -376,32 +383,6 @@ void InitializeTrafficMap( const Configuration & config )
 
   _xr = config.GetInt("xr");
 
-  vector<int> hotspot_nodes = config.GetIntArray("hotspot_nodes");
-  vector<int> hotspot_rates = config.GetIntArray("hotspot_rates");
-  hotspot_rates.resize(hotspot_nodes.size(), hotspot_rates.empty() ? 1 : hotspot_rates.back());
-  _hs_max_val = -1;
-  for(size_t i = 0; i < hotspot_nodes.size(); ++i) {
-    int rate = hotspot_rates[i];
-    _hs_elems.push_back(make_pair(rate, hotspot_nodes[i]));
-    _hs_max_val += rate;
-  }
-  
-  map<string, tTrafficFunction>::const_iterator match;
-
-  vector<string> combined_patterns = config.GetStrArray("combined_patterns");
-  vector<int> combined_rates = config.GetIntArray("combined_rates");
-  combined_rates.resize(combined_patterns.size(), combined_rates.empty() ? 1 : combined_rates.back());
-  _cp_max_val = -1;
-  for(size_t i = 0; i < combined_patterns.size(); ++i) {
-    match = gTrafficFunctionMap.find(combined_patterns[i]);
-    if(match == gTrafficFunctionMap.end()) {
-      cout << "Error: Undefined traffic pattern '" << combined_patterns[i] << "'." << endl;
-      exit(-1);
-    }
-    int rate = combined_rates[i];
-    _cp_elems.push_back(make_pair(rate, match->second));
-    _cp_max_val += rate;
-  }
 
   gPermSeed = config.GetInt( "perm_seed" );
 
@@ -434,7 +415,39 @@ void InitializeTrafficMap( const Configuration & config )
   gTrafficFunctionMap["badperm_yarc"] = &badperm_yarc;
 
   gTrafficFunctionMap["hotspot"]  = &hotspot;
+  gTrafficFunctionMap["background_uniform"] = &background_uniform;
   gTrafficFunctionMap["combined"] = &combined;
+
+
+  vector<int> hotspot_nodes = config.GetIntArray("hotspot_nodes");
+  vector<int> hotspot_rates = config.GetIntArray("hotspot_rates");
+  hotspot_rates.resize(hotspot_nodes.size(), hotspot_rates.empty() ? 1 : hotspot_rates.back());
+  _hs_max_val = -1;
+  for(size_t i = 0; i < hotspot_nodes.size(); ++i) {
+    int rate = hotspot_rates[i];
+    _hs_elems.push_back(make_pair(rate, hotspot_nodes[i]));
+    _hs_max_val += rate;
+  }
+  for(size_t i = 0; i< hotspot_nodes.size(); i++){
+    hs_lookup.insert(pair<int, int>(hotspot_nodes[i], hotspot_nodes[i]));
+  }
+
+  map<string, tTrafficFunction>::const_iterator match;
+
+  vector<string> combined_patterns = config.GetStrArray("combined_patterns");
+  vector<int> combined_rates = config.GetIntArray("combined_rates");
+  combined_rates.resize(combined_patterns.size(), combined_rates.empty() ? 1 : combined_rates.back());
+  _cp_max_val = -1;
+  for(size_t i = 0; i < combined_patterns.size(); ++i) {
+    match = gTrafficFunctionMap.find(combined_patterns[i]);
+    if(match == gTrafficFunctionMap.end()) {
+      cout << "Error: Undefined traffic pattern '" << combined_patterns[i] << "'." << endl;
+      exit(-1);
+    }
+    int rate = combined_rates[i];
+    _cp_elems.push_back(make_pair(rate, match->second));
+    _cp_max_val += rate;
+  }
 
 }
 
