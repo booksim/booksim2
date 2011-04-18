@@ -75,3 +75,8 @@ void Credit::FreeAll() {
     _all.pop();
   }
 }
+
+
+int Credit::OutStanding(){
+  return _all.size()-_free.size();
+}

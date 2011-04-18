@@ -49,7 +49,7 @@ public:
   static Credit * New();
   void Free();
   static void FreeAll();
-
+  static int OutStanding();
 private:
 
   static stack<Credit *> _all;
