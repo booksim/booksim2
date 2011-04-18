@@ -41,6 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
+
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
 : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
@@ -1117,7 +1118,6 @@ void TrafficManager::_Step( )
 	    if(_flow_out) ++injected_flits[subnet*_nodes+source];
 
 	    _net[subnet]->WriteFlit(f, source);
-	    
 	    iter->second.first = offset;
 	    
 	  }
@@ -1425,6 +1425,11 @@ bool TrafficManager::_SingleSim( )
 	    packets_left |= !_total_in_flight_flits[c].empty();
 	  }
 	}
+      }
+      while(Credit::OutStanding()!=0){
+	++empty_steps;
+	cout<<Credit::OutStanding()<<endl;
+	_Step();
       }
       cout << endl;
       cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) received. Time used is " << _time - _drain_time << " cycles. Last packet was " << _last_pid << ", last flit was " << _last_id << "." <<endl;
@@ -1738,6 +1743,12 @@ bool TrafficManager::_SingleSim( )
 	  packets_left |= !_total_in_flight_flits[c].empty();
 	}
       }
+    }
+    //wait until all the credits are drained as well
+    while(Credit::OutStanding()!=0){
+      ++empty_steps;
+      cout<<Credit::OutStanding()<<endl;
+      _Step();
     }
     _empty_network = false;
   }
