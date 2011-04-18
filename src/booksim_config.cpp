@@ -149,7 +149,7 @@ BookSimConfig::BookSimConfig( )
   AddStrField( "hotspot_nodes", "" );
   AddStrField( "hotspot_rates", "" );
 
-  AddStrField( "background_excludes" );
+  AddStrField( "background_excludes", "" );
 
   AddStrField( "combined_patterns", "" );
   AddStrField( "combined_rates", "" );
