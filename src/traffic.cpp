@@ -29,6 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <map>
+#include <set>
+#include <vector>
 #include <cstdlib>
 
 #include "booksim.hpp"
@@ -335,7 +337,6 @@ int badperm_yarc(int source, int total_nodes){
 
 static int _hs_max_val;
 static vector<pair<int, int> > _hs_elems;
-map<int, int> hs_lookup;
 int hotspot(int source, int total_nodes){
   int pct = RandomInt(_hs_max_val);
   for(size_t i = 0; i < (_hs_elems.size()-1); ++i) {
@@ -350,11 +351,12 @@ int hotspot(int source, int total_nodes){
   return _hs_elems.back().second;
 }
 
-int background_uniform(int source, int total_nodes){
-  int e = RandomInt(total_nodes-1);
-  while(hs_lookup.count(e)!=0){
+static set<int> _background_excludes;
+int background(int source, int total_nodes){
+  int e;
+  do {
     e = RandomInt(total_nodes-1);
-  }
+  } while(_background_excludes.count(e) != 0);
   return e;
 }
 //=============================================================
@@ -415,7 +417,7 @@ void InitializeTrafficMap( const Configuration & config )
   gTrafficFunctionMap["badperm_yarc"] = &badperm_yarc;
 
   gTrafficFunctionMap["hotspot"]  = &hotspot;
-  gTrafficFunctionMap["background_uniform"] = &background_uniform;
+  gTrafficFunctionMap["background"] = &background;
   gTrafficFunctionMap["combined"] = &combined;
 
 
@@ -428,8 +430,10 @@ void InitializeTrafficMap( const Configuration & config )
     _hs_elems.push_back(make_pair(rate, hotspot_nodes[i]));
     _hs_max_val += rate;
   }
-  for(size_t i = 0; i< hotspot_nodes.size(); i++){
-    hs_lookup.insert(pair<int, int>(hotspot_nodes[i], hotspot_nodes[i]));
+
+  vector<int> background_excludes = config.GetIntArray("background_excludes");
+  for(size_t i = 0; i < background_excludes.size(); ++i) {
+    _background_excludes.insert(background_excludes[i]);
   }
 
   map<string, tTrafficFunction>::const_iterator match;
