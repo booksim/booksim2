@@ -72,6 +72,7 @@ BufferState::PrivateBufferPolicy::PrivateBufferPolicy(Configuration const & conf
   if(_vc_buf_size <= 0) {
     _vc_buf_size = config.GetInt("vc_buf_size");
   }
+  assert(_vc_buf_size > 0);
 }
 
 void BufferState::PrivateBufferPolicy::AllocSlotFor(int vc)
@@ -87,29 +88,76 @@ bool BufferState::PrivateBufferPolicy::IsFullFor(int vc) const
 }
 
 BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-  : PrivateBufferPolicy(config, parent, name), _shared_occupied(0)
+  : BufferPolicy(config, parent, name), _shared_occupancy(0)
 {
   int num_vcs = config.GetInt("num_vcs");
 
-  _vc_buf_size = config.GetInt("vc_buf_size");
-  if(_vc_buf_size < 0) {
-    _shared_buf_size = config.GetInt("shared_buf_size");
-    _vc_buf_size = (config.GetInt("buf_size") - _shared_buf_size) / num_vcs;
-  } else {
-    int buf_size = config.GetInt("buf_size");
-    if(buf_size < 0) {
-      _shared_buf_size = config.GetInt("shared_buf_size");
+  int num_private_bufs = config.GetInt("private_bufs");
+  if(num_private_bufs < 0) {
+    num_private_bufs = num_vcs;
+  }
+  
+  _private_buf_occupancy.resize(num_private_bufs, 0);
+
+  int buf_size = config.GetInt("buf_size");
+
+  _private_buf_size = config.GetIntArray("private_buf_size");
+  if(_private_buf_size.empty()) {
+    int const bs = config.GetInt("private_buf_size");
+    if(bs < 0) {
+      _private_buf_size.push_back(buf_size / num_private_bufs);
     } else {
-      _shared_buf_size = buf_size - num_vcs * _vc_buf_size;
+      _private_buf_size.push_back(bs);
     }
   }
+  _private_buf_size.resize(num_private_bufs, _private_buf_size.back());
+  
+  vector<int> start_vc = config.GetIntArray("private_buf_start_vc");
+  if(start_vc.empty()) {
+    int const sv = config.GetInt("private_buf_start_vc");
+    if(sv < 0) {
+      start_vc.resize(num_private_bufs);
+      for(int i = 0; i < num_private_bufs; ++i) {
+	start_vc[i] = i * num_vcs / num_private_bufs;
+      }
+    } else {
+      start_vc.push_back(sv);
+    }
+  }
+  
+  vector<int> end_vc = config.GetIntArray("private_buf_end_vc");
+  if(end_vc.empty()) {
+    int const ev = config.GetInt("private_buf_end_vc");
+    if(ev < 0) {
+      end_vc.resize(num_private_bufs);
+      for(int i = 0; i < num_private_bufs; ++i) {
+	end_vc[i] = (i + 1) * num_vcs / num_private_bufs - 1;
+      }
+    } else {
+      end_vc.push_back(ev);
+    }
+  }
+
+  _private_buf_vc_map.resize(num_vcs, -1);
+  _shared_buf_size = buf_size;
+  for(int i = 0; i < num_private_bufs; ++i) {
+    _shared_buf_size -= _private_buf_size[i];
+    assert(start_vc[i] <= end_vc[i]);
+    for(int v = start_vc[i]; v <= end_vc[i]; ++v) {
+      assert(_private_buf_vc_map[v] < 0);
+      _private_buf_vc_map[v] = i;
+    }
+  }
+  assert(_shared_buf_size >= 0);
 }
 
 void BufferState::SharedBufferPolicy::AllocSlotFor(int vc)
 {
-  if(_buffer_state->Size(vc) > _vc_buf_size) {
-    ++_shared_occupied;
-    if(_shared_occupied > _shared_buf_size) {
+  int i = _private_buf_vc_map[vc];
+  ++_private_buf_occupancy[i];
+  if(_private_buf_occupancy[i] > _private_buf_size[i]) {
+    ++_shared_occupancy;
+    if(_shared_occupancy > _shared_buf_size) {
       Error("Buffer overflow.");
     }
   }
@@ -117,43 +165,46 @@ void BufferState::SharedBufferPolicy::AllocSlotFor(int vc)
 
 void BufferState::SharedBufferPolicy::FreeSlotFor(int vc)
 {
-  if(_buffer_state->Size(vc) >= _vc_buf_size) {
-    --_shared_occupied;
-    assert(_shared_occupied >= 0);
+  int i = _private_buf_vc_map[vc];
+  assert(_private_buf_occupancy[i]);
+  --_private_buf_occupancy[i];
+  if(_private_buf_occupancy[i] >= _private_buf_size[i]) {
+    --_shared_occupancy;
+    assert(_shared_occupancy >= 0);
   }
 }
 
 bool BufferState::SharedBufferPolicy::IsFullFor(int vc) const
 {
-  return ((_buffer_state->Size(vc) >= _vc_buf_size) &&
-	  (_shared_occupied >= _shared_buf_size));
+  int i = _private_buf_vc_map[vc];
+  return ((_private_buf_occupancy[i] >= _private_buf_size[i]) &&
+	  (_shared_occupancy >= _shared_buf_size));
 }
 
 BufferState::VariableBufferPolicy::VariableBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
   : SharedBufferPolicy(config, parent, name)
 {
-  _max_slots_per_vc = _shared_buf_size;
+  _max_shared_slots = _shared_buf_size;
 }
 
 void BufferState::VariableBufferPolicy::AllocVC(int vc)
 {
   assert(_buffer_state->ActiveVCs());
-  _max_slots_per_vc = _shared_buf_size / _buffer_state->ActiveVCs();
+  _max_shared_slots = _shared_buf_size / _buffer_state->ActiveVCs();
 }
 
 void BufferState::VariableBufferPolicy::FreeVC(int vc)
 {
   int active_vcs = _buffer_state->ActiveVCs();
   if(active_vcs) {
-    _max_slots_per_vc = _shared_buf_size / active_vcs;
+    _max_shared_slots = _shared_buf_size / active_vcs;
   }
 }
 
 bool BufferState::VariableBufferPolicy::IsFullFor(int vc) const
 {
-  return (SharedBufferPolicy::IsFullFor(vc) ||
-	  ((_buffer_state->Size(vc) >= _vc_buf_size) &&
-	   (_buffer_state->Size(vc) - _vc_buf_size >= _max_slots_per_vc)));
+  int i = _private_buf_vc_map[vc];
+  return (_private_buf_occupancy[i] >= _private_buf_size[i] + _max_shared_slots);
 }
 
 BufferState::BufferState( const Configuration& config, Module *parent, const string& name ) : 

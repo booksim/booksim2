@@ -70,10 +70,13 @@ class BufferState : public Module {
     virtual bool IsFullFor(int vc = 0) const;
   };
   
-  class SharedBufferPolicy : public PrivateBufferPolicy {
+  class SharedBufferPolicy : public BufferPolicy {
   protected:
+    vector<int> _private_buf_vc_map;
+    vector<int> _private_buf_size;
+    vector<int> _private_buf_occupancy;
     int _shared_buf_size;
-    int _shared_occupied;
+    int _shared_occupancy;
   public:
     SharedBufferPolicy(Configuration const & config, BufferState * parent, 
 		       const string & name);
@@ -86,7 +89,7 @@ class BufferState : public Module {
 
   class VariableBufferPolicy : public SharedBufferPolicy {
   private:
-    int _max_slots_per_vc;
+    int _max_shared_slots;
   public:
     VariableBufferPolicy(Configuration const & config, BufferState * parent,
 			 const string & name);
