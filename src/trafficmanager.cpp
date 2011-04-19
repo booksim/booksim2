@@ -184,17 +184,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     }
   }
 
-  vector<string> inject = config.GetStrArray("injection_process");
-  inject.resize(_classes, inject.back());
-
-  _injection_process.clear();
-  for(int c = 0; c < _classes; ++c) {
-    map<string, tInjectionProcess>::iterator iter = gInjectionProcessMap.find(inject[c]);
-    if(iter == gInjectionProcessMap.end()) {
-      Error("Invalid injection process: " + inject[c]);
-    }
-    _injection_process.push_back(iter->second);
-  }
+  _injection_process = InjectionProcess::Load(config);
 
   // ============ Injection VC states  ============ 
 
@@ -529,8 +519,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 TrafficManager::~TrafficManager( )
 {
 
-  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
-    for ( int source = 0; source < _nodes; ++source ) {
+  for ( int source = 0; source < _nodes; ++source ) {
+    for ( int c = 0; c < _classes; ++c) {
+      delete _injection_process[source][c];
+    }
+    for ( int subnet = 0; subnet < _subnets; ++subnet ) {
       delete _buf_states[source][subnet];
     }
   }
@@ -766,7 +759,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
       } else {
 
 	//produce a packet
-	if(_injection_process[cl]( source, _load[cl] )){
+	if(_injection_process[source][cl]->test()) {
 	
 	  //coin toss to determine request type.
 	  result = (RandomFloat() < 0.5) ? -2 : -1;
@@ -776,7 +769,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	}
       } 
     } else { //normal mode
-      return _injection_process[cl]( source, _load[cl] ) ? 1 : 0;
+      return _injection_process[source][cl]->test() ? 1 : 0;
     } 
   }
   return result;
