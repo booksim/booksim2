@@ -155,17 +155,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _last_class.resize(_nodes, -1);
 
-  vector<string> inject = config.GetStrArray("injection_process");
-  inject.resize(_classes, inject.back());
-
-  _injection_process.clear();
-  for(int c = 0; c < _classes; ++c) {
-    map<string, tInjectionProcess>::iterator iter = gInjectionProcessMap.find(inject[c]);
-    if(iter == gInjectionProcessMap.end()) {
-      Error("Invalid injection process: " + inject[c]);
-    }
-    _injection_process.push_back(iter->second);
-  }
+  _injection_process = InjectionProcess::Load(config);
 
   // ============ Injection VC states  ============ 
 
@@ -506,8 +496,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 TrafficManager::~TrafficManager( )
 {
 
-  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
-    for ( int source = 0; source < _nodes; ++source ) {
+  for ( int source = 0; source < _nodes; ++source ) {
+    for ( int c = 0; c < _classes; ++c) {
+      delete _injection_process[source][c];
+    }
+    for ( int subnet = 0; subnet < _subnets; ++subnet ) {
       delete _buf_states[source][subnet];
     }
   }
@@ -685,7 +678,7 @@ bool TrafficManager::_IssuePacket( int source, int cl )
      (_sent_packets[source][cl] >= _batch_size)) {
     return false;
   }
-  if(_injection_process[cl](source, _load[cl])) {
+  if(_injection_process[source][cl]->test()) {
     _requests_outstanding[source][cl]++;
     _sent_packets[source][cl]++;
     return true;

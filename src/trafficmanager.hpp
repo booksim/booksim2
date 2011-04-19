@@ -81,7 +81,7 @@ protected:
   vector<int> _last_class;
 
   vector<tTrafficFunction> _traffic_function;
-  vector<tInjectionProcess> _injection_process;
+  vector<vector<InjectionProcess *> > _injection_process;
 
   // ============ Message priorities ============ 
 

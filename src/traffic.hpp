@@ -37,9 +37,6 @@ typedef int (*tTrafficFunction)( int, int );
 
 void InitializeTrafficMap( const Configuration & config );
 
-void ResetTraffic( );
-void StepTrafficFunctions( );
-
 extern map<string, tTrafficFunction> gTrafficFunctionMap;
 
 #endif
