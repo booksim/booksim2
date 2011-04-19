@@ -42,9 +42,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 map<string, tTrafficFunction> gTrafficFunctionMap;
 
-static int gResetTraffic = 0;
-static int gStepTraffic  = 0;
-
 static int _xr = 1;
 
 void src_dest_bin( int source, int dest, int lg )
@@ -236,9 +233,8 @@ void GenerateRandomPerm( int total_nodes )
 
 int randperm( int source, int total_nodes )
 {
-  if ( gResetTraffic || gPerm.empty() ) {
+  if ( gPerm.empty( ) ) {
     GenerateRandomPerm( total_nodes );
-    gResetTraffic = 0;
   }
 
   return gPerm[source];
@@ -453,14 +449,4 @@ void InitializeTrafficMap( const Configuration & config )
     _cp_max_val += rate;
   }
 
-}
-
-void ResetTrafficFunction( )
-{
-  gResetTraffic++;
-}
-
-void StepTrafficFunction( )
-{
-  gStepTraffic++;
 }
