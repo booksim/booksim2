@@ -1630,6 +1630,9 @@ void InitializeRoutingMap( const Configuration & config )
     gEndVCs.push_back((end_vc < 0) ? (gNumVCs - 1) : end_vc);
   }
   gEndVCs.resize(classes, gEndVCs.back());
+  for(int c = 0; c < classes; ++c) {
+    assert(gBeginVCs[c] >= gEndVCs[c]);
+  }
 
   /* Register routing functions here */
 
