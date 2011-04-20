@@ -184,7 +184,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     }
   }
 
-  _injection_process = InjectionProcess::Load(config);
+  _injection_process = InjectionProcess::Load(config, _nodes);
 
   // ============ Injection VC states  ============ 
 
