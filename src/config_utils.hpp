@@ -50,7 +50,7 @@ protected:
   map<string,int>    _int_map;
   map<string,double> _float_map;
   
-  static vector<string> tokenize(string data);
+  static vector<string> tokenize(string const & data);
 
 public:
   Configuration();
