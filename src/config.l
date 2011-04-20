@@ -22,6 +22,7 @@ extern int config_input(char *, int);
 Digit [0-9]
 Exponent [eE][+-]?{Digit}+
 DblConst ({Digit}*\.)?{Digit}+{Exponent}?
+StrConst [A-Za-z_\-/\.][A-Za-z0-9_\-/\.\+]*
 
 %%
 
@@ -34,9 +35,9 @@ DblConst ({Digit}*\.)?{Digit}+{Exponent}?
 
    /* Commands */
 
-[A-Za-z_\-/][A-Za-z0-9_\-/\.\+]* { configlval.name = strdup( yytext ); return STR; }
+{StrConst} { configlval.name = strdup( yytext ); return STR; }
 
-\{[A-Za-z0-9_\-\.]+(\,[A-Za-z0-9_\-\.]+)*\} { configlval.name = strdup( yytext ); return STR; }
+\{[A-Za-z0-9_\-\.\{\,\}]+(\,[A-Za-z0-9_\-\.\{\,\}]+)*\} { configlval.name = strdup( yytext ); return STR; }
 
 -?[0-9]+     { configlval.num = strtoul( yytext, 0, 10 ); return NUM; }
 
