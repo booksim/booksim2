@@ -108,6 +108,12 @@ protected:
   vector<vector<vector<int> > > _last_vc;
   vector<vector<vector<int> > > _last_interm;
 
+  vector<int> _last_receive_flow_buffer;
+  vector<int> _last_normal_flow_buffer;
+  vector<int> _last_spec_flow_buffer;
+  vector<int> _last_normal_vc;
+  vector<int> _last_spec_vc;
+
   // ============ Routing ============ 
 
   tRoutingFunction _rf;
@@ -116,7 +122,7 @@ protected:
 
   vector<vector<int> > _qtime;
   vector<vector<bool> > _qdrained;
-  vector<vector<list<Flit *> > > _partial_packets;
+  //  vector<vector<list<Flit *> > > _partial_packets;
 
   vector<map<int, Flit *> > _total_in_flight_flits;
   vector<map<int, Flit *> > _measured_in_flight_flits;
@@ -162,9 +168,10 @@ protected:
   vector<int> _reservation_schedule;
 
   //sender
-  FlowBuffer** _injection_buffer;
-  vector<multimap<int, int>  >_dest_vc_lookup;
-  vector<map<int, flow*> > _flow_vc_lookup;
+  int _flow_buffer_capacity;
+  int _max_flow_buffers;
+  vector< map<int, flow*> > _flow;
+  vector< vector< FlowBuffer*> > _flow_buffer;
   map<int, flow*> _flow_master;
 
   // ============ Statistics ============
@@ -276,7 +283,6 @@ protected:
   void _LoadWatchList(const string & filename);
 
   Flit* IssueSpecial(int src, Flit* ff);
-  void RemoveSrcFlow(int source, int vc, int flid);
 public:
 
   Flit* DropPacket(int source, Flit* f);

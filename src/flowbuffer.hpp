@@ -2,47 +2,55 @@
 #define _FLOWBUFFER_H_
 #include "flit.hpp"
 #include "reservation.hpp"
-#include <list>
+#include <map>
+#include <queue>
+#include "globals.hpp"
 struct flow{
-  bool spec_sent;
   int flid;
   int vc;
   int rtime;
   int flow_size;
   bool collect;
   int create_time;
+  queue<Flit*> data;
 };
 
 class FlowBuffer{
 public:
-  FlowBuffer();
+  FlowBuffer(int id, int size, bool res, flow* fl);
   ~FlowBuffer();
 
-  Flit* front();
-  flow* front_flow();
-  Flit* back();
-  Flit* get_spec(int flid);
-  int size();
-  bool empty();
-  bool full();
-  void inc_spec();
-  void push_flow(flow* f);
-  void pop_flow();
-  void push_back(Flit * f);
-  void pop_front();
-  bool remove_packet();
-  void reset();  
-  void nack();
+  void ack(int sn);
+  void nack(int sn);
+  void grant(int time);
 
-  Flit** _flit_buffer;
-  list<flow* > _flow_buffer;
-  int _head;
-  int _tail;
-  int _size;
+  bool receive_ready();
+  bool send_norm_ready();
+  bool send_spec_ready();
+  bool done();
+
+  Flit* send();
+  Flit* receive();
+  Flit* front();
+
+  map<int, int> _flit_status;
+  map<int, Flit*> _flit_buffer;
+  flow* fl;
+  Flit* _reservation_flit;
   int _capacity;			       
+  int _id;
+
   int _status;
-  int _spec_position;
-  int _spec_sent;
+  bool _tail_sent; //if the last flit sent was a tail
+  bool _tail_received; //tail received from the node
+  int _last_sn;
+  int _guarantee_sent;
+  int _received;
+  int _ready;
+  bool _spec_sent;
+  int _vc;
+
+  bool _watch;
 };
 
 #endif

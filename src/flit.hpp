@@ -57,6 +57,7 @@ public:
   int payload;
   int head_sn;
 
+  int flbid;
 
   int vc;
   int cl;

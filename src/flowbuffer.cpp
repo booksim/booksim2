@@ -1,102 +1,375 @@
 #include "flowbuffer.hpp"
 
 
+FlowBuffer::FlowBuffer(int id, int size, bool res, flow* f){
+  _id = id;
+  fl = f;
+  _capacity = size;
 
-FlowBuffer::FlowBuffer(){
-  _head = 0; _tail = 0; _size = 0; _capacity = INJECTION_BUFFER_SIZE;
-  _spec_position = 0; _status= FLOW_STATUS_SPEC;
-  _flit_buffer  = new Flit*[INJECTION_BUFFER_SIZE];
-  _spec_sent = 0;
+  _vc = -1;
+  _last_sn = -1;
+  _tail_received = true;
+  _tail_sent = true;
+  _guarantee_sent = 0;
+  _received = 0;
+  _ready = 0;
+  if(res){
+    _reservation_flit  = Flit::New();
+    _reservation_flit->flid = fl->flid;
+    _reservation_flit->flbid = _id;
+    _reservation_flit->sn = 0;
+    _reservation_flit->id = -1;
+    _reservation_flit->subnetwork = 0;
+    _reservation_flit->cl = 0;
+    _reservation_flit->type = Flit::ANY_TYPE;
+    _reservation_flit->head = true;
+    _reservation_flit->tail = true;
+    _reservation_flit->vc = 0;
+    _reservation_flit->res_type = RES_TYPE_RES;
+    _reservation_flit->pri = FLIT_PRI_RES;
+    _reservation_flit->payload = fl->flow_size;
+
+    _status= FLOW_STATUS_SPEC;
+    _spec_sent = false;
+  } else {
+    _status =FLOW_STATUS_NORM;
+    _spec_sent = true;
+  }
+
+  _watch = false;
 }
 
 FlowBuffer::~FlowBuffer(){
-  delete [] _flit_buffer;
 }
 
-void FlowBuffer::nack(){
-  _spec_position = _head; 
-  _spec_sent = 0;
-}
-void FlowBuffer::reset(){
-  _spec_position = _head; _status= FLOW_STATUS_SPEC; _spec_sent = 0;
+//when ack return
+//1. packet could have already been sent normaly
+//2. ack goes through
+
+//no status change
+void FlowBuffer::ack(int sn){
+  if(_watch){
+    cout<<"flow "<<fl->flid
+	<<" received ack "<<sn<<endl;
+  }
+  for(int i = sn; _flit_buffer.count(i)!=0; ++i){
+    if(_watch){
+      cout<<"\tfree flit "<<i<<endl;
+    }
+    bool tail = _flit_buffer[i]->tail;
+    _guarantee_sent++;
+    _flit_buffer.erase(i);
+    _flit_status.erase(i);
+    if(tail)
+      break;
+  }
 }
 
-void FlowBuffer::inc_spec(){
-  _spec_position = (_spec_position+1)%_capacity;
-  _spec_sent++;
+//when nack return
+//1. packet could have already been sent normaly
+//2. nack goes through
+
+//flow buffer status only change when in spec mode
+void FlowBuffer::nack(int sn){
+  if(_watch){
+    cout<<"flow "<<fl->flid
+	<<" received nack "<<sn<<endl;
+  }
+  if(_flit_buffer.count(sn)!=0){
+    //change flit status
+    for(int i = sn; _flit_buffer.count(i)!=0; ++i){
+      if(_watch){
+	cout<<"\tnack flit "<<i<<endl;
+      }
+      bool tail = _flit_buffer[i]->tail;
+      _flit_status[i] = FLIT_NACKED;
+      _ready++;
+      if(tail)
+	break;
+    }
+    
+    //change buffer status
+    if(_status == FLOW_STATUS_SPEC){
+      if(_tail_sent){
+	_status = FLOW_STATUS_NACK_TRANSITION;
+      } else {
+	_status = FLOW_STATUS_NACK;
+      }
+    }
+  }
+  
 }
-Flit* FlowBuffer::front() { 
-  if(_size == 0){
-    return NULL;
+
+//only one grant can return
+void FlowBuffer::grant(int time){
+  if(_watch){
+    cout<<"flow "<<fl->flid
+	<<" received grant at time "<<time<<endl;
+  }
+  assert(fl->rtime == -1);
+  fl->rtime = time;
+  if(_tail_sent){
+    _status = FLOW_STATUS_WAIT;
   } else {
-    return _flit_buffer[_head];
+    _status = FLOW_STATUS_GRANT_TRANSITION;
   }
 }
-flow* FlowBuffer::front_flow(){
-  flow* f = NULL;
-  if(!_flow_buffer.empty())
-    f = _flow_buffer.front();
-  return f; 
-}
-Flit* FlowBuffer::back(){
-  if(_size == 0){
-    return NULL;
-  } else {
-    return _flit_buffer[(_tail+_capacity-1)%_capacity];
+
+Flit* FlowBuffer::front(){
+  Flit* f = NULL;
+  //handle the transition case first
+  switch(_status){
+  case FLOW_STATUS_NACK_TRANSITION:
+    if(_tail_sent){
+      _status = FLOW_STATUS_NACK;
+    }
+    break;
+  case FLOW_STATUS_GRANT_TRANSITION:
+    if(_tail_sent){
+      _status = FLOW_STATUS_WAIT;
+    }
+    break;
+  default: 
+    break;
   }
-}
-Flit* FlowBuffer::get_spec(int flid){
-  Flit* f = _flit_buffer[_spec_position];
-  if(f && f->flid!=flid){
-    f = NULL;
+
+  switch(_status){
+  case FLOW_STATUS_WAIT:
+    if(GetSimTime()>=fl->rtime){
+      _status = FLOW_STATUS_NORM;
+      //then fall through
+    } else {
+      break;
+    }
+  case FLOW_STATUS_NORM:
+    //not in the middle of a packet
+    //search the buffer for the first available 
+    if(_tail_sent){
+      for(map<int, int>::iterator i = _flit_status.begin();
+	  i!=_flit_status.end(); 
+	  i++){
+	if(i->second!=FLIT_SPEC){
+	  f= _flit_buffer[i->first];
+	  assert(f->head);
+	  break;
+	}
+      }
+    } else {
+      //in the middle of a packet, pickup where last left off
+      assert(_flit_buffer.count(_last_sn+1)!=0);
+      f = _flit_buffer[_last_sn+1];
+    }
+    break;
+    //transitions are equivalent to spec at this stage
+  case FLOW_STATUS_NACK_TRANSITION:
+  case FLOW_STATUS_GRANT_TRANSITION:
+  case FLOW_STATUS_SPEC:
+    if(!_spec_sent){
+      f = _reservation_flit;
+    } else {
+      if(_flit_buffer.count(_last_sn+1)!=0){
+	f = _flit_buffer[_last_sn+1];
+      }
+    }
+    break;
+  case FLOW_STATUS_NACK:
+  default:
+    break;
   }
   return f;
 }
-int FlowBuffer::size(){
-  return _size;
-}
-bool FlowBuffer::empty(){
-  return (_size == 0);
-}
-bool FlowBuffer::full(){
-  return (_size==_capacity);
-}
-void FlowBuffer::push_flow(flow* f){
-  _flow_buffer.push_back(f);
-}
-void FlowBuffer::pop_flow(){
-  assert(!_flow_buffer.empty());
-  _flow_buffer.pop_front();
-}
-void FlowBuffer::push_back(Flit * f){
-  assert(_size<=_capacity);
-  _flit_buffer[_tail] =f;
-  _tail = (_tail+1)%_capacity;
-  _size++;
-}
-void FlowBuffer::pop_front(){
-  assert(_size !=0);
-  _flit_buffer[_head] =NULL;
-  _head = (_head+1)%_capacity; 
-  _size --;
+
+Flit* FlowBuffer::send(){
+  Flit* f = NULL;
+  //handle the transition case first
+  switch(_status){
+  case FLOW_STATUS_NACK_TRANSITION:
+    if(_tail_sent){
+      _status = FLOW_STATUS_NACK;
+    }
+    break;
+  case FLOW_STATUS_GRANT_TRANSITION:
+    if(_tail_sent){
+      _status = FLOW_STATUS_WAIT;
+    }
+    break;
+  default: 
+    break;
+  }
+
+  switch(_status){
+  case FLOW_STATUS_WAIT:
+    if(GetSimTime()>=fl->rtime){
+      _status = FLOW_STATUS_NORM;
+      //then fall through
+    } else {
+      break;
+    }
+
+  case FLOW_STATUS_NORM:
+    //not in the middle of a packet
+    //search the buffer for the first available 
+    if(_tail_sent){
+      for(map<int, int>::iterator i = _flit_status.begin();
+	  i!=_flit_status.end(); 
+	  i++){
+	if(i->second!=FLIT_SPEC){
+	  f= _flit_buffer[i->first];
+	  assert(f->head);
+	  break;
+	}
+      }
+    } else {
+      //in the middle of a packet, pickup where last left off
+      assert(_flit_buffer.count(_last_sn+1)!=0);
+      f = _flit_buffer[_last_sn+1];
+    }
+    if(f){
+      _flit_buffer.erase(f->sn);
+      _flit_status.erase(f->sn);
+      f->res_type = RES_TYPE_NORM;
+      f->pri = FLIT_PRI_NORM;
+      _ready--;
+      _guarantee_sent++;
+      _last_sn = f->sn;
+      _tail_sent = f->tail;
+    }
+    break;
+
+    //transitions are equivalent to spec at this stage
+  case FLOW_STATUS_NACK_TRANSITION:
+  case FLOW_STATUS_GRANT_TRANSITION:
+  case FLOW_STATUS_SPEC:
+    //first send the spec packet
+    if(!_spec_sent){
+      assert(_flit_buffer.count(0)!=0);
+      f = _reservation_flit;
+      f->time = GetSimTime();
+      f->src = _flit_buffer[0]->src;
+      f->dest =_flit_buffer[0]->dest;
+      _spec_sent = true;
+    } else {
+      if(_flit_buffer.count(_last_sn+1)!=0){
+	f = Flit::New();
+	memcpy(f,_flit_buffer[_last_sn+1], sizeof(Flit));
+	_flit_status[_last_sn+1] = FLIT_SPEC;
+	f->res_type = RES_TYPE_SPEC;
+	f->pri = FLIT_PRI_SPEC;
+	_ready--;
+	_last_sn = f->sn;
+	_tail_sent = f->tail;
+      }
+    }
+    break;
+  case FLOW_STATUS_NACK:
+  default:
+    break;
+  }
+
+  if(f){
+    if(_watch){
+      cout<<"flow "<<fl->flid
+	  <<" sent flit sn "<<f->sn
+	  <<" id "<<f->id
+	  <<" type "<<f->res_type<<endl;
+    } 
+    assert(_vc!=-1);
+    f->vc = _vc;
+  }
     
+  return f;
 }
-bool FlowBuffer::remove_packet(){
-  assert(_size !=0);
-  int pointer = _head; 
-  bool done = false;
-  bool flow_done = false;
-  do{
-    flow_done = _flit_buffer[pointer]->flow_tail;
-    //end of packet or end of the buffer
-    done = _flit_buffer[pointer]->tail;
-    _flit_buffer[pointer]->Free();
-  
-    _flit_buffer[pointer] = NULL;
-    _head = (_head+1)%_capacity; 
-    _size--;
-    pointer = (pointer+1)%_capacity; 
-      
-  }while(!done && pointer!=_tail);
-  return flow_done;
+
+
+Flit*  FlowBuffer::receive(){
+  assert(receive_ready());
+  assert(!fl->data.empty());
+  Flit *f = fl->data.front();
+  fl->data.pop();
+
+  f->flbid = _id;
+  _flit_status[f->sn]=FLIT_NORMAL;
+  _flit_buffer[f->sn]=f;
+  _ready++;
+  _received++;
+  if(f->tail){
+    _tail_received = true;
+  } else {
+    _tail_received = false;
+  }
+  return f;
+}
+
+//can receive as long as
+//0. tail for the current packet has not being received
+//1. there is buffer space and
+//2. there is more to be received
+bool FlowBuffer::receive_ready(){
+  return !_tail_received ||( ((int)_flit_buffer.size()<_capacity) && (_received < fl->flow_size));
+}
+
+bool FlowBuffer::send_norm_ready(){
+  switch(_status){
+  case FLOW_STATUS_GRANT_TRANSITION:
+    if(_tail_sent){
+      _status = FLOW_STATUS_WAIT;
+    } else {
+      break;
+    }
+  case FLOW_STATUS_WAIT:
+    if(GetSimTime()>=fl->rtime){
+      _status = FLOW_STATUS_NORM;
+    } else {
+      break;
+    }
+  case FLOW_STATUS_NORM:
+    if(!_tail_sent){
+      return true;
+    } else {
+      return (_ready>0);
+    }
+  default:
+    break;
+  }
+
+  return false;
+}
+
+bool FlowBuffer::send_spec_ready(){
+  switch(_status){
+  case FLOW_STATUS_GRANT_TRANSITION:
+    if(_tail_sent){
+      _status = FLOW_STATUS_WAIT;
+      break;
+    } else{
+      return true;
+    }
+  case FLOW_STATUS_NACK_TRANSITION:
+    if(_tail_sent){
+      _status = FLOW_STATUS_NACK;
+      break;
+    } else{
+      return true;
+    }
+  case FLOW_STATUS_SPEC:
+    if(!_spec_sent){
+      return true;
+    } else if(!_tail_sent){
+      return true;
+    } else{
+      return (_ready>0);
+    }
+  default:
+    break;
+  } 
+  return false;
+}
+
+bool FlowBuffer::done(){
+  bool d = (_guarantee_sent == fl->flow_size);
+  if(_watch && d){
+    cout<<"flow "<<fl->flid
+	<<" ready to terminate\n";
+  } 
+  return  d;
 }
