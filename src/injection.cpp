@@ -28,10 +28,12 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <iostream>
 #include <cassert>
 #include "random_utils.hpp"
-#include "globals.hpp"
 #include "injection.hpp"
+
+using namespace std;
 
 InjectionProcess::InjectionProcess(double rate)
 : _rate(rate)
@@ -39,7 +41,7 @@ InjectionProcess::InjectionProcess(double rate)
   assert((rate >= 0.0) && (rate <= 1.0));
 }
 
-vector<vector<InjectionProcess *> > InjectionProcess::Load(Configuration const & config)
+vector<vector<InjectionProcess *> > InjectionProcess::Load(Configuration const & config, int nodes)
 {
   int classes = config.GetInt("classes");
 
@@ -75,8 +77,8 @@ vector<vector<InjectionProcess *> > InjectionProcess::Load(Configuration const &
   beta.resize(classes, beta.back());
 
   vector<vector<InjectionProcess *> > result;
-  result.resize(gNodes);
-  for(int n = 0; n < gNodes; ++n) {
+  result.resize(nodes);
+  for(int n = 0; n < nodes; ++n) {
     result[n].resize(classes);
     for(int c = 0; c < classes; ++c) {
       if(inject[c] == "bernoulli") {
