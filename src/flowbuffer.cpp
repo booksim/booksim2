@@ -40,6 +40,7 @@ FlowBuffer::FlowBuffer(int id, int size, bool res, flow* f){
 }
 
 FlowBuffer::~FlowBuffer(){
+  delete fl;
 }
 
 //when ack return
@@ -91,9 +92,9 @@ void FlowBuffer::nack(int sn){
     //change buffer status
     if(_status == FLOW_STATUS_SPEC){
       if(_tail_sent){
-	_status = FLOW_STATUS_NACK_TRANSITION;
+	_status = FLOW_STATUS_NACK;	
       } else {
-	_status = FLOW_STATUS_NACK;
+	_status = FLOW_STATUS_NACK_TRANSITION;
       }
     }
   }

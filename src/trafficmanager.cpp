@@ -45,42 +45,6 @@
 #define MAX(X,Y) (X>Y?(X):(Y))
 
 map<int, vector<int> > gDropStats;
-vector<int> gFlowIssued;
-vector<int> gNormSent;
-vector<int> gSpecSent;
-vector<int> gAckIssued;
-vector<int> gDestNacked;
-vector<int> gCtrlInject; //from node to injection buffer
-vector<int> gDataInject; //from node to injection buffer
-
-vector<int> gResReceived;
-vector<int> gAckReceived;
-vector<int> gNackReceived;
-vector<int> gDupReceivedNorm;
-vector<int> gDupReceivedSpec;
-
-vector<int> gEffectiveGrant;
-vector<int> gEffectiveRes;
-vector<int> gEffectiveNack;
-vector<int> gEffectiveAck;
-
-vector<int> gTimeInNack;
-vector<int> gTimeInSpec;
-vector<int> gTimeInNorm; 
-
-Stats** gReserveTDelta1;
-Stats** gReserveTDelta2;
-Stats** gScheduleTDelta1;
-Stats** gScheduleTDelta2;
-
-Stats** gRobSize;
-Stats** gResponseSize;
-Stats* gFlowStat;
-
-Stats* gResLat;
-Stats* gNackLat;
-Stats* gAckLat;
-Stats* gGrantLat;
 
 int gExpirationTime = 0;
 
@@ -95,12 +59,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _flow_buffer_capacity = config.GetInt("flow_buffer_capacity");
   _max_flow_buffers = config.GetInt("flow_buffers");
   _last_receive_flow_buffer.resize(_nodes,0);
+  _last_send_flow_buffer.resize(_nodes,0);
   _last_normal_flow_buffer.resize(_nodes,0);
    _last_spec_flow_buffer.resize(_nodes,0);
   _last_normal_vc.resize(_nodes,0);
   _last_spec_vc.resize(_nodes,0);
-
-  _flow.resize(_nodes);
   _flow_buffer.resize(_nodes);
 
   for(int i = 0; i<_nodes; i++){
@@ -109,85 +72,15 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _flow_size = config.GetInt("flow_size");
 
 
-  gFlowIssued.resize(_nodes,0);
 
-  _reservation_status.resize(_nodes);
-  _reservation_robs.resize(_nodes);
+
+  _rob.resize(_nodes);
   _reservation_schedule.resize(_nodes, 0);
   _response_packets.resize(_nodes);
   _cur_flid = 0;
   gExpirationTime =  config.GetInt("expiration_time");
 
-  //stats
-  gNormSent.resize(_nodes,0);
-  gSpecSent.resize(_nodes,0);
-  gAckIssued.resize(_nodes,0);
-  gDestNacked.resize(_nodes,0);
-  gCtrlInject.resize(_nodes,0);
-  gDataInject.resize(_nodes,0);
-
-  gResReceived.resize(_nodes,0);
-  gAckReceived.resize(_nodes,0);
-  gNackReceived.resize(_nodes,0);
-  gDupReceivedNorm.resize(_nodes,0);
-  gDupReceivedSpec.resize(_nodes,0);
-
-  gEffectiveGrant.resize(_nodes,0);
-  gEffectiveRes.resize(_nodes,0);
-  gEffectiveNack.resize(_nodes,0);
-  gEffectiveAck.resize(_nodes,0);
-
-  gTimeInNack.resize(_nodes,0);
-  gTimeInSpec.resize(_nodes,0);
-  gTimeInNorm.resize(_nodes,0);
-
-  gReserveTDelta1=new Stats*[_nodes];
-  gReserveTDelta2=new Stats*[_nodes];
-  gScheduleTDelta1=new Stats*[_nodes];
-  gScheduleTDelta2=new Stats*[_nodes];
-
-  gRobSize=new Stats*[_nodes];
-  gResponseSize=new Stats*[_nodes];
-
-  ostringstream tmp_name;
-  for(int i = 0; i<_nodes; i++){
-    tmp_name.str("");
-    tmp_name << "reserve_delta1_" << i;
-    gReserveTDelta1[i] = new Stats(this, tmp_name.str( ), 1.0, 500 );
-    tmp_name.str("");
-    tmp_name << "reserve_delta2_" << i;
-    gReserveTDelta2[i] = new Stats(this, tmp_name.str( ), 1.0, 500 );
-    tmp_name.str("");
-    tmp_name << "schedule_delta1_" << i;
-    gScheduleTDelta1[i] = new Stats(this, tmp_name.str( ), 1.0, 500 );
-    tmp_name.str("");
-    tmp_name << "schedule_delta2_" << i;
-    gScheduleTDelta2[i] = new Stats(this, tmp_name.str( ), 1.0, 500 );
-    tmp_name.str("");
-    tmp_name << "rob_size_" << i;
-    gRobSize[i] = new Stats(this, tmp_name.str( ), 1.0, 200 );
-    tmp_name.str("");
-    tmp_name << "response_size_" << i;
-    gResponseSize[i] = new Stats(this, tmp_name.str( ), 1.0, 100 );
-    tmp_name.str("");
-  }
-  tmp_name << "flow_hist_";
-  gFlowStat = new Stats(this, tmp_name.str( ), 1.0, 10000 );
-  tmp_name.str("");
-
-  tmp_name << "res_hist_";
-  gResLat = new Stats(this, tmp_name.str( ), 1.0, 1000 );
-  tmp_name.str("");
-  tmp_name << "ack_hist_";
-  gAckLat = new Stats(this, tmp_name.str( ), 1.0, 1000 );
-  tmp_name.str("");
-  tmp_name << "nack_hist_";
-  gNackLat = new Stats(this, tmp_name.str( ), 1.0, 1000 );
-  tmp_name.str("");
-  tmp_name << "grant_hist_";
-  gGrantLat = new Stats(this, tmp_name.str( ), 1.0, 1000 );
-  tmp_name.str("");
-
+ 
 
 
   //nodes higher than limit do not produce or receive packets
@@ -727,245 +620,150 @@ Flit* TrafficManager::DropPacket(int src, Flit* f){
 void TrafficManager::_RetireFlit( Flit *f, int dest )
 {
 
+  Flit* ff;
+  FlowROB* receive_rob = NULL;
+  FlowBuffer* receive_flow_buffer  = NULL;
 
-  if(gReservation){
-    FlowBuffer* receive_flow_buffer  = NULL;
-    flow* fl = NULL;
-
-    switch(f->res_type){
-    case RES_TYPE_ACK:
-      receive_flow_buffer = _flow_buffer[dest][f->flbid];
-      if( receive_flow_buffer!=NULL &&
-	  receive_flow_buffer->fl->flid == f->flid){
-	receive_flow_buffer->ack(f->sn);
-	if(receive_flow_buffer->done()){
-	  delete _flow_buffer[dest][f->flbid];
-	  _flow_buffer[dest][f->flbid]=NULL;
-	}
+  switch(f->res_type){
+  case RES_TYPE_ACK:
+    receive_flow_buffer = _flow_buffer[dest][f->flbid];
+    if( receive_flow_buffer!=NULL &&
+	receive_flow_buffer->fl->flid == f->flid){
+      receive_flow_buffer->ack(f->sn);
+      if(receive_flow_buffer->done()){
+	delete _flow_buffer[dest][f->flbid];
+	_flow_buffer[dest][f->flbid]=NULL;
       }
-      f->Free();
-      return;
-      break;
-    case RES_TYPE_NACK:
-      receive_flow_buffer = _flow_buffer[dest][f->flbid];
-      if( receive_flow_buffer!=NULL &&
-	  receive_flow_buffer->fl->flid == f->flid){
-	receive_flow_buffer->nack(f->sn);
-      }
-      f->Free();
-      return;
-      break;
-    case RES_TYPE_GRANT: 
-      receive_flow_buffer = _flow_buffer[dest][f->flbid];
-      if( receive_flow_buffer!=NULL &&
-	  receive_flow_buffer->fl->flid == f->flid){
-	receive_flow_buffer->grant(f->payload);
-      }
-      f->Free();
-      return;
-      break;
-    case RES_TYPE_RES:
-      gResReceived[dest]++;
-      gResLat->AddSample(_time-f->time);
-      //could be flit 0 already arrived then reservation already exists
-      if(_reservation_status[dest].count(f->flid)==0 ||
-	 _reservation_status[dest][f->flid] == RES_STATUS_REORDER){
-	if(f->flid == WATCH_FLID){
-	  cout<<"\nreservation\n";
-	}
-	gEffectiveRes[dest]++;
-	if(_time> _reservation_schedule[dest]){
-	  gScheduleTDelta1[dest]->AddSample(_time- _reservation_schedule[dest]);
-	} else {
-	  gScheduleTDelta2[dest]->AddSample(_reservation_schedule[dest] - _time);
-	}
-	
-	if(_reservation_status[dest].count(f->flid)==0){
-	  _reservation_status[dest].insert(pair<int, int>(f->flid, RES_STATUS_ASSIGNED));	
-	} else {
-	  _reservation_status[dest][f->flid] =  RES_STATUS_ASSIGNED;
-	}
-	Flit* ff = IssueSpecial(dest,f);
-	
-	ff->payload  = MAX(_time, _reservation_schedule[dest]);
-	_reservation_schedule[dest] = ff->payload+f->payload;
-	ff->res_type = RES_TYPE_GRANT;
-	ff->pri = FLIT_PRI_GRANT;
-	ff->vc = 1;
-	if(ff->flid==WATCH_FLID)
-	  ff->watch = true;
-	_response_packets[dest].push_back(ff);
-      } else {
-	if(f->flid == WATCH_FLID){
-	  cout<<"\ndelayed reservation\n";
-	}
-      }
-      f->Free();
-      return;
-      break;
-    case RES_TYPE_SPEC:
-      if(_reservation_status[dest].count(f->flid)){ //reservation already exists
-	if(_reservation_robs[dest].count(f->flid)==0){ //first packet to arrive
-	  _reservation_robs[dest].insert(pair<int, map<int, Flit* > >(f->flid, map<int, Flit* >()));
-	}
-
-	//could be that normal flit already arrived before spec
-	if(_reservation_robs[dest][f->flid].count(f->sn)==0){
-	  if(_reservation_robs[dest][f->flid].empty()){
-	    //do nothing
-	  } else if(f->sn<_reservation_robs[dest][f->flid].begin()->first){
-	    gRobSize[dest]->AddSample(_reservation_robs[dest][f->flid].begin()->first-f->sn);
-	   
-	  } else if(f->sn>_reservation_robs[dest][f->flid].rbegin()->first){
-	    gRobSize[dest]->AddSample(f->sn-_reservation_robs[dest][f->flid].rbegin()->first);
-	  }
-	  _reservation_robs[dest][f->flid].insert(pair<int, Flit*>(f->sn, f));
-	  //send ack, shoudl ideally send ack when tail arrives
-	  if(f->tail){
-	    Flit* ff = IssueSpecial(dest,f);
-	    assert(f->head_sn!=-1);
-	    ff->sn = f->head_sn;
-	    ff->res_type = RES_TYPE_ACK;
-	    ff->pri  = FLIT_PRI_ACK;
-	    ff->vc = 1;
-	    _response_packets[dest].push_back(ff);
-	    gAckIssued[dest]++;
-	  }
-	} else {
-	  //no need to send nack since the flow is already in grant state
-	  f->Free();
-	  return;
-	}	
-      } else {//new reservation, could happen if reservation gets delayed
-	if(f->sn == 0){
-	  _reservation_status[dest].insert(pair<int, int>(f->flid, RES_STATUS_ASSIGNED));
-	  //issue grant
-	  if(f->flid == WATCH_FLID){
-	    cout<<"\nflit 0 reservation\n";
-	  }
-	  Flit* ff = IssueSpecial(dest,f);
-	  ff->payload  = MAX(_time, _reservation_schedule[dest]);
-	  assert(f->payload!=-1);
-	  _reservation_schedule[dest] = ff->payload+f->payload;
-	  ff->res_type = RES_TYPE_GRANT;
-	  ff->pri = FLIT_PRI_GRANT;
-	  ff->vc = 1;
-	  _response_packets[dest].push_back(ff);
-	  _reservation_robs[dest].insert(pair<int, map<int, Flit*> >(f->flid, map<int, Flit*>()));
-	  _reservation_robs[dest][f->flid].insert(pair<int, Flit*>(f->sn, f));
-	  //this is for single flit packets
-	  if(f->tail){ 
-	    Flit* ff = IssueSpecial(dest,f);
-	    assert(f->head_sn!=-1);
-	    ff->sn = f->head_sn;//head flit sn
-	    ff->res_type = RES_TYPE_ACK;
-	    ff->pri  = FLIT_PRI_ACK;
-	    ff->vc = 1;
-	    _response_packets[dest].push_back(ff);
-	    gAckIssued[dest]++;
-	  }
-	}  else { //out of order send nack	      
-	  if(f->head){
-	    Flit* ff = IssueSpecial(dest,f);
-	    ff->res_type = RES_TYPE_NACK;
-	    ff->pri = FLIT_PRI_NACK;
-	    ff->vc =1;
-	    _response_packets[dest].push_back(ff);
-	    gDestNacked[dest]++;
-	  } 
-	  if(f->watch){
-	    *gWatchOut << GetSimTime() << " | "
-		       << "node" << dest << " | "
-		       << "out of order(1) spec flit " << f->id
-		       << "." << endl;
-	  }
-	  f->Free();
-	  return;	 
-	}
-      }
-      break;
-    case RES_TYPE_NORM:
-      //duplication  speculative version already succeced ignore
-      if(_reservation_status[dest].count(f->flid) !=0){
-	//check the rob
-	if(!_reservation_robs[dest][f->flid].empty() &&
-	   _reservation_robs[dest][f->flid].count(f->sn)!=0){
-	  if(f->watch){
-	    *gWatchOut << GetSimTime() << " | "
-		       << " node" << dest << " | "
-		       << " duplicate normal flit " << f->id
-		       << " sn "<<f->sn
-		       << "." << endl;
-	  }
-	  gDupReceivedNorm[dest]++; 
-	  f->Free();
-	  return;
-	} else {
-	  if(_reservation_robs[dest][f->flid].empty()){
-	    //do nothing
-	  } else if(f->sn<_reservation_robs[dest][f->flid].begin()->first){
-	    gRobSize[dest]->AddSample(_reservation_robs[dest][f->flid].begin()->first-f->sn);
-	  } else if(f->sn>_reservation_robs[dest][f->flid].rbegin()->first){
-	    gRobSize[dest]->AddSample(f->sn-_reservation_robs[dest][f->flid].rbegin()->first);
-	  }
-	  //this is a place holder
-	  _reservation_robs[dest][f->flid].insert(pair<int, Flit*>(f->sn, 0)); 
-	}
-      } else { //came in way too late
-	gDupReceivedNorm[dest]++; 
-	f->Free();
-	return;
-      }
-      break;
-    default:
-      assert(false);
     }
-
-
-    if(_reservation_robs[dest].count(f->flid)!=0 &&
-       _flow_master.count(f->flid)!=0 &&
-       (int)_reservation_robs[dest][f->flid].size() == _flow_master[f->flid]->flow_size){
-      int saved_flid = f->flid;
-      fl = _flow_master[saved_flid];
-      gFlowStat->AddSample(_time-fl->create_time);
-      if(fl->flid == WATCH_FLID)
-	cout<<"\nerase reservation"<<endl;
-      if(fl->collect){
-	delete _flow_master[saved_flid];
-	_flow_master.erase(saved_flid);
-      } else {
-	fl->collect = true;
-      }
-      _reservation_status[dest].erase(saved_flid);
-      for(map<int, Flit*>::iterator i = _reservation_robs[dest][saved_flid].begin(); 
-	  i!= _reservation_robs[dest][saved_flid].end();
-	  i++){
-	if(i->second)
-	  i->second->Free();
-      }
-      _reservation_robs[dest][saved_flid].clear();
-      _reservation_robs[dest].erase(saved_flid);
+    f->Free();
+    return;
+    break;
+  case RES_TYPE_NACK:
+    receive_flow_buffer = _flow_buffer[dest][f->flbid];
+    if( receive_flow_buffer!=NULL &&
+	receive_flow_buffer->fl->flid == f->flid){
+      receive_flow_buffer->nack(f->sn);
+    }
+    f->Free();
+    return;
+    break;
+  case RES_TYPE_GRANT: 
+    receive_flow_buffer = _flow_buffer[dest][f->flbid];
+    if( receive_flow_buffer!=NULL &&
+	receive_flow_buffer->fl->flid == f->flid){
+      receive_flow_buffer->grant(f->payload);
+    }
+    f->Free();
+    return;
+    break;
+  case RES_TYPE_RES:
+    //find or create a reorder buffer
+    if(_rob[dest].count(f->flid)==0){
+      receive_rob = new FlowROB();
+      _rob[dest].insert(pair<int, FlowROB*>(f->flid, receive_rob));
+    } else {
+      receive_rob = _rob[dest][f->flid];
     }
     
-    if(f->watch){
-      *gWatchOut << GetSimTime() << " | "
-		 << "node" << dest << " | "
-		 << "retire flit " << f->id
-		 << "res type  "<<f->res_type
-		 << "." << endl;
+    f = receive_rob->insert(f);
+    
+    ff = IssueSpecial(dest,f);
+    if(f->flid == WATCH_FLID){
+      cout<<"Reservation received"<<endl;
+      ff->watch = true;
+    }
+    ff->payload  = MAX(_time, _reservation_schedule[dest]);
+    _reservation_schedule[dest] = ff->payload+f->payload;
+    ff->res_type = RES_TYPE_GRANT;
+    ff->pri = FLIT_PRI_GRANT;
+    ff->vc = 1;
+    _response_packets[dest].push_back(ff);
+    break;
+
+  case RES_TYPE_SPEC:
+    if(_rob[dest].count(f->flid)==0){
+      if(f->flid == WATCH_FLID){
+	cout<<"spec destination nack sn "<<f->sn<<"\n";
+      }
+      //NACK
+      if(f->head){
+	ff = IssueSpecial(dest,f);
+	ff->res_type = RES_TYPE_NACK;
+	ff->pri = FLIT_PRI_NACK;
+	ff->vc =1;
+	_response_packets[dest].push_back(ff);
+      } 
+      f->Free();
+      f = NULL;
+    } else {
+     if(f->flid == WATCH_FLID){
+	cout<<"spec insert sn "<<f->sn<<"\n";
+      }
+      receive_rob = _rob[dest][f->flid];
+      f = receive_rob->insert(f);
+      //ACK
+      if(f!=NULL && f->tail){
+	ff = IssueSpecial(dest,f);
+	ff->sn = f->head_sn;
+	ff->res_type = RES_TYPE_ACK;
+	ff->pri  = FLIT_PRI_ACK;
+	ff->vc = 1;
+	_response_packets[dest].push_back(ff);
+      }
+    }
+    break;
+  case RES_TYPE_NORM:
+    if(gReservation){
+      //find or create a reorder buffer
+      if(_rob[dest].count(f->flid)==0){
+	receive_rob = new FlowROB();
+	_rob[dest].insert(pair<int, FlowROB*>(f->flid, receive_rob));
+      } else {
+	receive_rob = _rob[dest][f->flid];
+      }
+      if(f->flid == WATCH_FLID){
+	cout<<"normal insert sn "<<f->sn<<"\n";
+      }
+      f = receive_rob->insert(f);
+    }    
+    break;
+  default:
+    assert(false);
+  }
+  
+  //duplicate packet would not pass this
+  if(gReservation){
+    if(f){
+      assert(receive_rob!=NULL);
+      if(receive_rob->done()){ //entire flow has been received
+	delete _rob[dest][f->flid];
+	_rob[dest].erase(f->flid); 
+      }
+      //rest of the code can't process this
+      if(f->res_type == RES_TYPE_RES){
+	return;
+      }
+    } else {
+      return;
     }
   }
+
+ 
+    
+  if(f->watch){
+    *gWatchOut << GetSimTime() << " | "
+	       << "node" << dest << " | "
+	       << "retire flit " << f->id
+	       << "res type  "<<f->res_type
+	       << "." << endl;
+  }
+  
 
   //this occurs, when the normal flit retires before the speculative
   if(_total_in_flight_flits[f->cl].count(f->id) == 0){
-    if(f->res_type == RES_TYPE_SPEC){
-       gDupReceivedSpec[dest]++;
-    } else {
-      //this probabably leaks memory
-      gDupReceivedNorm[dest]++; 
-    }
     return;
   }
+
   //Regular retire flit
   _deadlock_timer = 0;
 
@@ -1003,6 +801,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     if(f->head) {
       head = f;
     } else {
+      //TODO single packets fuck up if a second packet shows up really really late
+      //then it will try to be retired again??
       map<int, Flit *>::iterator iter = _retired_packets[f->cl].find(f->pid);
       assert(iter != _retired_packets[f->cl].end());
       head = iter->second;
@@ -1074,11 +874,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     }
     
     if(f != head) {
-      if(gReservation && head->res_type == RES_TYPE_SPEC){ //don't free spec yet
-
-      } else {
-	head->Free();
-      }
+      head->Free();
     }
     
   }
@@ -1086,11 +882,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   if(f->head && !f->tail) {
     _retired_packets[f->cl].insert(make_pair(f->pid, f));
   } else {
-    if(gReservation && f->res_type ==RES_TYPE_SPEC){ //don't free spec yet
-      
-    } else {
-      f->Free();
-    }
+
+    f->Free();  
   }
 }
 
@@ -1177,8 +970,8 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   
   flow* fl = new flow;
   fl->flid = _cur_flid++;
-  _flow[source].insert(pair<int, flow*>(fl->flid, fl));
-  _flow_master.insert(pair<int, flow*>(fl->flid, fl));
+  //  _flow[source].insert(pair<int, flow*>(fl->flid, fl));
+  //_flow_master.insert(pair<int, flow*>(fl->flid, fl));
 
   int sequence_number =0;
   for(int f_index = 0; f_index<_flow_size; f_index++){
@@ -1333,6 +1126,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 	*gWatchOut << GetSimTime() << " | "
 		   << "node" << source << " | "
 		   << "Enqueuing flit " << f->id
+		   << " flow "<<f->flid
 		   << " (packet " << f->pid
 		   << ") at time " << time
 		   << "." << endl;
@@ -1341,8 +1135,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       fl->data.push( f );
     }
   }
-
-  gFlowIssued[source]++;
 
   fl->rtime = -1;
   fl->vc = -1;
@@ -1506,63 +1298,37 @@ void TrafficManager::_Step( )
 	assert(f->head);//only heads
 	if(dest_buf->IsAvailableFor(1) &&
 	   dest_buf->HasCreditFor(1)){
-	  assert(f->vc !=-1);
+	  assert(f->vc ==1);
 	  dest_buf->TakeBuffer(f->vc); 
 	  dest_buf->SendingFlit(f);
+	 
 	  _net[0]->WriteSpecialFlit(f, source);
 	  _response_packets[source].pop_front();
-	  gCtrlInject[source]++;
 	}
       }
     }
 
-    //picking a flow buffer and VC assignment
-    for(int i = 0; i<_max_flow_buffers; i++){
-      int flb_index = (_last_normal_flow_buffer[source]+i)%_max_flow_buffers;
-      if(_flow_buffer[source][flb_index]!=NULL &&
-	 _flow_buffer[source][flb_index]->send_norm_ready()){
-	assert(! _flow_buffer[source][flb_index]->send_spec_ready());
-	ready_flow_buffer = _flow_buffer[source][flb_index];
-	if(ready_flow_buffer->_vc==-1){
-	  Flit* f = ready_flow_buffer->front();
-	  assert(f);
-	  assert(f->head);
-	  assert(f->sn==0);
-	  OutputSet route_set;
-	  _rf(NULL, f, 0, &route_set, true);
-	  set<OutputSet::sSetElement> const & os = route_set.GetSet();
-	  assert(os.size() == 1);
-	  OutputSet::sSetElement const & se = *os.begin();
-	  assert(se.output_port == 0);
-	  int const & vc_start = se.vc_start;
-	  int const & vc_end = se.vc_end;
-	  int const vc_count = vc_end - vc_start + 1;
-	  for(int i = 1; i <= vc_count; ++i) {
-	    int const vc = vc_start + (_last_normal_vc[source] + i) % vc_count;
-	    if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
-	      ready_flow_buffer->_vc = vc; 
-	      _last_normal_vc[source] = vc- vc_start;
-	      break;
-	    }		 
-	  }
-	}
-	if(ready_flow_buffer->_vc!=-1){
-	  _last_normal_flow_buffer[source]= flb_index;
-	  break;
-	}  else {
-	  ready_flow_buffer= NULL;
-	}
-      }
-    }
+    int flb_index = _last_send_flow_buffer[source];
+    //first check the last flow buffer served
+    if(_flow_buffer[source][flb_index]!=NULL && 
+       _flow_buffer[source][flb_index]->_vc!=-1 && //this line trip for startup flows
+       (_flow_buffer[source][flb_index]->send_norm_ready() ||
+	_flow_buffer[source][flb_index]->send_spec_ready())){
 
-    //TODO reservation has higher priority
-    //reservation case has a second chance on speculative packets
-    if(gReservation){
+      ready_flow_buffer = _flow_buffer[source][flb_index];
+  
+    } else {
+
+      //then check the normal buffer
+      //then check the speculative buffers
+    
+      //picking a flow buffer and VC assignment
       for(int i = 0; i<_max_flow_buffers; i++){
-	int flb_index = (_last_spec_flow_buffer[source]+i)%_max_flow_buffers;
+	flb_index = (_last_normal_flow_buffer[source]+i)%_max_flow_buffers;
 	if(_flow_buffer[source][flb_index]!=NULL &&
-	   _flow_buffer[source][flb_index]->send_spec_ready()){
-	  assert(! _flow_buffer[source][flb_index]->send_norm_ready());
+	   _flow_buffer[source][flb_index]->send_norm_ready()){
+
+	  assert(! _flow_buffer[source][flb_index]->send_spec_ready());
 	  ready_flow_buffer = _flow_buffer[source][flb_index];
 	  if(ready_flow_buffer->_vc==-1){
 	    Flit* f = ready_flow_buffer->front();
@@ -1579,26 +1345,69 @@ void TrafficManager::_Step( )
 	    int const & vc_end = se.vc_end;
 	    int const vc_count = vc_end - vc_start + 1;
 	    for(int i = 1; i <= vc_count; ++i) {
-	      int const vc = vc_start + (_last_spec_vc[source] + i) % vc_count;
+	      int const vc = vc_start + (_last_normal_vc[source] + i) % vc_count;
 	      if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
 		ready_flow_buffer->_vc = vc; 
-		_last_spec_vc[source] = vc- vc_start;
+		_last_normal_vc[source] = vc- vc_start;
 		break;
 	      }		 
 	    }
 	  }
-	  //is this buffer assigned to a VC
 	  if(ready_flow_buffer->_vc!=-1){
-	    _last_spec_flow_buffer[source]= flb_index;
+	    _last_normal_flow_buffer[source]= flb_index;
 	    break;
-	  } else {
+	  }  else {
 	    ready_flow_buffer= NULL;
+	  }
+	}
+      }
+
+      //reservation case has a second chance on speculative packets
+      if(gReservation && ready_flow_buffer == NULL){
+	for(int i = 0; i<_max_flow_buffers; i++){
+	  flb_index = (_last_spec_flow_buffer[source]+i)%_max_flow_buffers;
+	  if(_flow_buffer[source][flb_index]!=NULL &&
+	     _flow_buffer[source][flb_index]->send_spec_ready()){
+	    assert(! _flow_buffer[source][flb_index]->send_norm_ready());
+	    ready_flow_buffer = _flow_buffer[source][flb_index];
+	    if(ready_flow_buffer->_vc==-1){
+	      Flit* f = ready_flow_buffer->front();
+	      assert(f);
+	      assert(f->head);
+	      assert(f->sn==0);
+	      OutputSet route_set;
+	      _rf(NULL, f, 0, &route_set, true);
+	      set<OutputSet::sSetElement> const & os = route_set.GetSet();
+	      assert(os.size() == 1);
+	      OutputSet::sSetElement const & se = *os.begin();
+	      assert(se.output_port == 0);
+	      int const & vc_start = se.vc_start;
+	      int const & vc_end = se.vc_end;
+	      int const vc_count = vc_end - vc_start + 1;
+	      for(int i = 1; i <= vc_count; ++i) {
+		int const vc = vc_start + (_last_spec_vc[source] + i) % vc_count;
+		if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
+		  ready_flow_buffer->_vc = vc; 
+		  _last_spec_vc[source] = vc- vc_start;
+		  break;
+		}		 
+	      }
+	    }
+	    //is this buffer assigned to a VC
+	    if(ready_flow_buffer->_vc!=-1){
+	      _last_spec_flow_buffer[source]= flb_index;
+	      break;
+	    } else {
+	      ready_flow_buffer= NULL;
+	    }
 	  }
 	}
       }
     }
 
+
     if(ready_flow_buffer){
+      _last_send_flow_buffer[source] = flb_index;
       int vc = ready_flow_buffer->_vc;
       Flit* f = ready_flow_buffer->front();
       assert(f);
@@ -1758,71 +1567,12 @@ void TrafficManager::_ClearStats( )
     _hop_stats[c]->Clear();
 
   }
-  if(gReservation){
-    gFlowIssued.clear();
-    gFlowIssued.resize(_nodes,0);
-    gNormSent.clear();
-    gNormSent.resize(_nodes, 0);
-    gSpecSent.clear();
-    gSpecSent.resize(_nodes,0);
-    gAckIssued.clear();
-    gAckIssued.resize(_nodes,0);
-    gDestNacked.clear();
-    gDestNacked.resize(_nodes,0);
-    gCtrlInject.clear();
-    gCtrlInject.resize(_nodes,0); //from node to injection buffer
-    gDataInject.clear();
-    gDataInject.resize(_nodes,0); //from node to injection buffe
-
-    gResReceived.clear();
-    gResReceived.resize(_nodes,0);
-    gAckReceived.clear();
-    gAckReceived.resize(_nodes,0);
-    gNackReceived.clear();
-    gNackReceived.resize(_nodes,0);
-    gDupReceivedNorm.clear();
-    gDupReceivedNorm.resize(_nodes,0);
-    gDupReceivedSpec.clear();
-    gDupReceivedSpec.resize(_nodes,0);
-
-    gEffectiveGrant.clear();
-    gEffectiveGrant.resize(_nodes,0);
-    gEffectiveRes.clear();
-    gEffectiveRes.resize(_nodes,0);
-    gEffectiveNack.clear();
-    gEffectiveNack.resize(_nodes,0);
-    gEffectiveAck.clear();
-    gEffectiveAck.resize(_nodes,0);
-
-    gTimeInNack.clear();
-    gTimeInNack.resize(_nodes,0);
-    gTimeInSpec.clear();
-    gTimeInSpec.resize(_nodes,0);
-    gTimeInNorm.clear();
-    gTimeInNorm.resize(_nodes,0); 
-
-    for(int i = 0; i<_routers; i++){
-      for(unsigned int j = 0; j<    gDropStats[i].size(); j++){
-	gDropStats[i][j] = 0;
-      }
+  
+  for(int i = 0; i<_routers; i++){
+    for(unsigned int j = 0; j<    gDropStats[i].size(); j++){
+      gDropStats[i][j] = 0;
     }
-
-    for(int i = 0; i<_nodes; i++){
-      gReserveTDelta1[i]->Clear();
-      gReserveTDelta2[i]->Clear();
-      gScheduleTDelta1[i]->Clear();
-      gScheduleTDelta2[i]->Clear();
-      gResponseSize[i]->Clear();
-      gRobSize[i]->Clear();
-    }
-    gFlowStat->Clear();
-
-    gResLat->Clear();
-    gNackLat->Clear();
-    gAckLat->Clear();
-    gGrantLat->Clear();
   }
-
 }
 
 int TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const 
@@ -2147,105 +1897,11 @@ bool TrafficManager::_SingleSim( )
 	  *_stats_out << "];" << endl;
 	  *_stats_out << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
 	  
-	  if(gReservation){
+	 
 	  for(int i = 0; i<_routers; i++){
 	    *_stats_out <<"drop_router("<<i+1<<",:)="
 			<<gDropStats[i] 
 			<<";"<<endl;
-	  }
-	  *_stats_out <<"spec_sent="
-		      <<gSpecSent 
-		      <<";"<<endl;
-	  *_stats_out <<"norm_sent="
-		      <<gNormSent 
-		      <<";"<<endl;
-	  *_stats_out <<"flow_issued="
-		      <<gFlowIssued 
-		      <<";"<<endl;
-	  *_stats_out <<"ack_issued="
-		      <<gAckIssued 
-		      <<";"<<endl;
-	  *_stats_out <<"dest_nacked="
-		      <<gDestNacked 
-		      <<";"<<endl;
-	  *_stats_out <<"ctrl_inject="
-		      <<gCtrlInject 
-		      <<";"<<endl;
-	  *_stats_out <<"data_inject="
-		      <<gDataInject 
-		      <<";"<<endl;
-	  *_stats_out <<"res_received="
-		      <<gResReceived 
-		      <<";"<<endl;
-	  *_stats_out <<"ack_received="
-		      <<gAckReceived 
-		      <<";"<<endl;
-	  *_stats_out <<"nack_received="
-		      <<gNackReceived 
-		      <<";"<<endl;
-	  *_stats_out <<"norm_dup="
-		      <<gDupReceivedNorm 
-		      <<";"<<endl;
-	  *_stats_out <<"spec_dup="
-		      <<gDupReceivedSpec 
-		      <<";"<<endl;
-	  *_stats_out <<"eff_grant="
-		      <<gEffectiveGrant 
-		      <<";"<<endl;
-	  *_stats_out <<"eff_res="
-		      <<gEffectiveRes 
-		      <<";"<<endl;
-	  *_stats_out <<"eff_nack="
-		      <<gEffectiveNack 
-		      <<";"<<endl;
-	  *_stats_out <<"eff_ack="
-		      <<gEffectiveAck 
-		      <<";"<<endl;
-	  *_stats_out <<"time_nack="
-		      << gTimeInNack
-		      <<";"<<endl;
-	  *_stats_out <<"time_spec="
-		      << gTimeInSpec
-		      <<";"<<endl;
-	  *_stats_out <<"time_norm="
-		      << gTimeInNorm
-		      <<";"<<endl;
-
-	  *_stats_out <<"flow_hist="
-		      <<*gFlowStat
-		      <<";"<<endl;
-	  *_stats_out <<"res_hist="
-		      <<*gResLat
-		      <<";"<<endl;
-	  *_stats_out <<"ack_hist="
-		      <<*gAckLat
-		      <<";"<<endl;
-	  *_stats_out <<"nack_hist="
-		      <<*gNackLat
-		      <<";"<<endl;
-	  *_stats_out <<"grant_hist="
-		      <<*gGrantLat
-		      <<";"<<endl;
-	  for(int i = 0; i<_nodes; i++){
-	    *_stats_out <<"res_delta_1("<<i+1<<",:)="
-			<<*gReserveTDelta1[i]
-			<<";"<<endl;
-	    *_stats_out <<"res_delta_2("<<i+1<<",:)="
-			<<*gReserveTDelta2[i]
-			<<";"<<endl;
-	    *_stats_out <<"sch_delta_1("<<i+1<<",:)="
-			<<*gScheduleTDelta1[i]
-			<<";"<<endl;
-	    *_stats_out <<"sch_delta_2("<<i+1<<",:)="
-			<<*gScheduleTDelta2[i]
-			<<";"<<endl;
-	    *_stats_out <<"rob_size("<<i+1<<",:)="
-			<<*gRobSize[i]
-			<<";"<<endl;
-	    *_stats_out <<"response_size("<<i+1<<",:)="
-			<<*gResponseSize[i]
-			<<";"<<endl;
-	  }
 	  }
 	  vector<FlitChannel *>  temp = _net[0]->GetChannels();
 	  for(unsigned int i = 0; i<temp.size(); i++){

@@ -17,7 +17,7 @@ struct flow{
 
 class FlowBuffer{
 public:
-  FlowBuffer(int id, int size, bool res, flow* fl);
+  FlowBuffer(int id, int size, bool reservation_enabled, flow* fl);
   ~FlowBuffer();
 
   void ack(int sn);

@@ -523,13 +523,17 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
 	vcBegin = RES_RESERVED_VCS;
 	vcEnd = gNumVCs-1;
       } else { //normal channel must segregate
-	if(f->res_type == RES_TYPE_SPEC){
+	vcBegin = (RES_RESERVED_VCS+gResVCs);
+	vcEnd = (gNumVCs-1);
+	
+      }
+    } else if(f->res_type == RES_TYPE_SPEC){
+      if(inject){ //inject channel use any vcs
+	vcBegin = RES_RESERVED_VCS;
+	vcEnd = gNumVCs-1;
+      } else { //normal channel must segregate
 	  vcBegin = RES_RESERVED_VCS;
 	  vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
-	} else {
-	  vcBegin = (RES_RESERVED_VCS+gResVCs);
-	  vcEnd = (gNumVCs-1);
-	}
       }
     } else { //ack, nack, grant
       vcBegin = 1;

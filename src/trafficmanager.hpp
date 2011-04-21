@@ -49,6 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "injection.hpp"
 #include "reservation.hpp"
 #include "flowbuffer.hpp"
+#include "flowrob.hpp"
 
 //register the requests to a node
 class PacketReplyInfo;
@@ -109,6 +110,7 @@ protected:
   vector<vector<vector<int> > > _last_interm;
 
   vector<int> _last_receive_flow_buffer;
+  vector<int> _last_send_flow_buffer;
   vector<int> _last_normal_flow_buffer;
   vector<int> _last_spec_flow_buffer;
   vector<int> _last_normal_vc;
@@ -161,18 +163,18 @@ protected:
 
   //==============hot spot reservation=====================
   //receiver
-  vector<map<int, int> > _reservation_status;
-  vector<map<int, int> > _reservation_count;
-  vector<map<int, map<int, Flit* > > > _reservation_robs;
+
+  vector<map<int, FlowROB*> > _rob; 
   vector<list<Flit *> > _response_packets;
   vector<int> _reservation_schedule;
 
   //sender
   int _flow_buffer_capacity;
   int _max_flow_buffers;
-  vector< map<int, flow*> > _flow;
   vector< vector< FlowBuffer*> > _flow_buffer;
-  map<int, flow*> _flow_master;
+
+  //  vector< map<int, flow*> > _flow;
+  //map<int, flow*> _flow_master;
 
   // ============ Statistics ============
 
