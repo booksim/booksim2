@@ -1,0 +1,65 @@
+#include "flowrob.hpp"
+
+FlowROB::FlowROB(){
+
+ _status = RES_STATUS_NONE;
+  _flid = -1;
+  _flow_size = -1;
+}
+
+FlowROB::~FlowROB(){
+
+}
+
+Flit* FlowROB::insert(Flit* f){
+
+  Flit* rf;
+  switch(_status){
+  case RES_STATUS_NONE:
+    assert(f->res_type == RES_TYPE_RES);
+    _flow_size = f->payload;
+    _status = RES_STATUS_ASSIGNED;
+    _flid = f->flid;
+    rf = f;
+    break;
+  case RES_STATUS_REORDER:
+  case RES_STATUS_ASSIGNED:
+    //reservation came late
+    if(f->res_type == RES_TYPE_RES){
+      _flow_size = f->payload;
+      rf = f;
+      break;
+    }
+
+    //is it a duplicate
+    if(_rob.count(f->sn)!=0){
+      f->Free();
+      rf = NULL;
+    } else {
+      if(f->head){
+	_pid.insert(f->pid);
+	_rob.insert(f->sn);
+      }  else { //this ensures header didn't get dropped and then reservation packet sneaks in
+	if(_pid.count(f->pid)!=0){
+	  _rob.insert(f->sn);
+	} else {
+	  f->Free();
+	  rf = NULL;
+	  break;
+	}
+      }
+      rf = f;
+    }
+    break;
+  default:
+    break;
+  }
+
+  return rf;
+}
+
+bool FlowROB::done(){
+  //reservation has not arrived yet, I don't knwo the flow size
+
+  return ((int)_rob.size() == _flow_size);
+}
