@@ -42,8 +42,7 @@ protected:
   InjectionProcess(double rate);
 public:
   virtual bool test() = 0;
-  static vector<vector<InjectionProcess *> > Load(Configuration const & config, 
-						  int nodes);
+  static vector<InjectionProcess *> Load(Configuration const & config);
 };
 
 class BernoulliInjectionProcess : public InjectionProcess {
