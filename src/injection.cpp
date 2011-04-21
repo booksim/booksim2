@@ -41,7 +41,7 @@ InjectionProcess::InjectionProcess(double rate)
   assert((rate >= 0.0) && (rate <= 1.0));
 }
 
-vector<vector<InjectionProcess *> > InjectionProcess::Load(Configuration const & config, int nodes)
+vector<InjectionProcess *> InjectionProcess::Load(Configuration const & config)
 {
   int classes = config.GetInt("classes");
 
@@ -76,18 +76,15 @@ vector<vector<InjectionProcess *> > InjectionProcess::Load(Configuration const &
   }
   beta.resize(classes, beta.back());
 
-  vector<vector<InjectionProcess *> > result;
-  result.resize(nodes);
-  for(int n = 0; n < nodes; ++n) {
-    result[n].resize(classes);
-    for(int c = 0; c < classes; ++c) {
-      if(inject[c] == "bernoulli") {
-	result[n][c] = new BernoulliInjectionProcess(load[c]);
-      } else if(inject[c] == "on_off") {
-	result[n][c] = new OnOffInjectionProcess(load[c], alpha[c], beta[c]);
-      } else {
-	cout << "Invalid injection process: " << inject[c] << endl;
-      }
+  vector<InjectionProcess *> result;
+  result.resize(classes);
+  for(int c = 0; c < classes; ++c) {
+    if(inject[c] == "bernoulli") {
+      result[c] = new BernoulliInjectionProcess(load[c]);
+    } else if(inject[c] == "on_off") {
+      result[c] = new OnOffInjectionProcess(load[c], alpha[c], beta[c]);
+    } else {
+      cout << "Invalid injection process: " << inject[c] << endl;
     }
   }
   return result;

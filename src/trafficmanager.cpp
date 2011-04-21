@@ -155,7 +155,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _last_class.resize(_nodes, -1);
 
-  _injection_process = InjectionProcess::Load(config, _nodes);
+  _injection_process.resize(_nodes, InjectionProcess::Load(config));
 
   // ============ Injection VC states  ============ 
 
@@ -497,9 +497,6 @@ TrafficManager::~TrafficManager( )
 {
 
   for ( int source = 0; source < _nodes; ++source ) {
-    for ( int c = 0; c < _classes; ++c) {
-      delete _injection_process[source][c];
-    }
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {
       delete _buf_states[source][subnet];
     }
@@ -538,6 +535,7 @@ TrafficManager::~TrafficManager( )
       delete _accepted_flits[c][dest];
     }
     
+    delete _injection_process[0][c];
   }
   
   delete _batch_time;
