@@ -49,15 +49,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
 
-  //nodes higher than limit do not produce or receive packets
-  //for default limit = sources
-
-  _limit = config.GetInt( "limit" );
-  if(_limit == 0){
-    _limit = _nodes;
-  }
-  assert(_limit<=_nodes);
- 
   _subnets = config.GetInt("subnets");
  
   _subnet.resize(Flit::NUM_FLIT_TYPES);
@@ -160,14 +151,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _traffic = config.GetStrArray("traffic");
   _traffic.resize(_classes, _traffic.back());
 
-  _traffic_function.clear();
-  for(int c = 0; c < _classes; ++c) {
-    map<string, tTrafficFunction>::const_iterator iter = gTrafficFunctionMap.find(_traffic[c]);
-    if(iter == gTrafficFunctionMap.end()) {
-      Error("Invalid traffic function: " + _traffic[c]);
-    }
-    _traffic_function.push_back(iter->second);
-  }
+  _traffic_pattern = TrafficPattern::Load(config, _nodes);
 
   _class_priority = config.GetIntArray("class_priority"); 
   if(_class_priority.empty()) {
@@ -778,18 +762,13 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 {
   assert(stype!=0);
 
-  //refusing to generate packets for nodes greater than limit
-  if(source >=_limit){
-    return ;
-  }
-
   Flit::FlitType packet_type = Flit::ANY_TYPE;
   int size = _packet_size[cl]; //input size 
   int ttime = time;
   int pid = _cur_pid++;
   assert(_cur_pid);
   int tid = _cur_tid;
-  int packet_destination = _traffic_function[cl](source, _limit);
+  int packet_destination = _traffic_pattern[cl]->dest(source);
   bool record = false;
   bool watch = gWatchOut && ((_packets_to_watch.count(pid) > 0) ||
 			     (_transactions_to_watch.count(tid) > 0));

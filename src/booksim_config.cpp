@@ -64,7 +64,6 @@ BookSimConfig::BookSimConfig( )
   _int_map["y"] = 8; //number of routers in Y
   _int_map["xr"] = 1; //number of nodes per router in X only if c>1
   _int_map["yr"] = 1; //number of nodes per router in Y only if c>1
-  _int_map["limit"] = 0; //how many of the nodes are actually used
 
 
   _int_map["link_failures"] = 0; //legacy
