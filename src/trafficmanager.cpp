@@ -48,15 +48,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
 
-  //nodes higher than limit do not produce or receive packets
-  //for default limit = sources
-
-  _limit = config.GetInt( "limit" );
-  if(_limit == 0){
-    _limit = _nodes;
-  }
-  assert(_limit<=_nodes);
- 
   _subnets = config.GetInt("subnets");
  
   // ============ Message priorities ============ 
@@ -138,14 +129,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _traffic = config.GetStrArray("traffic");
   _traffic.resize(_classes, _traffic.back());
 
-  _traffic_function.clear();
-  for(int c = 0; c < _classes; ++c) {
-    map<string, tTrafficFunction>::const_iterator iter = gTrafficFunctionMap.find(_traffic[c]);
-    if(iter == gTrafficFunctionMap.end()) {
-      Error("Invalid traffic function: " + _traffic[c]);
-    }
-    _traffic_function.push_back(iter->second);
-  }
+  _traffic_pattern = TrafficPattern::Load(config, _nodes);
 
   _class_priority = config.GetIntArray("class_priority"); 
   if(_class_priority.empty()) {
@@ -155,14 +139,14 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _last_class.resize(_nodes, -1);
 
-  _injection_process.resize(_nodes, InjectionProcess::Load(config));
-
   // ============ Injection VC states  ============ 
 
+  _injection_process.resize(_nodes);
   _buf_states.resize(_nodes);
   _last_vc.resize(_nodes);
 
   for ( int source = 0; source < _nodes; ++source ) {
+    _injection_process[source] = InjectionProcess::Load(config);
     _buf_states[source].resize(_subnets);
     _last_vc[source].resize(_subnets);
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {
@@ -529,13 +513,13 @@ TrafficManager::~TrafficManager( )
 	delete _pair_plat[c][source*_nodes+dest];
 	delete _pair_tlat[c][source*_nodes+dest];
       }
+
+      delete _injection_process[source][c];
     }
     
     for ( int dest = 0; dest < _nodes; ++dest ) {
       delete _accepted_flits[c][dest];
     }
-    
-    delete _injection_process[0][c];
   }
   
   delete _batch_time;
@@ -691,11 +675,6 @@ void TrafficManager::_GeneratePacket( int source, int dest, int size,
   assert((source >= 0) && (source < _nodes));
   assert((dest >= 0) && (dest < _nodes));
 
-  //refusing to generate packets for nodes greater than limit
-  if(source >=_limit){
-    return ;
-  }
-
   bool begin_trans = false;
 
   if(tid < 0) {
@@ -808,7 +787,7 @@ void TrafficManager::_Inject(){
 	    bool generated = false;
 	    while( !generated && ( _qtime[source][c] <= _time ) ) {
 	      if(_IssuePacket(source, c)) { //generate a packet
-		int dest = _traffic_function[c](source, _nodes);
+		int dest = _traffic_pattern[c]->dest(source);
 		int size = _packet_size[c];
 		int time = ((_include_queuing == 1) ? _qtime[source][c] : _time);
 		_GeneratePacket(source, dest, size, c, time, -1, time);

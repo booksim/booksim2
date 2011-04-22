@@ -43,7 +43,8 @@ InjectionProcess::InjectionProcess(double rate)
 
 vector<InjectionProcess *> InjectionProcess::Load(Configuration const & config)
 {
-  int classes = config.GetInt("classes");
+  int const classes = config.GetInt("classes");
+  assert(classes > 0);
 
   vector<int> packet_size = config.GetIntArray( "packet_size" );
   if(packet_size.empty()) {
@@ -76,16 +77,19 @@ vector<InjectionProcess *> InjectionProcess::Load(Configuration const & config)
   }
   beta.resize(classes, beta.back());
 
-  vector<InjectionProcess *> result;
-  result.resize(classes);
+  vector<InjectionProcess *> result(classes);
   for(int c = 0; c < classes; ++c) {
-    if(inject[c] == "bernoulli") {
-      result[c] = new BernoulliInjectionProcess(load[c]);
-    } else if(inject[c] == "on_off") {
-      result[c] = new OnOffInjectionProcess(load[c], alpha[c], beta[c]);
+    string const & s = inject[c];
+    InjectionProcess * ip = NULL;
+    if(s == "bernoulli") {
+      ip = new BernoulliInjectionProcess(load[c]);
+    } else if(s == "on_off") {
+      ip = new OnOffInjectionProcess(load[c], alpha[c], beta[c]);
     } else {
-      cout << "Invalid injection process: " << inject[c] << endl;
+      cout << "Invalid injection process: " << s << endl;
+      exit(-1);
     }
+    result[c] = ip;
   }
   return result;
 }
