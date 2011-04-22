@@ -28,425 +28,394 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <map>
-#include <set>
-#include <vector>
-#include <cstdlib>
-
-#include "booksim.hpp"
-#include "booksim_config.hpp"
-#include "traffic.hpp"
-#include "network.hpp"
+#include <iostream>
 #include "random_utils.hpp"
-#include "misc_utils.hpp"
+#include "traffic.hpp"
 
-map<string, tTrafficFunction> gTrafficFunctionMap;
-
-static int _xr = 1;
-
-void src_dest_bin( int source, int dest, int lg )
+TrafficPattern::TrafficPattern(int nodes)
+: _nodes(nodes)
 {
-  int b, t;
-
-  cout << "from: ";
-  t = source;
-  for ( b = 0; b < lg; ++b ) {
-    cout << ( ( t >> ( lg - b - 1 ) ) & 0x1 );
-  }
-  
-  cout << " to ";
-  t = dest;
-  for ( b = 0; b < lg; ++b ) {
-    cout << ( ( t >> ( lg - b - 1 ) ) & 0x1 );
-  }
-  cout << endl;
-}
-
-/* Add Traffic functions here */
-
-
-
-
-
-
-
-//=============================================================
-
-int uniform( int source, int total_nodes )
-{
-  return RandomInt( total_nodes - 1 );
-}
-
-//=============================================================
-
-int bitcomp( int source, int total_nodes )
-{
-  int lg   = log_two( total_nodes );
-  int mask = total_nodes - 1;
-  int dest;
-
-  if ( ( 1 << lg ) != total_nodes ) {
-    cout << "Error: The 'bitcomp' traffic pattern requires the number of"
-	 << " nodes to be a power of two!" << endl;
+  if(nodes <= 0) {
+    cout << "Error: Traffic patterns require at least one node." << endl;
     exit(-1);
   }
-
-  dest = ( ~source ) & mask;
-
-  return dest;
 }
 
-//=============================================================
-
-int transpose( int source, int total_nodes )
+vector<TrafficPattern *> TrafficPattern::Load(Configuration const & config, 
+					      int nodes)
 {
-  int lg      = log_two( total_nodes );
-  int mask_lo = (1 << (lg/2)) - 1;
-  int mask_hi = mask_lo << (lg/2);
-  int dest;
+  int const classes = config.GetInt("classes");
+  assert(classes > 0);
 
-  if ( ( ( 1 << lg ) != total_nodes ) || ( lg & 0x1 ) ) {
-    cout << "Error: The 'transpose' traffic pattern requires the number of"
-	 << " nodes to be an even power of two!" << endl;
-    exit(-1);
-  }
-
-  dest = ( ( source >> (lg/2) ) & mask_lo ) |
-    ( ( source << (lg/2) ) & mask_hi );
-
-  return dest;
-}
-
-//=============================================================
-
-int bitrev( int source, int total_nodes )
-{
-  int lg = log_two( total_nodes );
-  int dest;
-
-  if ( ( 1 << lg ) != total_nodes  ) {
-    cout << "Error: The 'bitrev' traffic pattern requires the number of"
-	 << " nodes to be a power of two!" << endl;
-    exit(-1);
-  }
-
-  // If you were fancy you could do this in O(log log total_nodes)
-  // instructions, but I'm not
-
-  dest = 0;
-  for ( int b = 0; b < lg; ++b  ) {
-    dest |= ( ( source >> b ) & 0x1 ) << ( lg - b - 1 );
-  }
-
-  return dest;
-}
-
-//=============================================================
-
-int shuffle( int source, int total_nodes )
-{
-  int lg = log_two( total_nodes );
-  int dest;
-
-  if ( ( 1 << lg ) != total_nodes  ) {
-    cout << "Error: The 'shuffle' traffic pattern requires the number of"
-	 << " nodes to be a power of two!" << endl;
-    exit(-1);
-  }
-
-  dest = ( ( source << 1 ) & ( total_nodes - 1 ) ) | 
-    ( ( source >> ( lg - 1 ) ) & 0x1 );
-
-  return dest;
-}
-
-//=============================================================
-
-int tornado( int source, int total_nodes )
-{
-  int offset = 1;
-  int dest = 0;
-
-  for ( int n = 0; n < gN; ++n ) {
-    dest += offset *
-      ( ( ( source / offset ) % (_xr*gK) + ( (_xr*gK)/2 - 1 ) ) % (_xr*gK) );
-    offset *= (_xr*gK);
-  }
-  //cout<<source<<" "<<dest<<endl;
-  return dest;
-}
-
-//=============================================================
-
-int neighbor( int source, int total_nodes )
-{
-  int offset = 1;
-  int dest = 0;
-
-  for ( int n = 0; n < gN; ++n ) {
-    dest += offset *
-      ( ( ( source / offset ) % (_xr*gK) + 1 ) % (_xr*gK) );
-    offset *= (_xr*gK);
-  }
-
-  //cout<<"Source "<<source<<" destination "<<dest<<endl;
-  return dest;
-}
-
-//=============================================================
-
-static vector<int> gPerm;
-static int gPermSeed;
-
-void GenerateRandomPerm( int total_nodes )
-{
-  int ind;
-  int i,j;
-  int cnt;
-  unsigned long prev_rand;
-  
-  prev_rand = RandomIntLong( );
-  gPerm.resize(total_nodes);
-  gPerm.assign(total_nodes, -1);
-
-  for ( i = 0; i < total_nodes; ++i ) {
-    ind = RandomInt( total_nodes - 1 - i );
-    
-    j   = 0;
-    cnt = 0;
-    while( ( cnt < ind ) ||
-	   ( gPerm[j] != -1 ) ) {
-      if ( gPerm[j] == -1 ) { ++cnt; }
-      ++j;
-
-      if ( j >= total_nodes ) {
-	cout << "ERROR: GenerateRandomPerm( ) internal error" << endl;
-	exit(-1);
-      }
-    }
-    
-    gPerm[j] = i;
-  }
-
-  RandomSeed( prev_rand );
-}
-
-int randperm( int source, int total_nodes )
-{
-  if ( gPerm.empty( ) ) {
-    GenerateRandomPerm( total_nodes );
-  }
-
-  return gPerm[source];
-}
-
-//=============================================================
-
-int diagonal( int source, int total_nodes )
-{
-  int t = RandomInt( 2 );
-  int d;
-
-  // 2/3 of traffic goes from source->source
-  // 1/3 of traffic goes from source->(source+1)%total_nodes
-
-  if ( t == 0 ) {
-    d = ( source + 1 ) % total_nodes;
-  } else {
-    d = source;
-  }
-
-  return d;
-}
-
-//=============================================================
-
-int asymmetric( int source, int total_nodes )
-{
-  int d;
-  int half = total_nodes / 2;
-  
-  d = ( source % half ) + RandomInt( 1 ) * half;
-
-  return d;
-}
-
-//=============================================================
-
-int taper64( int source, int total_nodes )
-{
-  int d;
-
-  if ( total_nodes != 64 ) {
-    cout << "Error: The 'taper64' traffic pattern requires the number of"
-	 << " nodes to be 64!" << endl;
-    exit(-1);
-  }
-
-  if (RandomInt(1)) {
-    d = (64 + source + 8*(RandomInt(2) - 1) + (RandomInt(2) - 1)) % 64;
-
-  } else {
-    d = RandomInt( total_nodes - 1 );
-  }
-
-  return d;
-}
-
-//=============================================================
-
-int badperm_dfly( int source, int total_nodes )
-{
-  int grp_size_routers = powi((_xr*gK), gN - 1);
-  int grp_size_nodes = grp_size_routers * (_xr*gK);
-
-  int temp;
-  int dest;
-
-  temp = (int) (source / grp_size_nodes);
-  dest =  (RandomInt(grp_size_nodes - 1) + (temp+1)*grp_size_nodes ) %  total_nodes;
-
-  return dest;
-}
-
-int badperm_dflynew( int source, int total_nodes )
-{
-  int grp_size_routers = 2*(_xr*gK);
-  int grp_size_nodes = grp_size_routers * (_xr*gK);
-
-  int temp;
-  int dest;
-
-  temp = (int) (source / grp_size_nodes);
-  dest =  (RandomInt(grp_size_nodes - 1) + (temp+1)*grp_size_nodes ) %  total_nodes;
-
-  return dest;
-}
-
-int badperm_yarc(int source, int total_nodes){
-  int row = (int)(source/(_xr*gK));
-  
-  return RandomInt((_xr*gK)-1)*(_xr*gK)+row;
-}
-
-//=============================================================
-
-static int _hs_max_val;
-static vector<pair<int, int> > _hs_elems;
-int hotspot(int source, int total_nodes){
-  int pct = RandomInt(_hs_max_val);
-  for(size_t i = 0; i < (_hs_elems.size()-1); ++i) {
-    int limit = _hs_elems[i].first;
-    if(limit > pct) {
-      return _hs_elems[i].second;
+  vector<string> traffic = config.GetStrArray("traffic");
+  traffic.resize(classes, traffic.back());
+  vector<TrafficPattern *> result(classes);
+  for(int c = 0; c < classes; ++c) {
+    string const & s = traffic[c];
+    TrafficPattern * tp = NULL;
+    if(s == "bitcomp") {
+      tp = new BitCompTrafficPattern(nodes);
+    } else if(s == "transpose") {
+      tp = new TransposeTrafficPattern(nodes);
+    } else if(s == "bitrev") {
+      tp = new BitRevTrafficPattern(nodes);
+    } else if(s == "shuffle") {
+      tp = new ShuffleTrafficPattern(nodes);
+    } else if(s == "tornado") {
+      tp = new TornadoTrafficPattern(nodes, config.GetInt("k"), 
+				     config.GetInt("n"), config.GetInt("xr"));
+    } else if(s == "neighbor") {
+      tp = new NeighborTrafficPattern(nodes, config.GetInt("k"), 
+				      config.GetInt("n"), config.GetInt("xr"));
+    } else if(s == "randperm") {
+      tp = new RandomPermutationTrafficPattern(nodes, 
+					       config.GetInt("perm_seed"));
+    } else if(s == "uniform") {
+      tp = new UniformRandomTrafficPattern(nodes);
+    } else if(s == "diagonal") {
+      tp = new DiagonalTrafficPattern(nodes);
+    } else if(s == "asymmetric") {
+      tp = new AsymmetricTrafficPattern(nodes);
+    } else if(s == "taper64") {
+      tp = new Taper64TrafficPattern(nodes);
+    } else if(s == "bad_dragon") {
+      tp = new BadPermDFlyTrafficPattern(nodes, config.GetInt("k"),
+					 config.GetInt("n"), 
+					 config.GetInt("xr"));
+    } else if(s == "badperm_yarc") {
+      tp = new BadPermYarcTrafficPattern(nodes, config.GetInt("k"),
+					 config.GetInt("n"),
+					 config.GetInt("xr"));
+    } else if(s == "hotspot") {
+      vector<int> hotspots = config.GetIntArray("hotspot_nodes");
+      vector<int> rates = config.GetIntArray("hotspot_rates");
+      tp = new HotSpotTrafficPattern(nodes, hotspots, rates);
     } else {
-      pct -= limit;
-    }
-  }
-  assert(_hs_elems.back().first > pct);
-  return _hs_elems.back().second;
-}
-
-static set<int> _background_excludes;
-int background(int source, int total_nodes){
-  int e;
-  do {
-    e = RandomInt(total_nodes-1);
-  } while(_background_excludes.count(e) != 0);
-  return e;
-}
-//=============================================================
-
-static int _cp_max_val;
-static vector<pair<int, tTrafficFunction> > _cp_elems;
-
-int combined(int source, int total_nodes){
-  int pct = RandomInt(_cp_max_val);
-  for(size_t i = 0; i < (_cp_elems.size()-1); ++i) {
-    int limit = _cp_elems[i].first;
-    if(limit > pct) {
-      return _cp_elems[i].second(source, total_nodes);
-    } else {
-      pct -= limit;
-    }
-  }
-  assert(_cp_elems.back().first > pct);
-  return _cp_elems.back().second(source, total_nodes);
-}
-
-//=============================================================
-
-void InitializeTrafficMap( const Configuration & config )
-{
-
-  _xr = config.GetInt("xr");
-
-
-  gPermSeed = config.GetInt( "perm_seed" );
-
-
-  /* Register Traffic functions here */
-
-  gTrafficFunctionMap["uniform"] = &uniform;
-
-  // "Bit" patterns
-
-  gTrafficFunctionMap["bitcomp"]   = &bitcomp;
-  gTrafficFunctionMap["bitrev"]    = &bitrev;
-  gTrafficFunctionMap["transpose"] = &transpose;
-  gTrafficFunctionMap["shuffle"]   = &shuffle;
-
-  // "Digit" patterns
-
-  gTrafficFunctionMap["tornado"]  = &tornado;
-  gTrafficFunctionMap["neighbor"] = &neighbor;
-
-  // Other patterns
-
-  gTrafficFunctionMap["randperm"] = &randperm;
-
-  gTrafficFunctionMap["diagonal"]   = &diagonal;
-  gTrafficFunctionMap["asymmetric"] = &asymmetric;
-  gTrafficFunctionMap["taper64"]    = &taper64;
-
-  gTrafficFunctionMap["bad_dragon"]   = &badperm_dflynew;
-  gTrafficFunctionMap["badperm_yarc"] = &badperm_yarc;
-
-  gTrafficFunctionMap["hotspot"]  = &hotspot;
-  gTrafficFunctionMap["background"] = &background;
-  gTrafficFunctionMap["combined"] = &combined;
-
-
-  vector<int> hotspot_nodes = config.GetIntArray("hotspot_nodes");
-  vector<int> hotspot_rates = config.GetIntArray("hotspot_rates");
-  hotspot_rates.resize(hotspot_nodes.size(), hotspot_rates.empty() ? 1 : hotspot_rates.back());
-  _hs_max_val = -1;
-  for(size_t i = 0; i < hotspot_nodes.size(); ++i) {
-    int rate = hotspot_rates[i];
-    _hs_elems.push_back(make_pair(rate, hotspot_nodes[i]));
-    _hs_max_val += rate;
-  }
-
-  vector<int> background_excludes = config.GetIntArray("background_excludes");
-  for(size_t i = 0; i < background_excludes.size(); ++i) {
-    _background_excludes.insert(background_excludes[i]);
-  }
-
-  map<string, tTrafficFunction>::const_iterator match;
-
-  vector<string> combined_patterns = config.GetStrArray("combined_patterns");
-  vector<int> combined_rates = config.GetIntArray("combined_rates");
-  combined_rates.resize(combined_patterns.size(), combined_rates.empty() ? 1 : combined_rates.back());
-  _cp_max_val = -1;
-  for(size_t i = 0; i < combined_patterns.size(); ++i) {
-    match = gTrafficFunctionMap.find(combined_patterns[i]);
-    if(match == gTrafficFunctionMap.end()) {
-      cout << "Error: Undefined traffic pattern '" << combined_patterns[i] << "'." << endl;
+      cout << "Error: Unknown traffic pattern: " << s << endl;
       exit(-1);
     }
-    int rate = combined_rates[i];
-    _cp_elems.push_back(make_pair(rate, match->second));
-    _cp_max_val += rate;
+    result[c] = tp;
+  }
+  return result;
+}
+
+PermutationTrafficPattern::PermutationTrafficPattern(int nodes)
+  : TrafficPattern(nodes)
+{
+  
+}
+
+BitPermutationTrafficPattern::BitPermutationTrafficPattern(int nodes)
+  : PermutationTrafficPattern(nodes)
+{
+  if((nodes & -nodes) != nodes) {
+    cout << "Error: Bit permutation traffic patterns require the number of "
+	 << "nodes to be a power of two." << endl;
+    exit(-1);
+  }
+}
+
+BitCompTrafficPattern::BitCompTrafficPattern(int nodes)
+  : BitPermutationTrafficPattern(nodes)
+{
+  
+}
+
+int BitCompTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+  int const mask = _nodes - 1;
+  return ~source & mask;
+}
+
+TransposeTrafficPattern::TransposeTrafficPattern(int nodes)
+  : BitPermutationTrafficPattern(nodes), _shift(0)
+{
+  while(nodes >>= 1) {
+    ++_shift;
+  }
+  if(_shift % 2) {
+    cout << "Error: Transpose traffic pattern requires the number of nodes to "
+	 << "be an even power of two." << endl;
+    exit(-1);
+  }
+}
+
+int TransposeTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+  int const mask_lo = (1 << _shift) - 1;
+  int const mask_hi = mask_lo << _shift;
+  return (((source >> _shift) & mask_lo) | ((source << _shift) & mask_hi));
+}
+
+BitRevTrafficPattern::BitRevTrafficPattern(int nodes)
+  : BitPermutationTrafficPattern(nodes)
+{
+  
+}
+
+int BitRevTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+  int result = 0;
+  for(int n = _nodes; n > 1; n >>= 1) {
+    result = (result << 1) | (source % 2);
+    source >>= 1;
+  }
+  return result;
+}
+
+ShuffleTrafficPattern::ShuffleTrafficPattern(int nodes)
+  : BitPermutationTrafficPattern(nodes)
+{
+
+}
+
+int ShuffleTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+  int const shifted = source << 1;
+  return ((shifted & (_nodes - 1)) | bool(shifted & _nodes));
+}
+
+DigitPermutationTrafficPattern::DigitPermutationTrafficPattern(int nodes, int k,
+							       int n, int xr)
+  : PermutationTrafficPattern(nodes), _k(k), _n(n), _xr(xr)
+{
+  
+}
+
+TornadoTrafficPattern::TornadoTrafficPattern(int nodes, int k, int n, int xr)
+  : DigitPermutationTrafficPattern(nodes, k, n, xr)
+{
+
+}
+
+int TornadoTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+
+  int offset = 1;
+  int result = 0;
+
+  for(int n = 0; n < _n; ++n) {
+    result += offset *
+      (((source / offset) % (_xr * _k) + ((_xr * _k) / 2 - 1)) % (_xr * _k));
+    offset *= (_xr * _k);
+  }
+  return result;
+}
+
+NeighborTrafficPattern::NeighborTrafficPattern(int nodes, int k, int n, int xr)
+  : DigitPermutationTrafficPattern(nodes, k, n, xr)
+{
+
+}
+
+int NeighborTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+
+  int offset = 1;
+  int result = 0;
+  
+  for(int n = 0; n < _n; ++n) {
+    result += offset *
+      (((source / offset) % (_xr * _k) + 1) % (_xr * _k));
+    offset *= (_xr * _k);
+  }
+  return result;
+}
+
+RandomPermutationTrafficPattern::RandomPermutationTrafficPattern(int nodes, 
+								 int seed)
+  : TrafficPattern(nodes)
+{
+  _dest.resize(nodes);
+  randomize(seed);
+}
+
+void RandomPermutationTrafficPattern::randomize(int seed)
+{
+  unsigned long prev_seed = RandomIntLong( );
+  RandomSeed(seed);
+
+  _dest.assign(_nodes, -1);
+
+  for(int i = 0; i < _nodes; ++i) {
+    int ind = RandomInt(_nodes - 1 - i);
+
+    int j = 0;
+    int cnt = 0;
+    while((cnt < ind) || (_dest[j] != -1)) {
+      if(_dest[j] == -1) {
+	++cnt;
+      }
+      ++j;
+      assert(j < _nodes);
+    }
+
+    _dest[j] = i;
   }
 
+  RandomSeed(prev_seed); 
+}
+
+int RandomPermutationTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+  assert((_dest[source] >= 0) && (_dest[source] < _nodes));
+  return _dest[source];
+}
+
+RandomTrafficPattern::RandomTrafficPattern(int nodes)
+  : TrafficPattern(nodes)
+{
+
+}
+
+UniformRandomTrafficPattern::UniformRandomTrafficPattern(int nodes)
+  : RandomTrafficPattern(nodes)
+{
+
+}
+
+int UniformRandomTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+  return RandomInt(_nodes - 1);
+}
+
+UniformBackgroundTrafficPattern::UniformBackgroundTrafficPattern(int nodes, vector<int> excluded_nodes)
+  : RandomTrafficPattern(nodes)
+{
+  for(size_t i = 0; i < excluded_nodes.size(); ++i) {
+    int const node = excluded_nodes[i];
+    assert((node >= 0) && (node < _nodes));
+    _excluded.insert(node);
+  }
+}
+
+int UniformBackgroundTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+
+  int result;
+
+  do {
+    result = RandomInt(_nodes - 1);
+  } while(_excluded.count(result) > 0);
+
+  return result;
+}
+
+DiagonalTrafficPattern::DiagonalTrafficPattern(int nodes)
+  : RandomTrafficPattern(nodes)
+{
+
+}
+
+int DiagonalTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+  return ((RandomInt(2) == 0) ? ((source + 1) % _nodes) : source);
+}
+
+AsymmetricTrafficPattern::AsymmetricTrafficPattern(int nodes)
+  : RandomTrafficPattern(nodes)
+{
+
+}
+
+int AsymmetricTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+  int const half = _nodes / 2;
+  return (source % half) + (RandomInt(1) ? half : 0);
+}
+
+Taper64TrafficPattern::Taper64TrafficPattern(int nodes)
+  : RandomTrafficPattern(nodes)
+{
+  if(nodes != 64) {
+    cout << "Error: Tthe Taper64 traffic pattern requires the number of nodes "
+	 << "to be exactly 64." << endl;
+    exit(-1);
+  }
+}
+
+int Taper64TrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+  if(RandomInt(1)) {
+    return ((64 + source + 8 * (RandomInt(2) - 1) + (RandomInt(2) - 1)) % 64);
+  } else {
+    return RandomInt(_nodes - 1);
+  }
+}
+
+BadPermDFlyTrafficPattern::BadPermDFlyTrafficPattern(int nodes, int k, int n, 
+						     int xr)
+  : DigitPermutationTrafficPattern(nodes, k, n, xr)
+{
+  
+}
+
+int BadPermDFlyTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+
+  int const grp_size_routers = 2 * (_xr * _k);
+  int const grp_size_nodes = grp_size_routers * (_xr * _k);
+
+  return ((RandomInt(grp_size_nodes - 1) + ((source / grp_size_nodes) + 1) * grp_size_nodes) % _nodes);
+}
+
+BadPermYarcTrafficPattern::BadPermYarcTrafficPattern(int nodes, int k, int n, 
+						     int xr)
+  : DigitPermutationTrafficPattern(nodes, k, n, xr)
+{
+
+}
+
+int BadPermYarcTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+  int const row = source / (_xr * _k);
+  return RandomInt((_xr * _k) - 1) * (_xr * _k) + row;
+}
+
+HotSpotTrafficPattern::HotSpotTrafficPattern(int nodes, vector<int> hotspots, 
+					     vector<int> rates)
+  : TrafficPattern(nodes), _hotspots(hotspots), _rates(rates), _max_val(-1)
+{
+  assert(!_hotspots.empty());
+  int const size = _hotspots.size();
+  _rates.resize(size, _rates.empty() ? 1 : _rates.back());
+  for(size_t i = 0; i < size; ++i) {
+    int const hotspot = _hotspots[i];
+    assert((hotspot >= 0) && (hotspot < _nodes));
+    int const rate = _rates[i];
+    assert(rate >= 0);
+    _max_val += rate;
+  }
+}
+
+int HotSpotTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+
+  int pct = RandomInt(_max_val);
+
+  for(size_t i = 0; i < (_hotspots.size() - 1); ++i) {
+    int const limit = _rates[i];
+    if(limit > pct) {
+      return _hotspots[i];
+    } else {
+      pct -= limit;
+    }
+  }
+  assert(_rates.back() > pct);
+  return _hotspots.back();
 }

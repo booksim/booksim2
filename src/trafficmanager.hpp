@@ -89,7 +89,7 @@ protected:
 
   map<int, pair<int, vector<int> > > _class_prio_map;
 
-  vector<tTrafficFunction> _traffic_function;
+  vector<TrafficPattern *> _traffic_pattern;
   vector<vector<InjectionProcess *> > _injection_process;
 
   // ============ Message priorities ============ 
@@ -192,8 +192,6 @@ protected:
   
   //batched time-mode, know what you are doing
   bool _timed_mode;
-
-  int   _limit; //any higher clients do not generate packets
 
   int   _warmup_time;
   int   _drain_time;
