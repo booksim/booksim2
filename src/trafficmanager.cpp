@@ -184,14 +184,14 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     }
   }
 
-  _injection_process.resize(_nodes, InjectionProcess::Load(config));
-
   // ============ Injection VC states  ============ 
 
+  _injection_process.resize(_nodes);
   _buf_states.resize(_nodes);
   _last_vc.resize(_nodes);
 
   for ( int source = 0; source < _nodes; ++source ) {
+    _injection_process[source] = InjectionProcess::Load(config);
     _buf_states[source].resize(_subnets);
     _last_vc[source].resize(_subnets);
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {
@@ -552,13 +552,13 @@ TrafficManager::~TrafficManager( )
 	delete _pair_plat[c][source*_nodes+dest];
 	delete _pair_tlat[c][source*_nodes+dest];
       }
+
+      delete _injection_process[source][c];
     }
     
     for ( int dest = 0; dest < _nodes; ++dest ) {
       delete _accepted_flits[c][dest];
     }
-    
-    delete _injection_process[0][c];
   }
   
   delete _batch_time;
