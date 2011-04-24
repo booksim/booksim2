@@ -36,8 +36,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class BookSimConfig : public Configuration {
 protected:
 
-  static vector<string> tokenize(string data);
-
 public:
   BookSimConfig( );
 
