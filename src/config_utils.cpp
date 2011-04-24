@@ -218,57 +218,6 @@ Configuration * Configuration::GetTheConfig()
   return theConfig;
 }
 
-vector<string> Configuration::tokenize(string const & data)
-{
-  vector<string> values;
-
-  // no elements, no braces --> empty list
-  if(data.empty()) {
-    return values;
-  }
-
-  // doesn't start with an opening brace --> treat as single element
-  // note that this element can potentially contain nested lists 
-  if(data[0] != '{') {
-    values.push_back(data);
-    return values;
-  }
-
-  size_t start = 1;
-  int nested = 0;
-
-  string const separators = "{,}";
-
-  size_t curr = start;
-
-  while(string::npos != (curr = data.find_first_of(separators, curr))) {
-    
-    switch(data[curr]) {
-    case '{':
-      ++nested;
-      break;
-    case '}':
-      if(nested) {
-	--nested;
-	break;
-      }
-      // NOTE: fall through here if not nested!
-    default:
-      if(!nested) {
-	if(curr > start) {
-	  string token = data.substr(start, curr - start);
-	  values.push_back(token);
-	}
-	start = curr + 1;
-      }
-    }
-    ++curr;
-  }
-  assert(!nested);
-
-  return values;
-}
-
 //============================================================
 
 int config_input(char * line, int max_size)
@@ -373,4 +322,47 @@ void Configuration::WriteMatlabFile(ostream * config_out) const {
   }
   config_out->flush();
 
+}
+
+vector<string> tokenize(string const & data, char sep, char open, char close)
+{
+  vector<string> values;
+
+  // no elements, no braces --> empty list
+  if(data.empty()) {
+    return values;
+  }
+
+  // doesn't start with an opening brace --> treat as single element
+  // note that this element can potentially contain nested lists 
+  if(data[0] != open) {
+    values.push_back(data);
+    return values;
+  }
+
+  size_t start = 1;
+  int nested = 0;
+
+  string const separators = string(&open, 1) + string(&sep, 1) + string(&close, 1);
+
+  size_t curr = start;
+
+  while(string::npos != (curr = data.find_first_of(separators, curr))) {
+    
+    if(data[curr] == open) {
+      ++nested;
+    } else if((data[curr] == close) && nested) {
+      --nested;
+    } else if((data[curr] == sep) || !nested) {
+      if(curr > start) {
+	string token = data.substr(start, curr - start);
+	values.push_back(token);
+      }
+      start = curr + 1;
+    }
+    ++curr;
+  }
+  assert(!nested);
+
+  return values;
 }

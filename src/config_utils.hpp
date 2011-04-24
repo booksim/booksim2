@@ -50,8 +50,6 @@ protected:
   map<string,int>    _int_map;
   map<string,double> _float_map;
   
-  static vector<string> tokenize(string const & data);
-
 public:
   Configuration();
 
@@ -92,5 +90,8 @@ public:
 };
 
 bool ParseArgs(Configuration * cf, int argc, char **argv);
+
+vector<string> tokenize(string const & data, char sep = ',', char open = '{', 
+			char close = '}');
 
 #endif
