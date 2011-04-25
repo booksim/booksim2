@@ -43,7 +43,8 @@ protected:
   TrafficPattern(int nodes);
 public:
   virtual int dest(int source) = 0;
-  static vector<TrafficPattern *> Load(Configuration const & config, int nodes);
+  static TrafficPattern * New(string const & pattern, int nodes);
+  static TrafficPattern * New(string const & pattern, int nodes, Configuration const & config);
 };
 
 class PermutationTrafficPattern : public TrafficPattern {

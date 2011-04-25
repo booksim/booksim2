@@ -129,7 +129,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _traffic = config.GetStrArray("traffic");
   _traffic.resize(_classes, _traffic.back());
 
-  _traffic_pattern = TrafficPattern::Load(config, _nodes);
+  _traffic_pattern.resize(_classes);
+  for(int c = 0; c < _classes; ++c) {
+    _traffic_pattern[c] = TrafficPattern::New(_traffic[c], _nodes, config);
+  }
 
   _class_priority = config.GetIntArray("class_priority"); 
   if(_class_priority.empty()) {
