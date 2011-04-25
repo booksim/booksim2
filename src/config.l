@@ -22,7 +22,7 @@ extern int config_input(char *, int);
 Digit [0-9]
 Exponent [eE][+-]?{Digit}+
 DblConst ({Digit}*\.)?{Digit}+{Exponent}?
-StrConst [A-Za-z_\-/\.][A-Za-z0-9_\-/\.\+(\,)]*
+StrConst [A-Za-z_\-/\.][A-Za-z0-9_\-/\.\+(\{\,)\}]*
 
 %%
 

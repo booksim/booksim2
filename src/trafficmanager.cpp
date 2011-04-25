@@ -151,7 +151,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _traffic = config.GetStrArray("traffic");
   _traffic.resize(_classes, _traffic.back());
 
-  _traffic_pattern = TrafficPattern::Load(config, _nodes);
+  _traffic_pattern.resize(_classes);
 
   _class_priority = config.GetIntArray("class_priority"); 
   if(_class_priority.empty()) {
@@ -160,6 +160,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _class_priority.resize(_classes, _class_priority.back());
 
   for(int c = 0; c < _classes; ++c) {
+    _traffic_pattern[c] = TrafficPattern::New(_traffic[c], _nodes, config);
+
     int const & prio = _class_priority[c];
     if(_class_prio_map.count(prio) > 0) {
       _class_prio_map.find(prio)->second.second.push_back(c);
