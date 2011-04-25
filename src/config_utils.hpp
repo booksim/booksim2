@@ -91,7 +91,7 @@ public:
 
 bool ParseArgs(Configuration * cf, int argc, char **argv);
 
-vector<string> tokenize(string const & data, char sep = ',', char open = '{', 
-			char close = '}');
+vector<string> tokenize(string const & data, char open = '{', char close = '}',
+			char sep = ',');
 
 #endif
