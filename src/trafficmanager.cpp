@@ -141,12 +141,17 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   // ============ Injection VC states  ============ 
 
+  vector<string> injection_process = config.GetStrArray("injection_process");
+
   _injection_process.resize(_nodes);
   _buf_states.resize(_nodes);
   _last_vc.resize(_nodes);
 
   for ( int source = 0; source < _nodes; ++source ) {
-    _injection_process[source] = InjectionProcess::Load(config);
+    _injection_process[source].resize(_classes);
+    for(int c = 0; c < _classes; ++c) {
+      _injection_process[source][c] = InjectionProcess::New(injection_process[c], _load[c]);
+    }
     _buf_states[source].resize(_subnets);
     _last_vc[source].resize(_subnets);
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {

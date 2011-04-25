@@ -31,7 +31,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _INJECTION_HPP_
 #define _INJECTION_HPP_
 
-#include <vector>
 #include "config_utils.hpp"
 
 using namespace std;
@@ -43,7 +42,6 @@ protected:
 public:
   virtual bool test() = 0;
   static InjectionProcess * New(string const & inject, double load);
-  static vector<InjectionProcess *> Load(Configuration const & config);
 };
 
 class BernoulliInjectionProcess : public InjectionProcess {

@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <iostream>
+#include <vector>
 #include <cassert>
 #include "random_utils.hpp"
 #include "injection.hpp"
@@ -78,38 +79,6 @@ InjectionProcess * InjectionProcess::New(string const & inject, double load)
   } else {
     cout << "Invalid injection process: " << inject << endl;
     exit(-1);
-  }
-  return result;
-}
-
-vector<InjectionProcess *> InjectionProcess::Load(Configuration const & config)
-{
-  int const classes = config.GetInt("classes");
-  assert(classes > 0);
-
-  vector<int> packet_size = config.GetIntArray( "packet_size" );
-  if(packet_size.empty()) {
-    packet_size.push_back(config.GetInt("packet_size"));
-  }
-  packet_size.resize(classes, packet_size.back());
-  
-  vector<double> load = config.GetFloatArray("injection_rate"); 
-  if(load.empty()) {
-    load.push_back(config.GetFloat("injection_rate"));
-  }
-  load.resize(classes, load.back());
-
-  if(config.GetInt("injection_rate_uses_flits")) {
-    for(int c = 0; c < classes; ++c)
-      load[c] /= (double)packet_size[c];
-  }
-
-  vector<string> inject = config.GetStrArray("injection_process");
-  inject.resize(classes, inject.back());
-  
-  vector<InjectionProcess *> result(classes);
-  for(int c = 0; c < classes; ++c) {
-    result[c] = InjectionProcess::New(inject[c], load[c]);
   }
   return result;
 }
