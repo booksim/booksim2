@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <iostream>
+#include <vector>
 #include <cassert>
 #include "random_utils.hpp"
 #include "injection.hpp"
@@ -78,73 +79,6 @@ InjectionProcess * InjectionProcess::New(string const & inject, double load)
   } else {
     cout << "Invalid injection process: " << inject << endl;
     exit(-1);
-  }
-  return result;
-}
-
-vector<InjectionProcess *> InjectionProcess::Load(Configuration const & config)
-{
-  int const classes = config.GetInt("classes");
-  assert(classes > 0);
-
-  vector<int> use_read_write = config.GetIntArray("use_read_write");
-  if(use_read_write.empty()) {
-    use_read_write.push_back(config.GetInt("use_read_write"));
-  }
-  use_read_write.resize(classes, use_read_write.back());
-
-  vector<int> read_request_size = config.GetIntArray("read_request_size");
-  if(read_request_size.empty()) {
-    read_request_size.push_back(config.GetInt("read_request_size"));
-  }
-  read_request_size.resize(classes, read_request_size.back());
-
-  vector<int> read_reply_size = config.GetIntArray("read_reply_size");
-  if(read_reply_size.empty()) {
-    read_reply_size.push_back(config.GetInt("read_reply_size"));
-  }
-  read_reply_size.resize(classes, read_reply_size.back());
-
-  vector<int> write_request_size = config.GetIntArray("write_request_size");
-  if(write_request_size.empty()) {
-    write_request_size.push_back(config.GetInt("write_request_size"));
-  }
-  write_request_size.resize(classes, write_request_size.back());
-
-  vector<int> write_reply_size = config.GetIntArray("write_reply_size");
-  if(write_reply_size.empty()) {
-    write_reply_size.push_back(config.GetInt("write_reply_size"));
-  }
-  write_reply_size.resize(classes, write_reply_size.back());
-
-  vector<int> packet_size = config.GetIntArray( "const_flits_per_packet" );
-  if(packet_size.empty()) {
-    packet_size.push_back(config.GetInt("const_flits_per_packet"));
-  }
-  packet_size.resize(classes, packet_size.back());
-  
-  for(int c = 0; c < classes; ++c)
-    if(use_read_write[c])
-      packet_size[c] = (read_request_size[c] + read_reply_size[c] +
-			write_request_size[c] + write_reply_size[c]) / 2;
-  
-  vector<double> load = config.GetFloatArray("injection_rate"); 
-  if(load.empty()) {
-    load.push_back(config.GetFloat("injection_rate"));
-  }
-  load.resize(classes, load.back());
-
-  if(config.GetInt("injection_rate_uses_flits")) {
-    for(int c = 0; c < classes; ++c)
-      load[c] /= (double)packet_size[c];
-  }
-
-  vector<string> inject = config.GetStrArray("injection_process");
-  inject.resize(classes, inject.back());
-  
-  vector<InjectionProcess *> result(classes);
-  for(int c = 0; c < classes; ++c) {
-    result[c] = InjectionProcess::New(inject[c], load[c]);
   }
   return result;
 }
