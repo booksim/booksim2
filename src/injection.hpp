@@ -42,6 +42,7 @@ protected:
   InjectionProcess(double rate);
 public:
   virtual bool test() = 0;
+  static InjectionProcess * New(string const & inject, double load);
   static vector<InjectionProcess *> Load(Configuration const & config);
 };
 

@@ -324,7 +324,7 @@ void Configuration::WriteMatlabFile(ostream * config_out) const {
 
 }
 
-vector<string> tokenize(string const & data, char sep, char open, char close)
+vector<string> tokenize(string const & data, char open, char close, char sep)
 {
   vector<string> values;
 
