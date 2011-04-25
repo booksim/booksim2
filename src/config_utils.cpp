@@ -353,7 +353,7 @@ vector<string> tokenize(string const & data, char open, char close, char sep)
       ++nested;
     } else if((data[curr] == close) && nested) {
       --nested;
-    } else if((data[curr] == sep) || !nested) {
+    } else if(!nested) {
       if(curr > start) {
 	string token = data.substr(start, curr - start);
 	values.push_back(token);

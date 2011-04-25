@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <iostream>
+#include <sstream>
 #include "random_utils.hpp"
 #include "traffic.hpp"
 
@@ -41,60 +42,109 @@ TrafficPattern::TrafficPattern(int nodes)
   }
 }
 
-vector<TrafficPattern *> TrafficPattern::Load(Configuration const & config, 
-					      int nodes)
+TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
 {
-  int const classes = config.GetInt("classes");
-  assert(classes > 0);
-
-  vector<string> traffic = config.GetStrArray("traffic");
-  traffic.resize(classes, traffic.back());
-  vector<TrafficPattern *> result(classes);
-  for(int c = 0; c < classes; ++c) {
-    string const & s = traffic[c];
-    TrafficPattern * tp = NULL;
-    if(s == "bitcomp") {
-      tp = new BitCompTrafficPattern(nodes);
-    } else if(s == "transpose") {
-      tp = new TransposeTrafficPattern(nodes);
-    } else if(s == "bitrev") {
-      tp = new BitRevTrafficPattern(nodes);
-    } else if(s == "shuffle") {
-      tp = new ShuffleTrafficPattern(nodes);
-    } else if(s == "tornado") {
-      tp = new TornadoTrafficPattern(nodes, config.GetInt("k"), 
-				     config.GetInt("n"), config.GetInt("xr"));
-    } else if(s == "neighbor") {
-      tp = new NeighborTrafficPattern(nodes, config.GetInt("k"), 
-				      config.GetInt("n"), config.GetInt("xr"));
-    } else if(s == "randperm") {
-      tp = new RandomPermutationTrafficPattern(nodes, 
-					       config.GetInt("perm_seed"));
-    } else if(s == "uniform") {
-      tp = new UniformRandomTrafficPattern(nodes);
-    } else if(s == "diagonal") {
-      tp = new DiagonalTrafficPattern(nodes);
-    } else if(s == "asymmetric") {
-      tp = new AsymmetricTrafficPattern(nodes);
-    } else if(s == "taper64") {
-      tp = new Taper64TrafficPattern(nodes);
-    } else if(s == "bad_dragon") {
-      tp = new BadPermDFlyTrafficPattern(nodes, config.GetInt("k"),
-					 config.GetInt("n"), 
-					 config.GetInt("xr"));
-    } else if(s == "badperm_yarc") {
-      tp = new BadPermYarcTrafficPattern(nodes, config.GetInt("k"),
-					 config.GetInt("n"),
-					 config.GetInt("xr"));
-    } else if(s == "hotspot") {
-      vector<int> hotspots = config.GetIntArray("hotspot_nodes");
-      vector<int> rates = config.GetIntArray("hotspot_rates");
-      tp = new HotSpotTrafficPattern(nodes, hotspots, rates);
+  string pattern_name;
+  string param_str;
+  size_t left = pattern.find_first_of('(');
+  if(left == string::npos) {
+    pattern_name = pattern;
+    param_str = "{}";
+  } else {
+    pattern_name = pattern.substr(0, left);
+    size_t right = pattern.find_last_of(')');
+    if(right == string::npos) {
+      param_str = pattern.substr(left+1);
     } else {
-      cout << "Error: Unknown traffic pattern: " << s << endl;
+      param_str = pattern.substr(left+1, right-left-1);
+    }
+  }
+  vector<string> params = tokenize('{' + param_str + '}');
+  
+  TrafficPattern * result = NULL;
+  if(pattern_name == "bitcomp") {
+    result = new BitCompTrafficPattern(nodes);
+  } else if(pattern_name == "transpose") {
+    result = new TransposeTrafficPattern(nodes);
+  } else if(pattern_name == "bitrev") {
+    result = new BitRevTrafficPattern(nodes);
+  } else if(pattern_name == "shuffle") {
+    result = new ShuffleTrafficPattern(nodes);
+  } else if(pattern_name == "randperm") {
+    int perm_seed = params.empty() ? 0 : atoi(params[0].c_str());
+    result = new RandomPermutationTrafficPattern(nodes, perm_seed);
+  } else if(pattern_name == "uniform") {
+    result = new UniformRandomTrafficPattern(nodes);
+  } else if(pattern_name == "background") {
+    vector<string> excludes_str = tokenize(params[0]);
+    vector<int> excludes(excludes_str.size());
+    for(size_t i = 0; i < excludes.size(); ++i) {
+      excludes[i] = atoi(excludes_str[i].c_str());
+    }
+    result = new UniformBackgroundTrafficPattern(nodes, excludes);
+  } else if(pattern_name == "diagonal") {
+    result = new DiagonalTrafficPattern(nodes);
+  } else if(pattern_name == "asymmetric") {
+    result = new AsymmetricTrafficPattern(nodes);
+  } else if(pattern_name == "taper64") {
+    result = new Taper64TrafficPattern(nodes);
+  } else if((pattern_name == "tornado") || (pattern_name == "neighbor") ||
+	    (pattern_name == "bad_dragon") || (pattern_name == "badperm_yarc")) {
+    if(params.size() < 3) {
+      cout << "Error: Missing parameters for digit permutation traffic pattern: " << pattern << endl;
       exit(-1);
     }
-    result[c] = tp;
+    int k = atoi(params[0].c_str());
+    int n = atoi(params[1].c_str());
+    int xr = atoi(params[2].c_str());
+    if(pattern_name == "tornado") {
+      result = new TornadoTrafficPattern(nodes, k, n, xr);
+    } else if(pattern_name == "neighbor") {
+      result = new NeighborTrafficPattern(nodes, k, n, xr);
+    } else if(pattern_name == "bad_dragon") {
+      result = new BadPermDFlyTrafficPattern(nodes, k, n, xr);
+    } else if(pattern_name == "badperm_yarc") {
+      result = new BadPermYarcTrafficPattern(nodes, k, n, xr);
+    }
+  } else if(pattern_name == "hotspot") {
+    if(params.empty()) {
+      cout << "Error: Missing parameter for hotspot traffic pattern: " << pattern << endl;
+      exit(-1);
+    } 
+    vector<string> hotspots_str = tokenize(params[0]);
+    vector<int> hotspots(hotspots_str.size());
+    for(size_t i = 0; i < hotspots.size(); ++i) {
+      hotspots[i] = atoi(hotspots_str[i].c_str());
+    }
+    vector<int> rates(hotspots.size(), 1);
+    if(params.size() >= 2) {
+      vector<string> rates_str = tokenize(params[1]);
+      rates_str.resize(hotspots.size(), rates_str.back());
+      for(size_t i = 0; i < rates.size(); ++i) {
+	rates[i] = atoi(rates_str[i].c_str());
+      }
+    }
+    result = new HotSpotTrafficPattern(nodes, hotspots, rates);
+  } else {
+    cout << "Error: Unknown traffic pattern: " << pattern << endl;
+    exit(-1);
+  }
+  return result;
+}
+
+TrafficPattern * TrafficPattern::New(string const & pattern, int nodes, Configuration const & config)
+{
+  TrafficPattern * result = NULL;
+  if((pattern == "tornado") || (pattern == "neighbor") || 
+     (pattern == "bad_dragon") || (pattern == "badperm_yarc")) {
+    int k = config.GetInt("k");
+    int n = config.GetInt("n");
+    int xr = config.GetInt("xr");
+    ostringstream ss;
+    ss << pattern << '(' << k << ',' << n << ',' << xr << ')';
+    result = New(ss.str(), nodes);
+  } else {
+    result = New(pattern, nodes);
   }
   return result;
 }
@@ -391,7 +441,7 @@ HotSpotTrafficPattern::HotSpotTrafficPattern(int nodes, vector<int> hotspots,
   : TrafficPattern(nodes), _hotspots(hotspots), _rates(rates), _max_val(-1)
 {
   assert(!_hotspots.empty());
-  int const size = _hotspots.size();
+  size_t const size = _hotspots.size();
   _rates.resize(size, _rates.empty() ? 1 : _rates.back());
   for(size_t i = 0; i < size; ++i) {
     int const hotspot = _hotspots[i];
