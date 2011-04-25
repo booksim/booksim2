@@ -41,6 +41,44 @@ InjectionProcess::InjectionProcess(double rate)
   assert((rate >= 0.0) && (rate <= 1.0));
 }
 
+InjectionProcess * InjectionProcess::New(string const & inject, double load)
+{
+  string process_name;
+  string param_str;
+  size_t left = inject.find_first_of('(');
+  if(left == string::npos) {
+    process_name = inject;
+    param_str = "{}";
+  } else {
+    process_name = inject.substr(0, left);
+    size_t right = inject.find_last_of(')');
+    if(right == string::npos) {
+      param_str = inject.substr(left+1);
+    } else {
+      param_str = inject.substr(left+1, right-left-1);
+    }
+  }
+  vector<string> params = tokenize('{' + param_str + '}');
+
+  InjectionProcess * result = NULL;
+  if(process_name == "bernoulli") {
+    result = new BernoulliInjectionProcess(load);
+  } else if(process_name == "on_off") {
+    if(params.size() < 2) {
+      cout << "Missing parameters for injection process: " << inject << endl;
+      exit(-1);
+    }
+    double alpha = strtod(params[0].c_str(), NULL);
+    double beta = strtod(params[1].c_str(), NULL);
+    bool initial = (params.size() > 2) ? atoi(params[2].c_str()) : false;
+    result = new OnOffInjectionProcess(load, alpha, beta, initial);
+  } else {
+    cout << "Invalid injection process: " << inject << endl;
+    exit(-1);
+  }
+  return result;
+}
+
 vector<InjectionProcess *> InjectionProcess::Load(Configuration const & config)
 {
   int const classes = config.GetInt("classes");
@@ -66,30 +104,9 @@ vector<InjectionProcess *> InjectionProcess::Load(Configuration const & config)
   vector<string> inject = config.GetStrArray("injection_process");
   inject.resize(classes, inject.back());
   
-  vector<double> alpha = config.GetFloatArray("burst_alpha");
-  if(alpha.empty()) {
-    alpha.push_back(config.GetFloat("burst_alpha"));
-  }
-  alpha.resize(classes, alpha.back());
-  vector<double> beta = config.GetFloatArray("burst_beta");
-  if(beta.empty()) {
-    beta.push_back(config.GetFloat("burst_beta"));
-  }
-  beta.resize(classes, beta.back());
-
   vector<InjectionProcess *> result(classes);
   for(int c = 0; c < classes; ++c) {
-    string const & s = inject[c];
-    InjectionProcess * ip = NULL;
-    if(s == "bernoulli") {
-      ip = new BernoulliInjectionProcess(load[c]);
-    } else if(s == "on_off") {
-      ip = new OnOffInjectionProcess(load[c], alpha[c], beta[c]);
-    } else {
-      cout << "Invalid injection process: " << s << endl;
-      exit(-1);
-    }
-    result[c] = ip;
+    result[c] = InjectionProcess::New(inject[c], load[c]);
   }
   return result;
 }
