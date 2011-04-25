@@ -38,7 +38,10 @@ using namespace std;
 InjectionProcess::InjectionProcess(double rate)
 : _rate(rate)
 {
-  assert((rate >= 0.0) && (rate <= 1.0));
+  if((rate < 0.0) || (rate > 1.0)) {
+    cout << "Error: Injection process must have load between 0.0 and 1.0." << endl;
+    exit(-1);
+  }
 }
 
 InjectionProcess * InjectionProcess::New(string const & inject, double load)
