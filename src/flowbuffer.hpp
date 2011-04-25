@@ -5,6 +5,17 @@
 #include <map>
 #include <queue>
 #include "globals.hpp"
+
+#define FLOW_STAT_SPEC 0
+#define FLOW_STAT_NACK 1
+#define FLOW_STAT_WAIT 2
+#define FLOW_STAT_NORM 3
+#define FLOW_STAT_NORM_READY 4
+#define FLOW_STAT_SPEC_READY 5
+#define FLOW_STAT_NOT_READY 6
+#define FLOW_STAT_FINAL_NOT_READY 7
+#define FLOW_STAT_LIFETIME 8
+
 struct flow{
   int flid;
   int vc;
@@ -20,8 +31,8 @@ public:
   FlowBuffer(int id, int size, bool reservation_enabled, flow* fl);
   ~FlowBuffer();
 
-  void ack(int sn);
-  void nack(int sn);
+  bool ack(int sn);
+  bool nack(int sn);
   void grant(int time);
 
   bool receive_ready();
@@ -29,9 +40,12 @@ public:
   bool send_spec_ready();
   bool done();
 
+
   Flit* send();
   Flit* receive();
   Flit* front();
+
+  void update_stats();
 
   map<int, int> _flit_status;
   map<int, Flit*> _flit_buffer;
@@ -51,6 +65,8 @@ public:
   int _vc;
 
   bool _watch;
+
+  vector<int> _stats;
 };
 
 #endif

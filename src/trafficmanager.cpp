@@ -48,9 +48,58 @@ map<int, vector<int> > gDropStats;
 
 int gExpirationTime = 0;
 
+vector<int> gStatAckReceived;
+vector<int> gStatAckEffective;
+vector<int> gStatAckSent;
+
+vector<int> gStatNackReceived;
+vector<int> gStatNackEffective;
+vector<int> gStatNackSent;
+
+vector<int> gStatGrantReceived;
+Stats** gStatGrantTimeNow;
+Stats** gStatGrantTimeFuture;
+
+vector<int> gStatReservationReceived;
+Stats** gStatReservationTimeNow;
+Stats** gStatReservationTimeFuture;
+
+vector<int> gStatSpecReceived;
+vector<int> gStatSpecDuplicate;
+
+vector<int> gStatNormSent;
+vector<int> gStatNormReceived;
+vector<int> gStatNormDuplicate;
+
+vector<int> gStatLostPacket;
+
+Stats* gStatROBRange;
+
+Stats* gStatFlowSenderLatency;
+Stats* gStatFlowLatency;
+Stats* gStatActiveFlowBuffers;
+Stats* gStatResponseBuffer;
+
+Stats* gStatPureNetworkLatency;
+Stats* gStatAckLatency;
+Stats* gStatNackLatency;
+Stats* gStatResLatency;
+Stats* gStatGrantLatency; 
+Stats* gStatSpecLatency;
+Stats* gStatNormLatency;
+Stats* gStatSourceTrueLatency;
+Stats* gStatSourceLatency;
+Stats* gStatNackByPacket;
+
+
+vector<int> gStatFlowStats;
+
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
   : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
+
+
+  gStatFlowStats.resize(FLOW_STAT_LIFETIME+1+1,0);
 
   _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
@@ -72,17 +121,77 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _flow_size = config.GetInt("flow_size");
 
 
-
-
   _rob.resize(_nodes);
   _reservation_schedule.resize(_nodes, 0);
   _response_packets.resize(_nodes);
   _cur_flid = 0;
   gExpirationTime =  config.GetInt("expiration_time");
 
- 
 
 
+  gStatAckReceived.resize(_nodes,0);
+  gStatAckEffective.resize(_nodes,0);
+  gStatAckSent.resize(_nodes,0);
+
+  gStatNackReceived.resize(_nodes,0);
+  gStatNackEffective.resize(_nodes,0);
+  gStatNackSent.resize(_nodes,0);
+
+  gStatGrantReceived.resize(_nodes,0);
+
+  gStatReservationReceived.resize(_nodes,0);
+
+
+  gStatGrantTimeNow=new Stats*[_nodes];
+  gStatGrantTimeFuture=new Stats*[_nodes];
+  gStatReservationTimeNow=new Stats*[_nodes];
+  gStatReservationTimeFuture=new Stats*[_nodes];
+
+  for(int i = 0; i< _nodes; i++){
+    ostringstream tmp_name;
+    tmp_name << "grant_time_now_" << i;
+    gStatGrantTimeNow[i] =  new Stats( this, tmp_name.str() , 1.0, 1000 );
+    tmp_name.str("");
+    tmp_name << "grant_time_future_" << i;
+    gStatGrantTimeFuture[i] =  new Stats( this, tmp_name.str() , 1.0, 1000 );
+    tmp_name.str("");
+    tmp_name << "res_time_now_" << i;
+    gStatReservationTimeNow[i] =  new Stats( this, tmp_name.str() , 1.0, 1000 );
+    tmp_name.str("");
+    tmp_name << "res_time_future_" << i;
+    gStatReservationTimeFuture[i] =  new Stats( this, tmp_name.str() , 1.0, 1000 );
+    tmp_name.str("");
+  }
+
+  gStatSpecReceived.resize(_nodes,0);
+  gStatSpecDuplicate.resize(_nodes,0);
+
+  gStatNormSent.resize(_nodes,0);
+  gStatNormReceived.resize(_nodes,0);
+  gStatNormDuplicate.resize(_nodes,0);
+
+  gStatLostPacket.resize(_nodes,0);
+
+  gStatROBRange =  new Stats( this, "rob_range" , 1.0, 300 );
+  
+  gStatFlowSenderLatency =  new Stats( this, "flow_sender_latency" , 1.0, 5000 );
+  gStatFlowLatency=  new Stats( this, "flow_latency" , 1.0, 5000 );
+  gStatActiveFlowBuffers=  new Stats( this, "sender_active_flows" , 1.0, 10 );
+  gStatResponseBuffer=  new Stats( this, "response_range" , 1.0, 10 );
+
+  gStatPureNetworkLatency =  new Stats( this, "net_hist" , 1.0, 5000 );
+  gStatAckLatency=  new Stats( this, "ack_hist" , 1.0, 1000 );
+  gStatNackLatency=  new Stats( this, "nack_hist" , 1.0, 1000 );
+  gStatResLatency=  new Stats( this, "res_hist" , 1.0, 1000 );
+  gStatGrantLatency=  new Stats( this, "grant_hist" , 1.0, 1000 );
+  gStatSpecLatency=  new Stats( this, "spec_hist" , 1.0, 5000 );
+  gStatNormLatency=  new Stats( this, "norm_hist" , 1.0, 5000 );
+
+  gStatSourceLatency=  new Stats( this, "source_queue_hist" , 1.0, 5000 );
+  gStatSourceTrueLatency=  new Stats( this, "source_truequeue_hist" , 1.0, 5000 );
+
+
+  gStatNackByPacket = new Stats(this, "nack_by_sn", 1.0, 1000);
   //nodes higher than limit do not produce or receive packets
   //for default limit = sources
 
@@ -305,7 +414,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   for ( int c = 0; c < _classes; ++c ) {
     ostringstream tmp_name;
     tmp_name << "plat_stat_" << c;
-    _plat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _plat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 5000 );
     _stats[tmp_name.str()] = _plat_stats[c];
     tmp_name.str("");
 
@@ -626,11 +735,19 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
   switch(f->res_type){
   case RES_TYPE_ACK:
+    gStatAckLatency->AddSample(_time-f->time);
+    gStatAckReceived[dest]++;
     receive_flow_buffer = _flow_buffer[dest][f->flbid];
     if( receive_flow_buffer!=NULL &&
 	receive_flow_buffer->fl->flid == f->flid){
-      receive_flow_buffer->ack(f->sn);
+      gStatAckEffective[dest]+= receive_flow_buffer->ack(f->sn)?1:0;
       if(receive_flow_buffer->done()){
+	for(size_t i = 0; i<gStatFlowStats.size()-1; i++){
+	  gStatFlowStats[i]+=receive_flow_buffer->_stats[i];
+	}
+	gStatFlowStats[gStatFlowStats.size()-1]++;
+
+	gStatFlowSenderLatency->AddSample(_time-receive_flow_buffer->fl->create_time);
 	delete _flow_buffer[dest][f->flbid];
 	_flow_buffer[dest][f->flbid]=NULL;
       }
@@ -639,24 +756,36 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     return;
     break;
   case RES_TYPE_NACK:
+    gStatNackLatency->AddSample(_time-f->time);
+    gStatNackByPacket->AddSample(f->sn);
+    gStatNackReceived[dest]++;
     receive_flow_buffer = _flow_buffer[dest][f->flbid];
     if( receive_flow_buffer!=NULL &&
 	receive_flow_buffer->fl->flid == f->flid){
-      receive_flow_buffer->nack(f->sn);
+      gStatNackEffective[dest]+= receive_flow_buffer->nack(f->sn)?1:0;
     }
     f->Free();
     return;
     break;
   case RES_TYPE_GRANT: 
+    gStatGrantLatency->AddSample(_time-f->time);
+    gStatGrantReceived[dest]++;
     receive_flow_buffer = _flow_buffer[dest][f->flbid];
     if( receive_flow_buffer!=NULL &&
 	receive_flow_buffer->fl->flid == f->flid){
+      if(f->payload>_time){
+	gStatGrantTimeFuture[dest]->AddSample(f->payload-_time);
+      } else {
+	gStatGrantTimeNow[dest]->AddSample(_time-f->payload);
+      }
       receive_flow_buffer->grant(f->payload);
     }
     f->Free();
     return;
     break;
   case RES_TYPE_RES:
+    gStatResLatency->AddSample(_time-f->time);
+    gStatReservationReceived[dest]++;
     //find or create a reorder buffer
     if(_rob[dest].count(f->flid)==0){
       receive_rob = new FlowROB();
@@ -672,6 +801,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       cout<<"Reservation received"<<endl;
       ff->watch = true;
     }
+    if(_reservation_schedule[dest]>_time){
+      gStatReservationTimeFuture[dest]->AddSample(_reservation_schedule[dest]-_time);
+    } else {
+      gStatReservationTimeNow[dest]->AddSample(_time-_reservation_schedule[dest]);
+    }
     ff->payload  = MAX(_time, _reservation_schedule[dest]);
     _reservation_schedule[dest] = ff->payload+f->payload;
     ff->res_type = RES_TYPE_GRANT;
@@ -681,12 +815,17 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     break;
 
   case RES_TYPE_SPEC:
+    if(f->tail){
+      gStatSpecLatency->AddSample(_time-f->time);
+    }
+    gStatSpecReceived[dest]++;
     if(_rob[dest].count(f->flid)==0){
       if(f->flid == WATCH_FLID){
 	cout<<"spec destination nack sn "<<f->sn<<"\n";
       }
       //NACK
       if(f->head){
+	gStatNackSent[dest]++;
 	ff = IssueSpecial(dest,f);
 	ff->res_type = RES_TYPE_NACK;
 	ff->pri = FLIT_PRI_NACK;
@@ -701,8 +840,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       }
       receive_rob = _rob[dest][f->flid];
       f = receive_rob->insert(f);
+      if(f==NULL){
+	gStatSpecDuplicate[dest]++;
+      }
       //ACK
       if(f!=NULL && f->tail){
+	gStatAckSent[dest]++;
 	ff = IssueSpecial(dest,f);
 	ff->sn = f->head_sn;
 	ff->res_type = RES_TYPE_ACK;
@@ -713,6 +856,10 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     }
     break;
   case RES_TYPE_NORM:
+    if(f->tail){
+      gStatNormLatency->AddSample(_time-f->time);
+    }
+    gStatNormReceived[dest]++;
     if(gReservation){
       //find or create a reorder buffer
       if(_rob[dest].count(f->flid)==0){
@@ -725,6 +872,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	cout<<"normal insert sn "<<f->sn<<"\n";
       }
       f = receive_rob->insert(f);
+      if(f==NULL){
+	gStatNormDuplicate[dest]++;
+      }
     }    
     break;
   default:
@@ -735,12 +885,15 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   if(gReservation){
     if(f){
       assert(receive_rob!=NULL);
+      gStatROBRange->AddSample(receive_rob->range());
       if(receive_rob->done()){ //entire flow has been received
+	gStatFlowLatency->AddSample(_time-receive_rob->_flow_creation_time);
 	delete _rob[dest][f->flid];
 	_rob[dest].erase(f->flid); 
       }
       //rest of the code can't process this
       if(f->res_type == RES_TYPE_RES){
+	f->Free();
 	return;
       }
     } else {
@@ -761,6 +914,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
   //this occurs, when the normal flit retires before the speculative
   if(_total_in_flight_flits[f->cl].count(f->id) == 0){
+    gStatLostPacket[dest]++;
     return;
   }
 
@@ -861,6 +1015,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	 (_plat_stats[f->cl]->Max() < (f->atime - f->time)))
 	_slowest_flit[f->cl] = f->id;
       _plat_stats[f->cl]->AddSample( f->atime - f->time);
+      gStatPureNetworkLatency->AddSample( f->atime - f->ntime);
       _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
 	_tlat_stats[f->cl]->AddSample( f->atime - f->ttime );
@@ -1168,6 +1323,7 @@ void TrafficManager::_Inject(){
 	  any_flow_ready = any_flow_ready || (_flow_buffer[input][i] ->receive_ready());
 	}
       }
+      gStatActiveFlowBuffers->AddSample(flow_buffer_taken);
       //if no currently active flow is ready to receive and there is flow buffer available
       if (!any_flow_ready && flow_buffer_taken<_max_flow_buffers) {
 	bool generated = false;
@@ -1203,6 +1359,15 @@ void TrafficManager::_Inject(){
 
 void TrafficManager::_Step( )
 {
+
+  for ( int input = 0; input < _nodes; ++input ) {
+    for(int i = 0; i<_max_flow_buffers; i++){
+      if(_flow_buffer[input][i] != NULL){
+	_flow_buffer[input][i]->update_stats();
+      }
+    }
+  }
+
   bool flits_in_flight = false;
   for(int c = 0; c < _classes; ++c) {
     flits_in_flight |= !_total_in_flight_flits[c].empty();
@@ -1292,6 +1457,7 @@ void TrafficManager::_Step( )
 
     //ack nack grant
     if(gReservation){
+      gStatResponseBuffer->AddSample((int)_response_packets[source].size());
       if( !_response_packets[source].empty() ){
 	Flit* f = _response_packets[source].front();
 	assert(f);
@@ -1436,11 +1602,28 @@ void TrafficManager::_Step( )
 	//this might be slightly different from front
 	f =  ready_flow_buffer->send();
 	f->exptime = _time+gExpirationTime;
-
+	if(f->res_type==RES_TYPE_RES){
+	  assert(ready_flow_buffer->_vc!=-1);
+	  gStatSourceTrueLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
+	}
+	if(f->sn==0 && f->res_type!= RES_TYPE_RES){
+	  gStatSourceLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
+	}
+	if(f->head && f->res_type== RES_TYPE_NORM){
+	  gStatNormSent[source]++;
+	}
+	
+	//flit network traffic time
+	f->ntime = _time;
 	_net[0]->WriteSpecialFlit(f, source);
 	_sent_flits[0][source]->AddSample(1);
 	
 	if(ready_flow_buffer->done()){
+	  for(size_t i = 0; i<gStatFlowStats.size()-1; i++){
+	    gStatFlowStats[i]+=ready_flow_buffer->_stats[i];
+	  }
+	  gStatFlowStats[gStatFlowStats.size()-1]++;
+	  gStatFlowSenderLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
 	  delete _flow_buffer[source][f->flbid];
 	  _flow_buffer[source][f->flbid]=NULL;
 	}
@@ -1573,6 +1756,72 @@ void TrafficManager::_ClearStats( )
       gDropStats[i][j] = 0;
     }
   }
+
+  gStatAckReceived.clear();
+  gStatAckReceived.resize(_nodes,0);
+  gStatAckEffective.clear();
+  gStatAckEffective.resize(_nodes,0);
+  gStatAckSent.clear();
+  gStatAckSent.resize(_nodes,0);
+
+  gStatNackReceived.clear();
+  gStatNackReceived.resize(_nodes,0);
+  gStatNackEffective.clear();
+  gStatNackEffective.resize(_nodes,0);
+  gStatNackSent.clear();
+  gStatNackSent.resize(_nodes,0);
+
+  gStatGrantReceived.clear();
+  gStatGrantReceived.resize(_nodes,0);
+
+  gStatReservationReceived.clear();
+  gStatReservationReceived.resize(_nodes,0);
+
+  for(int i = 0; i< _nodes; i++){
+    gStatGrantTimeNow[i]->Clear();
+    gStatGrantTimeFuture[i]->Clear();
+    gStatReservationTimeNow[i]->Clear();
+    gStatReservationTimeFuture[i]->Clear();
+  }
+
+
+  gStatSpecReceived.clear();
+  gStatSpecReceived.resize(_nodes,0);
+  gStatSpecDuplicate.clear();
+  gStatSpecDuplicate.resize(_nodes,0);
+
+  gStatNormSent.clear();
+  gStatNormSent.resize(_nodes,0);
+  gStatNormReceived.clear();
+  gStatNormReceived.resize(_nodes,0);
+  gStatNormDuplicate.clear();
+  gStatNormDuplicate.resize(_nodes,0);
+
+  gStatLostPacket.clear();
+  gStatLostPacket.resize(_nodes,0);
+
+  gStatROBRange->Clear();
+  
+  gStatFlowSenderLatency->Clear();
+  gStatFlowLatency->Clear();
+  gStatActiveFlowBuffers->Clear();
+  gStatResponseBuffer->Clear();
+
+  gStatPureNetworkLatency->Clear();
+  gStatAckLatency->Clear();
+  gStatNackLatency->Clear();
+  gStatResLatency->Clear();
+  gStatGrantLatency->Clear();
+  gStatSpecLatency->Clear();
+  gStatNormLatency->Clear();
+
+  gStatSourceTrueLatency->Clear();
+  gStatSourceLatency->Clear();
+
+  gStatNackByPacket->Clear();
+  
+  gStatFlowStats.clear();
+  gStatFlowStats.resize(FLOW_STAT_LIFETIME+1+1,0);
 }
 
 int TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const 
@@ -2190,6 +2439,110 @@ void TrafficManager::DisplayStats( ostream & os ) {
 
     os << "Slowest flit = " << _slowest_flit[c] << endl;
     
+    if(_stats_out){
+    *_stats_out<< "ack_received = "
+	       <<gStatAckReceived<<";\n";
+    *_stats_out<< "ack_eff = "
+	       <<gStatAckEffective<<";\n";
+    *_stats_out<< "ack_sent = "
+	       <<gStatAckSent<<";\n";
+
+    *_stats_out<< "nack_received = "
+	       <<gStatNackReceived<<";\n";
+    *_stats_out<< "nack_eff = "
+	       <<gStatNackEffective<<";\n";
+    *_stats_out<< "nack_sent = "
+	       <<gStatNackSent<<";\n";
+
+    *_stats_out<< "grant_received = "
+	       <<gStatGrantReceived<<";\n";
+
+    *_stats_out<< "res_received = "
+	       <<gStatReservationReceived<<";\n";
+
+    *_stats_out<< "spec_received = "
+	       <<gStatSpecReceived<<";\n";
+    *_stats_out<< "spec_dup = "
+	       <<gStatSpecDuplicate<<";\n";
+
+    *_stats_out<< "norm_sent = "
+	       <<gStatNormSent<<";\n";
+    *_stats_out<< "norm_received = "
+	       <<gStatNormReceived<<";\n";
+    *_stats_out<< "norm_dup = "
+	       <<gStatNormDuplicate<<";\n";
+
+    *_stats_out<< "lost_flits = "
+	       <<gStatLostPacket<<";\n";
+
+
+    for(int i = 0; i<_nodes; i++){
+      *_stats_out<<"grant_now ("<<i+1<<",:)="
+		 <<*gStatGrantTimeNow[i] <<";\n";
+      *_stats_out<<"grant_future ("<<i+1<<",:)="
+		 <<*gStatGrantTimeFuture[i] <<";\n";
+      *_stats_out<<"res_now ("<<i+1<<",:)="
+		 <<*gStatReservationTimeNow[i] <<";\n";
+      *_stats_out<<"res_future ("<<i+1<<",:)="
+		 <<*gStatReservationTimeFuture[i] <<";\n";
+    }
+    
+    *_stats_out<< "rob_range = "
+	       <<*gStatROBRange<<";\n";
+
+    *_stats_out<< "flow_sender_hist = "
+	       <<*gStatFlowSenderLatency <<";\n";
+    *_stats_out<< "flow_hist = "
+	       <<*gStatFlowLatency <<";\n";
+    *_stats_out<< "active_flows = "
+	       <<*gStatActiveFlowBuffers <<";\n";
+    *_stats_out<< "response_range = "
+	       <<*gStatResponseBuffer <<";\n";
+    
+    *_stats_out<< "net_hist = "
+	       <<*gStatPureNetworkLatency <<";\n";
+    *_stats_out<< "ack_hist = "
+	       <<*gStatAckLatency <<";\n";
+   *_stats_out<< "nack_hist = "
+	       <<*gStatNackLatency <<";\n";
+   *_stats_out<< "res_hist = "
+	       <<*gStatResLatency <<";\n";
+   *_stats_out<< "grant_hist = "
+	       <<*gStatGrantLatency <<";\n";
+   *_stats_out<< "spec_hist = "
+	       <<*gStatSpecLatency <<";\n";
+   *_stats_out<< "norm_hist = "
+	       <<*gStatNormLatency <<";\n";
+
+   *_stats_out<< "source_queue_hist = "
+	      <<*gStatSourceLatency <<";\n";
+   *_stats_out<< "source_truequeue_hist = "
+	      <<*gStatSourceTrueLatency <<";\n";   
+
+   *_stats_out<< "nack_by_sn = "
+	      <<*gStatNackByPacket<<";\n";
+
+   *_stats_out<< "flow_in_spec =" 
+	      <<gStatFlowStats[FLOW_STAT_SPEC]<<";\n";
+   *_stats_out<< "flow_in_nack =" 
+	      <<gStatFlowStats[FLOW_STAT_NACK]<<";\n";
+   *_stats_out<< "flow_in_wait =" 
+	      <<gStatFlowStats[FLOW_STAT_WAIT]<<";\n";
+   *_stats_out<< "flow_in_norm =" 
+	      <<gStatFlowStats[FLOW_STAT_NORM ]<<";\n";
+   *_stats_out<< "flow_in_norm_ready =" 
+	      <<gStatFlowStats[FLOW_STAT_NORM_READY ]<<";\n";
+   *_stats_out<< "flow_in_spec_ready =" 
+	      <<gStatFlowStats[FLOW_STAT_SPEC_READY]<<";\n";
+   *_stats_out<< "flow_in_not_ready =" 
+	    <<gStatFlowStats[FLOW_STAT_NOT_READY]<<";\n";
+   *_stats_out<< "flow_in_final_not_ready =" 
+	    <<gStatFlowStats[FLOW_STAT_FINAL_NOT_READY]<<";\n";
+   *_stats_out<< "flow_in_lifetime =" 
+	      <<gStatFlowStats[FLOW_STAT_LIFETIME]<<";\n";
+   *_stats_out<< "flow_count =" 
+	      <<gStatFlowStats[FLOW_STAT_LIFETIME+1]<<";\n";
+    }
   }
   
   if(_sim_mode == batch)

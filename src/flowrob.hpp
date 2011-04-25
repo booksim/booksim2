@@ -14,8 +14,11 @@ public:
 
   Flit* insert(Flit* f);
   bool done();
+  
+  int range();
 
-
+  int _flow_creation_time;
+  int _max_reorder;
   int _flow_size;
   int _flid;
   int _status;

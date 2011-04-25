@@ -304,6 +304,7 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
 		     << " from channel at input " << input
 		     << "." << endl;
 	}
+	gDropStats[_id][input]++;
 	drop_f = trafficManager->DropPacket(input, f);
 	drop_f->vc = f->vc;
 	drop = true;
@@ -314,8 +315,7 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
 	drop = true;
       }
     }
-    if(drop){
-      gDropStats[_id][input]++;
+    if(drop){   
       //send dropped credit since the packet is removed from the buffer
       if(drop_f==NULL){
 	if(_out_queue_credits.count(input) == 0) {

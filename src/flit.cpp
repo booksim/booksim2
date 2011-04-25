@@ -73,6 +73,7 @@ void Flit::Reset()
   head      = false ;
   tail      = false ;
   flow_tail = false ;
+  ntime = -1;
   time      = -1 ;
   ttime     = -1 ;
   atime     = -1 ;

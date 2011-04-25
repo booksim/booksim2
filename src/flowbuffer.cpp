@@ -37,18 +37,58 @@ FlowBuffer::FlowBuffer(int id, int size, bool res, flow* f){
   }
 
   _watch = false;
+
+  _stats.resize(FLOW_STAT_LIFETIME+1,0);
 }
 
 FlowBuffer::~FlowBuffer(){
   delete fl;
 }
 
+void FlowBuffer::update_stats(){
+  _stats[FLOW_STAT_LIFETIME]++;
+  
+
+  if(send_norm_ready()){
+    _stats[FLOW_STAT_NORM_READY]++;
+  }else if(send_spec_ready()){
+    _stats[FLOW_STAT_SPEC_READY]++;
+  } else if(_received == fl->flow_size && _ready==0){
+    _stats[FLOW_STAT_FINAL_NOT_READY]++;
+  } else {
+    _stats[FLOW_STAT_NOT_READY]++;
+  }
+
+  switch(_status){
+  case FLOW_STATUS_GRANT_TRANSITION:
+  case FLOW_STATUS_NACK_TRANSITION:
+  case FLOW_STATUS_SPEC:
+    _stats[FLOW_STAT_SPEC]++;
+    break;
+  case FLOW_STATUS_WAIT:
+    _stats[FLOW_STAT_WAIT]++;
+    break;
+  case FLOW_STATUS_NACK:
+    _stats[FLOW_STAT_NACK]++;
+    break;
+  case FLOW_STATUS_NORM:
+    _stats[FLOW_STAT_NORM]++;
+    break;
+  default:
+    break;
+  }
+
+}
+
+
+
 //when ack return
 //1. packet could have already been sent normaly
 //2. ack goes through
 
 //no status change
-void FlowBuffer::ack(int sn){
+bool FlowBuffer::ack(int sn){
+  bool effective = false;
   if(_watch){
     cout<<"flow "<<fl->flid
 	<<" received ack "<<sn<<endl;
@@ -57,6 +97,7 @@ void FlowBuffer::ack(int sn){
     if(_watch){
       cout<<"\tfree flit "<<i<<endl;
     }
+    effective = true;
     bool tail = _flit_buffer[i]->tail;
     _guarantee_sent++;
     _flit_buffer.erase(i);
@@ -64,6 +105,7 @@ void FlowBuffer::ack(int sn){
     if(tail)
       break;
   }
+  return effective;
 }
 
 //when nack return
@@ -71,7 +113,8 @@ void FlowBuffer::ack(int sn){
 //2. nack goes through
 
 //flow buffer status only change when in spec mode
-void FlowBuffer::nack(int sn){
+bool FlowBuffer::nack(int sn){
+  bool effective = false;
   if(_watch){
     cout<<"flow "<<fl->flid
 	<<" received nack "<<sn<<endl;
@@ -82,6 +125,7 @@ void FlowBuffer::nack(int sn){
       if(_watch){
 	cout<<"\tnack flit "<<i<<endl;
       }
+      effective = true;
       bool tail = _flit_buffer[i]->tail;
       _flit_status[i] = FLIT_NACKED;
       _ready++;
@@ -98,7 +142,7 @@ void FlowBuffer::nack(int sn){
       }
     }
   }
-  
+  return effective;
 }
 
 //only one grant can return
@@ -243,9 +287,8 @@ Flit* FlowBuffer::send(){
   case FLOW_STATUS_SPEC:
     //first send the spec packet
     if(!_spec_sent){
-      assert(_flit_buffer.count(0)!=0);
+      _reservation_flit->time = GetSimTime();
       f = _reservation_flit;
-      f->time = GetSimTime();
       f->src = _flit_buffer[0]->src;
       f->dest =_flit_buffer[0]->dest;
       _spec_sent = true;
@@ -374,3 +417,4 @@ bool FlowBuffer::done(){
   } 
   return  d;
 }
+

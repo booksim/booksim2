@@ -5,6 +5,8 @@ FlowROB::FlowROB(){
  _status = RES_STATUS_NONE;
   _flid = -1;
   _flow_size = -1;
+  _max_reorder = 0;
+  _flow_creation_time=-1;
 }
 
 FlowROB::~FlowROB(){
@@ -13,7 +15,10 @@ FlowROB::~FlowROB(){
 
 Flit* FlowROB::insert(Flit* f){
 
-  Flit* rf;
+  if(f->res_type != RES_TYPE_RES && f->sn==0){ 
+    _flow_creation_time = f->time;
+  }
+  Flit* rf=NULL;
   switch(_status){
   case RES_STATUS_NONE:
     assert(f->res_type == RES_TYPE_RES);
@@ -38,9 +43,24 @@ Flit* FlowROB::insert(Flit* f){
     } else {
       if(f->head){
 	_pid.insert(f->pid);
+	if(!_rob.empty()){
+	  if(f->sn > (*_rob.rbegin())+1){
+	    int reorderness = f->sn - (*_rob.rbegin())+1;
+	    _max_reorder = (reorderness>_max_reorder)?reorderness:_max_reorder;
+	  }
+	} else {
+	  int reorderness = f->sn;
+	  _max_reorder = (reorderness>_max_reorder)?reorderness:_max_reorder;
+	}
 	_rob.insert(f->sn);
       }  else { //this ensures header didn't get dropped and then reservation packet sneaks in
 	if(_pid.count(f->pid)!=0){
+	  if(!_rob.empty()){
+	    if(f->sn > (*_rob.rbegin())+1){
+	      int reorderness = f->sn - (*_rob.rbegin())+1;
+	      _max_reorder = (reorderness>_max_reorder)?reorderness:_max_reorder;
+	    }
+	  }
 	  _rob.insert(f->sn);
 	} else {
 	  f->Free();
@@ -62,4 +82,8 @@ bool FlowROB::done(){
   //reservation has not arrived yet, I don't knwo the flow size
 
   return ((int)_rob.size() == _flow_size);
+}
+
+int FlowROB::range(){
+  return _max_reorder;
 }
