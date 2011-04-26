@@ -991,7 +991,6 @@ void IQRouter::_SWHoldUpdate( )
 	_out_queue_credits.insert(make_pair(input, Credit::New()));
       }
       _out_queue_credits.find(input)->second->vc.push_back(vc);
-      
       if(cur_buf->Empty(vc)) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -1709,7 +1708,6 @@ void IQRouter::_SWAllocUpdate( )
 	_out_queue_credits.insert(make_pair(input, Credit::New()));
       }
       _out_queue_credits.find(input)->second->vc.push_back(vc);
-
       if(cur_buf->Empty(vc)) {
 	if(f->tail) {
 	  cur_buf->SetState(vc, VC::idle);

@@ -516,10 +516,19 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
     }
   } else {
     if(f->res_type == RES_TYPE_RES){//special packets
-      vcBegin = 0;
-      vcEnd = 0;
+      //even though res type res always go on vc 0, it is the first flit
+      //popped from the flow buffer and handles the vc assignment for the whole buffer
+      //
+      if(inject){ 
+	vcBegin = RES_RESERVED_VCS;
+	vcEnd = gNumVCs-1;
+      } else {
+	vcBegin = 0;
+	vcEnd = 0;
+      }
     } else if(f->res_type == RES_TYPE_NORM){ //normal packets
       if(inject){ //inject channel use any vcs
+	assert(false);
 	vcBegin = RES_RESERVED_VCS;
 	vcEnd = gNumVCs-1;
       } else { //normal channel must segregate
@@ -529,6 +538,7 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
       }
     } else if(f->res_type == RES_TYPE_SPEC){
       if(inject){ //inject channel use any vcs
+	assert(false);
 	vcBegin = RES_RESERVED_VCS;
 	vcEnd = gNumVCs-1;
       } else { //normal channel must segregate

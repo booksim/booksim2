@@ -784,6 +784,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     return;
     break;
   case RES_TYPE_RES:
+    assert(f->vc==0);
     gStatResLatency->AddSample(_time-f->time);
     gStatReservationReceived[dest]++;
     //find or create a reorder buffer
@@ -1578,24 +1579,34 @@ void TrafficManager::_Step( )
       Flit* f = ready_flow_buffer->front();
       assert(f);
       //vc bookkeeping
-      if(f->head){
-	if(dest_buf->IsAvailableFor(vc) &&
-	   dest_buf->HasCreditFor(vc)){
-	  dest_buf->TakeBuffer(vc); 
-	  f->vc = vc;
+      if(f->res_type== RES_TYPE_RES){
+	if(dest_buf->IsAvailableFor(0) &&
+	   dest_buf->HasCreditFor(0)){
+	  dest_buf->TakeBuffer(0); 
 	  dest_buf->SendingFlit(f);
 	} else {
 	  f = NULL;
 	}
-      } else { //body 
-	if( dest_buf->HasCreditFor(vc)){
-	  f->vc = vc;
-	  dest_buf->SendingFlit(f);
-	} else {
-	  f = NULL;
+      } else {
+	if(f->head){
+	  if(dest_buf->IsAvailableFor(vc) &&
+	     dest_buf->HasCreditFor(vc)){
+	    dest_buf->TakeBuffer(vc); 
+	    f->vc = vc;
+	    dest_buf->SendingFlit(f);
+	  } else {
+	    f = NULL;
+	  }
+	} else { //body 
+	  if( dest_buf->HasCreditFor(vc)){
+	    f->vc = vc;
+	    dest_buf->SendingFlit(f);
+	  } else {
+	    f = NULL;
+	  }
 	}
-      }
       
+      }    
       //VC bookkeeping completed success
       if(f){
 	//actual the actual packet to send
@@ -1603,7 +1614,6 @@ void TrafficManager::_Step( )
 	f =  ready_flow_buffer->send();
 	f->exptime = _time+gExpirationTime;
 	if(f->res_type==RES_TYPE_RES){
-	  assert(ready_flow_buffer->_vc!=-1);
 	  gStatSourceTrueLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
 	}
 	if(f->sn==0 && f->res_type!= RES_TYPE_RES){
@@ -1612,6 +1622,8 @@ void TrafficManager::_Step( )
 	if(f->head && f->res_type== RES_TYPE_NORM){
 	  gStatNormSent[source]++;
 	}
+	
+
 	
 	//flit network traffic time
 	f->ntime = _time;

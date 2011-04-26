@@ -226,6 +226,7 @@ void Network::WriteSpecialFlit( Flit *f, int source )
 {
 
   assert( ( source >= 0 ) && ( source < _nodes ) );
+  assert( _special_inject[ _inject[source] ][f->vc]==NULL);
   _special_inject[ _inject[source] ][f->vc] = f;
   // _inject[source]->Send(f);
 }

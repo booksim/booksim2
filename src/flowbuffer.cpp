@@ -287,6 +287,7 @@ Flit* FlowBuffer::send(){
   case FLOW_STATUS_SPEC:
     //first send the spec packet
     if(!_spec_sent){
+      _reservation_flit->vc=0;
       _reservation_flit->time = GetSimTime();
       f = _reservation_flit;
       f->src = _flit_buffer[0]->src;
@@ -311,14 +312,13 @@ Flit* FlowBuffer::send(){
   }
 
   if(f){
+    assert(_vc!=-1);
     if(_watch){
       cout<<"flow "<<fl->flid
 	  <<" sent flit sn "<<f->sn
 	  <<" id "<<f->id
 	  <<" type "<<f->res_type<<endl;
     } 
-    assert(_vc!=-1);
-    f->vc = _vc;
   }
     
   return f;
