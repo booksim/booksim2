@@ -48,7 +48,6 @@ public:
   void Add( int output_port, int vc, int pri = 0 );
   void AddRange( int output_port, int vc_start, int vc_end, int pri = 0 );
 
-  int Size( ) const;
   bool OutputEmpty( int output_port ) const;
   int NumVCs( int output_port ) const;
   
