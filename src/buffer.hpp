@@ -140,14 +140,14 @@ public:
     return _vc[vc]->IsWatched( );
   }
 
-  inline int GetSize( ) const
+  inline int GetOccupancy( ) const
   {
     return _occupancy;
   }
 
-  inline int GetSize( int vc ) const
+  inline int GetOccupancy( int vc ) const
   {
-    return _vc[vc]->GetSize( );
+    return _vc[vc]->GetOccupancy( );
   }
 
   void Display( ostream & os = cout ) const;

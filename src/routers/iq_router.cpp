@@ -1866,7 +1866,7 @@ int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
 
   int size = 0;
   for (int v = start; v <= end; v++)  {
-    size+= dest_buf->Size(v);
+    size+= dest_buf->Occupancy(v);
   }
   return size;
 }
@@ -1879,7 +1879,7 @@ int IQRouter::GetBuffer(int i) const {
   int const i_end = (i >= 0) ? i : (_inputs - 1);
   for(int input = i_start; input <= i_end; ++input) {
     for(int vc = 0; vc < _vcs; ++vc) {
-      size += _buf[input]->GetSize(vc);
+      size += _buf[input]->GetOccupancy(vc);
     }
   }
   return size;
@@ -1893,7 +1893,7 @@ vector<int> IQRouter::GetBuffers(int i) const {
   int const i_end = (i >= 0) ? i : (_inputs - 1);
   for(int input = i_start; input <= i_end; ++input) {
     for(int vc = 0; vc < _vcs; ++vc) {
-      sizes[vc] += _buf[input]->GetSize(vc);
+      sizes[vc] += _buf[input]->GetOccupancy(vc);
     }
   }
   return sizes;
