@@ -77,14 +77,14 @@ BufferState::PrivateBufferPolicy::PrivateBufferPolicy(Configuration const & conf
 
 void BufferState::PrivateBufferPolicy::AllocSlotFor(int vc)
 {
-  if(_buffer_state->Size(vc) > _vc_buf_size) {
+  if(_buffer_state->Occupancy(vc) > _vc_buf_size) {
     Error("Buffer overflow.");
   }
 }
 
 bool BufferState::PrivateBufferPolicy::IsFullFor(int vc) const
 {
-  return (_buffer_state->Size(vc) >= _vc_buf_size);
+  return (_buffer_state->Occupancy(vc) >= _vc_buf_size);
 }
 
 BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)

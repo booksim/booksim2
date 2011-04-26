@@ -140,7 +140,7 @@ public:
 
   void AdvanceTime( );
 
-  inline int GetSize() const
+  inline int GetOccupancy() const
   {
     return (int)_buffer.size();
   }

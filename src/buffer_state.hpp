@@ -134,7 +134,7 @@ public:
   inline int ActiveVCs() const {
     return _active_vcs;
   }
-  inline int Size (int vc = 0) const {
+  inline int Occupancy(int vc = 0) const {
     assert((vc >= 0) && (vc < _vcs));
     return  _vc_occupancy[vc];
   }
