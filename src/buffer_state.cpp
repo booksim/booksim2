@@ -230,7 +230,7 @@ BufferState::BufferState( const Configuration& config, Module *parent, const str
   _vcs = config.GetInt( "num_vcs" );
   _size = config.GetInt("buf_size");
   if(_size < 0) {
-    _size = _vcs * config.GetInt("vc_buf_size") + config.GetInt("shared_buf_size");
+    _size = _vcs * config.GetInt("vc_buf_size");
   }
 
   _buffer_policy = BufferPolicy::NewBufferPolicy(config, this, "policy");
