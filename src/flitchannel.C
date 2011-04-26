@@ -1,7 +1,7 @@
 // $Id: flitchannel.cpp 1872 2010-03-29 20:20:22Z dub $
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-20[01][0-9], Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,

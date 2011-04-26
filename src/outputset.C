@@ -1,7 +1,7 @@
 // $Id: outputset.cpp 2200 2010-07-01 19:33:38Z qtedq $
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-20[01][0-9], Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
