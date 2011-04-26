@@ -77,11 +77,6 @@ int OutputSet::NumVCs( int output_port ) const
   return total;
 }
 
-int OutputSet::Size( ) const
-{
-  assert(false);
-}
-
 bool OutputSet::OutputEmpty( int output_port ) const
 {
   set<sSetElement>::const_iterator i = _outputs.begin( );
