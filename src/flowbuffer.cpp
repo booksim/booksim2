@@ -100,6 +100,7 @@ bool FlowBuffer::ack(int sn){
     effective = true;
     bool tail = _flit_buffer[i]->tail;
     _guarantee_sent++;
+    _flit_buffer[i]->Free();
     _flit_buffer.erase(i);
     _flit_status.erase(i);
     if(tail)

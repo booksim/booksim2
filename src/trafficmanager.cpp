@@ -1939,7 +1939,6 @@ bool TrafficManager::_SingleSim( )
 	  int dmin = _ComputeStats( _accepted_flits[c], &avg, &min );
 	  
 	  cout << "Class " << c << ":" << endl;
-
 	  cout << "Minimum latency = " << _plat_stats[c]->Min( ) << endl;
 	  cout << "Average latency = " << cur_latency << endl;
 	  cout << "Maximum latency = " << _plat_stats[c]->Max( ) << endl;
@@ -2087,7 +2086,6 @@ bool TrafficManager::_SingleSim( )
       for ( int iter = 0; iter < _sample_period; ++iter )
 	_Step( );
       
-      cout << _sim_state << endl;
       if(_stats_out)
 	*_stats_out << "%=================================" << endl;
 
@@ -2113,7 +2111,7 @@ bool TrafficManager::_SingleSim( )
 	prev_accepted[c] = cur_accepted;
 
 	cout << "Class " << c << ":" << endl;
-
+	cout<<"Flits allocated "<<Flit::Allocated()<<endl;
 	cout << "Minimum latency = " << _plat_stats[c]->Min( ) << endl;
 	cout << "Average latency = " << cur_latency << endl;
 	cout << "Maximum latency = " << _plat_stats[c]->Max( ) << endl;

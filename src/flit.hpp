@@ -106,6 +106,7 @@ public:
   void Free();
   static void FreeAll();
 
+  static int Allocated(){return _all.size();};
 private:
 
   Flit();

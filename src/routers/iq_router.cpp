@@ -346,7 +346,8 @@ bool IQRouter::_ReceiveFlits( )
       }
     } else {
       Flit *  f = _input_channels[input]->Receive();
-      f = _ExpirationCheck(f, input);
+      if(gReservation)
+	f = _ExpirationCheck(f, input);
       if(f) {
 	++_received_flits[input];
 	if(f->watch) {
