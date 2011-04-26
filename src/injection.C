@@ -1,7 +1,7 @@
 // $Id: injection.cpp 1969 2010-05-10 11:09:22Z dub $
 
 /*
-Copyright (c) 2007-20[01][0-9], Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,

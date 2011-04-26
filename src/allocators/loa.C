@@ -1,7 +1,7 @@
 // $Id: loa.cpp 1839 2010-03-24 02:03:56Z dub $
 
 /*
-Copyright (c) 2007-20[01][0-9], Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,

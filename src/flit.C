@@ -1,7 +1,7 @@
 // $Id: flit.cpp 2207 2010-07-08 18:40:17Z qtedq $
 
 /*
-Copyright (c) 2007-20[01][0-9], Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
