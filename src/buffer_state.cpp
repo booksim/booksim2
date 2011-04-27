@@ -44,9 +44,45 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "random_utils.hpp"
 
 BufferState::BufferPolicy::BufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-: Module(parent, name), _buffer_state(parent)
+: Module(parent, name), _buffer_state(parent), _active_vcs(0)
 {
   _vcs = config.GetInt("num_vcs");
+  _vc_occupancy.resize(_vcs, 0);
+}
+
+void BufferState::BufferPolicy::AllocVC(int vc)
+{
+  assert((vc >= 0) && (vc < _vcs));
+  ++_active_vcs;
+  if(_active_vcs > _vcs) {
+    Error("Number of active VCs is too large.");
+  }
+}
+
+void BufferState::BufferPolicy::FreeVC(int vc)
+{
+  assert((vc >= 0) && (vc < _vcs));
+  --_active_vcs;
+  if(_active_vcs < 0) {
+    Error("Number of active VCs fell below zero.");
+  }
+}
+
+void BufferState::BufferPolicy::AllocSlotFor(int vc)
+{
+  assert((vc >= 0) && (vc < _vcs));
+  ++_vc_occupancy[vc];
+}
+
+void BufferState::BufferPolicy::FreeSlotFor(int vc)
+{
+  assert((vc >= 0) && (vc < _vcs));
+  --_vc_occupancy[vc];
+  if(_vc_occupancy[vc] < 0) {
+    ostringstream err;
+    err << "Buffer occupancy fell below zero for VC " << vc;
+    Error(err.str());
+  }
 }
 
 BufferState::BufferPolicy * BufferState::BufferPolicy::NewBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
@@ -77,9 +113,11 @@ BufferState::PrivateBufferPolicy::PrivateBufferPolicy(Configuration const & conf
 
 void BufferState::PrivateBufferPolicy::AllocSlotFor(int vc)
 {
-  assert((vc >= 0) && (vc < _vcs));
-  if(_buffer_state->Occupancy(vc) > _vc_buf_size) {
-    Error("Buffer overflow.");
+  BufferPolicy::AllocSlotFor(vc);
+  if(_vc_occupancy[vc] > _vc_buf_size) {
+    ostringstream err;
+    err << "Buffer overflow for VC " << vc;
+    Error(err.str());
   }
 }
 
@@ -90,7 +128,7 @@ bool BufferState::PrivateBufferPolicy::IsFullFor(int vc) const
 }
 
 BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-  : BufferPolicy(config, parent, name), _shared_buf_occupancy(0), _active_vcs(0)
+  : BufferPolicy(config, parent, name), _shared_buf_occupancy(0)
 {
   int num_private_bufs = config.GetInt("private_bufs");
   if(num_private_bufs < 0) {
@@ -151,42 +189,33 @@ BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config
   assert(_shared_buf_size >= 0);
 }
 
-void BufferState::SharedBufferPolicy::AllocVC(int vc)
-{
-  assert((vc >= 0) && (vc < _vcs));
-  assert(_active_vcs < _vcs);
-  ++_active_vcs;
-}
-
-void BufferState::SharedBufferPolicy::FreeVC(int vc)
-{
-  assert((vc >= 0) && (vc < _vcs));
-  assert(_active_vcs > 0);
-  --_active_vcs;
-}
-
 void BufferState::SharedBufferPolicy::AllocSlotFor(int vc)
 {
-  assert((vc >= 0) && (vc < _vcs));
+  BufferPolicy::AllocSlotFor(vc);
   int i = _private_buf_vc_map[vc];
   ++_private_buf_occupancy[i];
   if(_private_buf_occupancy[i] > _private_buf_size[i]) {
     ++_shared_buf_occupancy;
     if(_shared_buf_occupancy > _shared_buf_size) {
-      Error("Buffer overflow.");
+      Error("Shared buffer overflow.");
     }
   }
 }
 
 void BufferState::SharedBufferPolicy::FreeSlotFor(int vc)
 {
-  assert((vc >= 0) && (vc < _vcs));
+  BufferPolicy::FreeSlotFor(vc);
   int i = _private_buf_vc_map[vc];
-  assert(_private_buf_occupancy[i]);
   --_private_buf_occupancy[i];
-  if(_private_buf_occupancy[i] >= _private_buf_size[i]) {
+  if(_private_buf_occupancy[i] < 0) {
+    ostringstream err;
+    err << "Private buffer occupancy fell below zero for buffer " << i;
+    Error(err.str());
+  } else if(_private_buf_occupancy[i] >= _private_buf_size[i]) {
     --_shared_buf_occupancy;
-    assert(_shared_buf_occupancy >= 0);
+    if(_shared_buf_occupancy < 0) {
+      Error("Shared buffer occupancy fell below zero.");
+    }
   }
 }
 
@@ -221,7 +250,9 @@ void BufferState::VariableBufferPolicy::FreeVC(int vc)
 bool BufferState::VariableBufferPolicy::IsFullFor(int vc) const
 {
   int i = _private_buf_vc_map[vc];
-  return (_private_buf_occupancy[i] >= _private_buf_size[i] + _max_shared_slots);
+  return (SharedBufferPolicy::IsFullFor(vc) || 
+	  (_private_buf_occupancy[i] - _private_buf_size[i] >= 
+	   _max_shared_slots));
 }
 
 BufferState::BufferState( const Configuration& config, Module *parent, const string& name ) : 
@@ -230,7 +261,7 @@ BufferState::BufferState( const Configuration& config, Module *parent, const str
   _vcs = config.GetInt( "num_vcs" );
   _size = config.GetInt("buf_size");
   if(_size < 0) {
-    _size = _vcs * config.GetInt("vc_buf_size") + config.GetInt("shared_buf_size");
+    _size = _vcs * config.GetInt("vc_buf_size");
   }
 
   _buffer_policy = BufferPolicy::NewBufferPolicy(config, this, "policy");
@@ -241,7 +272,6 @@ BufferState::BufferState( const Configuration& config, Module *parent, const str
   _in_use.resize(_vcs, false);
   _tail_sent.resize(_vcs, false);
 
-  _vc_occupancy.resize(_vcs, 0);
   _last_id.resize(_vcs, -1);
   _last_pid.resize(_vcs, -1);
 }
@@ -270,15 +300,9 @@ void BufferState::ProcessCredit( Credit const * const c )
     if(_occupancy < 0) {
       Error("Buffer occupancy fell below zero.");
     }
-    --_vc_occupancy[*iter];
-    if(_vc_occupancy[*iter] < 0) {
-      ostringstream err;
-      err << "Buffer occupancy fell below zero for VC " << *iter;
-      Error( err.str() );
-    }
     _buffer_policy->FreeSlotFor(*iter);
 
-    if(_wait_for_tail_credit && (_vc_occupancy[*iter] == 0) && (_tail_sent[*iter])) {
+    if(_wait_for_tail_credit && IsEmptyFor(*iter) && _tail_sent[*iter]) {
       assert(_in_use[*iter]);
       _in_use[*iter] = false;
       _buffer_policy->FreeVC(*iter);
@@ -296,8 +320,7 @@ void BufferState::SendingFlit( Flit const * const f )
   if(_occupancy > _size) {
     Error("Buffer overflow.");
   }
-  
-  ++_vc_occupancy[f->vc];
+
   _buffer_policy->AllocSlotFor(f->vc);
   
   if ( f->tail ) {
@@ -335,6 +358,6 @@ void BufferState::Display( ostream & os ) const
     os << "  VC " << v << ": ";
     os << "in_use = " << _in_use[v] 
        << ", tail_sent = " << _tail_sent[v]
-       << ", occupied = " << _vc_occupancy[v] << endl;
+       << ", occupied = " << _buffer_policy->Occupancy(v) << endl;
   }
 }
