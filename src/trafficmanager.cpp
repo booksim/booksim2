@@ -73,6 +73,9 @@ vector<int> gStatNormDuplicate;
 
 vector<int> gStatLostPacket;
 
+vector<vector<int> > gStatInjectVCDist;
+vector<int> gStatInjectVCBlock;
+
 Stats* gStatROBRange;
 
 Stats* gStatFlowSenderLatency;
@@ -171,6 +174,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   gStatNormDuplicate.resize(_nodes,0);
 
   gStatLostPacket.resize(_nodes,0);
+  gStatInjectVCDist.resize(_nodes);
+  for(int i = 0; i<_nodes; i++){
+    gStatInjectVCDist[i].resize(_num_vcs,0);
+  }
+  gStatInjectVCBlock.resize(_nodes,0);
 
   gStatROBRange =  new Stats( this, "rob_range" , 1.0, 300 );
   
@@ -807,7 +815,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     } else {
       gStatReservationTimeNow[dest]->AddSample(_time-_reservation_schedule[dest]);
     }
-    ff->payload  = MAX(_time, _reservation_schedule[dest]);
+    //the return time is offset by the reservation packet latency to prevent schedule fragmentation
+    ff->payload  = MAX(_time, _reservation_schedule[dest]-(_time-f->time));
     _reservation_schedule[dest] = ff->payload+f->payload;
     ff->res_type = RES_TYPE_GRANT;
     ff->pri = FLIT_PRI_GRANT;
@@ -1126,8 +1135,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   
   flow* fl = new flow;
   fl->flid = _cur_flid++;
-  //  _flow[source].insert(pair<int, flow*>(fl->flid, fl));
-  //_flow_master.insert(pair<int, flow*>(fl->flid, fl));
 
   int sequence_number =0;
   for(int f_index = 0; f_index<_flow_size; f_index++){
@@ -1514,6 +1521,7 @@ void TrafficManager::_Step( )
 	    for(int i = 1; i <= vc_count; ++i) {
 	      int const vc = vc_start + (_last_normal_vc[source] + i) % vc_count;
 	      if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
+		gStatInjectVCDist[source][vc]++;
 		ready_flow_buffer->_vc = vc; 
 		_last_normal_vc[source] = vc- vc_start;
 		break;
@@ -1554,6 +1562,7 @@ void TrafficManager::_Step( )
 	      for(int i = 1; i <= vc_count; ++i) {
 		int const vc = vc_start + (_last_spec_vc[source] + i) % vc_count;
 		if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
+		  gStatInjectVCDist[source][vc]++;
 		  ready_flow_buffer->_vc = vc; 
 		  _last_spec_vc[source] = vc- vc_start;
 		  break;
@@ -1585,6 +1594,7 @@ void TrafficManager::_Step( )
 	  dest_buf->TakeBuffer(0); 
 	  dest_buf->SendingFlit(f);
 	} else {
+	  gStatInjectVCBlock[source]++;
 	  f = NULL;
 	}
       } else {
@@ -1595,6 +1605,7 @@ void TrafficManager::_Step( )
 	    f->vc = vc;
 	    dest_buf->SendingFlit(f);
 	  } else {
+	    gStatInjectVCBlock[source]++;
 	    f = NULL;
 	  }
 	} else { //body 
@@ -1811,6 +1822,14 @@ void TrafficManager::_ClearStats( )
 
   gStatLostPacket.clear();
   gStatLostPacket.resize(_nodes,0);
+
+  gStatInjectVCDist.clear();
+  gStatInjectVCDist.resize(_nodes);
+  for(int i= 0; i<_nodes; i++){
+    gStatInjectVCDist[i].resize(_num_vcs,0);
+  }
+  gStatInjectVCBlock.clear();
+  gStatInjectVCBlock.resize(_nodes,0);
 
   gStatROBRange->Clear();
   
@@ -2487,6 +2506,8 @@ void TrafficManager::DisplayStats( ostream & os ) {
 
 
     for(int i = 0; i<_nodes; i++){
+      *_stats_out<<"inject_vc_dist("<<i+1<<",:)="
+		 <<gStatInjectVCDist[i] <<";\n";
       *_stats_out<<"grant_now ("<<i+1<<",:)="
 		 <<*gStatGrantTimeNow[i] <<";\n";
       *_stats_out<<"grant_future ("<<i+1<<",:)="
@@ -2496,6 +2517,8 @@ void TrafficManager::DisplayStats( ostream & os ) {
       *_stats_out<<"res_future ("<<i+1<<",:)="
 		 <<*gStatReservationTimeFuture[i] <<";\n";
     }
+    *_stats_out<<"inject_vc_block = "
+	       <<gStatInjectVCBlock<<";\n";
     
     *_stats_out<< "rob_range = "
 	       <<*gStatROBRange<<";\n";
