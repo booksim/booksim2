@@ -281,6 +281,7 @@ protected:
 
   bool _SingleSim( );
 
+  void _DisplayTedsShit();
   void _DisplayRemaining( ostream & os = cout ) const;
   
   void _LoadWatchList(const string & filename);

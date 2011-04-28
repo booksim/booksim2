@@ -820,7 +820,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       gStatReservationTimeNow[dest]->AddSample(_time-_reservation_schedule[dest]);
     }
     //the return time is offset by the reservation packet latency to prevent schedule fragmentation
-    ff->payload  = MAX(_time, _reservation_schedule[dest]);
+    ff->payload  = MAX(_time, _reservation_schedule[dest]-(_time-f->time));
     _reservation_schedule[dest] = ff->payload+f->payload;
     ff->res_type = RES_TYPE_GRANT;
     ff->pri = FLIT_PRI_GRANT;
@@ -2372,6 +2372,7 @@ bool TrafficManager::Run( )
   for ( int sim = 0; sim < _total_sims; ++sim ) {
     if ( !_SingleSim( ) ) {
       cout << "Simulation unstable, ending ..." << endl;
+      _DisplayTedsShit();
       return false;
     }
     //for the love of god don't ever say "Time taken" anywhere else
@@ -2473,8 +2474,18 @@ void TrafficManager::DisplayStats( ostream & os ) {
        << " (" << _hop_stats[c]->NumSamples( ) << " samples)" << endl;
 
     os << "Slowest flit = " << _slowest_flit[c] << endl;
+    _DisplayTedsShit();
     
-    if(_stats_out){
+  }
+  
+  if(_sim_mode == batch)
+    os << "Overall batch duration = " << _overall_batch_time->Average( )
+       << " (" << _overall_batch_time->NumSamples( ) << " samples)" << endl;
+  
+}
+
+void TrafficManager::_DisplayTedsShit(){
+  if(_stats_out){
     *_stats_out<< "ack_received = "
 	       <<gStatAckReceived<<";\n";
     *_stats_out<< "ack_eff = "
@@ -2542,52 +2553,46 @@ void TrafficManager::DisplayStats( ostream & os ) {
 	       <<*gStatPureNetworkLatency <<";\n";
     *_stats_out<< "ack_hist = "
 	       <<*gStatAckLatency <<";\n";
-   *_stats_out<< "nack_hist = "
+    *_stats_out<< "nack_hist = "
 	       <<*gStatNackLatency <<";\n";
-   *_stats_out<< "res_hist = "
+    *_stats_out<< "res_hist = "
 	       <<*gStatResLatency <<";\n";
-   *_stats_out<< "grant_hist = "
+    *_stats_out<< "grant_hist = "
 	       <<*gStatGrantLatency <<";\n";
-   *_stats_out<< "spec_hist = "
+    *_stats_out<< "spec_hist = "
 	       <<*gStatSpecLatency <<";\n";
-   *_stats_out<< "norm_hist = "
+    *_stats_out<< "norm_hist = "
 	       <<*gStatNormLatency <<";\n";
 
-   *_stats_out<< "source_queue_hist = "
-	      <<*gStatSourceLatency <<";\n";
-   *_stats_out<< "source_truequeue_hist = "
-	      <<*gStatSourceTrueLatency <<";\n";   
+    *_stats_out<< "source_queue_hist = "
+	       <<*gStatSourceLatency <<";\n";
+    *_stats_out<< "source_truequeue_hist = "
+	       <<*gStatSourceTrueLatency <<";\n";   
 
-   *_stats_out<< "nack_by_sn = "
-	      <<*gStatNackByPacket<<";\n";
+    *_stats_out<< "nack_by_sn = "
+	       <<*gStatNackByPacket<<";\n";
 
-   *_stats_out<< "flow_in_spec =" 
-	      <<gStatFlowStats[FLOW_STAT_SPEC]<<";\n";
-   *_stats_out<< "flow_in_nack =" 
-	      <<gStatFlowStats[FLOW_STAT_NACK]<<";\n";
-   *_stats_out<< "flow_in_wait =" 
-	      <<gStatFlowStats[FLOW_STAT_WAIT]<<";\n";
-   *_stats_out<< "flow_in_norm =" 
-	      <<gStatFlowStats[FLOW_STAT_NORM ]<<";\n";
-   *_stats_out<< "flow_in_norm_ready =" 
-	      <<gStatFlowStats[FLOW_STAT_NORM_READY ]<<";\n";
-   *_stats_out<< "flow_in_spec_ready =" 
-	      <<gStatFlowStats[FLOW_STAT_SPEC_READY]<<";\n";
-   *_stats_out<< "flow_in_not_ready =" 
-	    <<gStatFlowStats[FLOW_STAT_NOT_READY]<<";\n";
-   *_stats_out<< "flow_in_final_not_ready =" 
-	    <<gStatFlowStats[FLOW_STAT_FINAL_NOT_READY]<<";\n";
-   *_stats_out<< "flow_in_lifetime =" 
-	      <<gStatFlowStats[FLOW_STAT_LIFETIME]<<";\n";
-   *_stats_out<< "flow_count =" 
-	      <<gStatFlowStats[FLOW_STAT_LIFETIME+1]<<";\n";
-    }
+    *_stats_out<< "flow_in_spec =" 
+	       <<gStatFlowStats[FLOW_STAT_SPEC]<<";\n";
+    *_stats_out<< "flow_in_nack =" 
+	       <<gStatFlowStats[FLOW_STAT_NACK]<<";\n";
+    *_stats_out<< "flow_in_wait =" 
+	       <<gStatFlowStats[FLOW_STAT_WAIT]<<";\n";
+    *_stats_out<< "flow_in_norm =" 
+	       <<gStatFlowStats[FLOW_STAT_NORM ]<<";\n";
+    *_stats_out<< "flow_in_norm_ready =" 
+	       <<gStatFlowStats[FLOW_STAT_NORM_READY ]<<";\n";
+    *_stats_out<< "flow_in_spec_ready =" 
+	       <<gStatFlowStats[FLOW_STAT_SPEC_READY]<<";\n";
+    *_stats_out<< "flow_in_not_ready =" 
+	       <<gStatFlowStats[FLOW_STAT_NOT_READY]<<";\n";
+    *_stats_out<< "flow_in_final_not_ready =" 
+	       <<gStatFlowStats[FLOW_STAT_FINAL_NOT_READY]<<";\n";
+    *_stats_out<< "flow_in_lifetime =" 
+	       <<gStatFlowStats[FLOW_STAT_LIFETIME]<<";\n";
+    *_stats_out<< "flow_count =" 
+	       <<gStatFlowStats[FLOW_STAT_LIFETIME+1]<<";\n";
   }
-  
-  if(_sim_mode == batch)
-    os << "Overall batch duration = " << _overall_batch_time->Average( )
-       << " (" << _overall_batch_time->NumSamples( ) << " samples)" << endl;
-  
 }
 
 //read the watchlist
