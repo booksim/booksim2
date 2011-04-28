@@ -43,24 +43,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include "vc.hpp"
 
-int VC::total_cycles = 0;
 const char * const VC::VCSTATE[] = {"idle",
 				    "routing",
 				    "vc_alloc",
 				    "active"};
 
-VC::state_info_t VC::state_info[] = {{0},
-				     {0},
-				     {0},
-				     {0}};
-int VC::occupancy = 0;
-
 VC::VC( const Configuration& config, int outputs, 
 	Module *parent, const string& name )
   : Module( parent, name ), 
-    _state(idle), _state_time(0), _out_port(-1), _out_vc(-1), _total_cycles(0),
-    _vc_alloc_cycles(0), _active_cycles(0), _idle_cycles(0), _routing_cycles(0),
-    _pri(0), _watched(false), _expected_pid(-1), _last_id(-1), _last_pid(-1)
+    _state(idle), _out_port(-1), _out_vc(-1), _pri(0), _watched(false), 
+    _expected_pid(-1), _last_id(-1), _last_pid(-1)
 {
   _route_set = new OutputSet( );
 
@@ -142,7 +134,6 @@ void VC::SetState( eVCState s )
 		<< " to " << VC::VCSTATE[s] << "." << endl;
   
   _state = s;
-  _state_time = 0;
 }
 
 const OutputSet *VC::GetRouteSet( ) const
@@ -194,23 +185,6 @@ void VC::Route( tRoutingFunction rf, const Router* router, const Flit* f, int in
   _out_vc = -1;
 }
 
-void VC::AdvanceTime( )
-{
-  if(!Empty()) {
-    _state_time++;
-  }
-  
-  total_cycles++;
-  switch( _state ) {
-  case idle          : _idle_cycles++; break;
-  case active        : _active_cycles++; break;
-  case vc_alloc      : _vc_alloc_cycles++; break;
-  case routing       : _routing_cycles++; break;
-  }
-  state_info[_state].cycles++;
-  occupancy += _buffer.size();
-}
-
 // ==== Debug functions ====
 
 void VC::SetWatch( bool watch )
@@ -239,20 +213,4 @@ void VC::Display( ostream & os ) const
     os << " pri: " << _pri;
     os << endl;
   }
-}
-
-void VC::DisplayStats( bool print_csv, ostream & os )
-{
-  if(print_csv) {
-    for(eVCState state = state_min; state <= state_max; state = eVCState(state+1)) {
-      os << (double)state_info[state].cycles/(double)total_cycles << ",";
-    }
-    os << (double)occupancy/(double)total_cycles << endl;
-  }
-  os << "VC state breakdown:" << endl;
-  for(eVCState state = state_min; state <= state_max; state = eVCState(state+1)) {
-    os << "  " << VCSTATE[state]
-       << ": " << (double)state_info[state].cycles/(double)total_cycles << endl;
-  }
-  os << "  occupancy: " << (double)occupancy/(double)total_cycles << endl;
 }

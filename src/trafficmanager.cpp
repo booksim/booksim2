@@ -405,7 +405,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _include_queuing = config.GetInt( "include_queuing" );
 
   _print_csv_results = config.GetInt( "print_csv_results" );
-  _print_vc_stats = config.GetInt( "print_vc_stats" );
   _deadlock_warn_timeout = config.GetInt( "deadlock_warn_timeout" );
   _drain_measured_only = config.GetInt( "drain_measured_only" );
 
@@ -1644,12 +1643,6 @@ bool TrafficManager::Run( )
   }
   
   DisplayStats();
-  if(_print_vc_stats) {
-    if(_print_csv_results) {
-      cout << "vc_stats:";
-    }
-    VC::DisplayStats(_print_csv_results);
-  }
   return true;
 }
 

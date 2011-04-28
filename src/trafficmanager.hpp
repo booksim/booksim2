@@ -206,7 +206,6 @@ protected:
   set<int> _transactions_to_watch;
 
   bool _print_csv_results;
-  bool _print_vc_stats;
   bool _drain_measured_only;
 
   //flits to watch
