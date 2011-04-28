@@ -56,7 +56,7 @@ private:
   OutputSet *_route_set;
   int _out_port, _out_vc;
 
-  enum ePrioType { local_age_based, queue_length_based, hop_count_based, none };
+  enum ePrioType { local_age_based, queue_length_based, hop_count_based, none, other };
 
   ePrioType _pri_type;
 
