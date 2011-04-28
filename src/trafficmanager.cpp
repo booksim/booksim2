@@ -75,6 +75,7 @@ vector<int> gStatLostPacket;
 
 vector<vector<int> > gStatInjectVCDist;
 vector<int> gStatInjectVCBlock;
+vector<int> gStatInjectVCMiss;
 
 Stats* gStatROBRange;
 
@@ -121,6 +122,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   for(int i = 0; i<_nodes; i++){
     _flow_buffer[i].resize(_max_flow_buffers,NULL);
   }
+  _flow_buffer_dest.resize(_nodes);
+
   _flow_size = config.GetInt("flow_size");
 
 
@@ -179,6 +182,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     gStatInjectVCDist[i].resize(_num_vcs,0);
   }
   gStatInjectVCBlock.resize(_nodes,0);
+  gStatInjectVCMiss.resize(_nodes,0);
 
   gStatROBRange =  new Stats( this, "rob_range" , 1.0, 300 );
   
@@ -816,7 +820,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       gStatReservationTimeNow[dest]->AddSample(_time-_reservation_schedule[dest]);
     }
     //the return time is offset by the reservation packet latency to prevent schedule fragmentation
-    ff->payload  = MAX(_time, _reservation_schedule[dest]-(_time-f->time));
+    ff->payload  = MAX(_time, _reservation_schedule[dest]);
     _reservation_schedule[dest] = ff->payload+f->payload;
     ff->res_type = RES_TYPE_GRANT;
     ff->pri = FLIT_PRI_GRANT;
@@ -1332,6 +1336,8 @@ void TrafficManager::_Inject(){
 	}
       }
       gStatActiveFlowBuffers->AddSample(flow_buffer_taken);
+      
+
       //if no currently active flow is ready to receive and there is flow buffer available
       if (!any_flow_ready && flow_buffer_taken<_max_flow_buffers) {
 	bool generated = false;
@@ -1594,7 +1600,6 @@ void TrafficManager::_Step( )
 	  dest_buf->TakeBuffer(0); 
 	  dest_buf->SendingFlit(f);
 	} else {
-	  gStatInjectVCBlock[source]++;
 	  f = NULL;
 	}
       } else {
@@ -1613,6 +1618,7 @@ void TrafficManager::_Step( )
 	    f->vc = vc;
 	    dest_buf->SendingFlit(f);
 	  } else {
+	    gStatInjectVCBlock[source]++;
 	    f = NULL;
 	  }
 	}

@@ -39,6 +39,7 @@ FlowBuffer::FlowBuffer(int id, int size, bool res, flow* f){
   _watch = false;
 
   _stats.resize(FLOW_STAT_LIFETIME+1,0);
+  _stats[FLOW_STAT_LIFETIME]=GetSimTime()-fl->create_time;
 }
 
 FlowBuffer::~FlowBuffer(){
@@ -55,7 +56,7 @@ void FlowBuffer::update_stats(){
     _stats[FLOW_STAT_SPEC_READY]++;
   } else if(_received == fl->flow_size && _ready==0){
     _stats[FLOW_STAT_FINAL_NOT_READY]++;
-  } else {
+  } else if(_received != fl->flow_size && _ready==0){
     _stats[FLOW_STAT_NOT_READY]++;
   }
 

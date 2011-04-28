@@ -27,7 +27,7 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
+#include <set>
 #include <map>
 #include <cstdlib>
 
@@ -335,7 +335,7 @@ int badperm_yarc(int source, int total_nodes){
 
 static int _hs_max_val;
 static vector<pair<int, int> > _hs_elems;
-
+set<int> hs_lookup;
 int hotspot(int source, int total_nodes){
   int pct = RandomInt(_hs_max_val);
   for(size_t i = 0; i < (_hs_elems.size()-1); ++i) {
@@ -350,6 +350,13 @@ int hotspot(int source, int total_nodes){
   return _hs_elems.back().second;
 }
 
+int background_uniform(int source, int total_nodes){
+  int e = RandomInt(total_nodes-1);
+  while(hs_lookup.count(e)!=0){
+    e = RandomInt(total_nodes-1);
+  }
+  return e;
+}
 //=============================================================
 
 static int _cp_max_val;
@@ -409,6 +416,7 @@ void InitializeTrafficMap( const Configuration & config )
 
   gTrafficFunctionMap["hotspot"]  = &hotspot;
   gTrafficFunctionMap["combined"] = &combined;
+  gTrafficFunctionMap["background_uniform"] = &background_uniform;
 
   vector<int> hotspot_nodes = config.GetIntArray("hotspot_nodes");
   vector<int> hotspot_rates = config.GetIntArray("hotspot_rates");
@@ -418,6 +426,7 @@ void InitializeTrafficMap( const Configuration & config )
     int rate = hotspot_rates[i];
     _hs_elems.push_back(make_pair(rate, hotspot_nodes[i]));
     _hs_max_val += rate;
+    hs_lookup.insert(hotspot_nodes[i]);
   }
   
   map<string, tTrafficFunction>::const_iterator match;

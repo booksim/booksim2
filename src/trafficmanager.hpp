@@ -172,6 +172,7 @@ protected:
   int _flow_buffer_capacity;
   int _max_flow_buffers;
   vector< vector< FlowBuffer*> > _flow_buffer;
+  vector< multimap<int, int> > _flow_buffer_dest;
 
   //  vector< map<int, flow*> > _flow;
   //map<int, flow*> _flow_master;
