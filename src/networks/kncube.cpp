@@ -89,8 +89,10 @@ void KNCube::_BuildNet( const Configuration &config )
 
     router_name << "router";
     
-    for ( int dim_offset = _size / _k; dim_offset >= 1; dim_offset /= _k ) {
-      router_name << "_" << ( node / dim_offset ) % _k;
+    if ( _k > 1 ) {
+      for ( int dim_offset = _size / _k; dim_offset >= 1; dim_offset /= _k ) {
+	router_name << "_" << ( node / dim_offset ) % _k;
+      }
     }
 
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
