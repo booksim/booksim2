@@ -145,6 +145,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   // ============ Injection VC states  ============ 
 
   vector<string> injection_process = config.GetStrArray("injection_process");
+  injection_process.resize(_classes, injection_process.back());
 
   _injection_process.resize(_nodes);
   _buf_states.resize(_nodes);
