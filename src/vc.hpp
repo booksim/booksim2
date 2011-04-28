@@ -52,21 +52,10 @@ private:
   deque<Flit *> _buffer;
   
   eVCState _state;
-  int      _state_time;
   
   OutputSet *_route_set;
   int _out_port, _out_vc;
 
-  int _total_cycles;
-  int _vc_alloc_cycles;
-  int _active_cycles;
-  int _idle_cycles;
-  int _routing_cycles;
-  
-  static int total_cycles;
-  static state_info_t state_info[];
-  static int occupancy;
-  
   enum ePrioType { local_age_based, queue_length_based, hop_count_based, none };
 
   ePrioType _pri_type;
@@ -107,11 +96,6 @@ public:
     return _state;
   }
 
-  inline int GetStateTime( ) const
-  {
-    return _state_time;
-  }
-
 
   void SetState( eVCState s );
 
@@ -150,7 +134,6 @@ public:
   void SetWatch( bool watch = true );
   bool IsWatched( ) const;
   void Display( ostream & os = cout ) const;
-  static void DisplayStats( bool print_csv = false, ostream & os = cout );
 };
 
 #endif 
