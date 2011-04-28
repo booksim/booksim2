@@ -122,8 +122,6 @@ public:
   }
   void Route( tRoutingFunction rf, const Router* router, const Flit* f, int in_channel );
 
-  void AdvanceTime( );
-
   inline int GetOccupancy() const
   {
     return (int)_buffer.size();
