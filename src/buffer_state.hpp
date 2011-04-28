@@ -87,9 +87,12 @@ class BufferState : public Module {
     vector<int> _private_buf_occupancy;
     int _shared_buf_size;
     int _shared_buf_occupancy;
+    vector<int> _reserved_slots;
+    void ProcessFreeSlot(int vc = 0);
   public:
     SharedBufferPolicy(Configuration const & config, BufferState * parent, 
 		       const string & name);
+    virtual void FreeVC(int vc = 0);
     virtual void AllocSlotFor(int vc = 0);
     virtual void FreeSlotFor(int vc = 0);
     virtual bool IsFullFor(int vc = 0) const;
