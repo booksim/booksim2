@@ -66,7 +66,7 @@ VC::VC( const Configuration& config, int outputs,
   } else if ( priority == "none" ) {
     _pri_type = none;
   } else {
-    Error("Unknown priority type: " + priority);
+    _pri_type = other;
   }
 
   _priority_donation = config.GetInt("vc_priority_donation");
