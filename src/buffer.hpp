@@ -80,12 +80,6 @@ public:
     return _vc[vc]->GetState( );
   }
 
-  inline int GetStateTime( int vc ) const
-  {
-    return _vc[vc]->GetStateTime( );
-  }
-
-
   inline void SetState( int vc, VC::eVCState s )
   {
     _vc[vc]->SetState(s);
@@ -119,13 +113,6 @@ public:
   inline void Route( int vc, tRoutingFunction rf, const Router* router, const Flit* f, int in_channel )
   {
     _vc[vc]->Route(rf, router, f, in_channel);
-  }
-
-  inline void AdvanceTime( )
-  {
-    for(vector<VC*>::iterator i = _vc.begin(); i != _vc.end(); ++i) {
-      (*i)->AdvanceTime();
-    }
   }
 
   // ==== Debug functions ====
