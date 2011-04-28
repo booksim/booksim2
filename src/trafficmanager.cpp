@@ -162,7 +162,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
       ostringstream tmp_name;
       tmp_name << "terminal_buf_state_" << source << "_" << subnet;
       _buf_states[source][subnet] = new BufferState( config, this, tmp_name.str( ) );
-      _last_vc[source][subnet].resize(_classes, -1);
+      _last_vc[source][subnet] = gEndVCs;
     }
   }
 
