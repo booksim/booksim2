@@ -142,12 +142,6 @@ protected:
   int _last_id;
   int _last_pid;
 
-  // ============voq mode =============================
-
-  vector<vector<list<Flit*> > > _voq;
-  vector<list<int> > _active_list;
-  vector<vector<bool> > _active_vc;
-  
   // ============ Statistics ============
 
   vector<Stats *> _plat_stats;     
