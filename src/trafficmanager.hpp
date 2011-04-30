@@ -117,7 +117,7 @@ protected:
   // ============ batch mode ==========================
 
   vector<vector<int> > _sent_packets;
-  int _batch_size;
+  vector<int> _batch_size;
   int _batch_count;
   vector<vector<int> > _requests_outstanding;
   vector<int> _max_outstanding;

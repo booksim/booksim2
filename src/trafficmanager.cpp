@@ -192,7 +192,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _max_outstanding.resize(_classes, _max_outstanding.back());
 
-  _batch_size = config.GetInt( "batch_size" );
+  _batch_size = config.GetIntArray("batch_size");
+  if(_batch_size.empty()) {
+    _batch_size.push_back(config.GetInt("batch_size"));
+  }
+  _batch_size.resize(_classes, _batch_size.back());
+
   _batch_count = config.GetInt( "batch_count" );
 
   // ============ Statistics ============ 
@@ -665,7 +670,7 @@ bool TrafficManager::_IssuePacket( int source, int cl )
   }
   if((_sim_mode == batch) &&
      !_timed_mode && 
-     (_sent_packets[source][cl] >= _batch_size)) {
+     (_sent_packets[source][cl] >= _batch_size[cl])) {
     return false;
   }
   if(_injection_process[source][cl]->test()) {
@@ -1229,17 +1234,22 @@ bool TrafficManager::_SingleSim( )
       _last_pid = -1;
       _sim_state = running;
       int start_time = _time;
-      int min_sent_packets = 0;
-      while(min_sent_packets < _batch_size){
+      bool batch_complete;
+      do {
 	_Step();
-	for(int source = 0; source < _nodes; ++source)
-	  for(int c = 0; c < _classes; ++c)
-	    if(_sent_packets[source][c] < min_sent_packets)
-	      min_sent_packets = _sent_packets[source][c];
+	batch_complete = true;
+	for(int source = 0; (source < _nodes) && batch_complete; ++source) {
+	  for(int c = 0; c < _classes; ++c) {
+	    if(_sent_packets[source][c] < _batch_size[c]) {
+	      batch_complete = false;
+	      break;
+	    }
+	  }
+	}
 	if(_sent_packets_out) {
 	  *_sent_packets_out << "sent_packets(" << _time << ",:) = " << _sent_packets << ";" << endl;
 	}
-      }
+      } while(!batch_complete);
       cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) sent. Time used is " << _time - start_time << " cycles." << endl;
       cout << "Draining the Network...................\n";
       _sim_state = draining;
