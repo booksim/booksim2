@@ -35,6 +35,7 @@ public:
   bool nack(int sn);
   void grant(int time);
 
+  bool eligible();
   bool receive_ready();
   bool send_norm_ready();
   bool send_spec_ready();
@@ -45,6 +46,7 @@ public:
   Flit* receive();
   Flit* front();
 
+  void update_transition();
   void update_stats();
 
   map<int, int> _flit_status;

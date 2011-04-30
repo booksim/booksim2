@@ -112,17 +112,19 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _flow_buffer_capacity = config.GetInt("flow_buffer_capacity");
   _max_flow_buffers = config.GetInt("flow_buffers");
   _last_receive_flow_buffer.resize(_nodes,0);
-  _last_send_flow_buffer.resize(_nodes,0);
-  _last_normal_flow_buffer.resize(_nodes,0);
-   _last_spec_flow_buffer.resize(_nodes,0);
+  _last_send_flow_buffer.resize(_nodes,-1);
   _last_normal_vc.resize(_nodes,0);
   _last_spec_vc.resize(_nodes,0);
   _flow_buffer.resize(_nodes);
 
+  _flow_buffer_arb.resize(_nodes);
   for(int i = 0; i<_nodes; i++){
     _flow_buffer[i].resize(_max_flow_buffers,NULL);
+    _flow_buffer_arb[i] = new RoundRobinArbiter(this, "inject_arb",_max_flow_buffers);
+    _flow_buffer_arb[i]->Clear();
   }
   _flow_buffer_dest.resize(_nodes);
+ 
 
   _flow_size = config.GetInt("flow_size");
 
@@ -1373,10 +1375,11 @@ void TrafficManager::_Inject(){
 
 void TrafficManager::_Step( )
 {
-
+  //update stats
   for ( int input = 0; input < _nodes; ++input ) {
     for(int i = 0; i<_max_flow_buffers; i++){
       if(_flow_buffer[input][i] != NULL){
+	_flow_buffer[input][i]->update_transition();
 	_flow_buffer[input][i]->update_stats();
       }
     }
@@ -1390,7 +1393,8 @@ void TrafficManager::_Step( )
     _deadlock_timer = 0;
     cout << "WARNING: Possible network deadlock.\n";
   }
-
+  
+  //process credit
   for ( int source = 0; source < _nodes; ++source ) {
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {
       Credit * const c = _net[subnet]->ReadCredit( source );
@@ -1401,8 +1405,8 @@ void TrafficManager::_Step( )
     }
   }
 
+  //Eject
   vector<map<int, Flit *> > flits(_subnets);
-  
   for ( int subnet = 0; subnet < _subnets; ++subnet ) {
     for ( int dest = 0; dest < _nodes; ++dest ) {
       Flit * const f = _net[subnet]->ReadFlit( dest );
@@ -1426,14 +1430,13 @@ void TrafficManager::_Step( )
     _net[subnet]->ReadInputs( );
   }
 
+
   _Inject();
   vector<int> injected_flits(_subnets*_nodes);
 
 
+  //from node to flow buffer, 1 flit per cycle
   for(int source = 0; source < _nodes; ++source) {
-    
-
-    //from node to flow buffer, 1 flit per cycle
     for(map<int, pair<int, vector<int> > >::reverse_iterator iter = _class_prio_map.rbegin();
 	iter != _class_prio_map.rend();
 	++iter) {
@@ -1488,104 +1491,110 @@ void TrafficManager::_Step( )
       }
     }
 
-    int flb_index = _last_send_flow_buffer[source];
-    //first check the last flow buffer served
-    if(_flow_buffer[source][flb_index]!=NULL && 
-       _flow_buffer[source][flb_index]->_vc!=-1 && //this line trip for startup flows
-       (_flow_buffer[source][flb_index]->send_norm_ready() ||
-	_flow_buffer[source][flb_index]->send_spec_ready())){
 
-      ready_flow_buffer = _flow_buffer[source][flb_index];
-  
-    } else {
-
-      //then check the normal buffer
-      //then check the speculative buffers
-    
-      //picking a flow buffer and VC assignment
-      for(int i = 0; i<_max_flow_buffers; i++){
-	flb_index = (_last_normal_flow_buffer[source]+i)%_max_flow_buffers;
-	if(_flow_buffer[source][flb_index]!=NULL &&
-	   _flow_buffer[source][flb_index]->send_norm_ready()){
-
-	  assert(! _flow_buffer[source][flb_index]->send_spec_ready());
-	  ready_flow_buffer = _flow_buffer[source][flb_index];
-	  if(ready_flow_buffer->_vc==-1){
-	    Flit* f = ready_flow_buffer->front();
-	    assert(f);
-	    assert(f->head);
-	    assert(f->sn==0);
-	    OutputSet route_set;
-	    _rf(NULL, f, 0, &route_set, true);
-	    set<OutputSet::sSetElement> const & os = route_set.GetSet();
-	    assert(os.size() == 1);
-	    OutputSet::sSetElement const & se = *os.begin();
-	    assert(se.output_port == 0);
-	    int const & vc_start = se.vc_start;
-	    int const & vc_end = se.vc_end;
-	    int const vc_count = vc_end - vc_start + 1;
-	    for(int i = 1; i <= vc_count; ++i) {
-	      int const vc = vc_start + (_last_normal_vc[source] + i) % vc_count;
-	      if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
-		gStatInjectVCDist[source][vc]++;
-		ready_flow_buffer->_vc = vc; 
-		_last_normal_vc[source] = vc- vc_start;
-		break;
-	      }		 
-	    }
-	  }
-	  if(ready_flow_buffer->_vc!=-1){
-	    _last_normal_flow_buffer[source]= flb_index;
-	    break;
-	  }  else {
-	    ready_flow_buffer= NULL;
-	  }
-	}
-      }
-
-      //reservation case has a second chance on speculative packets
-      if(gReservation && ready_flow_buffer == NULL){
-	for(int i = 0; i<_max_flow_buffers; i++){
-	  flb_index = (_last_spec_flow_buffer[source]+i)%_max_flow_buffers;
-	  if(_flow_buffer[source][flb_index]!=NULL &&
-	     _flow_buffer[source][flb_index]->send_spec_ready()){
-	    assert(! _flow_buffer[source][flb_index]->send_norm_ready());
-	    ready_flow_buffer = _flow_buffer[source][flb_index];
-	    if(ready_flow_buffer->_vc==-1){
-	      Flit* f = ready_flow_buffer->front();
-	      assert(f);
-	      assert(f->head);
-	      assert(f->sn==0);
-	      OutputSet route_set;
-	      _rf(NULL, f, 0, &route_set, true);
-	      set<OutputSet::sSetElement> const & os = route_set.GetSet();
-	      assert(os.size() == 1);
-	      OutputSet::sSetElement const & se = *os.begin();
-	      assert(se.output_port == 0);
-	      int const & vc_start = se.vc_start;
-	      int const & vc_end = se.vc_end;
-	      int const vc_count = vc_end - vc_start + 1;
-	      for(int i = 1; i <= vc_count; ++i) {
-		int const vc = vc_start + (_last_spec_vc[source] + i) % vc_count;
-		if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
-		  gStatInjectVCDist[source][vc]++;
-		  ready_flow_buffer->_vc = vc; 
-		  _last_spec_vc[source] = vc- vc_start;
-		  break;
-		}		 
-	      }
-	    }
-	    //is this buffer assigned to a VC
-	    if(ready_flow_buffer->_vc!=-1){
-	      _last_spec_flow_buffer[source]= flb_index;
+    //asssgin vc to flow buffers that are ready but no vc assignemnt
+    for(int fb = 0; fb<_max_flow_buffers; fb++){
+      if(_flow_buffer[source][fb]!=NULL &&   
+	 _flow_buffer[source][fb]->_vc==-1){
+	//For flowbuffer in normal mode
+	//when a flow buffer transition from spec to normal its vc is reset
+	if(_flow_buffer[source][fb]->send_norm_ready()){
+	  Flit* f = _flow_buffer[source][fb]->front();
+	  assert(f);
+	  assert(f->head);
+	  OutputSet route_set;
+	  _rf(NULL, f, 0, &route_set, true);
+	  set<OutputSet::sSetElement> const & os = route_set.GetSet();
+	  assert(os.size() == 1);
+	  OutputSet::sSetElement const & se = *os.begin();
+	  assert(se.output_port == 0);
+	  int const & vc_start = se.vc_start;
+	  int const & vc_end = se.vc_end;
+	  int const vc_count = vc_end - vc_start + 1;
+	  for(int i = 1; i <= vc_count; ++i) {
+	    int const vc = vc_start + (_last_normal_vc[source] + i) % vc_count;
+	    if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
+	      gStatInjectVCDist[source][vc]++;
+	      _flow_buffer[source][fb]->_vc = vc; 
+	      _last_normal_vc[source] = vc- vc_start;
 	      break;
-	    } else {
-	      ready_flow_buffer= NULL;
-	    }
+	    }		 
+	  }
+
+	  //For flow buffer in spec mode
+	} else if(_flow_buffer[source][fb]->send_spec_ready()){
+	  Flit* f = _flow_buffer[source][fb]->front();
+	  assert(f);
+	  assert(f->head);
+	  assert(f->sn==0);
+	  OutputSet route_set;
+	  _rf(NULL, f, 0, &route_set, true);
+	  set<OutputSet::sSetElement> const & os = route_set.GetSet();
+	  assert(os.size() == 1);
+	  OutputSet::sSetElement const & se = *os.begin();
+	  assert(se.output_port == 0);
+	  int const & vc_start = se.vc_start;
+	  int const & vc_end = se.vc_end;
+	  int const vc_count = vc_end - vc_start + 1;
+	  for(int i = 1; i <= vc_count; ++i) {
+	    int const vc = vc_start + (_last_spec_vc[source] + i) % vc_count;
+	    if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
+	      gStatInjectVCDist[source][vc]++;
+	      _flow_buffer[source][fb]->_vc = vc; 
+	      _last_spec_vc[source] = vc- vc_start;
+	      break;
+	    }		 
 	  }
 	}
       }
     }
+
+    //TODO reservatin packet use vc0, and can be sent even if flow buffer vc =-1
+    //first check the last flow buffer served
+    int flb_index = _last_send_flow_buffer[source];
+    if(flb_index!=-1 && //last buffer exists
+       _flow_buffer[source][flb_index]!=NULL  && //last buffer wasn't already freed
+       _flow_buffer[source][flb_index]->eligible()&& //has a vc, ready to send
+       dest_buf->HasCreditFor(_flow_buffer[source][flb_index]->_vc) ){ //has credit
+      
+      ready_flow_buffer =  _flow_buffer[source][flb_index];
+    } else {
+      bool at_least_one_request = false;
+      int active = 0;
+      _flow_buffer_arb[source]->Clear();
+      flb_index=-1;
+      _last_send_flow_buffer[source]=-1;
+      for(int fb = 0; fb<_max_flow_buffers; fb++){
+	if(_flow_buffer[source][fb]!=NULL && 
+	   _flow_buffer[source][fb]->eligible()){
+	  active++;
+	  if((dest_buf->IsAvailableFor(_flow_buffer[source][fb]->_vc) || //head flit an vc avaialble
+	      !_flow_buffer[source][fb]->_tail_sent)&&                                                                     //or intra packet and only need credit
+	     dest_buf->HasCreditFor(_flow_buffer[source][fb]->_vc)){
+	    if( _flow_buffer[source][fb]->send_norm_ready()){
+	      _flow_buffer_arb[source]->AddRequest(fb, fb, 1);
+	    } else {
+	      _flow_buffer_arb[source]->AddRequest(fb, fb, 0);
+	    }
+	    at_least_one_request = true;
+	  }
+	}
+      }
+	 
+      if(at_least_one_request){
+	int fodder;
+	_flow_buffer_arb[source]->Arbitrate(&flb_index, &fodder);
+      } 
+      if(!at_least_one_request && active>0){
+	gStatInjectVCBlock[source]++;
+      }
+
+      //found an eligible flow buffer
+      if(flb_index!=-1){
+	ready_flow_buffer =  _flow_buffer[source][flb_index]; 
+      }
+    }
+   
 
 
     if(ready_flow_buffer){
@@ -1604,25 +1613,13 @@ void TrafficManager::_Step( )
 	}
       } else {
 	if(f->head){
-	  if(dest_buf->IsAvailableFor(vc) &&
-	     dest_buf->HasCreditFor(vc)){
-	    dest_buf->TakeBuffer(vc); 
-	    f->vc = vc;
-	    dest_buf->SendingFlit(f);
-	  } else {
-	    gStatInjectVCBlock[source]++;
-	    f = NULL;
-	  }
+	  dest_buf->TakeBuffer(vc); 
+	  f->vc = vc;
+	  dest_buf->SendingFlit(f);
 	} else { //body 
-	  if( dest_buf->HasCreditFor(vc)){
-	    f->vc = vc;
-	    dest_buf->SendingFlit(f);
-	  } else {
-	    gStatInjectVCBlock[source]++;
-	    f = NULL;
-	  }
+	  f->vc = vc;
+	  dest_buf->SendingFlit(f);
 	}
-      
       }    
       //VC bookkeeping completed success
       if(f){
@@ -1655,6 +1652,7 @@ void TrafficManager::_Step( )
 	  gStatFlowSenderLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
 	  delete _flow_buffer[source][f->flbid];
 	  _flow_buffer[source][f->flbid]=NULL;
+	  _last_send_flow_buffer[source] =-1;
 	}
       }
     }

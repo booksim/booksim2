@@ -81,7 +81,29 @@ void FlowBuffer::update_stats(){
 
 }
 
-
+void FlowBuffer::update_transition(){
+  switch(_status){
+  case FLOW_STATUS_NACK_TRANSITION:
+    if(_tail_sent){
+      _status = FLOW_STATUS_NACK;
+    }
+    break;
+  case FLOW_STATUS_GRANT_TRANSITION:
+    if(_tail_sent){
+      _vc=-1;
+      _status = FLOW_STATUS_WAIT;
+    } else {
+      break;
+    }
+  case FLOW_STATUS_WAIT:
+    if(GetSimTime()>=fl->rtime){
+      _status = FLOW_STATUS_NORM;
+    }
+    break;
+  default: 
+    break;
+  }
+}
 
 //when ack return
 //1. packet could have already been sent normaly
@@ -156,6 +178,7 @@ void FlowBuffer::grant(int time){
   assert(fl->rtime == -1);
   fl->rtime = time;
   if(_tail_sent){
+    _vc=-1;
     _status = FLOW_STATUS_WAIT;
   } else {
     _status = FLOW_STATUS_GRANT_TRANSITION;
@@ -164,30 +187,8 @@ void FlowBuffer::grant(int time){
 
 Flit* FlowBuffer::front(){
   Flit* f = NULL;
-  //handle the transition case first
-  switch(_status){
-  case FLOW_STATUS_NACK_TRANSITION:
-    if(_tail_sent){
-      _status = FLOW_STATUS_NACK;
-    }
-    break;
-  case FLOW_STATUS_GRANT_TRANSITION:
-    if(_tail_sent){
-      _status = FLOW_STATUS_WAIT;
-    }
-    break;
-  default: 
-    break;
-  }
 
   switch(_status){
-  case FLOW_STATUS_WAIT:
-    if(GetSimTime()>=fl->rtime){
-      _status = FLOW_STATUS_NORM;
-      //then fall through
-    } else {
-      break;
-    }
   case FLOW_STATUS_NORM:
     //not in the middle of a packet
     //search the buffer for the first available 
@@ -197,6 +198,7 @@ Flit* FlowBuffer::front(){
 	  i++){
 	if(i->second!=FLIT_SPEC){
 	  f= _flit_buffer[i->first];
+	  f->res_type = RES_TYPE_NORM;
 	  assert(f->head);
 	  break;
 	}
@@ -205,6 +207,7 @@ Flit* FlowBuffer::front(){
       //in the middle of a packet, pickup where last left off
       assert(_flit_buffer.count(_last_sn+1)!=0);
       f = _flit_buffer[_last_sn+1];
+      f->res_type = RES_TYPE_NORM;
     }
     break;
     //transitions are equivalent to spec at this stage
@@ -216,6 +219,7 @@ Flit* FlowBuffer::front(){
     } else {
       if(_flit_buffer.count(_last_sn+1)!=0){
 	f = _flit_buffer[_last_sn+1];
+	f->res_type = RES_TYPE_SPEC;
       }
     }
     break;
@@ -228,31 +232,9 @@ Flit* FlowBuffer::front(){
 
 Flit* FlowBuffer::send(){
   Flit* f = NULL;
-  //handle the transition case first
-  switch(_status){
-  case FLOW_STATUS_NACK_TRANSITION:
-    if(_tail_sent){
-      _status = FLOW_STATUS_NACK;
-    }
-    break;
-  case FLOW_STATUS_GRANT_TRANSITION:
-    if(_tail_sent){
-      _status = FLOW_STATUS_WAIT;
-    }
-    break;
-  default: 
-    break;
-  }
+
 
   switch(_status){
-  case FLOW_STATUS_WAIT:
-    if(GetSimTime()>=fl->rtime){
-      _status = FLOW_STATUS_NORM;
-      //then fall through
-    } else {
-      break;
-    }
-
   case FLOW_STATUS_NORM:
     //not in the middle of a packet
     //search the buffer for the first available 
@@ -346,6 +328,13 @@ Flit*  FlowBuffer::receive(){
   return f;
 }
 
+//Is the flow buffer eligbible for injection arbitration
+bool FlowBuffer::eligible(){
+  return _vc!=-1 &&
+    (send_norm_ready() ||
+     send_spec_ready());
+}
+
 //can receive as long as
 //0. tail for the current packet has not being received
 //1. there is buffer space and
@@ -356,18 +345,6 @@ bool FlowBuffer::receive_ready(){
 
 bool FlowBuffer::send_norm_ready(){
   switch(_status){
-  case FLOW_STATUS_GRANT_TRANSITION:
-    if(_tail_sent){
-      _status = FLOW_STATUS_WAIT;
-    } else {
-      break;
-    }
-  case FLOW_STATUS_WAIT:
-    if(GetSimTime()>=fl->rtime){
-      _status = FLOW_STATUS_NORM;
-    } else {
-      break;
-    }
   case FLOW_STATUS_NORM:
     if(!_tail_sent){
       return true;
@@ -384,19 +361,7 @@ bool FlowBuffer::send_norm_ready(){
 bool FlowBuffer::send_spec_ready(){
   switch(_status){
   case FLOW_STATUS_GRANT_TRANSITION:
-    if(_tail_sent){
-      _status = FLOW_STATUS_WAIT;
-      break;
-    } else{
-      return true;
-    }
   case FLOW_STATUS_NACK_TRANSITION:
-    if(_tail_sent){
-      _status = FLOW_STATUS_NACK;
-      break;
-    } else{
-      return true;
-    }
   case FLOW_STATUS_SPEC:
     if(!_spec_sent){
       return true;

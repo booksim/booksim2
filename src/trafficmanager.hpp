@@ -50,6 +50,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "reservation.hpp"
 #include "flowbuffer.hpp"
 #include "flowrob.hpp"
+#include "roundrobin_arb.hpp"
+
 
 //register the requests to a node
 class PacketReplyInfo;
@@ -111,8 +113,6 @@ protected:
 
   vector<int> _last_receive_flow_buffer;
   vector<int> _last_send_flow_buffer;
-  vector<int> _last_normal_flow_buffer;
-  vector<int> _last_spec_flow_buffer;
   vector<int> _last_normal_vc;
   vector<int> _last_spec_vc;
 
@@ -173,6 +173,7 @@ protected:
   int _max_flow_buffers;
   vector< vector< FlowBuffer*> > _flow_buffer;
   vector< multimap<int, int> > _flow_buffer_dest;
+  vector< RoundRobinArbiter*> _flow_buffer_arb;
 
   //  vector< map<int, flow*> > _flow;
   //map<int, flow*> _flow_master;
