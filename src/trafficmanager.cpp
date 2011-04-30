@@ -1358,18 +1358,18 @@ bool TrafficManager::_SingleSim( )
       _last_pid = -1;
       _sim_state = running;
       int start_time = _time;
-      int min_sent_packets = 0;
-      while(min_sent_packets < _batch_size){
+      int min_sent_packets;
+      do {
 	_Step();
-	min_sent_packets = _sent_packets[0];
-	for(int i = 1; i < _nodes; ++i) {
+	min_sent_packets = numeric_limits<int>::max();
+	for(int i = 0; i < _nodes; ++i) {
 	  if(_sent_packets[i] < min_sent_packets)
 	    min_sent_packets = _sent_packets[i];
 	}
 	if(_sent_packets_out) {
 	  *_sent_packets_out << "sent_packets(" << _time << ",:) = " << _sent_packets << ";" << endl;
 	}
-      }
+      } while(min_sent_packets < _batch_size);
       cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) sent. Time used is " << _time - start_time << " cycles." << endl;
       cout << "Draining the Network...................\n";
       _sim_state = draining;
