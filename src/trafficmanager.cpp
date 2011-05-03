@@ -1250,7 +1250,7 @@ bool TrafficManager::_SingleSim( )
 	  *_sent_packets_out << "sent_packets(" << _time << ",:) = " << _sent_packets << ";" << endl;
 	}
       } while(!batch_complete);
-      cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) sent. Time used is " << _time - start_time << " cycles." << endl;
+      cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " packets) sent. Time used is " << _time - start_time << " cycles." << endl;
       cout << "Draining the Network...................\n";
       _sim_state = draining;
       _drain_time = _time;
@@ -1258,11 +1258,7 @@ bool TrafficManager::_SingleSim( )
 
       bool packets_left = false;
       for(int c = 0; c < _classes; ++c) {
-	if(_drain_measured_only) {
-	  packets_left |= !_measured_in_flight_flits[c].empty();
-	} else {
-	  packets_left |= !_total_in_flight_flits[c].empty();
-	}
+	packets_left |= !_total_in_flight_flits[c].empty();
       }
 
       while( packets_left ) { 
@@ -1277,36 +1273,34 @@ bool TrafficManager::_SingleSim( )
 
 	packets_left = false;
 	for(int c = 0; c < _classes; ++c) {
-	  if(_drain_measured_only) {
-	    packets_left |= !_measured_in_flight_flits[c].empty();
-	  } else {
-	    packets_left |= !_total_in_flight_flits[c].empty();
-	  }
+	  packets_left |= !_total_in_flight_flits[c].empty();
 	}
       }
-      while(Credit::OutStanding()!=0){
-	++empty_steps;
-	_Step();
-      }
       cout << endl;
-      cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " flits) received. Time used is " << _time - _drain_time << " cycles. Last packet was " << _last_pid << ", last flit was " << _last_id << "." <<endl;
+      cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " packets) received. Time used is " << _time - _drain_time << " cycles. Last packet was " << _last_pid << ", last flit was " << _last_id << "." <<endl;
       _batch_time->AddSample(_time - start_time);
       cout << _sim_state << endl;
       if(_stats_out)
 	*_stats_out << "%=================================" << endl;
+
+      cout << "Batch duration = " << _time - start_time << endl;
+
+      if(_stats_out) {
+	*_stats_out << "batch_time(" << total_phases + 1 << ") = " << _time << ";" << endl;
+      }
+
       double cur_latency = _plat_stats[0]->Average( );
       double min, avg;
       int dmin = _ComputeStats( _accepted_flits[0], &avg, &min );
-      
-      cout << "Batch duration = " << _time - start_time << endl;
+	
       cout << "Minimum latency = " << _plat_stats[0]->Min( ) << endl;
       cout << "Average latency = " << cur_latency << endl;
       cout << "Maximum latency = " << _plat_stats[0]->Max( ) << endl;
       cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
       cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
+
       if(_stats_out) {
-	*_stats_out << "batch_time(" << total_phases + 1 << ") = " << _time << ";" << endl
-		    << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
+	*_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
 		    << "lat_hist(" << total_phases + 1 << ",:) = "
 		    << *_plat_stats[0] << ";" << endl
 		    << "frag_hist(" << total_phases + 1 << ",:) = "
@@ -1397,6 +1391,7 @@ bool TrafficManager::_SingleSim( )
 	cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
 	cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 	cout << "Total in-flight flits = " << _total_in_flight_flits[c].size() << " (" << _measured_in_flight_flits[c].size() << " measured)" << endl;
+
 	//c+1 due to matlab array starting at 1
 	if(_stats_out) {
 	  *_stats_out << "lat(" << c+1 << ") = " << cur_latency << ";" << endl
@@ -1601,14 +1596,14 @@ bool TrafficManager::_SingleSim( )
 	}
       }
     }
-    //wait until all the credits are drained as well
-    while(Credit::OutStanding()!=0){
-      ++empty_steps;
-      _Step();
-    }
     _empty_network = false;
   }
-
+  
+  //wait until all the credits are drained as well
+  while(Credit::OutStanding()!=0){
+    _Step();
+  }
+  
   return ( converged > 0 );
 }
 
