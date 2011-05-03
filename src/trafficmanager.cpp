@@ -1630,7 +1630,7 @@ void TrafficManager::_Step( )
 	if(f->res_type==RES_TYPE_RES){
 	  gStatSourceTrueLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
 	}
-	if(f->sn==0 && f->res_type!= RES_TYPE_RES){
+	if(f->sn==0 && f->res_type== RES_TYPE_SPEC){
 	  gStatSourceLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
 	}
 	if(f->head && f->res_type== RES_TYPE_NORM){
