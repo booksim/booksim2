@@ -526,6 +526,9 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
 	vcBegin = 0;
 	vcEnd = 0;
       }
+    } else if(f->res_type == RES_TYPE_GRANT){
+      vcBegin = 1;
+      vcEnd = 1;
     } else if(f->res_type == RES_TYPE_NORM){ //normal packets
       vcBegin = (RES_RESERVED_VCS+gResVCs);
       vcEnd = (gNumVCs-1);
@@ -533,8 +536,8 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
       vcBegin = RES_RESERVED_VCS;
       vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
     } else { //ack, nack, grant
-      vcBegin = 1;
-      vcEnd = 1;
+      vcBegin = RES_RESERVED_VCS-1;
+      vcEnd = RES_RESERVED_VCS-1;
     }
 
   }

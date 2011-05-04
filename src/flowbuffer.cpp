@@ -38,6 +38,8 @@ FlowBuffer::FlowBuffer(int id, int size, bool res, flow* f){
 
   _watch = false;
 
+  _no_retransmit_loss = 0;
+  _spec_outstanding = 0;
   _stats.resize(FLOW_STAT_LIFETIME+1,0);
   _stats[FLOW_STAT_LIFETIME]=GetSimTime()-fl->create_time;
 }
@@ -55,7 +57,7 @@ void FlowBuffer::update_stats(){
   }else if(send_spec_ready()){
     _stats[FLOW_STAT_SPEC_READY]++;
   } else if(_received == fl->flow_size && _ready==0){
-    _stats[FLOW_STAT_FINAL_NOT_READY]++;
+    _no_retransmit_loss++;
   } else if(_received != fl->flow_size && _ready==0){
     _stats[FLOW_STAT_NOT_READY]++;
   }
@@ -123,6 +125,7 @@ bool FlowBuffer::ack(int sn){
     effective = true;
     bool tail = _flit_buffer[i]->tail;
     _guarantee_sent++;
+    _spec_outstanding--;
     _flit_buffer[i]->Free();
     _flit_buffer.erase(i);
     _flit_status.erase(i);
@@ -153,10 +156,14 @@ bool FlowBuffer::nack(int sn){
       bool tail = _flit_buffer[i]->tail;
       _flit_status[i] = FLIT_NACKED;
       _ready++;
+      _spec_outstanding--;
       if(tail)
 	break;
     }
     
+    _stats[FLOW_STAT_FINAL_NOT_READY] += _no_retransmit_loss;
+    _no_retransmit_loss=0;
+
     //change buffer status
     if(_status == FLOW_STATUS_SPEC){
       if(_tail_sent){
@@ -285,6 +292,7 @@ Flit* FlowBuffer::send(){
 	f->res_type = RES_TYPE_SPEC;
 	f->pri = FLIT_PRI_SPEC;
 	_ready--;
+	_spec_outstanding++;
 	_last_sn = f->sn;
 	_tail_sent = f->tail;
       }

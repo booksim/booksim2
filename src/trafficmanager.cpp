@@ -82,6 +82,7 @@ Stats* gStatROBRange;
 Stats* gStatFlowSenderLatency;
 Stats* gStatFlowLatency;
 Stats* gStatActiveFlowBuffers;
+Stats* gStatReadyFlowBuffers;
 Stats* gStatResponseBuffer;
 
 Stats* gStatPureNetworkLatency;
@@ -96,7 +97,7 @@ Stats* gStatSourceLatency;
 Stats* gStatNackByPacket;
 
 
-vector<int> gStatFlowStats;
+vector<long> gStatFlowStats;
 
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
   : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
@@ -191,6 +192,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   gStatFlowSenderLatency =  new Stats( this, "flow_sender_latency" , 1.0, 5000 );
   gStatFlowLatency=  new Stats( this, "flow_latency" , 1.0, 5000 );
   gStatActiveFlowBuffers=  new Stats( this, "sender_active_flows" , 1.0, 10 );
+  gStatReadyFlowBuffers=  new Stats( this, "sender_ready_flows" , 1.0, 10 );
   gStatResponseBuffer=  new Stats( this, "response_range" , 1.0, 10 );
 
   gStatPureNetworkLatency =  new Stats( this, "net_hist" , 1.0, 5000 );
@@ -730,7 +732,7 @@ Flit* TrafficManager::DropPacket(int src, Flit* f){
   Flit* ff = IssueSpecial(f->src, f);
   ff->res_type = RES_TYPE_NACK;
   ff->pri = FLIT_PRI_NACK;
-  ff->vc = 1;
+  ff->vc = RES_RESERVED_VCS-1;
   if(f->watch){
     ff->watch=true;
   }
@@ -822,8 +824,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       gStatReservationTimeNow[dest]->AddSample(_time-_reservation_schedule[dest]);
     }
     //the return time is offset by the reservation packet latency to prevent schedule fragmentation
-    ff->payload  = MAX(_time, _reservation_schedule[dest]-(_time-f->time));
-    _reservation_schedule[dest] = ff->payload+f->payload;
+    ff->payload  = MAX(_time, _reservation_schedule[dest]-3*(_time-f->time));
+    _reservation_schedule[dest] =_reservation_schedule[dest]+f->payload;//ff->payload+f->payload ;//
     ff->res_type = RES_TYPE_GRANT;
     ff->pri = FLIT_PRI_GRANT;
     ff->vc = 1;
@@ -845,7 +847,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	ff = IssueSpecial(dest,f);
 	ff->res_type = RES_TYPE_NACK;
 	ff->pri = FLIT_PRI_NACK;
-	ff->vc =1;
+	ff->vc = RES_RESERVED_VCS-1;
 	_response_packets[dest].push_back(ff);
       } 
       f->Free();
@@ -866,7 +868,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	ff->sn = f->head_sn;
 	ff->res_type = RES_TYPE_ACK;
 	ff->pri  = FLIT_PRI_ACK;
-	ff->vc = 1;
+	ff->vc =  RES_RESERVED_VCS-1;
 	_response_packets[dest].push_back(ff);
       }
     }
@@ -1330,18 +1332,18 @@ void TrafficManager::_Inject(){
   for ( int input = 0; input < _nodes; ++input ) {
     for ( int c = 0; c < _classes; ++c ) {
       int flow_buffer_taken = 0;
-      bool any_flow_ready=false;
+      int flow_buffer_ready = 0;
       for(int i = 0; i<_max_flow_buffers; i++){
 	if(_flow_buffer[input][i] != NULL){
 	  flow_buffer_taken++;
-	  any_flow_ready = any_flow_ready || (_flow_buffer[input][i] ->receive_ready());
+	  flow_buffer_ready+= (_flow_buffer[input][i] ->receive_ready())?1:0;
 	}
       }
+      gStatReadyFlowBuffers->AddSample(flow_buffer_ready);
       gStatActiveFlowBuffers->AddSample(flow_buffer_taken);
       
-
       //if no currently active flow is ready to receive and there is flow buffer available
-      if (!any_flow_ready && flow_buffer_taken<_max_flow_buffers) {
+      if (flow_buffer_ready==0 && flow_buffer_taken<_max_flow_buffers) {
 	bool generated = false;
 
 	if ( !_empty_network ) {
@@ -1459,7 +1461,7 @@ void TrafficManager::_Step( )
 	    ++injected_flits[0*_nodes+source]; 
 	    iter->second.first = offset;	  
 	    _last_receive_flow_buffer[source] = flb_index;
-	    break;
+	    break;//this break nearly no effect on performance
 	  }
 	}
       }
@@ -1479,17 +1481,18 @@ void TrafficManager::_Step( )
 	Flit* f = _response_packets[source].front();
 	assert(f);
 	assert(f->head);//only heads
-	if(dest_buf->IsAvailableFor(1) &&
-	   dest_buf->HasCreditFor(1)){
-	  assert(f->vc ==1);
+	assert(f->vc==1 || f->vc == RES_RESERVED_VCS-1);
+
+	if(dest_buf->IsAvailableFor(f->vc) &&
+	   dest_buf->HasCreditFor(f->vc)){
 	  dest_buf->TakeBuffer(f->vc); 
 	  dest_buf->SendingFlit(f);
-	 
 	  _net[0]->WriteSpecialFlit(f, source);
 	  _response_packets[source].pop_front();
 	}
       }
     }
+    
 
 
     //asssgin vc to flow buffers that are ready but no vc assignemnt
@@ -1648,6 +1651,7 @@ void TrafficManager::_Step( )
 	  for(size_t i = 0; i<gStatFlowStats.size()-1; i++){
 	    gStatFlowStats[i]+=ready_flow_buffer->_stats[i];
 	  }
+	 
 	  gStatFlowStats[gStatFlowStats.size()-1]++;
 	  gStatFlowSenderLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
 	  delete _flow_buffer[source][f->flbid];
@@ -1840,6 +1844,7 @@ void TrafficManager::_ClearStats( )
   gStatFlowSenderLatency->Clear();
   gStatFlowLatency->Clear();
   gStatActiveFlowBuffers->Clear();
+  gStatReadyFlowBuffers->Clear();
   gStatResponseBuffer->Clear();
 
   gStatPureNetworkLatency->Clear();
@@ -2544,6 +2549,8 @@ void TrafficManager::_DisplayTedsShit(){
 	       <<*gStatFlowLatency <<";\n";
     *_stats_out<< "active_flows = "
 	       <<*gStatActiveFlowBuffers <<";\n";
+    *_stats_out<< "ready_flows = "
+	       <<*gStatReadyFlowBuffers <<";\n";
     *_stats_out<< "response_range = "
 	       <<*gStatResponseBuffer <<";\n";
     

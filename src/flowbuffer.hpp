@@ -14,7 +14,7 @@
 #define FLOW_STAT_SPEC_READY 5
 #define FLOW_STAT_NOT_READY 6
 #define FLOW_STAT_FINAL_NOT_READY 7
-#define FLOW_STAT_LIFETIME 8
+#define FLOW_STAT_LIFETIME 9
 
 struct flow{
   int flid;
@@ -66,9 +66,14 @@ public:
   bool _spec_sent;
   int _vc;
 
+
+
   bool _watch;
 
+  //these variables for stat collection
+  int _spec_outstanding;
   vector<int> _stats;
+  int _no_retransmit_loss;
 };
 
 #endif

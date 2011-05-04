@@ -23,12 +23,12 @@
 
 #define FLIT_PRI_GRANT 4
 #define FLIT_PRI_RES 3
-#define FLIT_PRI_ACK 1
-#define FLIT_PRI_NACK 1
-#define FLIT_PRI_NORM 2
+#define FLIT_PRI_ACK 2
+#define FLIT_PRI_NACK 2
+#define FLIT_PRI_NORM 1
 #define FLIT_PRI_SPEC 0
 
-#define RES_RESERVED_VCS 2
+#define RES_RESERVED_VCS 3
 
 #define FLIT_NACKED 2
 #define FLIT_NORMAL 1
