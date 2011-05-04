@@ -1161,29 +1161,6 @@ void TrafficManager::_DisplayRemaining( ostream & os ) const
 
 bool TrafficManager::_SingleSim( )
 {
-  _time = 0;
-
-  //remove any pending request from the previous simulations
-  for (int i=0;i<_nodes;i++) {
-    _requests_outstanding[i].assign(_classes, 0);
-  }
-
-  //reset queuetime for all sources
-  for ( int s = 0; s < _nodes; ++s ) {
-    _qtime[s].assign(_classes, 0);
-    _qdrained[s].assign(_classes, false);
-  }
-
-  // warm-up ...
-  // reset stats, all packets after warmup_time marked
-  // converge
-  // draing, wait until all packets finish
-  _sim_state = warming_up;
-  
-  _ClearStats( );
-
-  bool clear_last = false;
-  int total_phases  = 0;
   int converged = 0;
 
   if (_sim_mode == batch && _timed_mode) {
@@ -1226,7 +1203,8 @@ bool TrafficManager::_SingleSim( )
     converged = 1;
 
   } else if(_sim_mode == batch && !_timed_mode){//batch mode   
-    while(total_phases < _batch_count) {
+    int batch_index = 0;
+    while(batch_index < _batch_count) {
       for (int i = 0; i < _nodes; i++) {
 	_sent_packets[i].assign(_classes, 0);
       }
@@ -1250,7 +1228,7 @@ bool TrafficManager::_SingleSim( )
 	  *_sent_packets_out << "sent_packets(" << _time << ",:) = " << _sent_packets << ";" << endl;
 	}
       } while(!batch_complete);
-      cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " packets) sent. Time used is " << _time - start_time << " cycles." << endl;
+      cout << "Batch " << batch_index + 1 << " ("<<_batch_size  <<  " packets) sent. Time used is " << _time - start_time << " cycles." << endl;
       cout << "Draining the Network...................\n";
       _sim_state = draining;
       _drain_time = _time;
@@ -1277,7 +1255,7 @@ bool TrafficManager::_SingleSim( )
 	}
       }
       cout << endl;
-      cout << "Batch " << total_phases + 1 << " ("<<_batch_size  <<  " packets) received. Time used is " << _time - _drain_time << " cycles. Last packet was " << _last_pid << ", last flit was " << _last_id << "." <<endl;
+      cout << "Batch " << batch_index + 1 << " ("<<_batch_size  <<  " packets) received. Time used is " << _time - _drain_time << " cycles. Last packet was " << _last_pid << ", last flit was " << _last_id << "." <<endl;
       _batch_time->AddSample(_time - start_time);
       cout << _sim_state << endl;
       if(_stats_out)
@@ -1286,7 +1264,7 @@ bool TrafficManager::_SingleSim( )
       cout << "Batch duration = " << _time - start_time << endl;
 
       if(_stats_out) {
-	*_stats_out << "batch_time(" << total_phases + 1 << ") = " << _time << ";" << endl;
+	*_stats_out << "batch_time(" << batch_index + 1 << ") = " << _time << ";" << endl;
       }
 
       double cur_latency = _plat_stats[0]->Average( );
@@ -1300,44 +1278,44 @@ bool TrafficManager::_SingleSim( )
       cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 
       if(_stats_out) {
-	*_stats_out << "lat(" << total_phases + 1 << ") = " << cur_latency << ";" << endl
-		    << "lat_hist(" << total_phases + 1 << ",:) = "
+	*_stats_out << "lat(" << batch_index + 1 << ") = " << cur_latency << ";" << endl
+		    << "lat_hist(" << batch_index + 1 << ",:) = "
 		    << *_plat_stats[0] << ";" << endl
-		    << "frag_hist(" << total_phases + 1 << ",:) = "
+		    << "frag_hist(" << batch_index + 1 << ",:) = "
 		    << *_frag_stats[0] << ";" << endl
-		    << "pair_sent(" << total_phases + 1 << ",:) = [ ";
+		    << "pair_sent(" << batch_index + 1 << ",:) = [ ";
 	for(int i = 0; i < _nodes; ++i) {
 	  for(int j = 0; j < _nodes; ++j) {
 	    *_stats_out << _pair_plat[0][i*_nodes+j]->NumSamples( ) << " ";
 	  }
 	}
 	*_stats_out << "];" << endl
-		    << "pair_lat(" << total_phases + 1 << ",:) = [ ";
+		    << "pair_lat(" << batch_index + 1 << ",:) = [ ";
 	for(int i = 0; i < _nodes; ++i) {
 	  for(int j = 0; j < _nodes; ++j) {
 	    *_stats_out << _pair_plat[0][i*_nodes+j]->Average( ) << " ";
 	  }
 	}
 	*_stats_out << "];" << endl
-		    << "pair_tlat(" << total_phases + 1 << ",:) = [ ";
+		    << "pair_tlat(" << batch_index + 1 << ",:) = [ ";
 	for(int i = 0; i < _nodes; ++i) {
 	  for(int j = 0; j < _nodes; ++j) {
 	    *_stats_out << _pair_tlat[0][i*_nodes+j]->Average( ) << " ";
 	  }
 	}
 	*_stats_out << "];" << endl
-		    << "sent(" << total_phases + 1 << ",:) = [ ";
+		    << "sent(" << batch_index + 1 << ",:) = [ ";
 	for ( int d = 0; d < _nodes; ++d ) {
 	  *_stats_out << _sent_flits[0][d]->Average( ) << " ";
 	}
 	*_stats_out << "];" << endl
-		    << "accepted(" << total_phases + 1 << ",:) = [ ";
+		    << "accepted(" << batch_index + 1 << ",:) = [ ";
 	for ( int d = 0; d < _nodes; ++d ) {
 	  *_stats_out << _accepted_flits[0][d]->Average( ) << " ";
 	}
 	*_stats_out << "];" << endl;
       }
-      ++total_phases;
+      ++batch_index;
     }
     converged = 1;
   } else { 
@@ -1345,6 +1323,8 @@ bool TrafficManager::_SingleSim( )
     //to end the simulation 
     vector<double> prev_latency(_classes, 0.0);
     vector<double> prev_accepted(_classes, 0.0);
+    bool clear_last = false;
+    int total_phases = 0;
     while( ( total_phases < _max_samples ) && 
 	   ( ( _sim_state != running ) || 
 	     ( converged < 3 ) ) ) {
@@ -1599,21 +1579,44 @@ bool TrafficManager::_SingleSim( )
     _empty_network = false;
   }
   
-  //wait until all the credits are drained as well
-  while(Credit::OutStanding()!=0){
-    _Step();
-  }
-  
   return ( converged > 0 );
 }
 
 bool TrafficManager::Run( )
 {
   for ( int sim = 0; sim < _total_sims; ++sim ) {
+
+    _time = 0;
+
+    //remove any pending request from the previous simulations
+    for (int i=0;i<_nodes;i++) {
+      _requests_outstanding[i].assign(_classes, 0);
+    }
+
+    //reset queuetime for all sources
+    for ( int s = 0; s < _nodes; ++s ) {
+      _qtime[s].assign(_classes, 0);
+      _qdrained[s].assign(_classes, false);
+    }
+
+    // warm-up ...
+    // reset stats, all packets after warmup_time marked
+    // converge
+    // draing, wait until all packets finish
+    _sim_state    = warming_up;
+  
+    _ClearStats( );
+
     if ( !_SingleSim( ) ) {
       cout << "Simulation unstable, ending ..." << endl;
       return false;
     }
+
+    //wait until all the credits are drained as well
+    while(Credit::OutStanding()!=0){
+      _Step();
+    }
+
     //for the love of god don't ever say "Time taken" anywhere else
     //the power script depend on it
     cout << "Time taken is " << _time << " cycles" <<endl; 
