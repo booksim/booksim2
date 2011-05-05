@@ -1106,7 +1106,7 @@ void TrafficManager::_Step( )
 	}
       }
     }
-    if(((_sim_mode != batch) && (_sim_state == warming_up)) || (_sim_state == running)) {
+    if((_sim_state == warming_up) || (_sim_state == running)) {
       for(int c = 0; c < _classes; ++c) {
 	_sent_flits[c][source]->AddSample(flits_sent_by_class[c]);
       }
