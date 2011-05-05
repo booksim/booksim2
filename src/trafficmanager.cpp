@@ -673,12 +673,12 @@ bool TrafficManager::_IssuePacket( int source, int cl )
      (_sent_packets[source][cl] >= _batch_size[cl])) {
     return false;
   }
-  if(_injection_process[source][cl]->test()) {
-    _requests_outstanding[source][cl]++;
-    _sent_packets[source][cl]++;
-    return true;
+  if(!_injection_process[source][cl]->test()) {
+    return false;
   }
-  return false;
+  _requests_outstanding[source][cl]++;
+  _sent_packets[source][cl]++;
+  return true;
 }
 
 void TrafficManager::_GeneratePacket( int source, int dest, int size, 
@@ -975,7 +975,7 @@ void TrafficManager::_Step( )
 
       }	
     }
-    if(((_sim_mode != batch) && (_sim_state == warming_up)) || (_sim_state == running)) {
+    if((_sim_state == warming_up) || (_sim_state == running)) {
       for(int c = 0; c < _classes; ++c) {
 	_sent_flits[c][source]->AddSample(flits_sent_by_class[c]);
       }
