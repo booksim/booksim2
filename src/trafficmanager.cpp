@@ -719,8 +719,6 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	//coin toss to determine request type.
 	result = (RandomFloat() < 0.5) ? -2 : -1;
 	
-	_sent_packets[source]++;
-	_requestsOutstanding[source]++;
       } 
     } else { //normal
       if ((_sent_packets[source] >= _batch_size && !_timed_mode) || 
@@ -728,9 +726,6 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	result = 0;
       } else {
 	result = _packet_size[cl];
-	_sent_packets[source]++;
-	//here is means, how many flits can be waiting in the queue
-	_requestsOutstanding[source]++;
       } 
     } 
   } else { //injection rate mode
@@ -745,6 +740,9 @@ int TrafficManager::_IssuePacket( int source, int cl )
       if (pending_time<=_qtime[source][cl]) {
 	result = _repliesPending[source].front();
 	_repliesPending[source].pop_front();
+      } else if ((_maxOutstanding > 0) && 
+		 (_requestsOutstanding[source] >= _maxOutstanding)) {
+	result = 0;
       } else {
 
 	//produce a packet
@@ -758,8 +756,12 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	}
       } 
     } else { //normal mode
-      return _injection_process[source][cl]->test() ? 1 : 0;
+      result = _injection_process[source][cl]->test() ? 1 : 0;
     } 
+  }
+  if(result != 0) {
+    _sent_packets[source]++;
+    _requestsOutstanding[source]++;
   }
   return result;
 }
