@@ -96,6 +96,7 @@ Stats* gStatSourceTrueLatency;
 Stats* gStatSourceLatency;
 Stats* gStatNackByPacket;
 
+Stats* gStatFastRetransmit;
 
 vector<long> gStatFlowStats;
 
@@ -208,6 +209,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
 
   gStatNackByPacket = new Stats(this, "nack_by_sn", 1.0, 1000);
+
+  gStatFastRetransmit=  new Stats( this, "fast_retransmit" , 1.0,  _flow_size);
   //nodes higher than limit do not produce or receive packets
   //for default limit = sources
 
@@ -762,8 +765,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	  gStatFlowStats[i]+=receive_flow_buffer->_stats[i];
 	}
 	gStatFlowStats[gStatFlowStats.size()-1]++;
-
 	gStatFlowSenderLatency->AddSample(_time-receive_flow_buffer->fl->create_time);
+	gStatFastRetransmit->AddSample(receive_flow_buffer->_fast_retransmit);
 	delete _flow_buffer[dest][f->flbid];
 	_flow_buffer[dest][f->flbid]=NULL;
       }
@@ -881,8 +884,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     if(gReservation){
       //find or create a reorder buffer
       if(_rob[dest].count(f->flid)==0){
-	receive_rob = new FlowROB();
-	_rob[dest].insert(pair<int, FlowROB*>(f->flid, receive_rob));
+	
+	gStatNormDuplicate[dest]++;
+	f->Free();
+	return;
+	//	receive_rob = new FlowROB();
+	// _rob[dest].insert(pair<int, FlowROB*>(f->flid, receive_rob));
       } else {
 	receive_rob = _rob[dest][f->flid];
       }
@@ -1654,6 +1661,7 @@ void TrafficManager::_Step( )
 	 
 	  gStatFlowStats[gStatFlowStats.size()-1]++;
 	  gStatFlowSenderLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
+	  gStatFastRetransmit->AddSample(ready_flow_buffer->_fast_retransmit);
 	  delete _flow_buffer[source][f->flbid];
 	  _flow_buffer[source][f->flbid]=NULL;
 	  _last_send_flow_buffer[source] =-1;
@@ -1860,6 +1868,8 @@ void TrafficManager::_ClearStats( )
 
   gStatNackByPacket->Clear();
   
+  gStatFastRetransmit->Clear();
+
   gStatFlowStats.clear();
   gStatFlowStats.resize(FLOW_STAT_LIFETIME+1+1,0);
 }
@@ -2576,6 +2586,9 @@ void TrafficManager::_DisplayTedsShit(){
 
     *_stats_out<< "nack_by_sn = "
 	       <<*gStatNackByPacket<<";\n";
+
+    *_stats_out<< "fast_retransmit = "
+	       <<*gStatFastRetransmit<<";\n";
 
     *_stats_out<< "flow_in_spec =" 
 	       <<gStatFlowStats[FLOW_STAT_SPEC]<<";\n";

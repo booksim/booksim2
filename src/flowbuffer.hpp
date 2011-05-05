@@ -74,6 +74,7 @@ public:
   int _spec_outstanding;
   vector<int> _stats;
   int _no_retransmit_loss;
+  int _fast_retransmit;
 };
 
 #endif

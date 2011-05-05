@@ -1,5 +1,6 @@
 #include "flowbuffer.hpp"
 
+#define FAST_RETRANSMIT_ENABLE (false)
 
 FlowBuffer::FlowBuffer(int id, int size, bool res, flow* f){
   _id = id;
@@ -38,6 +39,8 @@ FlowBuffer::FlowBuffer(int id, int size, bool res, flow* f){
 
   _watch = false;
 
+  //stats variables
+  _fast_retransmit = 0;
   _no_retransmit_loss = 0;
   _spec_outstanding = 0;
   _stats.resize(FLOW_STAT_LIFETIME+1,0);
@@ -200,21 +203,35 @@ Flit* FlowBuffer::front(){
     //not in the middle of a packet
     //search the buffer for the first available 
     if(_tail_sent){
-      for(map<int, int>::iterator i = _flit_status.begin();
-	  i!=_flit_status.end(); 
-	  i++){
-	if(i->second!=FLIT_SPEC){
-	  f= _flit_buffer[i->first];
-	  f->res_type = RES_TYPE_NORM;
-	  assert(f->head);
-	  break;
+      if( FAST_RETRANSMIT_ENABLE &&_received == fl->flow_size && _ready==0){ //search for spec packets
+	for(map<int, int>::iterator i = _flit_status.begin();
+	    i!=_flit_status.end(); 
+	    i++){
+	  if(i->second==FLIT_SPEC){
+	    f= _flit_buffer[i->first];
+	    assert(f->head);
+	    break;
+	  }
+	}
+      }else { //search for normal packets
+	for(map<int, int>::iterator i = _flit_status.begin();
+	    i!=_flit_status.end(); 
+	    i++){
+	  if(i->second!=FLIT_SPEC){
+	    f= _flit_buffer[i->first];
+	    f->res_type = RES_TYPE_NORM;
+	    assert(f->head);
+	    break;
+	  }
 	}
       }
     } else {
+      
       //in the middle of a packet, pickup where last left off
       assert(_flit_buffer.count(_last_sn+1)!=0);
       f = _flit_buffer[_last_sn+1];
       f->res_type = RES_TYPE_NORM;
+      
     }
     break;
     //transitions are equivalent to spec at this stage
@@ -246,15 +263,40 @@ Flit* FlowBuffer::send(){
     //not in the middle of a packet
     //search the buffer for the first available 
     if(_tail_sent){
-      for(map<int, int>::iterator i = _flit_status.begin();
-	  i!=_flit_status.end(); 
-	  i++){
-	if(i->second!=FLIT_SPEC){
-	  f= _flit_buffer[i->first];
-	  assert(f->head);
-	  break;
+      if( FAST_RETRANSMIT_ENABLE && _received == fl->flow_size && _ready==0){ //search for spec packets
+	map<int, int>::iterator i;
+	for(i = _flit_status.begin();
+	    i!=_flit_status.end(); 
+	    i++){
+	  if(i->second==FLIT_SPEC){
+	    _fast_retransmit++;
+	    f= _flit_buffer[i->first];
+	    assert(f->head);
+	    break;
+	  }
 	}
-      }
+	//convert this packet to normal
+	for(;
+	    i!=_flit_status.end(); 
+	    i++){
+	  assert(i->second==FLIT_SPEC);
+	  _ready++;
+	  i->second = FLIT_NORMAL;
+	  if(_flit_buffer[i->first]->tail)
+	    break;
+	}
+
+      }else { //search for normal packets
+	for(map<int, int>::iterator i = _flit_status.begin();
+	    i!=_flit_status.end(); 
+	    i++){
+	  if(i->second!=FLIT_SPEC){
+	    f= _flit_buffer[i->first];
+	    assert(f->head);
+	    break;
+	  }
+	}    
+      }  
     } else {
       //in the middle of a packet, pickup where last left off
       assert(_flit_buffer.count(_last_sn+1)!=0);
@@ -356,7 +398,11 @@ bool FlowBuffer::send_norm_ready(){
   case FLOW_STATUS_NORM:
     if(!_tail_sent){
       return true;
-    } else {
+    } else if(_received == fl->flow_size && _ready==0){ //there maybe outstanding speculative packet for retransmit
+      assert(_guarantee_sent!=fl->flow_size);//otherwise this flow buffer shoudl be been freed
+      return FAST_RETRANSMIT_ENABLE;
+      
+    } else{
       return (_ready>0);
     }
   default:
