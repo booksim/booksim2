@@ -651,10 +651,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 		   << ")." << endl;
       }
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY  ){
-	//received a reply
 	_requestsOutstanding[dest]--;
-      } else if(f->type == Flit::ANY_TYPE && _sim_mode == batch) {
-	//received a reply
+      } else if(f->type == Flit::ANY_TYPE) {
 	_requestsOutstanding[f->src]--;
       }
       
