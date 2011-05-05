@@ -712,7 +712,8 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	_repliesPending[source].pop_front();
 	
       } else if ((_sent_packets[source] >= _batch_size && !_timed_mode) || 
-		 (_requestsOutstanding[source] >= _maxOutstanding)) {
+		 (((_maxOutstanding > 0) && 
+		   (_requestsOutstanding[source] >= _maxOutstanding)))) {
 	result = 0;
       } else {
 	
@@ -722,7 +723,8 @@ int TrafficManager::_IssuePacket( int source, int cl )
       } 
     } else { //normal
       if ((_sent_packets[source] >= _batch_size && !_timed_mode) || 
-		 (_requestsOutstanding[source] >= _maxOutstanding)) {
+	  (((_maxOutstanding > 0) && 
+	    (_requestsOutstanding[source] >= _maxOutstanding)))) {
 	result = 0;
       } else {
 	result = _packet_size[cl];
