@@ -186,7 +186,7 @@ BookSimConfig::BookSimConfig( )
   AddStrField("batch_size", "");
   _int_map["batch_count"] = 1;
 
-  _int_map["max_outstanding_requests"] = -1;
+  _int_map["max_outstanding_requests"] = 0; // 0 = unlimited
   AddStrField("max_outstanding_requests", "");
 
   //==== Simulation parameters ==========================

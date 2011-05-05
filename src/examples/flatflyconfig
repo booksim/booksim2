@@ -87,10 +87,6 @@ y  = 4;
 xr = 2;
 yr = 2;
 
-//the nodes above "limit" does not emit or receiv traffic
-limit = 0;
-
-
 //
 // Routing
 //

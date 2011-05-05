@@ -1543,40 +1543,6 @@ bool TrafficManager::_SingleSim( )
     } else {
       cout << "Too many sample periods needed to converge" << endl;
     }
-
-    // Empty any remaining packets
-    cout << "Draining remaining packets ..." << endl;
-    _empty_network = true;
-    int empty_steps = 0;
-
-    bool packets_left = false;
-    for(int c = 0; c < _classes; ++c) {
-      if(_drain_measured_only) {
-	packets_left |= !_measured_in_flight_flits[c].empty();
-      } else {
-	packets_left |= !_total_in_flight_flits[c].empty();
-      }
-    }
-
-    while( packets_left ) { 
-      _Step( ); 
-
-      ++empty_steps;
-
-      if ( empty_steps % 1000 == 0 ) {
-	_DisplayRemaining( ); 
-      }
-      
-      packets_left = false;
-      for(int c = 0; c < _classes; ++c) {
-	if(_drain_measured_only) {
-	  packets_left |= !_measured_in_flight_flits[c].empty();
-	} else {
-	  packets_left |= !_total_in_flight_flits[c].empty();
-	}
-      }
-    }
-    _empty_network = false;
   }
   
   return ( converged > 0 );
@@ -1612,10 +1578,43 @@ bool TrafficManager::Run( )
       return false;
     }
 
+    // Empty any remaining packets
+    cout << "Draining remaining packets ..." << endl;
+    _empty_network = true;
+    int empty_steps = 0;
+
+    bool packets_left = false;
+    for(int c = 0; c < _classes; ++c) {
+      if(_drain_measured_only) {
+	packets_left |= !_measured_in_flight_flits[c].empty();
+      } else {
+	packets_left |= !_total_in_flight_flits[c].empty();
+      }
+    }
+
+    while( packets_left ) { 
+      _Step( ); 
+
+      ++empty_steps;
+
+      if ( empty_steps % 1000 == 0 ) {
+	_DisplayRemaining( ); 
+      }
+      
+      packets_left = false;
+      for(int c = 0; c < _classes; ++c) {
+	if(_drain_measured_only) {
+	  packets_left |= !_measured_in_flight_flits[c].empty();
+	} else {
+	  packets_left |= !_total_in_flight_flits[c].empty();
+	}
+      }
+    }
     //wait until all the credits are drained as well
     while(Credit::OutStanding()!=0){
       _Step();
     }
+    _empty_network = false;
 
     //for the love of god don't ever say "Time taken" anywhere else
     //the power script depend on it
