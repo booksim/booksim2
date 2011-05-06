@@ -1301,32 +1301,7 @@ bool TrafficManager::_SingleSim( )
 	if(_stats_out)
 	  *_stats_out << "%=================================" << endl;
 	
-	for(int c = 0; c < _classes; ++c) {
-
-	  if(_measure_stats[c] == 0) {
-	    continue;
-	  }
-
-	  double cur_latency = _plat_stats[c]->Average( );
-	  double min, avg;
-	  int dmin = _ComputeStats( _accepted_flits[c], &avg, &min );
-	  
-	  cout << "Class " << c << ":" << endl;
-
-	  cout << "Minimum latency = " << _plat_stats[c]->Min( ) << endl;
-	  cout << "Average latency = " << cur_latency << endl;
-	  cout << "Maximum latency = " << _plat_stats[c]->Max( ) << endl;
-	  cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
-	  cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
-
-	  cout << "Total in-flight flits = " << _total_in_flight_flits[c].size() << " (" << _measured_in_flight_flits[c].size() << " measured)" << endl;
-
-	  //c+1 because of matlab arrays starts at 1
-	  if(_stats_out)
-	    *_stats_out << "lat(" << c+1 << ") = " << cur_latency << ";" << endl
-			<< "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
-			<< "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl;
-	} 
+	DisplayStats();
       }
     }
     converged = 1;
@@ -1388,58 +1363,12 @@ bool TrafficManager::_SingleSim( )
 
       cout << "Batch duration = " << _time - start_time << endl;
 
+      DisplayStats();
+
       if(_stats_out) {
 	*_stats_out << "batch_time(" << batch_index + 1 << ") = " << _time << ";" << endl;
       }
 
-      double cur_latency = _plat_stats[0]->Average( );
-      double min, avg;
-      int dmin = _ComputeStats( _accepted_flits[0], &avg, &min );
-	
-      cout << "Minimum latency = " << _plat_stats[0]->Min( ) << endl;
-      cout << "Average latency = " << cur_latency << endl;
-      cout << "Maximum latency = " << _plat_stats[0]->Max( ) << endl;
-      cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
-      cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
-
-      if(_stats_out) {
-	*_stats_out << "lat(" << batch_index + 1 << ") = " << cur_latency << ";" << endl
-		    << "lat_hist(" << batch_index + 1 << ",:) = "
-		    << *_plat_stats[0] << ";" << endl
-		    << "frag_hist(" << batch_index + 1 << ",:) = "
-		    << *_frag_stats[0] << ";" << endl
-		    << "pair_sent(" << batch_index + 1 << ",:) = [ ";
-	for(int i = 0; i < _nodes; ++i) {
-	  for(int j = 0; j < _nodes; ++j) {
-	    *_stats_out << _pair_plat[0][i*_nodes+j]->NumSamples( ) << " ";
-	  }
-	}
-	*_stats_out << "];" << endl
-		    << "pair_lat(" << batch_index + 1 << ",:) = [ ";
-	for(int i = 0; i < _nodes; ++i) {
-	  for(int j = 0; j < _nodes; ++j) {
-	    *_stats_out << _pair_plat[0][i*_nodes+j]->Average( ) << " ";
-	  }
-	}
-	*_stats_out << "];" << endl
-		    << "pair_tlat(" << batch_index + 1 << ",:) = [ ";
-	for(int i = 0; i < _nodes; ++i) {
-	  for(int j = 0; j < _nodes; ++j) {
-	    *_stats_out << _pair_tlat[0][i*_nodes+j]->Average( ) << " ";
-	  }
-	}
-	*_stats_out << "];" << endl
-		    << "sent(" << batch_index + 1 << ",:) = [ ";
-	for ( int d = 0; d < _nodes; ++d ) {
-	  *_stats_out << _sent_flits[0][d]->Average( ) << " ";
-	}
-	*_stats_out << "];" << endl
-		    << "accepted(" << batch_index + 1 << ",:) = [ ";
-	for ( int d = 0; d < _nodes; ++d ) {
-	  *_stats_out << _accepted_flits[0][d]->Average( ) << " ";
-	}
-	*_stats_out << "];" << endl;
-      }
       ++batch_index;
     }
     converged = 1;
@@ -1467,6 +1396,8 @@ bool TrafficManager::_SingleSim( )
       if(_stats_out)
 	*_stats_out << "%=================================" << endl;
 
+      DisplayStats();
+
       int lat_exc_class = -1;
       int lat_chg_exc_class = -1;
       int acc_chg_exc_class = -1;
@@ -1478,63 +1409,17 @@ bool TrafficManager::_SingleSim( )
 	}
 
 	double cur_latency = _plat_stats[c]->Average( );
+
 	double min, avg;
 	int dmin = _ComputeStats( _accepted_flits[c], &avg, &min );
 	double cur_accepted = avg;
 
 	double latency_change = fabs((cur_latency - prev_latency[c]) / cur_latency);
 	prev_latency[c] = cur_latency;
+
 	double accepted_change = fabs((cur_accepted - prev_accepted[c]) / cur_accepted);
 	prev_accepted[c] = cur_accepted;
 
-	cout << "Class " << c << ":" << endl;
-
-	cout << "Minimum latency = " << _plat_stats[c]->Min( ) << endl;
-	cout << "Average latency = " << cur_latency << endl;
-	cout << "Maximum latency = " << _plat_stats[c]->Max( ) << endl;
-	cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
-	cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
-	cout << "Total in-flight flits = " << _total_in_flight_flits[c].size() << " (" << _measured_in_flight_flits[c].size() << " measured)" << endl;
-
-	//c+1 due to matlab array starting at 1
-	if(_stats_out) {
-	  *_stats_out << "lat(" << c+1 << ") = " << cur_latency << ";" << endl
-		    << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
-		    << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
-		    << "pair_sent(" << c+1 << ",:) = [ ";
-	  for(int i = 0; i < _nodes; ++i) {
-	    for(int j = 0; j < _nodes; ++j) {
-	      *_stats_out << _pair_plat[c][i*_nodes+j]->NumSamples( ) << " ";
-	    }
-	  }
-	  *_stats_out << "];" << endl
-		      << "pair_lat(" << c+1 << ",:) = [ ";
-	  for(int i = 0; i < _nodes; ++i) {
-	    for(int j = 0; j < _nodes; ++j) {
-	      *_stats_out << _pair_plat[c][i*_nodes+j]->Average( ) << " ";
-	    }
-	  }
-	  *_stats_out << "];" << endl
-		      << "pair_lat(" << c+1 << ",:) = [ ";
-	  for(int i = 0; i < _nodes; ++i) {
-	    for(int j = 0; j < _nodes; ++j) {
-	      *_stats_out << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";
-	    }
-	  }
-	  *_stats_out << "];" << endl
-		      << "sent(" << c+1 << ",:) = [ ";
-	  for ( int d = 0; d < _nodes; ++d ) {
-	    *_stats_out << _sent_flits[c][d]->Average( ) << " ";
-	  }
-	  *_stats_out << "];" << endl
-		      << "accepted(" << c+1 << ",:) = [ ";
-	  for ( int d = 0; d < _nodes; ++d ) {
-	    *_stats_out << _accepted_flits[c][d]->Average( ) << " ";
-	  }
-	  *_stats_out << "];" << endl;
-	  *_stats_out << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
-	}
-	
 	double latency = cur_latency;
 	double count = (double)_plat_stats[c]->NumSamples();
 	  
@@ -1772,6 +1657,76 @@ bool TrafficManager::Run( )
   
   DisplayOverallStats();
   return true;
+}
+
+void TrafficManager::DisplayStats(ostream & os) const {
+  
+  for(int c = 0; c < _classes; ++c) {
+    
+    if(_measure_stats[c] == 0) {
+      continue;
+    }
+    
+    cout << "Class " << c << ":" << endl;
+    
+    cout << "Minimum latency = " << _plat_stats[c]->Min() << endl;
+    cout << "Average latency = " << _plat_stats[c]->Average() << endl;
+    cout << "Maximum latency = " << _plat_stats[c]->Max() << endl;
+    cout << "Average fragmentation = " << _frag_stats[c]->Average() << endl;
+
+    double min, avg;
+    int dmin = _ComputeStats(_accepted_flits[c], &avg, &min);
+    cout << "Accepted packets = " << min
+	 << " at node " << dmin
+	 << " (avg = " << avg << ")"
+	 << endl;
+    
+    cout << "Total in-flight flits = " << _total_in_flight_flits[c].size()
+	 << " (" << _measured_in_flight_flits[c].size() << " measured)"
+	 << endl;
+    
+    //c+1 due to matlab array starting at 1
+    if(_stats_out) {
+      *_stats_out << "lat(" << c+1 << ") = " << _plat_stats[c]->Average()
+		  << ";" << endl
+		  << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c]
+		  << ";" << endl
+		  << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c]
+		  << ";" << endl
+		  << "pair_sent(" << c+1 << ",:) = [ ";
+      for(int i = 0; i < _nodes; ++i) {
+	for(int j = 0; j < _nodes; ++j) {
+	  *_stats_out << _pair_plat[c][i*_nodes+j]->NumSamples() << " ";
+	}
+      }
+      *_stats_out << "];" << endl
+		  << "pair_lat(" << c+1 << ",:) = [ ";
+      for(int i = 0; i < _nodes; ++i) {
+	for(int j = 0; j < _nodes; ++j) {
+	  *_stats_out << _pair_plat[c][i*_nodes+j]->Average( ) << " ";
+	}
+      }
+      *_stats_out << "];" << endl
+		  << "pair_lat(" << c+1 << ",:) = [ ";
+      for(int i = 0; i < _nodes; ++i) {
+	for(int j = 0; j < _nodes; ++j) {
+	  *_stats_out << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";
+	}
+      }
+      *_stats_out << "];" << endl
+		  << "sent(" << c+1 << ",:) = [ ";
+      for ( int d = 0; d < _nodes; ++d ) {
+	*_stats_out << _sent_flits[c][d]->Average( ) << " ";
+      }
+      *_stats_out << "];" << endl
+		  << "accepted(" << c+1 << ",:) = [ ";
+      for ( int d = 0; d < _nodes; ++d ) {
+	*_stats_out << _accepted_flits[c][d]->Average( ) << " ";
+      }
+      *_stats_out << "];" << endl;
+      *_stats_out << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
+    }
+  }    
 }
 
 void TrafficManager::DisplayOverallStats( ostream & os ) const {
