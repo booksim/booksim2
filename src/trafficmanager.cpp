@@ -1302,7 +1302,7 @@ bool TrafficManager::_SingleSim( )
 	double cur_latency = _plat_stats[c]->Average( );
 
 	double min, avg;
-	int dmin = _ComputeStats( _accepted_flits[c], &avg, &min );
+	_ComputeStats( _accepted_flits[c], &avg, &min );
 	double cur_accepted = avg;
 
 	double latency_change = fabs((cur_latency - prev_latency[c]) / cur_latency);
@@ -1519,40 +1519,48 @@ bool TrafficManager::Run( )
     //for the love of god don't ever say "Time taken" anywhere else
     //the power script depend on it
     cout << "Time taken is " << _time << " cycles" <<endl; 
-    for ( int c = 0; c < _classes; ++c ) {
 
-      if(_measure_stats[c] == 0) {
-	continue;
-      }
-
-      if(_plat_stats[c]->NumSamples() > 0) {
-	_overall_min_plat[c]->AddSample( _plat_stats[c]->Min( ) );
-	_overall_avg_plat[c]->AddSample( _plat_stats[c]->Average( ) );
-	_overall_max_plat[c]->AddSample( _plat_stats[c]->Max( ) );
-      }
-      if(_tlat_stats[c]->NumSamples() > 0) {
-	_overall_min_tlat[c]->AddSample( _tlat_stats[c]->Min( ) );
-	_overall_avg_tlat[c]->AddSample( _tlat_stats[c]->Average( ) );
-	_overall_max_tlat[c]->AddSample( _tlat_stats[c]->Max( ) );
-      }
-      if(_frag_stats[c]->NumSamples() > 0) {
-	_overall_min_frag[c]->AddSample( _frag_stats[c]->Min( ) );
-	_overall_avg_frag[c]->AddSample( _frag_stats[c]->Average( ) );
-	_overall_max_frag[c]->AddSample( _frag_stats[c]->Max( ) );
-      }
-
-      double min, avg;
-      _ComputeStats( _accepted_flits[c], &avg, &min );
-      _overall_accepted[c]->AddSample( avg );
-      _overall_accepted_min[c]->AddSample( min );
-
-      if(_sim_mode == batch)
-	_overall_batch_time->AddSample(_batch_time->Sum( ));
-    }
+    UpdateOverallStats();
   }
   
   DisplayOverallStats();
   return true;
+}
+
+void TrafficManager::UpdateOverallStats() {
+
+  for ( int c = 0; c < _classes; ++c ) {
+    
+    if(_measure_stats[c] == 0) {
+      continue;
+    }
+    
+    if(_plat_stats[c]->NumSamples() > 0) {
+      _overall_min_plat[c]->AddSample( _plat_stats[c]->Min( ) );
+      _overall_avg_plat[c]->AddSample( _plat_stats[c]->Average( ) );
+      _overall_max_plat[c]->AddSample( _plat_stats[c]->Max( ) );
+    }
+    if(_tlat_stats[c]->NumSamples() > 0) {
+      _overall_min_tlat[c]->AddSample( _tlat_stats[c]->Min( ) );
+      _overall_avg_tlat[c]->AddSample( _tlat_stats[c]->Average( ) );
+      _overall_max_tlat[c]->AddSample( _tlat_stats[c]->Max( ) );
+    }
+    if(_frag_stats[c]->NumSamples() > 0) {
+      _overall_min_frag[c]->AddSample( _frag_stats[c]->Min( ) );
+      _overall_avg_frag[c]->AddSample( _frag_stats[c]->Average( ) );
+      _overall_max_frag[c]->AddSample( _frag_stats[c]->Max( ) );
+    }
+    
+    double min, avg;
+    _ComputeStats( _accepted_flits[c], &avg, &min );
+    _overall_accepted[c]->AddSample( avg );
+    _overall_accepted_min[c]->AddSample( min );
+    
+    if(_sim_mode == batch)
+      _overall_batch_time->AddSample(_batch_time->Sum( ));
+
+  }
+
 }
 
 void TrafficManager::DisplayStats(ostream & os) const {
