@@ -1523,7 +1523,11 @@ bool TrafficManager::Run( )
     UpdateOverallStats();
   }
   
-  DisplayOverallStats();
+  if(_print_csv_results)
+    DisplayOverallStatsCSV();
+  else
+    DisplayOverallStats();
+  
   return true;
 }
 
@@ -1642,28 +1646,6 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
       continue;
     }
 
-    if(_print_csv_results) {
-      os << "results:"
-	 << c
-	 << "," << _traffic[c]
-	 << "," << (_request_class[c] >= 0)
-	 << "," << _packet_size[c]
-	 << "," << _load[c]
-	 << "," << _overall_min_plat[c]->Average( )
-	 << "," << _overall_avg_plat[c]->Average( )
-	 << "," << _overall_max_plat[c]->Average( )
-	 << "," << _overall_min_tlat[c]->Average( )
-	 << "," << _overall_avg_tlat[c]->Average( )
-	 << "," << _overall_max_tlat[c]->Average( )
-	 << "," << _overall_min_frag[c]->Average( )
-	 << "," << _overall_avg_frag[c]->Average( )
-	 << "," << _overall_max_frag[c]->Average( )
-	 << "," << _overall_accepted[c]->Average( )
-	 << "," << _overall_accepted_min[c]->Average( )
-	 << "," << _hop_stats[c]->Average( )
-	 << endl;
-    }
-
     os << "====== Traffic class " << c << " ======" << endl;
     
     if(_overall_min_plat[c]->NumSamples() > 0) {
@@ -1718,6 +1700,30 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
     os << "Overall batch duration = " << _overall_batch_time->Average( )
        << " (" << _overall_batch_time->NumSamples( ) << " samples)" << endl;
   
+}
+
+void TrafficManager::DisplayOverallStatsCSV(ostream & os) const {
+  for(int c = 0; c < _classes; ++c) {
+    os << "results:"
+       << c
+       << "," << _traffic[c]
+       << "," << (_request_class[c] >= 0)
+       << "," << _packet_size[c]
+       << "," << _load[c]
+       << "," << _overall_min_plat[c]->Average( )
+       << "," << _overall_avg_plat[c]->Average( )
+       << "," << _overall_max_plat[c]->Average( )
+       << "," << _overall_min_tlat[c]->Average( )
+       << "," << _overall_avg_tlat[c]->Average( )
+       << "," << _overall_max_tlat[c]->Average( )
+       << "," << _overall_min_frag[c]->Average( )
+       << "," << _overall_avg_frag[c]->Average( )
+       << "," << _overall_max_frag[c]->Average( )
+       << "," << _overall_accepted[c]->Average( )
+       << "," << _overall_accepted_min[c]->Average( )
+       << "," << _hop_stats[c]->Average( )
+       << endl;
+  }
 }
 
 //read the watchlist
