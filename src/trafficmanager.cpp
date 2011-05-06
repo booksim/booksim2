@@ -1769,11 +1769,12 @@ bool TrafficManager::Run( )
     }
   }
   
-  DisplayStats();
+  DisplayOverallStats();
   return true;
 }
 
-void TrafficManager::DisplayStats( ostream & os ) {
+void TrafficManager::DisplayOverallStats( ostream & os ) const {
+
   for ( int c = 0; c < _classes; ++c ) {
 
     if(_measure_stats[c] == 0) {
