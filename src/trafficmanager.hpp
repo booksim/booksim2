@@ -259,6 +259,7 @@ public:
 
   bool Run( );
 
+  void DisplayStats( ostream & os = cout ) const ;
   void DisplayOverallStats( ostream & os = cout ) const ;
 
   const Stats * GetOverallLatency(int c = 0) { return _overall_avg_plat[c]; }
