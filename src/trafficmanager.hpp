@@ -259,6 +259,8 @@ public:
 
   bool Run( );
 
+  void UpdateOverallStats();
+
   void DisplayStats( ostream & os = cout ) const ;
   void DisplayOverallStats( ostream & os = cout ) const ;
 
