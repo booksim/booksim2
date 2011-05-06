@@ -42,7 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
-: Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
+: Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
 
   _nodes = _net[0]->NumNodes( );
@@ -361,11 +361,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _sim_mode = throughput;
   }  else if ( sim_type == "batch" ) {
     _sim_mode = batch;
-  }  else if (sim_type == "timed_batch"){
-    _sim_mode = batch;
-    _timed_mode = true;
-  }
-  else {
+  } else {
     Error( "Unknown sim_type value : " + sim_type );
   }
 
@@ -683,7 +679,6 @@ bool TrafficManager::_IssuePacket( int source, int cl )
       return false;
   }
   if((_sim_mode == batch) &&
-     !_timed_mode && 
      (_sent_packets[source][cl] >= _batch_size[cl])) {
     return false;
   }
@@ -1179,21 +1174,7 @@ bool TrafficManager::_SingleSim( )
 {
   int converged = 0;
 
-  if (_sim_mode == batch && _timed_mode) {
-    _sim_state = running;
-    while(_time<_sample_period) {
-      _Step();
-      if ( _time % 10000 == 0 ) {
-	cout << _sim_state << endl;
-	if(_stats_out)
-	  *_stats_out << "%=================================" << endl;
-	
-	DisplayStats();
-      }
-    }
-    converged = 1;
-
-  } else if(_sim_mode == batch && !_timed_mode){//batch mode   
+  if(_sim_mode == batch) { //batch mode   
     int batch_index = 0;
     while(batch_index < _batch_count) {
       for (int i = 0; i < _nodes; i++) {

@@ -166,9 +166,6 @@ protected:
   enum eSimMode { latency, throughput, batch };
   eSimMode _sim_mode;
   
-  //batched time-mode, know what you are doing
-  bool _timed_mode;
-
   int   _warmup_time;
   int   _drain_time;
 
