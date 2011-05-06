@@ -1556,11 +1556,12 @@ void TrafficManager::UpdateOverallStats() {
     _overall_accepted[c]->AddSample( avg );
     _overall_accepted_min[c]->AddSample( min );
     
-    if(_sim_mode == batch)
-      _overall_batch_time->AddSample(_batch_time->Sum( ));
 
   }
-
+  
+  if(_sim_mode == batch)
+    _overall_batch_time->AddSample(_batch_time->Sum( ));
+  
 }
 
 void TrafficManager::DisplayStats(ostream & os) const {
