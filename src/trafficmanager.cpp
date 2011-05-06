@@ -1238,16 +1238,18 @@ int TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, d
   *min = numeric_limits<double>::max();
   *avg = 0.0;
 
-  for ( int d = 0; d < _nodes; ++d ) {
-    double curr = stats[d]->Average( );
+  int const count = stats.size();
+
+  for ( int i = 0; i < count; ++i ) {
+    double curr = stats[i]->Average( );
     if ( curr < *min ) {
       *min = curr;
-      dmin = d;
+      dmin = i;
     }
     *avg += curr;
   }
 
-  *avg /= (double)_nodes;
+  *avg /= (double)count;
 
   return dmin;
 }
@@ -1476,9 +1478,8 @@ bool TrafficManager::_SingleSim( )
 	}
 
 	double cur_latency = _plat_stats[c]->Average( );
-	int dmin;
 	double min, avg;
-	dmin = _ComputeStats( _accepted_flits[c], &avg, &min );
+	int dmin = _ComputeStats( _accepted_flits[c], &avg, &min );
 	double cur_accepted = avg;
 
 	double latency_change = fabs((cur_latency - prev_latency[c]) / cur_latency);
