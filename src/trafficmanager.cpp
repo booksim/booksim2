@@ -100,6 +100,10 @@ Stats* gStatFastRetransmit;
 
 vector<long> gStatFlowStats;
 
+Stats* gStatNackArrival;
+
+
+
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
   : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
@@ -145,6 +149,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   gStatNackReceived.resize(_nodes,0);
   gStatNackEffective.resize(_nodes,0);
+
   gStatNackSent.resize(_nodes,0);
 
   gStatGrantReceived.resize(_nodes,0);
@@ -211,6 +216,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   gStatNackByPacket = new Stats(this, "nack_by_sn", 1.0, 1000);
 
   gStatFastRetransmit=  new Stats( this, "fast_retransmit" , 1.0,  _flow_size);
+  gStatNackArrival = new Stats(this, "nack_arrival",1.0, 1000);
+
   //nodes higher than limit do not produce or receive packets
   //for default limit = sources
 
@@ -740,7 +747,6 @@ Flit* TrafficManager::DropPacket(int src, Flit* f){
     ff->watch=true;
   }
   return ff;
-  // _response_packets[src].push_back(ff);
 }
 
 
@@ -781,6 +787,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     receive_flow_buffer = _flow_buffer[dest][f->flbid];
     if( receive_flow_buffer!=NULL &&
 	receive_flow_buffer->fl->flid == f->flid){
+      gStatNackArrival->AddSample(_time-receive_flow_buffer->fl->create_time);
       gStatNackEffective[dest]+= receive_flow_buffer->nack(f->sn)?1:0;
     }
     f->Free();
@@ -1869,7 +1876,7 @@ void TrafficManager::_ClearStats( )
   gStatNackByPacket->Clear();
   
   gStatFastRetransmit->Clear();
-
+  gStatNackArrival->Clear();
   gStatFlowStats.clear();
   gStatFlowStats.resize(FLOW_STAT_LIFETIME+1+1,0);
 }
@@ -2589,6 +2596,8 @@ void TrafficManager::_DisplayTedsShit(){
 
     *_stats_out<< "fast_retransmit = "
 	       <<*gStatFastRetransmit<<";\n";
+    *_stats_out<< "nack_arrival = "
+	       <<*gStatNackArrival<<";\n";
 
     *_stats_out<< "flow_in_spec =" 
 	       <<gStatFlowStats[FLOW_STAT_SPEC]<<";\n";

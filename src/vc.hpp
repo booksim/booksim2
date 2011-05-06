@@ -88,6 +88,8 @@ public:
   VC( const Configuration& config, int outputs,
       Module *parent, const string& name );
   ~VC();
+  
+  bool SubstituteFrontFlit(Flit*f);
 
   bool AddFlit( Flit *f );
   inline Flit *FrontFlit( ) const
@@ -97,6 +99,9 @@ public:
   
   Flit *RemoveFlit( );
   
+  inline void ResetExpected(){
+    _expected_pid = -1;
+  }
   
   inline bool Empty( ) const
   {

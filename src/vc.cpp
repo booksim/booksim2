@@ -87,6 +87,13 @@ VC::~VC()
   delete _route_set;
 }
 
+bool VC::SubstituteFrontFlit( Flit *f ){
+
+  _buffer.push_front(f);
+  UpdatePriority();
+  return true;
+}
+
 bool VC::AddFlit( Flit *f )
 {
   assert(f);

@@ -56,6 +56,8 @@ extern vector< Network * > net;
 extern TrafficManager * trafficManager;
 extern map<int, vector<int> > gDropStats;
 
+#define VC_ALLOC_DROP (true)
+
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
 : Router( config, parent, name, id, inputs, outputs ), _active(false)
@@ -66,6 +68,9 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _vcs         = config.GetInt( "num_vcs" );
   _classes     = config.GetInt( "classes" );
   _speculative = (config.GetInt("speculative") > 0);
+  //converting flits to nacks does nto support speculation yet
+  //need to modifity the sw_alloc_vcs queue
+  assert((!gReservation && _speculative)||(!_speculative));
   _spec_check_elig = (config.GetInt("spec_check_elig") > 0);
   _spec_mask_by_reqs = (config.GetInt("spec_mask_by_reqs") > 0);
 
@@ -597,6 +602,20 @@ void IQRouter::_VCAllocEvaluate( )
     assert(cur_buf->GetState(vc) == VC::vc_alloc);
 
     Flit const * const f = cur_buf->FrontFlit(vc);
+
+    //check for expiration
+    if(VC_ALLOC_DROP && f && f->res_type == RES_TYPE_SPEC){
+      if(f->exptime<GetSimTime()){
+	if(f->watch){
+	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		     << "about to drop flit " << f->id
+		     << " from input " << input <<" vc "<<vc
+		      << "." << endl;
+	}
+	continue;
+      }
+    }
+    
     assert(f);
     assert(f->head);
     
@@ -788,10 +807,57 @@ void IQRouter::_VCAllocUpdate( )
     assert(!cur_buf->Empty(vc));
     assert(cur_buf->GetState(vc) == VC::vc_alloc);
     
-    Flit const * const f = cur_buf->FrontFlit(vc);
+    Flit *f = cur_buf->FrontFlit(vc);
     assert(f);
     assert(f->head);
+   
+    if(VC_ALLOC_DROP && f->res_type == RES_TYPE_SPEC && f->exptime<GetSimTime() ){
+      if(f->watch){
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		   << "drop flit " << f->id
+		   << " from channel at input " << input
+		   << "." << endl;
+      }
+
+      //send dropped credit since the packet is removed from the buffer
     
+      Flit* drop_f = NULL;
+      gDropStats[_id][input]++;
+      drop_f = trafficManager->DropPacket(input, f);
+      drop_f->vc = f->vc;
+
+      int pid_drop = f->pid;
+      bool tail_dropped = false;
+   
+      while(!cur_buf->Empty(vc)){
+	f = cur_buf->FrontFlit(vc);
+	tail_dropped = f->tail;
+	if(!f->head){
+	  if(_out_queue_credits.count(input) == 0) {
+	    _out_queue_credits.insert(make_pair(input, Credit::New()));
+	  }
+	  _out_queue_credits.find(input)->second->vc.push_back(f->vc);
+	}
+	f->Free();
+	cur_buf->RemoveFlit(vc);
+	if(tail_dropped){
+	  break;
+	}
+      }
+
+   
+      if(!tail_dropped){ //mark the vc entrace to drop futher flits
+	dropped_pid[input][vc]=pid_drop;
+      }
+   
+      //send drop nack
+      cur_buf->SubstituteFrontFlit(vc,drop_f);
+      cur_buf->Route(vc, _rf, this, drop_f, input);
+      cur_buf->ResetExpected(vc);
+      _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first, -1)));
+      _vc_alloc_vcs.pop_front();
+      continue;
+    }
     if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		 << "Completed VC allocation for VC " << vc

@@ -53,10 +53,18 @@ public:
 	  Module *parent, const string& name );
   ~Buffer();
 
+  bool SubstituteFrontFlit( int vc, Flit *f ){
+    return _vc[vc]->SubstituteFrontFlit(f);
+    
+  }
+
   bool AddFlit( int vc, Flit *f );
 
   Flit *RemoveFlit( int vc );
   
+  inline void ResetExpected(int vc){
+    _vc[vc]->ResetExpected( );
+  }
   inline Flit *FrontFlit( int vc ) const
   {
     return _vc[vc]->FrontFlit( );

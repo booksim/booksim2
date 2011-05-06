@@ -1,6 +1,6 @@
 #include "flowbuffer.hpp"
 
-#define FAST_RETRANSMIT_ENABLE (false)
+#define FAST_RETRANSMIT_ENABLE (true)
 
 FlowBuffer::FlowBuffer(int id, int size, bool res, flow* f){
   _id = id;
@@ -155,7 +155,7 @@ bool FlowBuffer::nack(int sn){
       if(_watch){
 	cout<<"\tnack flit "<<i<<endl;
       }
-      effective = true;
+    
       bool tail = _flit_buffer[i]->tail;
       _flit_status[i] = FLIT_NACKED;
       _ready++;
@@ -169,6 +169,7 @@ bool FlowBuffer::nack(int sn){
 
     //change buffer status
     if(_status == FLOW_STATUS_SPEC){
+      effective = true;
       if(_tail_sent){
 	_status = FLOW_STATUS_NACK;	
       } else {
