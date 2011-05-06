@@ -71,7 +71,7 @@ protected:
   vector<int> _packet_size;
 
   vector<int> _reply_class;
-  vector<bool> _is_reply_class;
+  vector<int> _request_class;
 
   vector<string> _traffic;
 

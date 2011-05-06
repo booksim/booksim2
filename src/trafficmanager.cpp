@@ -118,11 +118,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _reply_class.resize(_classes, _reply_class.back());
 
-  _is_reply_class.resize(_classes, false);
+  _request_class.resize(_classes, -1);
   for(int c = 0; c < _classes; ++c) {
     int const & reply_class = _reply_class[c];
     if(reply_class >= 0) {
-      _is_reply_class[reply_class] = true;
+      assert(_request_class[reply_class] < 0);
+      _request_class[reply_class] = c;
     }
   }
 
@@ -612,7 +613,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 		 << ")." << endl;
     }
 
-    int const reply_class = _reply_class[f->cl];
+    int const & reply_class = _reply_class[f->cl];
+    assert(reply_class < _classes);
 
     if (reply_class < 0) {
       if ( f->watch ) { 
@@ -624,7 +626,16 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 		   << ", dest = " << head->dest
 		   << ")." << endl;
       }
-      _requests_outstanding[dest][f->cl]--;
+      int const & request_class = _request_class[f->cl];
+      assert(request_class < _classes);
+      if(request_class < 0) {
+	// single-packet transactions "magically" notify source of completion 
+	// when packet arrives at destination
+	_requests_outstanding[f->src][f->cl]--;
+      } else {
+	// request-reply transactions complete when reply arrives
+	_requests_outstanding[dest][request_class]--;
+      }
     } else {
       _sent_packets[dest][f->cl]++;
       _GeneratePacket( f->dest, f->src, _packet_size[reply_class], 
@@ -643,8 +654,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       _plat_stats[f->cl]->AddSample( f->atime - f->time);
       _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
       if(reply_class < 0) {
-	_tlat_stats[f->cl]->AddSample( f->atime - f->ttime );
-	_pair_tlat[f->cl][dest*_nodes+f->src]->AddSample( f->atime - f->ttime );
+	int const & request_class = _request_class[f->cl];
+	assert(request_class < _classes);
+	int const cl = (request_class < 0) ? f->cl : request_class;
+	_tlat_stats[cl]->AddSample( f->atime - f->ttime );
+	_pair_tlat[cl][dest*_nodes+f->src]->AddSample( f->atime - f->ttime );
       }
       _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->time );
     }
@@ -794,7 +808,7 @@ void TrafficManager::_Inject(){
       // that is currently empty
       if ( _partial_packets[source][c].empty() ) {
 	if ( !_empty_network ) {
-	  if(_is_reply_class[c]) {
+	  if(_request_class[c] >= 0) {
 	    _qtime[source][c] = _time;
 	  } else {
 	    bool generated = false;
@@ -1623,7 +1637,7 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
       os << "results:"
 	 << c
 	 << "," << _traffic[c]
-	 << "," << (_reply_class[c] >= 0)
+	 << "," << (_request_class[c] >= 0)
 	 << "," << _packet_size[c]
 	 << "," << _load[c]
 	 << "," << _overall_min_plat[c]->Average( )
