@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "switch_monitor.hpp"
 #include "iq_router.hpp"
 
-Power_Module::Power_Module(Network * n , TrafficManager* parent, const Configuration &config)
+Power_Module::Power_Module(Network * n , const Configuration &config)
   : Module( 0, "power_module" ){
 
   
@@ -43,7 +43,6 @@ Power_Module::Power_Module(Network * n , TrafficManager* parent, const Configura
   pconfig.ParseFile(pfile);
 
   net = n;
-  sim = parent;
   output_file_name = config.GetStr("power_output_file");
   classes = config.GetInt("classes");
   channel_width = (double)config.GetInt("channel_width");
@@ -450,7 +449,7 @@ double Power_Module:: areaOutputModule(double Outputs) {
 }
 
 void Power_Module::run(){
-  totalTime = sim->getTime();
+  totalTime = GetSimTime();
   channelWirePower=0;
   channelClkPower=0;
   channelDFFPower=0;
