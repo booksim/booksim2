@@ -36,7 +36,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "module.hpp"
 #include "network.hpp"
 #include "config_utils.hpp"
-#include "trafficmanager.hpp"
 #include "flitchannel.hpp"
 #include "switch_monitor.hpp"
 #include "buffer_monitor.hpp"
@@ -53,7 +52,6 @@ class Power_Module : public Module {
 protected:
   //network undersimulation
   Network * net;
-  TrafficManager* sim;
   int classes;
   //all channels are this width
   double channel_width;
@@ -181,7 +179,7 @@ protected:
   double areaOutputModule(double Outputs);
 
 public:
-  Power_Module(Network * net, TrafficManager* parent, const Configuration &config);
+  Power_Module(Network * net, const Configuration &config);
   ~Power_Module();
 
   void run();
