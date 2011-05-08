@@ -37,12 +37,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include "booksim_config.hpp"
 #include "trafficmanager.hpp"
+#include "batchtrafficmanager.hpp"
 #include "random_utils.hpp" 
 #include "vc.hpp"
 
+TrafficManager * TrafficManager::NewTrafficManager(Configuration const & config,
+						   vector<Network *> const & net)
+{
+  TrafficManager * result = NULL;
+  string sim_type = config.GetStr("sim_type");
+  if((sim_type == "latency") || (sim_type == "throughput")) {
+    result = new TrafficManager(config, net);
+  } else if(sim_type == "batch") {
+    result = new BatchTrafficManager(config, net);
+  } else {
+    cerr << "Unknown simulation type: " << sim_type << endl;
+  } 
+  return result;
+}
 
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
-: Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
+: Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
 
   _nodes = _net[0]->NumNodes( );
@@ -193,14 +208,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _max_outstanding.resize(_classes, _max_outstanding.back());
 
-  _batch_size = config.GetIntArray("batch_size");
-  if(_batch_size.empty()) {
-    _batch_size.push_back(config.GetInt("batch_size"));
-  }
-  _batch_size.resize(_classes, _batch_size.back());
-
-  _batch_count = config.GetInt( "batch_count" );
-
   // ============ Statistics ============ 
 
   _plat_stats.resize(_classes);
@@ -333,12 +340,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     
   }
 
-  _batch_time = new Stats( this, "batch_time" );
-  _stats["batch_time"] = _batch_time;
-  
-  _overall_batch_time = new Stats( this, "overall_batch_time" );
-  _stats["overall_batch_time"] = _overall_batch_time;
-  
   _slowest_flit.resize(_classes, -1);
 
   // ============ Simulation parameters ============ 
@@ -353,17 +354,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   //seed the network
   RandomSeed(config.GetInt("seed"));
 
-  string sim_type = config.GetStr( "sim_type" );
-
-  if ( sim_type == "latency" ) {
-    _sim_mode = latency;
-  } else if ( sim_type == "throughput" ) {
-    _sim_mode = throughput;
-  }  else if ( sim_type == "batch" ) {
-    _sim_mode = batch;
-  } else {
-    Error( "Unknown sim_type value : " + sim_type );
-  }
+  _measure_latency = (config.GetStr("sim_type") == "latency");
 
   _sample_period = config.GetInt( "sample_period" );
   _max_samples    = config.GetInt( "max_samples" );
@@ -532,9 +523,6 @@ TrafficManager::~TrafficManager( )
     }
   }
   
-  delete _batch_time;
-  delete _overall_batch_time;
-  
   if(gWatchOut && (gWatchOut != &cout)) delete gWatchOut;
   if(_stats_out && (_stats_out != &cout)) delete _stats_out;
 
@@ -576,9 +564,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	       << ", lat = " << f->atime - f->time
 	       << ")." << endl;
   }
-
-  _last_id = f->id;
-  _last_pid = f->pid;
 
   if ( f->head && ( f->dest != dest ) ) {
     ostringstream err;
@@ -677,10 +662,6 @@ bool TrafficManager::_IssuePacket( int source, int cl )
   if((_max_outstanding[cl] > 0) && 
      (_requests_outstanding[source][cl] >= _max_outstanding[cl])) {
       return false;
-  }
-  if((_sim_mode == batch) &&
-     (_sent_packets[source][cl] >= _batch_size[cl])) {
-    return false;
   }
   if(!_injection_process[source][cl]->test()) {
     return false;
@@ -1096,6 +1077,7 @@ void TrafficManager::_ClearStats( )
   
     for ( int i = 0; i < _nodes; ++i ) {
       _sent_flits[c][i]->Clear( );
+      _accepted_flits[c][i]->Clear( );
       
       for ( int j = 0; j < _nodes; ++j ) {
 	_pair_plat[c][i*_nodes+j]->Clear( );
@@ -1103,10 +1085,6 @@ void TrafficManager::_ClearStats( )
       }
     }
 
-    for ( int i = 0; i < _nodes; ++i ) {
-      _accepted_flits[c][i]->Clear( );
-    }
-  
     _hop_stats[c]->Clear();
 
   }
@@ -1173,257 +1151,184 @@ void TrafficManager::_DisplayRemaining( ostream & os ) const
 bool TrafficManager::_SingleSim( )
 {
   int converged = 0;
-
-  if(_sim_mode == batch) { //batch mode   
-    int batch_index = 0;
-    while(batch_index < _batch_count) {
-      for (int i = 0; i < _nodes; i++) {
-	_sent_packets[i].assign(_classes, 0);
+  
+  //once warmed up, we require 3 converging runs to end the simulation 
+  vector<double> prev_latency(_classes, 0.0);
+  vector<double> prev_accepted(_classes, 0.0);
+  bool clear_last = false;
+  int total_phases = 0;
+  while( ( total_phases < _max_samples ) && 
+	 ( ( _sim_state != running ) || 
+	   ( converged < 3 ) ) ) {
+    
+    if ( clear_last || (( ( _sim_state == warming_up ) && ( ( total_phases % 2 ) == 0 ) )) ) {
+      clear_last = false;
+      _ClearStats( );
+    }
+    
+    
+    for ( int iter = 0; iter < _sample_period; ++iter )
+      _Step( );
+    
+    cout << _sim_state << endl;
+    if(_stats_out)
+      *_stats_out << "%=================================" << endl;
+    
+    DisplayStats();
+    
+    int lat_exc_class = -1;
+    int lat_chg_exc_class = -1;
+    int acc_chg_exc_class = -1;
+    
+    for(int c = 0; c < _classes; ++c) {
+      
+      if(_measure_stats[c] == 0) {
+	continue;
       }
-      _last_id = -1;
-      _last_pid = -1;
-      _sim_state = running;
-      int start_time = _time;
-      bool batch_complete;
-      do {
-	_Step();
-	batch_complete = true;
-	for(int source = 0; (source < _nodes) && batch_complete; ++source) {
-	  for(int c = 0; c < _classes; ++c) {
-	    if(_sent_packets[source][c] < _batch_size[c]) {
-	      batch_complete = false;
-	      break;
-	    }
-	  }
+
+      double cur_latency = _plat_stats[c]->Average( );
+
+      double min, avg;
+      _ComputeStats( _accepted_flits[c], &avg, &min );
+      double cur_accepted = avg;
+
+      double latency_change = fabs((cur_latency - prev_latency[c]) / cur_latency);
+      prev_latency[c] = cur_latency;
+
+      double accepted_change = fabs((cur_accepted - prev_accepted[c]) / cur_accepted);
+      prev_accepted[c] = cur_accepted;
+
+      double latency = cur_latency;
+      double count = (double)_plat_stats[c]->NumSamples();
+      
+      map<int, Flit *>::const_iterator iter;
+      for(iter = _total_in_flight_flits[c].begin(); 
+	  iter != _total_in_flight_flits[c].end(); 
+	  iter++) {
+	latency += (double)(_time - iter->second->time);
+	count++;
+      }
+      
+      if((lat_exc_class < 0) &&
+	 (_latency_thres[c] >= 0.0) &&
+	 ((latency / count) > _latency_thres[c])) {
+	lat_exc_class = c;
+      }
+      
+      cout << "class " << c << " latency change    = " << latency_change << endl;
+      if(lat_chg_exc_class < 0) {
+	if((_sim_state == warming_up) &&
+	   (_warmup_threshold[c] >= 0.0) &&
+	   (latency_change > _warmup_threshold[c])) {
+	  lat_chg_exc_class = c;
+	} else if((_sim_state == running) &&
+		  (_stopping_threshold[c] >= 0.0) &&
+		  (latency_change > _stopping_threshold[c])) {
+	  lat_chg_exc_class = c;
 	}
-	if(_sent_packets_out) {
-	  *_sent_packets_out << "sent_packets(" << _time << ",:) = " << _sent_packets << ";" << endl;
+      }
+      
+      cout << "class " << c << " throughput change = " << accepted_change << endl;
+      if(acc_chg_exc_class < 0) {
+	if((_sim_state == warming_up) &&
+	   (_acc_warmup_threshold[c] >= 0.0) &&
+	   (accepted_change > _acc_warmup_threshold[c])) {
+	  acc_chg_exc_class = c;
+	} else if((_sim_state == running) &&
+		  (_acc_stopping_threshold[c] >= 0.0) &&
+		  (accepted_change > _acc_stopping_threshold[c])) {
+	  acc_chg_exc_class = c;
 	}
-      } while(!batch_complete);
-      cout << "Batch " << batch_index + 1 << " ("<<_batch_size  <<  " packets) sent. Time used is " << _time - start_time << " cycles." << endl;
-      cout << "Draining the Network...................\n";
-      _sim_state = draining;
+      }
+      
+    }
+    
+    // Fail safe for latency mode, throughput will ust continue
+    if ( _measure_latency && ( lat_exc_class >= 0 ) ) {
+      
+      cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
+      converged = 0; 
+      _sim_state = warming_up;
+      break;
+      
+    }
+    
+    if ( _sim_state == warming_up ) {
+      if ( ( _warmup_periods > 0 ) ? 
+	   ( total_phases + 1 >= _warmup_periods ) :
+	   ( ( !_measure_latency || ( lat_chg_exc_class < 0 ) ) &&
+	     ( acc_chg_exc_class < 0 ) ) ) {
+	cout << "Warmed up ..." <<  "Time used is " << _time << " cycles" <<endl;
+	clear_last = true;
+	_sim_state = running;
+      }
+    } else if(_sim_state == running) {
+      if ( ( !_measure_latency || ( lat_chg_exc_class < 0 ) ) &&
+	   ( acc_chg_exc_class < 0 ) ) {
+	++converged;
+      } else {
+	converged = 0;
+      }
+    }
+    ++total_phases;
+  }
+  
+  if ( _sim_state == running ) {
+    ++converged;
+    
+    if ( _measure_latency ) {
+      cout << "Draining all recorded packets ..." << endl;
+      _sim_state  = draining;
       _drain_time = _time;
       int empty_steps = 0;
-
-      bool packets_left = false;
-      for(int c = 0; c < _classes; ++c) {
-	packets_left |= !_total_in_flight_flits[c].empty();
-      }
-
-      while( packets_left ) { 
+      while( _PacketsOutstanding( ) ) { 
 	_Step( ); 
-
+	
 	++empty_steps;
 	
 	if ( empty_steps % 1000 == 0 ) {
-	  _DisplayRemaining( ); 
-	  cout << ".";
-	}
-
-	packets_left = false;
-	for(int c = 0; c < _classes; ++c) {
-	  packets_left |= !_total_in_flight_flits[c].empty();
-	}
-      }
-      cout << endl;
-      cout << "Batch " << batch_index + 1 << " ("<<_batch_size  <<  " packets) received. Time used is " << _time - _drain_time << " cycles. Last packet was " << _last_pid << ", last flit was " << _last_id << "." <<endl;
-      _batch_time->AddSample(_time - start_time);
-      cout << _sim_state << endl;
-      if(_stats_out)
-	*_stats_out << "%=================================" << endl;
-
-      cout << "Batch duration = " << _time - start_time << endl;
-
-      DisplayStats();
-
-      if(_stats_out) {
-	*_stats_out << "batch_time(" << batch_index + 1 << ") = " << _time << ";" << endl;
-      }
-
-      ++batch_index;
-    }
-    converged = 1;
-  } else { 
-    //once warmed up, we require 3 converging runs
-    //to end the simulation 
-    vector<double> prev_latency(_classes, 0.0);
-    vector<double> prev_accepted(_classes, 0.0);
-    bool clear_last = false;
-    int total_phases = 0;
-    while( ( total_phases < _max_samples ) && 
-	   ( ( _sim_state != running ) || 
-	     ( converged < 3 ) ) ) {
-
-      if ( clear_last || (( ( _sim_state == warming_up ) && ( ( total_phases % 2 ) == 0 ) )) ) {
-	clear_last = false;
-	_ClearStats( );
-      }
-      
-      
-      for ( int iter = 0; iter < _sample_period; ++iter )
-	_Step( );
-      
-      cout << _sim_state << endl;
-      if(_stats_out)
-	*_stats_out << "%=================================" << endl;
-
-      DisplayStats();
-
-      int lat_exc_class = -1;
-      int lat_chg_exc_class = -1;
-      int acc_chg_exc_class = -1;
-
-      for(int c = 0; c < _classes; ++c) {
-
-	if(_measure_stats[c] == 0) {
-	  continue;
-	}
-
-	double cur_latency = _plat_stats[c]->Average( );
-
-	double min, avg;
-	_ComputeStats( _accepted_flits[c], &avg, &min );
-	double cur_accepted = avg;
-
-	double latency_change = fabs((cur_latency - prev_latency[c]) / cur_latency);
-	prev_latency[c] = cur_latency;
-
-	double accepted_change = fabs((cur_accepted - prev_accepted[c]) / cur_accepted);
-	prev_accepted[c] = cur_accepted;
-
-	double latency = cur_latency;
-	double count = (double)_plat_stats[c]->NumSamples();
 	  
-	map<int, Flit *>::const_iterator iter;
-	for(iter = _total_in_flight_flits[c].begin(); 
-	    iter != _total_in_flight_flits[c].end(); 
-	    iter++) {
-	  latency += (double)(_time - iter->second->time);
-	  count++;
-	}
-	
-	if((lat_exc_class < 0) &&
-	   (_latency_thres[c] >= 0.0) &&
-	   ((latency / count) > _latency_thres[c])) {
-	  lat_exc_class = c;
-	}
-	
-	cout << "latency change    = " << latency_change << endl;
-	if(lat_chg_exc_class < 0) {
-	  if((_sim_state == warming_up) &&
-	     (_warmup_threshold[c] >= 0.0) &&
-	     (latency_change > _warmup_threshold[c])) {
-	    lat_chg_exc_class = c;
-	  } else if((_sim_state == running) &&
-		    (_stopping_threshold[c] >= 0.0) &&
-		    (latency_change > _stopping_threshold[c])) {
-	    lat_chg_exc_class = c;
-	  }
-	}
-	
-	cout << "throughput change = " << accepted_change << endl;
-	if(acc_chg_exc_class < 0) {
-	  if((_sim_state == warming_up) &&
-	     (_acc_warmup_threshold[c] >= 0.0) &&
-	     (accepted_change > _acc_warmup_threshold[c])) {
-	    acc_chg_exc_class = c;
-	  } else if((_sim_state == running) &&
-		    (_acc_stopping_threshold[c] >= 0.0) &&
-		    (accepted_change > _acc_stopping_threshold[c])) {
-	    acc_chg_exc_class = c;
-	  }
-	}
-	
-      }
-
-      // Fail safe for latency mode, throughput will ust continue
-      if ( ( _sim_mode == latency ) && ( lat_exc_class >= 0 ) ) {
-
-	cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
-	converged = 0; 
-	_sim_state = warming_up;
-	break;
-
-      }
-
-      if ( _sim_state == warming_up ) {
-	if ( ( _warmup_periods > 0 ) ? 
-	     ( total_phases + 1 >= _warmup_periods ) :
-	     ( ( ( _sim_mode != latency ) || ( lat_chg_exc_class < 0 ) ) &&
-	       ( acc_chg_exc_class < 0 ) ) ) {
-	  cout << "Warmed up ..." <<  "Time used is " << _time << " cycles" <<endl;
-	  clear_last = true;
-	  _sim_state = running;
-	}
-      } else if(_sim_state == running) {
-	if ( ( ( _sim_mode != latency ) || ( lat_chg_exc_class < 0 ) ) &&
-	     ( acc_chg_exc_class < 0 ) ) {
-	  ++converged;
-	} else {
-	  converged = 0;
-	}
-      }
-      ++total_phases;
-    }
-  
-    if ( _sim_state == running ) {
-      ++converged;
-
-      if ( _sim_mode == latency ) {
-	cout << "Draining all recorded packets ..." << endl;
-	_sim_state  = draining;
-	_drain_time = _time;
-	int empty_steps = 0;
-	while( _PacketsOutstanding( ) ) { 
-	  _Step( ); 
-
-	  ++empty_steps;
+	  int lat_exc_class = -1;
 	  
-	  if ( empty_steps % 1000 == 0 ) {
+	  for(int c = 0; c < _classes; c++) {
 	    
-	    int lat_exc_class = -1;
+	    double threshold = _latency_thres[c];
 	    
-	    for(int c = 0; c < _classes; c++) {
-
-	      double threshold = _latency_thres[c];
-
-	      if(threshold < 0.0) {
-		continue;
-	      }
-
-	      double acc_latency = _plat_stats[c]->Sum();
-	      double acc_count = (double)_plat_stats[c]->NumSamples();
-
-	      map<int, Flit *>::const_iterator iter;
-	      for(iter = _total_in_flight_flits[c].begin(); 
-		  iter != _total_in_flight_flits[c].end(); 
-		  iter++) {
-		acc_latency += (double)(_time - iter->second->time);
-		acc_count++;
-	      }
-	      
-	      if((acc_latency / acc_count) > threshold) {
-		lat_exc_class = c;
-		break;
-	      }
+	    if(threshold < 0.0) {
+	      continue;
 	    }
 	    
-	    if(lat_exc_class >= 0) {
-	      cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
-	      converged = 0; 
-	      _sim_state = warming_up;
+	    double acc_latency = _plat_stats[c]->Sum();
+	    double acc_count = (double)_plat_stats[c]->NumSamples();
+	    
+	    map<int, Flit *>::const_iterator iter;
+	    for(iter = _total_in_flight_flits[c].begin(); 
+		iter != _total_in_flight_flits[c].end(); 
+		iter++) {
+	      acc_latency += (double)(_time - iter->second->time);
+	      acc_count++;
+	    }
+	    
+	    if((acc_latency / acc_count) > threshold) {
+	      lat_exc_class = c;
 	      break;
 	    }
-	    
-	    _DisplayRemaining( ); 
-	    
 	  }
+	  
+	  if(lat_exc_class >= 0) {
+	    cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
+	    converged = 0; 
+	    _sim_state = warming_up;
+	    break;
+	  }
+	  
+	  _DisplayRemaining( ); 
+	  
 	}
       }
-    } else {
-      cout << "Too many sample periods needed to converge" << endl;
     }
+  } else {
+    cout << "Too many sample periods needed to converge" << endl;
   }
   
   return ( converged > 0 );
@@ -1501,7 +1406,7 @@ bool TrafficManager::Run( )
     //the power script depend on it
     cout << "Time taken is " << _time << " cycles" <<endl; 
 
-    UpdateOverallStats();
+    _UpdateOverallStats();
   }
   
   if(_print_csv_results)
@@ -1512,7 +1417,7 @@ bool TrafficManager::Run( )
   return true;
 }
 
-void TrafficManager::UpdateOverallStats() {
+void TrafficManager::_UpdateOverallStats() {
 
   for ( int c = 0; c < _classes; ++c ) {
     
@@ -1543,10 +1448,6 @@ void TrafficManager::UpdateOverallStats() {
     
 
   }
-  
-  if(_sim_mode == batch)
-    _overall_batch_time->AddSample(_batch_time->Sum( ));
-  
 }
 
 void TrafficManager::DisplayStats(ostream & os) const {
@@ -1677,14 +1578,10 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
   
   }
   
-  if(_sim_mode == batch)
-    os << "Overall batch duration = " << _overall_batch_time->Average( )
-       << " (" << _overall_batch_time->NumSamples( ) << " samples)" << endl;
-  
 }
 
 void TrafficManager::DisplayOverallStatsCSV(ostream & os) const {
-  for(int c = 0; c < _classes; ++c) {
+  for(int c = 0; c <= _classes; ++c) {
     os << "results:"
        << c
        << "," << _traffic[c]

@@ -122,7 +122,7 @@ bool Simulate( BookSimConfig const & config )
    */
 
   assert(trafficManager == NULL);
-  trafficManager = new TrafficManager( config, net ) ;
+  trafficManager = TrafficManager::NewTrafficManager( config, net ) ;
 
   /*Start the simulation run
    */
