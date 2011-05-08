@@ -163,9 +163,6 @@ protected:
   vector<Stats *> _overall_accepted;
   vector<Stats *> _overall_accepted_min;
   
-  Stats * _batch_time;
-  Stats * _overall_batch_time;
-
   vector<int> _slowest_flit;
 
   map<string, Stats *> _stats;
@@ -175,9 +172,6 @@ protected:
   enum eSimState { warming_up, running, draining, done };
   eSimState _sim_state;
 
-  enum eSimMode { latency, throughput, batch };
-  eSimMode _sim_mode;
-  
   bool _measure_latency;
 
   int   _warmup_time;
