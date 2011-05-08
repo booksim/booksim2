@@ -128,19 +128,14 @@ protected:
   int _deadlock_timer;
   int _deadlock_warn_timeout;
 
-  // ============ batch mode ==========================
+  // ============ request & replies ==========================
 
   vector<int> _sent_packets;
-  int _batch_size;
-  int _batch_count;
   vector<list<int> > _repliesPending;
   map<int, PacketReplyInfo*> _repliesDetails;
   vector<int> _requestsOutstanding;
   int _maxOutstanding;
   bool _replies_inherit_priority;
-
-  int _last_id;
-  int _last_pid;
 
   // ============ Statistics ============
 
@@ -183,6 +178,8 @@ protected:
   enum eSimMode { latency, throughput, batch };
   eSimMode _sim_mode;
   
+  bool _measure_latency;
+
   int   _warmup_time;
   int   _drain_time;
 
@@ -230,37 +227,42 @@ protected:
 
   // ============ Internal methods ============ 
 protected:
-  void _RetireFlit( Flit *f, int dest );
+
+  virtual void _RetireFlit( Flit *f, int dest );
 
   void _Inject();
   void _Step( );
 
   bool _PacketsOutstanding( ) const;
   
-  int  _IssuePacket( int source, int cl );
+  virtual int  _IssuePacket( int source, int cl );
   void _GeneratePacket( int source, int size, int cl, int time );
 
   void _ClearStats( );
 
   int  _ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const;
 
-  bool _SingleSim( );
+  virtual bool _SingleSim( );
 
   void _DisplayRemaining( ostream & os = cout ) const;
   
   void _LoadWatchList(const string & filename);
 
+  virtual void _UpdateOverallStats();
+
 public:
+
+  static TrafficManager * NewTrafficManager(Configuration const & config, 
+					    vector<Network *> const & net);
+
   TrafficManager( const Configuration &config, const vector<Network *> & net );
-  ~TrafficManager( );
+  virtual ~TrafficManager( );
 
   bool Run( );
 
-  void UpdateOverallStats();
-
-  void DisplayStats( ostream & os = cout ) const ;
-  void DisplayOverallStats( ostream & os = cout ) const ;
-  void DisplayOverallStatsCSV( ostream & os = cout ) const ;
+  virtual void DisplayStats( ostream & os = cout ) const ;
+  virtual void DisplayOverallStats( ostream & os = cout ) const ;
+  virtual void DisplayOverallStatsCSV( ostream & os = cout ) const ;
 
   const Stats * GetOverallLatency(int c = 0) { return _overall_avg_plat[c]; }
   const Stats * GetAccepted(int c = 0) { return _overall_accepted[c]; }
