@@ -362,12 +362,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     
   }
 
-  _batch_time = new Stats( this, "batch_time" );
-  _stats["batch_time"] = _batch_time;
-  
-  _overall_batch_time = new Stats( this, "overall_batch_time" );
-  _stats["overall_batch_time"] = _overall_batch_time;
-  
   _slowest_flit.resize(_classes, -1);
 
   // ============ Simulation parameters ============ 
@@ -550,9 +544,6 @@ TrafficManager::~TrafficManager( )
       delete _accepted_flits[c][dest];
     }
   }
-  
-  delete _batch_time;
-  delete _overall_batch_time;
   
   if(gWatchOut && (gWatchOut != &cout)) delete gWatchOut;
   if(_stats_out && (_stats_out != &cout)) delete _stats_out;
