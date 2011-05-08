@@ -57,6 +57,7 @@ CPP_SRCS = main.cpp \
    traffic.cpp \
    flitchannel.cpp \
    trafficmanager.cpp \
+   batchtrafficmanager.cpp \
    packet_reply_info.cpp \
    buffer_state.cpp \
    stats.cpp \
