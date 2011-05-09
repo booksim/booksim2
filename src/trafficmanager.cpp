@@ -682,22 +682,20 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
 int TrafficManager::_IssuePacket( int source, int cl )
 {
-  int result;
+  int result = 0;
   if(_use_read_write[cl]){ //use read and write
     //check queue for waiting replies.
     //check to make sure it is on time yet
     int pending_time = numeric_limits<int>::max(); //reset to maxtime+1
     if (!_repliesPending[source].empty()) {
-      result = _repliesPending[source].front();
-      pending_time = _repliesDetails.find(result)->second->time;
+      int reply = _repliesPending[source].front();
+      if(_repliesDetails.find(result)->second->time <= _qtime[source][cl]) {
+	_repliesPending[source].pop_front();
+	result = reply;
+      }
     }
-    if (pending_time<=_qtime[source][cl]) {
-      result = _repliesPending[source].front();
-      _repliesPending[source].pop_front();
-    } else if((_maxOutstanding > 0) && 
-	      (_requestsOutstanding[source] >= _maxOutstanding)) {
-      result = 0;
-    } else {
+    if((_maxOutstanding <= 0) || 
+       (_requestsOutstanding[source] < _maxOutstanding)) {
       
       //produce a packet
       if(_injection_process[source][cl]->test()) {
@@ -705,10 +703,8 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	//coin toss to determine request type.
 	result = (RandomFloat() < 0.5) ? -2 : -1;
 	
-      } else {
-	result = 0;
       }
-    } 
+    }
   } else { //normal mode
     result = _injection_process[source][cl]->test() ? 1 : 0;
   } 
