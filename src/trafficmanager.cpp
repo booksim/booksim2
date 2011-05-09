@@ -659,16 +659,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
 bool TrafficManager::_IssuePacket( int source, int cl )
 {
-  if((_max_outstanding[cl] > 0) && 
-     (_requests_outstanding[source][cl] >= _max_outstanding[cl])) {
-      return false;
+  if(_injection_process[source][cl]->test()) {
+    _requests_outstanding[source][cl]++;
+    _sent_packets[source][cl]++;
+    return true;
   }
-  if(!_injection_process[source][cl]->test()) {
-    return false;
-  }
-  _requests_outstanding[source][cl]++;
-  _sent_packets[source][cl]++;
-  return true;
+  return false;
 }
 
 void TrafficManager::_GeneratePacket( int source, int dest, int size, 
@@ -784,19 +780,20 @@ void TrafficManager::_Inject(){
       // that is currently empty
       if ( _partial_packets[source][c].empty() ) {
 	if ( !_empty_network ) {
-	  if(_request_class[c] >= 0) {
+	  if((_request_class[c] >= 0) ||
+	     ((_max_outstanding[c] > 0) && 
+	      (_requests_outstanding[source][c] >= _max_outstanding[c]))) {
 	    _qtime[source][c] = _time;
 	  } else {
-	    bool generated = false;
-	    while( !generated && ( _qtime[source][c] <= _time ) ) {
+	    while(_qtime[source][c] <= _time) {
+	      ++_qtime[source][c];
 	      if(_IssuePacket(source, c)) { //generate a packet
 		int dest = _traffic_pattern[c]->dest(source);
 		int size = _packet_size[c];
 		int time = ((_include_queuing == 1) ? _qtime[source][c] : _time);
 		_GeneratePacket(source, dest, size, c, time, -1, time);
-		generated = true;
+		break;
 	      }
-	      ++_qtime[source][c];
 	    }
 	  }
 	  if((_sim_state == draining) && (_qtime[source][c] > _drain_time)) {
