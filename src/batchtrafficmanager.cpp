@@ -65,42 +65,37 @@ void BatchTrafficManager::_RetireFlit( Flit *f, int dest )
 
 int BatchTrafficManager::_IssuePacket( int source, int cl )
 {
-  int result;
+  int result = 0;
   if(_use_read_write[cl]) { //read write packets
     //check queue for waiting replies.
     //check to make sure it is on time yet
-    int pending_time = numeric_limits<int>::max(); //reset to maxtime+1
-    if (!_repliesPending[source].empty()) {
-      result = _repliesPending[source].front();
-      pending_time = _repliesDetails.find(result)->second->time;
+    if(!_repliesPending[source].empty()) {
+      int reply = _repliesPending[source].front();
+      if(_repliesDetails.find(reply)->second->time <= _qtime[source][cl]) {
+	_repliesPending[source].pop_front();
+	result = reply;
+      }
     }
-    if (pending_time<=_qtime[source][cl]) {
-      result = _repliesPending[source].front();
-      _repliesPending[source].pop_front();
-      
-    } else if ((_sent_packets[source] >= _batch_size) || 
-	       ((_maxOutstanding > 0) && 
-		(_requestsOutstanding[source] >= _maxOutstanding))) {
-      result = 0;
-    } else {
-      
+    if((_sent_packets[source] < _batch_size) && 
+       ((_maxOutstanding <= 0) || 
+	(_requestsOutstanding[source] < _maxOutstanding))) {
+
       //coin toss to determine request type.
       result = (RandomFloat() < 0.5) ? -2 : -1;
+
+    }
       
-      _sent_packets[source]++;
-      _requestsOutstanding[source]++;
-    } 
   } else { //normal
-    if ((_sent_packets[source] >= _batch_size) || 
-	((_maxOutstanding > 0) && 
-	 (_requestsOutstanding[source] >= _maxOutstanding))) {
-      result = 0;
-    } else {
+    if((_sent_packets[source] < _batch_size) && 
+       ((_maxOutstanding <= 0) || 
+	(_requestsOutstanding[source] < _maxOutstanding))) {
       result = _packet_size[cl];
-      _sent_packets[source]++;
-      _requestsOutstanding[source]++;
-    } 
-  } 
+    }
+  }
+  if(result != 0) {
+    _sent_packets[source]++;
+    _requestsOutstanding[source]++;
+  }
   return result;
 }
 
