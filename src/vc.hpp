@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -48,26 +48,14 @@ public:
   static const char * const VCSTATE[];
   
 private:
-  int _size;
 
   deque<Flit *> _buffer;
   
   eVCState _state;
-  int      _state_time;
   
   OutputSet *_route_set;
   int _out_port, _out_vc;
 
-  int _total_cycles;
-  int _vc_alloc_cycles;
-  int _active_cycles;
-  int _idle_cycles;
-  int _routing_cycles;
-  
-  static int total_cycles;
-  static state_info_t state_info[];
-  static int occupancy;
-  
   enum ePrioType { local_age_based, queue_length_based, hop_count_based, none, other };
 
   ePrioType _pri_type;
@@ -89,7 +77,7 @@ public:
       Module *parent, const string& name );
   ~VC();
 
-  bool AddFlit( Flit *f );
+  void AddFlit( Flit *f );
   inline Flit *FrontFlit( ) const
   {
     return _buffer.empty() ? NULL : _buffer.front();
@@ -103,23 +91,13 @@ public:
     return _buffer.empty( );
   }
 
-  inline bool Full( ) const
-  {
-    return (int)_buffer.size( ) == _size;
-  }
-
   inline VC::eVCState GetState( ) const
   {
     return _state;
   }
 
-  inline int GetStateTime( ) const
-  {
-    return _state_time;
-  }
 
-
-  void     SetState( eVCState s );
+  void SetState( eVCState s );
 
   const OutputSet *GetRouteSet( ) const;
 
@@ -144,9 +122,7 @@ public:
   }
   void Route( tRoutingFunction rf, const Router* router, const Flit* f, int in_channel );
 
-  void AdvanceTime( );
-
-  inline int GetSize() const
+  inline int GetOccupancy() const
   {
     return (int)_buffer.size();
   }
@@ -156,7 +132,6 @@ public:
   void SetWatch( bool watch = true );
   bool IsWatched( ) const;
   void Display( ostream & os = cout ) const;
-  static void DisplayStats( bool print_csv = false, ostream & os = cout );
 };
 
 #endif 

@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -166,6 +166,8 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _bufferMonitor = new BufferMonitor(inputs, classes);
   _switchMonitor = new SwitchMonitor(inputs, outputs, classes);
 
+  _stored_flits.resize(_inputs, 0);
+  _active_packets.resize(_inputs, 0);
 }
 
 IQRouter::~IQRouter( )
@@ -279,7 +281,7 @@ bool IQRouter::_ReceiveFlits( )
   for(int input = 0; input < _inputs; ++input) { 
     Flit * const f = _input_channels[input]->Receive();
     if(f) {
-      ++_received_flits;
+      ++_received_flits[input];
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "Received flit " << f->id
@@ -343,11 +345,9 @@ void IQRouter::_InputQueuing( )
       }
       *gWatchOut << ")." << endl;
     }
-    if(!cur_buf->AddFlit(vc, f)) {
-      Error( "VC buffer overflow" );
-    }
-    ++_stored_flits;
-    if(f->head) ++_active_packets;
+    cur_buf->AddFlit(vc, f);
+    ++_stored_flits[input];
+    if(f->head) ++_active_packets[input];
     _bufferMonitor->write(input, f) ;
 
     if(cur_buf->GetState(vc) == VC::idle) {
@@ -820,7 +820,7 @@ void IQRouter::_SWHoldEvaluate( )
     
     BufferState const * const dest_buf = _next_buf[match_port];
     
-    if(!dest_buf->HasCreditFor(match_vc)) {
+    if(dest_buf->IsFullFor(match_vc)) {
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "  Unable to reuse held connection from input " << input
@@ -894,7 +894,6 @@ void IQRouter::_SWHoldUpdate( )
       assert((match_vc >= 0) && (match_vc < _vcs));
       
       BufferState * const dest_buf = _next_buf[output];
-      assert(!dest_buf->IsFullFor(match_vc));
       
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -906,8 +905,8 @@ void IQRouter::_SWHoldUpdate( )
       }
       
       cur_buf->RemoveFlit(vc);
-      --_stored_flits;
-      if(f->tail) --_active_packets;
+      --_stored_flits[input];
+      if(f->tail) --_active_packets[input];
       _bufferMonitor->read(input, f) ;
       
       f->hops++;
@@ -1151,7 +1150,7 @@ void IQRouter::_SWAllocEvaluate( )
       
       BufferState const * const dest_buf = _next_buf[dest_output];
       
-      if(!dest_buf->HasCreditFor(dest_vc)) {
+      if(dest_buf->IsFullFor(dest_vc)) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  VC " << dest_vc 
@@ -1426,7 +1425,7 @@ void IQRouter::_SWAllocEvaluate( )
 			 << " due to port mismatch between VC and switch allocator." << endl;
 	    }
 	    iter->second.second = -1;
-	  } else if(!dest_buf->HasCreditFor((output_and_vc % _vcs))) {
+	  } else if(dest_buf->IsFullFor((output_and_vc % _vcs))) {
 	    if(f->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 			 << "Discarding grant from input " << input
@@ -1456,7 +1455,7 @@ void IQRouter::_SWAllocEvaluate( )
 		  ++out_vc) {
 		assert((out_vc >= 0) && (out_vc < _vcs));
 		if(dest_buf->IsAvailableFor(out_vc) && 
-		   dest_buf->HasCreditFor(out_vc)) {
+		   !dest_buf->IsFullFor(out_vc)) {
 		  found_vc = true;
 		  break;
 		}
@@ -1487,7 +1486,7 @@ void IQRouter::_SWAllocEvaluate( )
 	int const match_vc = cur_buf->GetOutputVC(vc);
 	assert((match_vc >= 0) && (match_vc < _vcs));
 
-	if(!dest_buf->HasCreditFor(match_vc)) {
+	if(dest_buf->IsFullFor(match_vc)) {
 	  if(f->watch) {
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		       << "  Discarding grant from input " << input
@@ -1578,7 +1577,7 @@ void IQRouter::_SWAllocUpdate( )
 	      // not Update(), as the latter can cause the outcome to depend on 
 	      // the order of evaluation!
 	      if(dest_buf->IsAvailableFor(out_vc) && 
-		 dest_buf->HasCreditFor(out_vc) &&
+		 !dest_buf->IsFullFor(out_vc) &&
 		 ((match_vc < 0) || 
 		  RoundRobinArbiter::Supersedes(out_vc, iset->pri, 
 						match_vc, match_prio, 
@@ -1609,7 +1608,6 @@ void IQRouter::_SWAllocUpdate( )
 	assert(cur_buf->GetOutputPort(vc) == output);
 
 	match_vc = cur_buf->GetOutputVC(vc);
-	assert(!dest_buf->IsFullFor(match_vc));
 
       }
       assert((match_vc >= 0) && (match_vc < _vcs));
@@ -1624,8 +1622,8 @@ void IQRouter::_SWAllocUpdate( )
       }
 
       cur_buf->RemoveFlit(vc);
-      --_stored_flits;
-      if(f->tail) --_active_packets;
+      --_stored_flits[input];
+      if(f->tail) --_active_packets[input];
       _bufferMonitor->read(input, f) ;
 
       f->hops++;
@@ -1816,7 +1814,7 @@ void IQRouter::_SendFlits( )
       Flit * const f = _output_buffer[output].front( );
       assert(f);
       _output_buffer[output].pop( );
-      ++_sent_flits;
+      ++_sent_flits[output];
       if(f->watch)
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		    << "Sending flit " << f->id
@@ -1868,7 +1866,7 @@ int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
 
   int size = 0;
   for (int v = start; v <= end; v++)  {
-    size+= dest_buf->Size(v);
+    size+= dest_buf->Occupancy(v);
   }
   return size;
 }
@@ -1881,7 +1879,7 @@ int IQRouter::GetBuffer(int i) const {
   int const i_end = (i >= 0) ? i : (_inputs - 1);
   for(int input = i_start; input <= i_end; ++input) {
     for(int vc = 0; vc < _vcs; ++vc) {
-      size += _buf[input]->GetSize(vc);
+      size += _buf[input]->GetOccupancy(vc);
     }
   }
   return size;
@@ -1895,7 +1893,7 @@ vector<int> IQRouter::GetBuffers(int i) const {
   int const i_end = (i >= 0) ? i : (_inputs - 1);
   for(int input = i_start; input <= i_end; ++input) {
     for(int vc = 0; vc < _vcs; ++vc) {
-      sizes[vc] += _buf[input]->GetSize(vc);
+      sizes[vc] += _buf[input]->GetOccupancy(vc);
     }
   }
   return sizes;

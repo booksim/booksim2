@@ -87,10 +87,6 @@ y  = 4;
 xr = 2;
 yr = 2;
 
-//the nodes above "limit" does not emit or receiv traffic
-limit = 0;
-
-
 //
 // Routing
 //
@@ -111,13 +107,13 @@ read_reply_size=1;
 write_reply_size=1;
 
 read_request_begin_vc  = 0;
-read_request_end_vc    = 5;
-write_reply_begin_vc   = 2;
+read_request_end_vc    = 3;
+write_reply_begin_vc   = 4;
 write_reply_end_vc     = 7;
-read_reply_begin_vc    = 8;
-read_reply_end_vc      = 12;
-write_request_begin_vc = 10;
-write_request_end_vc   = 15;
+read_reply_begin_vc    = 4;
+read_reply_end_vc      = 7;
+write_request_begin_vc = 0;
+write_request_end_vc   = 3;
 
 //latency: drains all packet, throughput:no drain?
 sim_type = latency;

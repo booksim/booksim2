@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -109,13 +109,9 @@ void Stats::AddSample( double val )
   _num_samples++;
   _sample_sum += val;
 
-  if(_num_samples == 0) {
-    _min = val;
-    _max = val;
-  } else {
-    if(val > _max) _max = val;
-    if(val < _min) _min = val;
-  }
+
+  _max = (val > _max)? val : _max;
+  _min = (val < _min)? val : _min;
 
   //double clamp between 0 and num_bins-1
   b = (int)fmax(floor( val / _bin_size ), 0.0);
@@ -135,6 +131,11 @@ void Stats::Display( ostream & os ) const
 }
 
 ostream & operator<<(ostream & os, const Stats & s) {
-  os << s._hist;
+  vector<int> const & v = s._hist;
+  os << "[ ";
+  for(size_t i = 0; i < v.size(); ++i) {
+    os << v[i] << " ";
+  }
+  os << "]";
   return os;
 }

@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -326,10 +326,7 @@ void EventRouter::_IncomingFlits( )
       cur_buf = _buf[input];
       int vc = f->vc;
 
-      if ( !cur_buf->AddFlit( vc, f ) ) {
-	cout << "Error processing flit:" << endl << *f;
-	Error( "VC buffer overflow" );
-      }
+      cur_buf->AddFlit( vc, f );
 
       // Head flit arriving at idle VC
       if ( !_active[input][vc] ) {

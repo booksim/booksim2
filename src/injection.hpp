@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -33,10 +33,32 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "config_utils.hpp"
 
-typedef bool (*tInjectionProcess)( int, double );
+using namespace std;
 
-void InitializeInjectionMap( const Configuration & config );
+class InjectionProcess {
+protected:
+  double _rate;
+  InjectionProcess(double rate);
+public:
+  virtual bool test() = 0;
+  static InjectionProcess * New(string const & inject, double load);
+};
 
-extern map<string, tInjectionProcess> gInjectionProcessMap;
+class BernoulliInjectionProcess : public InjectionProcess {
+public:
+  BernoulliInjectionProcess(double rate);
+  virtual bool test();
+};
+
+class OnOffInjectionProcess : public InjectionProcess {
+private:
+  double _alpha;
+  double _beta;
+  bool _state;
+public:
+  OnOffInjectionProcess(double rate, double alpha, double beta, 
+			bool initial = false);
+  virtual bool test();
+};
 
 #endif 

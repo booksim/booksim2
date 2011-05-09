@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -48,7 +48,6 @@ public:
   void Add( int output_port, int vc, int pri = 0 );
   void AddRange( int output_port, int vc_start, int vc_end, int pri = 0 );
 
-  int Size( ) const;
   bool OutputEmpty( int output_port ) const;
   int NumVCs( int output_port ) const;
   

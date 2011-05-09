@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -34,7 +34,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <list>
 #include <map>
 #include <set>
-#include <stack>
 #include <cassert>
 
 #include "module.hpp"
@@ -89,8 +88,8 @@ protected:
 
   map<int, pair<int, vector<int> > > _class_prio_map;
 
-  vector<tTrafficFunction> _traffic_function;
-  vector<tInjectionProcess> _injection_process;
+  vector<TrafficPattern *> _traffic_pattern;
+  vector<vector<InjectionProcess *> > _injection_process;
 
   // ============ Message priorities ============ 
 
@@ -129,26 +128,15 @@ protected:
   int _deadlock_timer;
   int _deadlock_warn_timeout;
 
-  // ============ batch mode ==========================
+  // ============ request & replies ==========================
 
-  vector<int> _packets_sent;
-  int _batch_size;
-  int _batch_count;
+  vector<int> _sent_packets;
   vector<list<int> > _repliesPending;
   map<int, PacketReplyInfo*> _repliesDetails;
   vector<int> _requestsOutstanding;
   int _maxOutstanding;
   bool _replies_inherit_priority;
 
-  int _last_id;
-  int _last_pid;
-
-  // ============voq mode =============================
-
-  vector<vector<list<Flit*> > > _voq;
-  vector<list<int> > _active_list;
-  vector<vector<bool> > _active_vc;
-  
   // ============ Statistics ============
 
   vector<Stats *> _plat_stats;     
@@ -175,9 +163,6 @@ protected:
   vector<Stats *> _overall_accepted;
   vector<Stats *> _overall_accepted_min;
   
-  Stats * _batch_time;
-  Stats * _overall_batch_time;
-
   vector<int> _slowest_flit;
 
   map<string, Stats *> _stats;
@@ -187,13 +172,7 @@ protected:
   enum eSimState { warming_up, running, draining, done };
   eSimState _sim_state;
 
-  enum eSimMode { latency, throughput, batch };
-  eSimMode _sim_mode;
-  
-  //batched time-mode, know what you are doing
-  bool _timed_mode;
-
-  int   _limit; //any higher clients do not generate packets
+  bool _measure_latency;
 
   int   _warmup_time;
   int   _drain_time;
@@ -225,43 +204,59 @@ protected:
   set<int> _transactions_to_watch;
 
   bool _print_csv_results;
-  bool _print_vc_stats;
   bool _drain_measured_only;
 
   //flits to watch
   ostream * _stats_out;
 
-  ostream * _flow_out;
+  bool _flow_out;
+
+  ostream * _sent_packets_out;
+  ostream * _active_packets_out;
+  ostream * _injected_flits_out;
+  ostream * _ejected_flits_out;
+  ostream * _received_flits_out;
+  ostream * _sent_flits_out;
+  ostream * _stored_flits_out;
 
   // ============ Internal methods ============ 
 protected:
-  void _RetireFlit( Flit *f, int dest );
+
+  virtual void _RetireFlit( Flit *f, int dest );
 
   void _Inject();
   void _Step( );
 
   bool _PacketsOutstanding( ) const;
   
-  int  _IssuePacket( int source, int cl );
+  virtual int  _IssuePacket( int source, int cl );
   void _GeneratePacket( int source, int size, int cl, int time );
 
   void _ClearStats( );
 
   int  _ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const;
 
-  bool _SingleSim( );
+  virtual bool _SingleSim( );
 
   void _DisplayRemaining( ostream & os = cout ) const;
   
   void _LoadWatchList(const string & filename);
 
+  virtual void _UpdateOverallStats();
+
 public:
+
+  static TrafficManager * NewTrafficManager(Configuration const & config, 
+					    vector<Network *> const & net);
+
   TrafficManager( const Configuration &config, const vector<Network *> & net );
-  ~TrafficManager( );
+  virtual ~TrafficManager( );
 
   bool Run( );
 
-  void DisplayStats( ostream & os = cout );
+  virtual void DisplayStats( ostream & os = cout ) const ;
+  virtual void DisplayOverallStats( ostream & os = cout ) const ;
+  virtual void DisplayOverallStatsCSV( ostream & os = cout ) const ;
 
   const Stats * GetOverallLatency(int c = 0) { return _overall_avg_plat[c]; }
   const Stats * GetAccepted(int c = 0) { return _overall_accepted[c]; }
@@ -272,5 +267,14 @@ public:
   Stats * getStats(const string & name) { return _stats[name]; }
 
 };
+
+template<class T>
+ostream & operator<<(ostream & os, const vector<T> & v) {
+  for(size_t i = 0; i < v.size() - 1; ++i) {
+    os << v[i] << ",";
+  }
+  os << v[v.size()-1];
+  return os;
+}
 
 #endif

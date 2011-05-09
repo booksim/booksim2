@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -50,8 +50,6 @@ protected:
   map<string,int>    _int_map;
   map<string,double> _float_map;
   
-  static vector<string> tokenize(string data);
-
 public:
   Configuration();
 
@@ -92,5 +90,8 @@ public:
 };
 
 bool ParseArgs(Configuration * cf, int argc, char **argv);
+
+vector<string> tokenize(string const & data, char open = '{', char close = '}',
+			char sep = ',');
 
 #endif

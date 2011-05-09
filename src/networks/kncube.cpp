@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -89,8 +89,10 @@ void KNCube::_BuildNet( const Configuration &config )
 
     router_name << "router";
     
-    for ( int dim_offset = _size / _k; dim_offset >= 1; dim_offset /= _k ) {
-      router_name << "_" << ( node / dim_offset ) % _k;
+    if ( _k > 1 ) {
+      for ( int dim_offset = _size / _k; dim_offset >= 1; dim_offset /= _k ) {
+	router_name << "_" << ( node / dim_offset ) % _k;
+      }
     }
 
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 

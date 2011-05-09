@@ -49,9 +49,9 @@ wait_for_tail_credit = 0;
 //
 // Router architectureq
 //
-vc_allocator = max_size; 
-sw_allocator = max_size;
-alloc_iters  = 2;
+vc_allocator = separable_input_first; 
+sw_allocator = separable_input_first;
+alloc_iters  = 1;
 
 credit_delay   = 2;
 routing_delay  = 0;
@@ -70,7 +70,7 @@ internal_speedup  = 1.0;
 sim_type = latency;
 
 warmup_periods = 3;
-
+max_samples = 3;
 
 sim_count          = 1;
 
@@ -97,10 +97,6 @@ y  = 4;
 xr = 2;
 yr = 2;
 
-//the nodes above "limit" does not emit or receiv traffic
-limit = 64;
-
-
 //
 // Routing
 //
@@ -117,7 +113,7 @@ use_read_write = 0;
 
 batch_size = 10000;
 
-injection_rate = 0.78;
+injection_rate = 0.00001;
 
 sim_type = latency;
 

@@ -1,0 +1,5 @@
+automatically load in channel length information, currently they are calculated according to nocsim
+
+Modify the nocviewer to be compatible with the new way that view traces are generated
+
+max_size allocator doesn't work mesh88

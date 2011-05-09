@@ -1,0 +1,34 @@
+8/19.08
+
+    Allocators are the same
+
+    Priority is always 1?????? iq_router.cpp
+	      _sw_allocator->AddRequest( expanded_input, expanded_output, vc, 
+					 1 /*cur_vc->GetPriority( ) */, 
+					 1 /*cur_vc->GetPriority( ) */);
+    Fixing it
+
+    Well it seems more complicated, since speculation is on by default
+    I am turning off speculative by default. Things seems to saturate slightly slower with spec off. But it could just be that spec just dies when saturates. While nospec continues to very high.
+
+    Otherwise routers are the same
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

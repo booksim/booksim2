@@ -1,0 +1,91 @@
+7/10//2008
+ I tried to combine the allocator files, though the files are identical between nocsim and booksim, but I have no idea how it actually works =( Matrix and roundrobin allocators were added by nocsim
+
+ I don't really understand the arbiter code either, added a update function to priority arbiter. There was minor differences between the two (an if) statement, but functionally should be identical
+
+ Configuration files such as lex, yacc and stuff has been moved, strangely config.tab.* are not required before compilate was sucessful. Also config_tab.* seem to be doing the same job that config.tab.* does, did someone compiled them using _ in stead of .
+
+ Ah configuration file resolved. Make file has line cp -f $*.tab.c $*_tab.cpp therefore these files shoudl be identical. And they are 
+
+-rwxrwx--x  1 qtedq qtedq 30915 Jun 27  2007 config.tab.c
+-rwxrwx--x  1 qtedq qtedq 30915 Jun 27  2007 config_tab.cpp
+-rwxrwx--x  1 qtedq qtedq  1816 Jun 27  2007 config.tab.h
+-rwxrwx--x  1 qtedq qtedq  1816 Jun 27  2007 config_tab.hpp
+
+ Nocsim uses flitchannel and credit channel classes to simulate channel latency, book sim does not and alway asume latency of 1. This will generate shit storm later
+
+7/11/2008
+
+ Bufferstate start the introduction of flit types and specific virtual channels set aside for them. _vc_range_* stores their range. Also,somethin looks strange with the take buffer function, why would it set a vc to in use
+
+ Need to make sure every flit variable has a default valule, this can be done by calling the flit constructor. But how often is that actually used in the rest of the code
+
+ As expected, the nocsim routers uses flitchannel and credit channels instead of array of flits and credits However, the old booksim uses vc_router (which I assume is the equivalent of iq_router) and chaos router. It had no event routers. Back in the days routers were categorized by its flow control techniques, such as vc, chaos, etc. 
+
+ The original injection rate is flit rate, the current rate is packet rate. 
+
+ allocators stayed largely the same. To clean things up a bit, I created a allocators directory in similar fashion to networks and ahve changed the make file to compile them. Also, matrix allocator were added by nocsim which needs matrix arbiters. Also roundrobin allocator were added with roundrobin arbiter
+
+ misc util has either log2 or log_two....... yeah... looking forward to those "function log2 doesn exists" I am keeping the log_two
+
+ booksima and nocsim uses two different random number generators. I will keep the nocsim version using knuth's code. I have no idea why rng_wrapper and rng double wrapper are there. Ok they are referenced but not compiled. Its like... a ghost....
+
+ Flit channel has a lot of power related variables that could be removed Set length is useless. Use set latency!!!!!! This same applies to credit channel
+
+ This is disturbing but what outputset used for? It seems to ttrack all the output port and vcs that a flit goes through
+
+ the nocsim vc class has more possible vc states to accommondate speculation
+
+
+7/12/2008
+
+ The routefunc files between the versions are heavily ediited as expected. Since nocsim now recognize different flit types, the routing functions should be adding flits to the right virtual channel. This is included in some of the routing funcitons. I should add a funciton "registertopologyRF" to networks, and have it called by main after routing funciton initialization. This way we can either include routing in routefunc or with the toplogies. 
+
+ trafficwise, tornado and neighbor nees "realgK" and etc. need to somehow make this clear and add them to the topology functions. Perhaps similarly to routing functions, allow network specific traffic patterns to be registered independently by the topolgoies.
+
+  I have moved the different routers into their own directory like allocators and netowkrs. 
+ 
+ What is chaos router?? Event router?? Whats the difference between vc and iq_router
+
+
+7/16/2008
+
+   What are select functions?
+
+   It seems vc routers are just iq routers. There is a vc router new in the old version of the booksim, but that seems to access vcs as pointers instead of objects...... Iq routers added the "pretty output" to parse network activities, speculation. Lots of speculation, I dont' even understand
+
+
+   The long mysterious batchmanager, seems to be and extension of the traffic manager. Interestingly I seen many of the functions exist in the dragonfly simulators... Perhaps comeback to this after incorporating the dragonfly.
+
+
+
+7/29/08
+
+   nocsim kncube has setchannel cookie.for duplicated networks
+
+   Need a better way to set realgK/gN
+
+   How does insert random faults work??
+
+   Flattened butterfly still has an incredible hack for the traffic patterns
+	
+
+7/31/08 all incorporated
+
+
+TODO fixes
+
+
+automatically load in channel length information, currently they are calculated according to nocsim
+
+Modify the nocviewer to be compatible with the new way that view traces are generated
+
+Clean up the power calc scripts
+
+
+
+
+
+
+
+
