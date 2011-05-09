@@ -1036,33 +1036,28 @@ void TrafficManager::_Step( )
   
 bool TrafficManager::_PacketsOutstanding( ) const
 {
-  bool outstanding = false;
-
   for ( int c = 0; c < _classes; ++c ) {
-    
-    if ( _measured_in_flight_flits[c].empty() ) {
-
-      for ( int s = 0; s < _nodes; ++s ) {
-	if ( _measure_stats[c] && !_qdrained[s][c] ) {
+    if ( _measure_stats[c] ) {
+      if ( _measured_in_flight_flits[c].empty() ) {
+	
+	for ( int s = 0; s < _nodes; ++s ) {
+	  if ( !_qdrained[s][c] ) {
 #ifdef DEBUG_DRAIN
-	  cout << "waiting on queue " << s << " class " << c;
-	  cout << ", time = " << _time << " qtime = " << _qtime[s][c] << endl;
+	    cout << "waiting on queue " << s << " class " << c;
+	    cout << ", time = " << _time << " qtime = " << _qtime[s][c] << endl;
 #endif
-	  outstanding = true;
-	  break;
+	    return true;
+	  }
 	}
-      }
-    } else {
+      } else {
 #ifdef DEBUG_DRAIN
-      cout << "in flight = " << _measured_in_flight_flits[c].size() << endl;
+	cout << "in flight = " << _measured_in_flight_flits[c].size() << endl;
 #endif
-      outstanding = true;
+	return true;
+      }
     }
-
-    if ( outstanding ) { break; }
   }
-
-  return outstanding;
+  return false;
 }
 
 void TrafficManager::_ClearStats( )
