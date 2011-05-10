@@ -105,12 +105,14 @@ bool BatchTrafficManager::_SingleSim( )
     _drain_time = _time;
     int empty_steps = 0;
     
-    bool packets_left = false;
-    for(int c = 0; c < _classes; ++c) {
-      packets_left |= !_total_in_flight_flits[c].empty();
+    bool requests_outstanding = false;
+    for(int n = 0; n < _nodes; ++n) {
+      for(int c = 0; c < _classes; ++c) {
+	requests_outstanding |= (_requests_outstanding[n][c] > 0);
+      }
     }
     
-    while( packets_left ) { 
+    while( requests_outstanding ) { 
       _Step( ); 
       
       ++empty_steps;
@@ -120,9 +122,11 @@ bool BatchTrafficManager::_SingleSim( )
 	cout << ".";
       }
       
-      packets_left = false;
-      for(int c = 0; c < _classes; ++c) {
-	packets_left |= !_total_in_flight_flits[c].empty();
+      requests_outstanding = false;
+      for(int n = 0; n < _nodes; ++n) {
+	for(int c = 0; c < _classes; ++c) {
+	  requests_outstanding |= (_requests_outstanding[n][c] > 0);
+	}
       }
     }
     cout << endl;
