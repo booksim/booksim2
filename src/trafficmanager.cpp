@@ -659,12 +659,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
 bool TrafficManager::_IssuePacket( int source, int cl )
 {
-  if(_injection_process[source][cl]->test()) {
-    _requests_outstanding[source][cl]++;
-    _sent_packets[source][cl]++;
-    return true;
-  }
-  return false;
+  return _injection_process[source][cl]->test();
 }
 
 void TrafficManager::_GeneratePacket( int source, int dest, int size, 
@@ -788,6 +783,8 @@ void TrafficManager::_Inject(){
 	    while(_qtime[source][c] <= _time) {
 	      ++_qtime[source][c];
 	      if(_IssuePacket(source, c)) { //generate a packet
+		_requests_outstanding[source][c]++;
+		_sent_packets[source][c]++;
 		int dest = _traffic_pattern[c]->dest(source);
 		int size = _packet_size[c];
 		int time = ((_include_queuing == 1) ? _qtime[source][c] : _time);
