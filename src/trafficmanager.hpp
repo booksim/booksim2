@@ -44,10 +44,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "traffic.hpp"
 #include "routefunc.hpp"
 #include "outputset.hpp"
-#include "injection.hpp"
 
 class TrafficManager : public Module {
+
 protected:
+
   int _nodes;
   int _routers;
 
@@ -76,7 +77,6 @@ protected:
   vector<int> _last_class;
 
   vector<TrafficPattern *> _traffic_pattern;
-  vector<vector<InjectionProcess *> > _injection_process;
 
   // ============ Message priorities ============ 
 
@@ -151,26 +151,13 @@ protected:
   enum eSimState { warming_up, running, draining, done };
   eSimState _sim_state;
 
-  bool _measure_latency;
-
   int   _drain_time;
 
   int   _total_sims;
-  int   _sample_period;
-  int   _max_samples;
-  int   _warmup_periods;
 
   int   _include_queuing;
 
   vector<int> _measure_stats;
-
-  vector<double> _latency_thres;
-
-  vector<double> _stopping_threshold;
-  vector<double> _acc_stopping_threshold;
-
-  vector<double> _warmup_threshold;
-  vector<double> _acc_warmup_threshold;
 
   int _cur_id;
   int _cur_pid;
@@ -197,24 +184,26 @@ protected:
   ostream * _sent_flits_out;
   ostream * _stored_flits_out;
 
+
   // ============ Internal methods ============ 
-protected:
 
   virtual void _RetireFlit( Flit *f, int dest );
 
   void _Inject();
+  
   void _Step( );
 
-  bool _PacketsOutstanding( ) const;
+  virtual bool _PacketsOutstanding( ) const;
   
-  virtual bool _IssuePacket( int source, int cl );
+  virtual bool _IssuePacket( int source, int cl ) = 0;
+
   void _GeneratePacket( int source, int dest, int size, int cl, int time, int tid, int ttime );
 
   void _ClearStats( );
 
   int  _ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const;
 
-  virtual bool _SingleSim( );
+  virtual bool _SingleSim( ) = 0;
 
   void _DisplayRemaining( ostream & os = cout ) const;
   

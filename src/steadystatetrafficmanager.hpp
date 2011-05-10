@@ -28,41 +28,44 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _BATCHTRAFFICMANAGER_HPP_
-#define _BATCHTRAFFICMANAGER_HPP_
+#ifndef _STEADYSTATETRAFFICMANAGER_HPP_
+#define _STEADYSTATETRAFFICMANAGER_HPP_
 
-#include <iostream>
 #include <vector>
 
 #include "trafficmanager.hpp"
+#include "injection.hpp"
 
-class BatchTrafficManager : public TrafficManager {
+class SteadyStateTrafficManager : public TrafficManager {
 
 protected:
 
-  vector<int> _batch_size;
-  int _batch_count;
-  int _last_batch_time;
-  int _last_id;
-  int _last_pid;
+  vector<double> _load;
 
-  Stats * _batch_time;
-  Stats * _overall_batch_time;
+  vector<vector<InjectionProcess *> > _injection_process;
 
-  virtual void _RetireFlit( Flit *f, int dest );
+  bool _measure_latency;
+
+  int   _sample_period;
+  int   _max_samples;
+  int   _warmup_periods;
+
+  vector<double> _latency_thres;
+
+  vector<double> _stopping_threshold;
+  vector<double> _acc_stopping_threshold;
+
+  vector<double> _warmup_threshold;
+  vector<double> _acc_warmup_threshold;
 
   virtual bool _IssuePacket( int source, int cl );
-  virtual bool _SingleSim( );
 
-  virtual void _UpdateOverallStats( );
+  virtual bool _SingleSim( );
 
 public:
 
-  BatchTrafficManager( const Configuration &config, const vector<Network *> & net );
-  virtual ~BatchTrafficManager( );
-
-  virtual void DisplayStats( ostream & os = cout ) const;
-  virtual void DisplayOverallStats( ostream & os = cout ) const;
+  SteadyStateTrafficManager( const Configuration &config, const vector<Network *> & net );
+  virtual ~SteadyStateTrafficManager( );
 
 };
 

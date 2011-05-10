@@ -30,7 +30,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <limits>
 
-#include "random_utils.hpp"
 #include "batchtrafficmanager.hpp"
 
 BatchTrafficManager::BatchTrafficManager( const Configuration &config, 
