@@ -130,12 +130,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     }
   }
 
-  _traffic = config.GetStrArray("traffic");
-  _traffic.resize(_classes, _traffic.back());
+  vector<string> traffic = config.GetStrArray("traffic");
+  traffic.resize(_classes, traffic.back());
 
   _traffic_pattern.resize(_classes);
   for(int c = 0; c < _classes; ++c) {
-    _traffic_pattern[c] = TrafficPattern::New(_traffic[c], _nodes, config);
+    _traffic_pattern[c] = TrafficPattern::New(traffic[c], _nodes, config);
   }
 
   _class_priority = config.GetIntArray("class_priority"); 
@@ -1317,10 +1317,6 @@ void TrafficManager::DisplayOverallStatsCSV(ostream & os) const {
   for(int c = 0; c <= _classes; ++c) {
     os << "results:"
        << c
-       << "," << _traffic[c]
-       << "," << (_request_class[c] >= 0)
-       << "," << _packet_size[c]
-       << "," << _load[c]
        << "," << _overall_min_plat[c]->Average( )
        << "," << _overall_avg_plat[c]->Average( )
        << "," << _overall_max_plat[c]->Average( )

@@ -59,8 +59,6 @@ protected:
 
   int    _classes;
 
-  vector<double> _load;
-
   int _subnets;
 
   vector<int> _subnet;
@@ -69,8 +67,6 @@ protected:
 
   vector<int> _reply_class;
   vector<int> _request_class;
-
-  vector<string> _traffic;
 
   vector<int> _class_priority;
 
