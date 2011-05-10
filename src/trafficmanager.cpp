@@ -781,24 +781,22 @@ void TrafficManager::_Inject(){
       // Potentially generate packets for any (source,class)
       // that is currently empty
       if ( _partial_packets[source][c].empty() ) {
-	if ( !_empty_network ) {
-	  if((_request_class[c] >= 0) ||
-	     ((_max_outstanding[c] > 0) && 
-	      (_requests_outstanding[source][c] >= _max_outstanding[c]))) {
-	    _qtime[source][c] = _time;
-	  } else {
-	    while(_qtime[source][c] <= _time) {
-	      ++_qtime[source][c];
-	      if(_IssuePacket(source, c)) { //generate a packet
-		_requests_outstanding[source][c]++;
-		_sent_packets[source][c]++;
-		break;
-	      }
+	if((_request_class[c] >= 0) ||
+	   ((_max_outstanding[c] > 0) && 
+	    (_requests_outstanding[source][c] >= _max_outstanding[c]))) {
+	  _qtime[source][c] = _time;
+	} else {
+	  while(_qtime[source][c] <= _time) {
+	    ++_qtime[source][c];
+	    if(_IssuePacket(source, c)) { //generate a packet
+	      _requests_outstanding[source][c]++;
+	      _sent_packets[source][c]++;
+	      break;
 	    }
 	  }
-	  if((_sim_state == draining) && (_qtime[source][c] > _drain_time)) {
-	    _qdrained[source][c] = true;
-	  }
+	}
+	if((_sim_state == draining) && (_qtime[source][c] > _drain_time)) {
+	  _qdrained[source][c] = true;
 	}
       }
     }
@@ -851,7 +849,9 @@ void TrafficManager::_Step( )
     _net[subnet]->ReadInputs( );
   }
   
-  _Inject();
+  if ( !_empty_network ) {
+    _Inject();
+  }
 
   vector<int> injected_flits(_classes*_subnets*_nodes);
 
