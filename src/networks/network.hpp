@@ -52,6 +52,7 @@ typedef Channel<Credit> CreditChannel;
 class BSNetwork : public TimedModule {
 protected:
 
+  int _default_channel_latency;
   int _size;
   int _sources;
   int _dests;

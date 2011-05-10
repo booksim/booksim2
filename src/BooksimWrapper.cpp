@@ -35,7 +35,7 @@ BooksimInterface::BooksimInterface(string name, SystemConfig* sysCon, Fwk::Log* 
   Interface(name,sysCon,log,id){
 
   booksimconfig = new BookSimConfig();
-  booksimconfig->ParseFile("/home/qtedq/bsuptodate/branches/systemsim_interface/testconfig");
+  booksimconfig->ParseFile(sysCon->booksimConfig);
   booksimconfig->Assign("limit",(int)sysCon->nCores);
 
   InitializeRoutingMap(*booksimconfig );
@@ -126,7 +126,7 @@ void BooksimInterface::route(){
   manager->_Step(parent->now().value());
 
   //add the network to the nnext cycle
-  if(booksim_inflight!=0 ||Credit::outstanding!=0){
+  if(booksim_inflight!=0||Credit::outstanding!=0){
     mainbooksima->nextTimeIs((parent->now()+1));
     mainbooksima->statusIs(Activity::nextTimeScheduled);
   } else {
@@ -154,16 +154,17 @@ void BooksimCoreInterface::messageIs(SS_Network::Message *msg){
 
   msg->Id = generateId();
   msg->SourceTime = parent->now();
- 
+
   //queue the message to send
   _inBuffer.push_back(msg);
   has_message[this->id()]++;
   booksim_inflight++;
-
+  
   if(!booksim_active){
     booksim_active=true;
     mainbooksima->statusIs(Activity::executing);
   }
+  
 }
 
 //ejection

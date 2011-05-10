@@ -40,6 +40,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 BookSimConfig::BookSimConfig( )
 { 
+
+  _int_map["perfect_network"] = 0;
+  _int_map["perfect_latency"] = 1;
   //========================================================
   // Network options
   //========================================================

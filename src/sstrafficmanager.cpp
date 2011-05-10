@@ -11,6 +11,10 @@ extern vector<int> has_message;
 #define REPORT_INTERVAL 10000000
 #define TRACE_INTERVAL 100000*4
 int last_trace = 0;
+bool perfect=false;
+int perfect_latency=1;
+queue<Flit* > retardq;
+queue<int > retardt;
 SSTrafficManager::SSTrafficManager(  const Configuration &config, const vector<BSNetwork *> & net )
   : TrafficManager(config, net)
 {
@@ -40,6 +44,9 @@ SSTrafficManager::SSTrafficManager(  const Configuration &config, const vector<B
   }
 
   trace_queue.reserve(3*TRACE_INTERVAL);
+
+  perfect=(config.GetInt("perfect_network")==1);
+  perfect_latency=config.GetInt("perfect_latency");
 }
 
 SSTrafficManager::~SSTrafficManager( )
@@ -208,7 +215,6 @@ void SSTrafficManager::_RetireFlit( Flit *f, int dest )
 
 
       if(_trace_out){
-
 	trace_queue.push_back(_time-last_trace);
 	trace_queue.push_back(dest);
 	trace_queue.push_back(f->src);
@@ -252,6 +258,8 @@ void SSTrafficManager::_GeneratePacket( int source, int stype,
   int ttime = time;
   int packet_destination=msg->Destination->id();
 
+
+
   if(packet_destination == source){
     msg->DeliveryTime = Time(_time);
     nodes[source]->messageIs(msg,(const Link*)1 /*bypass null check*/);
@@ -294,6 +302,40 @@ void SSTrafficManager::_GeneratePacket( int source, int stype,
 		<< "." << endl;
   }
   
+
+  if(perfect){
+
+ 
+    Flit * f  = Flit::New();
+    f->id     = _cur_id++;
+    assert(_cur_id);
+    f->pid    = _cur_pid;
+    f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
+    f->subnetwork = subnetwork;
+    f->src    = source;
+    f->time   = time;
+    f->ttime  = ttime;
+    f->record = record;
+    f->cl     = cl;
+    packet_payload[_cur_pid] = msg;
+    _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
+    if(record) {
+      _measured_in_flight_flits[f->cl].insert(make_pair(f->id, f));
+    }
+    f->type = packet_type;
+    f->head = true;
+    f->tail = true;
+    //packets are only generated to nodes smaller or equal to limit
+    f->dest = packet_destination;
+    ++_cur_pid;
+    f->atime = time+perfect_latency;
+    nodes[source]->pop(-1);
+    retardq.push(f);
+    retardt.push(time+perfect_latency);
+    return;
+  }
+
+
   for ( int i = 0; i < size; ++i ) {
     Flit * f  = Flit::New();
     f->id     = _cur_id++;
@@ -393,6 +435,12 @@ void SSTrafficManager::_Step(int t)
 
   _time = t;
 
+  while(!retardq.empty() && retardt.front()<=_time){
+    _RetireFlit(retardq.front(), retardq.front()->dest);
+    retardq.pop();
+    retardt.pop();
+  }
+  
   bool flits_in_flight = false;
   for(int c = 0; c < _classes; ++c) {
     flits_in_flight |= !_total_in_flight_flits[c].empty();

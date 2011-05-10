@@ -58,6 +58,7 @@ void KNCube::_ComputeSize( const Configuration &config )
   _k = config.GetInt( "k" );
   _n = config.GetInt( "n" );
 
+  _default_channel_latency = config.GetInt("default_latency");
   gK = _k; gN = _n;
   _size     = powi( _k, _n );
   _channels = 2*_n*_size;
@@ -133,10 +134,10 @@ void KNCube::_BuildNet( const Configuration &config )
 	_chan_cred[right_input]->SetLatency( latency );
 	_chan_cred[left_input]->SetLatency( latency );
       } else {
-	_chan[left_input]->SetLatency( 1 );
-	_chan_cred[right_input]->SetLatency( 1 );
-	_chan_cred[left_input]->SetLatency( 1);
-	_chan[right_input]->SetLatency( 1 );
+	_chan[left_input]->SetLatency(  _default_channel_latency );
+	_chan_cred[right_input]->SetLatency(  _default_channel_latency );
+	_chan_cred[left_input]->SetLatency(  _default_channel_latency);
+	_chan[right_input]->SetLatency(  _default_channel_latency );
       }
       //get the output channel number
       right_output = _RightChannel( node, dim );
@@ -153,10 +154,10 @@ void KNCube::_BuildNet( const Configuration &config )
 	_chan_cred[right_output]->SetLatency( latency );
 	_chan_cred[left_output]->SetLatency( latency );
       } else {
-	_chan[right_output]->SetLatency(1);
-	_chan[left_output]->SetLatency(1 );
-	_chan_cred[right_output]->SetLatency(1 );
-	_chan_cred[left_output]->SetLatency( 1);
+	_chan[right_output]->SetLatency( _default_channel_latency);
+	_chan[left_output]->SetLatency( _default_channel_latency );
+	_chan_cred[right_output]->SetLatency( _default_channel_latency );
+	_chan_cred[left_output]->SetLatency(  _default_channel_latency);
 
       }
     }
