@@ -69,7 +69,14 @@ void BatchTrafficManager::_RetireFlit( Flit *f, int dest )
 
 bool BatchTrafficManager::_IssuePacket( int source, int cl )
 {
-  return (_sent_packets[source][cl] < _batch_size[cl]);
+  if(_sent_packets[source][cl] < _batch_size[cl]) {
+    int dest = _traffic_pattern[cl]->dest(source);
+    int size = _packet_size[cl];
+    int time = ((_include_queuing == 1) ? _qtime[source][cl] : _time);
+    _GeneratePacket(source, dest, size, cl, time, -1, time);
+    return true;
+  }
+  return false;
 }
 
 bool BatchTrafficManager::_SingleSim( )
