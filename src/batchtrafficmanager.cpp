@@ -69,10 +69,10 @@ void BatchTrafficManager::_RetireFlit( Flit *f, int dest )
 
 bool BatchTrafficManager::_IssuePacket( int source, int cl )
 {
-  if(_sent_packets[source][cl] < _batch_size[cl]) {
+  if(_sent_packets[cl][source] < _batch_size[cl]) {
     int dest = _traffic_pattern[cl]->dest(source);
     int size = _packet_size[cl];
-    int time = ((_include_queuing == 1) ? _qtime[source][cl] : _time);
+    int time = ((_include_queuing == 1) ? _qtime[cl][source] : _time);
     _GeneratePacket(source, dest, size, cl, time, -1, time);
     return true;
   }
@@ -83,8 +83,8 @@ bool BatchTrafficManager::_SingleSim( )
 {
   int batch_index = 0;
   while(batch_index < _batch_count) {
-    for (int i = 0; i < _nodes; i++) {
-      _sent_packets[i].assign(_classes, 0);
+    for (int c = 0; c < _classes; ++c) {
+      _sent_packets[c].assign(_nodes, 0);
     }
     _last_id = -1;
     _last_pid = -1;
@@ -96,7 +96,7 @@ bool BatchTrafficManager::_SingleSim( )
       batch_complete = true;
       for(int source = 0; (source < _nodes) && batch_complete; ++source) {
 	for(int c = 0; c < _classes; ++c) {
-	  if(_sent_packets[source][c] < _batch_size[c]) {
+	  if(_sent_packets[c][source] < _batch_size[c]) {
 	    batch_complete = false;
 	    break;
 	  }
@@ -113,9 +113,9 @@ bool BatchTrafficManager::_SingleSim( )
     int empty_steps = 0;
     
     bool requests_outstanding = false;
-    for(int n = 0; n < _nodes; ++n) {
-      for(int c = 0; c < _classes; ++c) {
-	requests_outstanding |= (_requests_outstanding[n][c] > 0);
+    for(int c = 0; c < _classes; ++c) {
+      for(int n = 0; n < _nodes; ++n) {
+	requests_outstanding |= (_requests_outstanding[c][n] > 0);
       }
     }
     
@@ -130,9 +130,9 @@ bool BatchTrafficManager::_SingleSim( )
       }
       
       requests_outstanding = false;
-      for(int n = 0; n < _nodes; ++n) {
-	for(int c = 0; c < _classes; ++c) {
-	  requests_outstanding |= (_requests_outstanding[n][c] > 0);
+      for(int c = 0; c < _classes; ++c) {
+	for(int n = 0; n < _nodes; ++n) {
+	  requests_outstanding |= (_requests_outstanding[c][n] > 0);
 	}
       }
     }

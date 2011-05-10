@@ -163,15 +163,18 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   vector<string> injection_process = config.GetStrArray("injection_process");
   injection_process.resize(_classes, injection_process.back());
 
-  _injection_process.resize(_nodes);
+  _injection_process.resize(_classes);
+  for(int c = 0; c < _classes; ++c) {
+    _injection_process[c].resize(_nodes);
+    for(int n = 0; n < _nodes; ++n) {
+      _injection_process[c][n] = InjectionProcess::New(injection_process[c], _load[c]);
+    }
+  }
+
   _buf_states.resize(_nodes);
   _last_vc.resize(_nodes);
 
   for ( int source = 0; source < _nodes; ++source ) {
-    _injection_process[source].resize(_classes);
-    for(int c = 0; c < _classes; ++c) {
-      _injection_process[source][c] = InjectionProcess::New(injection_process[c], _load[c]);
-    }
     _buf_states[source].resize(_subnets);
     _last_vc[source].resize(_subnets);
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {
@@ -184,18 +187,18 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   // ============ Injection queues ============ 
 
-  _qtime.resize(_nodes);
-  _qdrained.resize(_nodes);
-  _partial_packets.resize(_nodes);
-  _sent_packets.resize(_nodes);
-  _requests_outstanding.resize(_nodes);
+  _qtime.resize(_classes);
+  _qdrained.resize(_classes);
+  _partial_packets.resize(_classes);
+  _sent_packets.resize(_classes);
+  _requests_outstanding.resize(_classes);
 
-  for ( int source = 0; source < _nodes; ++source ) {
-    _qtime[source].resize(_classes);
-    _qdrained[source].resize(_classes);
-    _partial_packets[source].resize(_classes);
-    _sent_packets[source].resize(_classes);
-    _requests_outstanding[source].resize(_classes);
+  for ( int c = 0; c < _classes; ++c ) {
+    _qtime[c].resize(_nodes);
+    _qdrained[c].resize(_nodes);
+    _partial_packets[c].resize(_nodes);
+    _sent_packets[c].resize(_nodes);
+    _requests_outstanding[c].resize(_nodes);
   }
 
   _total_in_flight_flits.resize(_classes);
@@ -509,13 +512,12 @@ TrafficManager::~TrafficManager( )
     
     for ( int source = 0; source < _nodes; ++source ) {
       delete _sent_flits[c][source];
+      delete _injection_process[c][source];
       
       for ( int dest = 0; dest < _nodes; ++dest ) {
 	delete _pair_plat[c][source*_nodes+dest];
 	delete _pair_tlat[c][source*_nodes+dest];
       }
-
-      delete _injection_process[source][c];
     }
     
     for ( int dest = 0; dest < _nodes; ++dest ) {
@@ -612,13 +614,13 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       if(request_class < 0) {
 	// single-packet transactions "magically" notify source of completion 
 	// when packet arrives at destination
-	_requests_outstanding[f->src][f->cl]--;
+	_requests_outstanding[f->cl][f->src]--;
       } else {
 	// request-reply transactions complete when reply arrives
-	_requests_outstanding[dest][request_class]--;
+	_requests_outstanding[request_class][dest]--;
       }
     } else {
-      _sent_packets[dest][f->cl]++;
+      _sent_packets[f->cl][dest]++;
       _GeneratePacket( f->dest, f->src, _packet_size[reply_class], 
 		       reply_class, f->atime + 1, f->tid, f->ttime );
     }
@@ -659,10 +661,10 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
 bool TrafficManager::_IssuePacket( int source, int cl )
 {
-  if(_injection_process[source][cl]->test()) {
+  if(_injection_process[cl][source]->test()) {
     int dest = _traffic_pattern[cl]->dest(source);
     int size = _packet_size[cl];
-    int time = ((_include_queuing == 1) ? _qtime[source][cl] : _time);
+    int time = ((_include_queuing == 1) ? _qtime[cl][source] : _time);
     _GeneratePacket(source, dest, size, cl, time, -1, time);
     return true;
   }
@@ -745,7 +747,7 @@ void TrafficManager::_GeneratePacket( int source, int dest, int size,
       f->pri = numeric_limits<int>::max() - ttime;
       break;
     case sequence_based:
-      f->pri = numeric_limits<int>::max() - _sent_packets[source][cl];
+      f->pri = numeric_limits<int>::max() - _sent_packets[cl][source];
       break;
     default:
       f->pri = 0;
@@ -770,33 +772,33 @@ void TrafficManager::_GeneratePacket( int source, int dest, int size,
 		  << "." << endl;
     }
 
-    _partial_packets[source][cl].push_back(f);
+    _partial_packets[cl][source].push_back(f);
   }
 }
 
 void TrafficManager::_Inject(){
 
-  for ( int source = 0; source < _nodes; ++source ) {
-    for ( int c = 0; c < _classes; ++c ) {
+  for ( int c = 0; c < _classes; ++c ) {
+    for ( int source = 0; source < _nodes; ++source ) {
       // Potentially generate packets for any (source,class)
       // that is currently empty
-      if ( _partial_packets[source][c].empty() ) {
+      if ( _partial_packets[c][source].empty() ) {
 	if((_request_class[c] >= 0) ||
 	   ((_max_outstanding[c] > 0) && 
-	    (_requests_outstanding[source][c] >= _max_outstanding[c]))) {
-	  _qtime[source][c] = _time;
+	    (_requests_outstanding[c][source] >= _max_outstanding[c]))) {
+	  _qtime[c][source] = _time;
 	} else {
-	  while(_qtime[source][c] <= _time) {
-	    ++_qtime[source][c];
+	  while(_qtime[c][source] <= _time) {
+	    ++_qtime[c][source];
 	    if(_IssuePacket(source, c)) { //generate a packet
-	      _requests_outstanding[source][c]++;
-	      _sent_packets[source][c]++;
+	      _requests_outstanding[c][source]++;
+	      _sent_packets[c][source]++;
 	      break;
 	    }
 	  }
 	}
-	if((_sim_state == draining) && (_qtime[source][c] > _drain_time)) {
-	  _qdrained[source][c] = true;
+	if((_sim_state == draining) && (_qtime[c][source] > _drain_time)) {
+	  _qdrained[c][source] = true;
 	}
       }
     }
@@ -866,9 +868,9 @@ void TrafficManager::_Step( )
 
       int const c = (last_class + i) % _classes;
 
-      if(!_partial_packets[source][c].empty()) {
+      if(!_partial_packets[c][source].empty()) {
 
-	Flit * cf = _partial_packets[source][c].front();
+	Flit * cf = _partial_packets[c][source].front();
 	assert(cf);
 	assert(cf->cl == c);
 
@@ -926,7 +928,7 @@ void TrafficManager::_Step( )
 	
 	_last_class[source] = c;
 	
-	_partial_packets[source][c].pop_front();
+	_partial_packets[c][source].pop_front();
 	_buf_states[source][subnet]->SendingFlit(f);
 	
 	if(_pri_type == network_age_based) {
@@ -950,8 +952,8 @@ void TrafficManager::_Step( )
 	}
 	
 	// Pass VC "back"
-	if(!_partial_packets[source][c].empty() && !f->tail) {
-	  Flit * nf = _partial_packets[source][c].front();
+	if(!_partial_packets[c][source].empty() && !f->tail) {
+	  Flit * nf = _partial_packets[c][source].front();
 	  nf->vc = f->vc;
 	}
 	
@@ -1038,10 +1040,10 @@ bool TrafficManager::_PacketsOutstanding( ) const
       if ( _measured_in_flight_flits[c].empty() ) {
 	
 	for ( int s = 0; s < _nodes; ++s ) {
-	  if ( !_qdrained[s][c] ) {
+	  if ( !_qdrained[c][s] ) {
 #ifdef DEBUG_DRAIN
 	    cout << "waiting on queue " << s << " class " << c;
-	    cout << ", time = " << _time << " qtime = " << _qtime[s][c] << endl;
+	    cout << ", time = " << _time << " qtime = " << _qtime[c][s] << endl;
 #endif
 	    return true;
 	  }
@@ -1333,14 +1335,11 @@ bool TrafficManager::Run( )
     _time = 0;
 
     //remove any pending request from the previous simulations
-    for (int i=0;i<_nodes;i++) {
-      _requests_outstanding[i].assign(_classes, 0);
-    }
-
     //reset queuetime for all sources
-    for ( int s = 0; s < _nodes; ++s ) {
-      _qtime[s].assign(_classes, 0);
-      _qdrained[s].assign(_classes, false);
+    for ( int c = 0; c < _classes; ++c ) {
+      _requests_outstanding[c].assign(_nodes, 0);
+      _qtime[c].assign(_nodes, 0);
+      _qdrained[c].assign(_nodes, false);
     }
 
     // warm-up ...
