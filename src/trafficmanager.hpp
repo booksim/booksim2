@@ -174,7 +174,6 @@ protected:
 
   bool _measure_latency;
 
-  int   _warmup_time;
   int   _drain_time;
 
   int   _total_sims;
