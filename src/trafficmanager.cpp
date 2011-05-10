@@ -1190,7 +1190,7 @@ bool TrafficManager::_SingleSim( )
       double accepted_change = fabs((cur_accepted - prev_accepted[c]) / cur_accepted);
       prev_accepted[c] = cur_accepted;
 
-      double latency = cur_latency;
+      double latency = (double)_plat_stats[c]->Sum();
       double count = (double)_plat_stats[c]->NumSamples();
       
       map<int, Flit *>::const_iterator iter;
