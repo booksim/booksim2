@@ -34,7 +34,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <list>
 #include <map>
 #include <set>
-#include <cassert>
 
 #include "module.hpp"
 #include "config_utils.hpp"
@@ -46,9 +45,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "routefunc.hpp"
 #include "outputset.hpp"
 #include "injection.hpp"
-
-//register the requests to a node
-class PacketReplyInfo;
 
 class TrafficManager : public Module {
 protected:
