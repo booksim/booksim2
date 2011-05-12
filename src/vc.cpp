@@ -70,6 +70,10 @@ VC::VC( const Configuration& config, int outputs,
   }
 
   _priority_donation = config.GetInt("vc_priority_donation");
+  _queuing_age = (config.GetInt("queuing_age")==1) && priority == "age";
+  _pri_granularity = config.GetInt("age_granularity");
+  _pri_cap = config.GetInt("age_cap");
+  _hop_offset = config.GetInt("hop_offset");
 }
 
 VC::~VC()
@@ -158,7 +162,13 @@ void VC::UpdatePriority()
       Flit * df = f;
       for(size_t i = 1; i < _buffer.size(); ++i) {
 	Flit * bf = _buffer[i];
-	if(bf->pri > df->pri) df = bf;
+	if(_queuing_age){
+	  if(((bf->pri -bf->hops*_hop_offset)>>_pri_granularity) > ((df->pri-df->hops*_hop_offset)>>_pri_granularity)) 
+	    df = bf;
+	} else {
+	  if((bf->pri>>_pri_granularity) > (df->pri>>_pri_granularity)) 
+	    df = bf;
+	}
       }
       if((df != f) && (df->watch || f->watch)) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -173,7 +183,12 @@ void VC::UpdatePriority()
 		  << "Flit " << f->id
 		  << " sets priority to " << f->pri
 		  << "." << endl;
-    _pri = f->pri;
+    //_pri = f->pri;
+    _pri = (f->pri - (_queuing_age?_hop_offset*f->hops:0))>>_pri_granularity;
+    int current_p = (numeric_limits<int>::max() -GetSimTime())>>_pri_granularity;;
+    if(_pri_cap!=-1 && current_p+_pri_cap<_pri){
+      _pri = current_p+_pri_cap;
+    }
   }
 }
 

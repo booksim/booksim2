@@ -1262,6 +1262,8 @@ bool TrafficManager::_SingleSim( )
     DisplayStats();
     
     int lat_exc_class = -1;
+    double lat_exc_value = 0.0;
+    double lat_exc_accpted = 0.0;
     int lat_chg_exc_class = -1;
     int acc_chg_exc_class = -1;
     
@@ -1283,7 +1285,7 @@ bool TrafficManager::_SingleSim( )
       double accepted_change = fabs((cur_accepted - prev_accepted[c]) / cur_accepted);
       prev_accepted[c] = cur_accepted;
 
-      double latency = cur_latency;
+      double latency =(double)_plat_stats[c]->Sum() ;
       double count = (double)_plat_stats[c]->NumSamples();
       
       map<int, Flit *>::const_iterator iter;
@@ -1298,6 +1300,8 @@ bool TrafficManager::_SingleSim( )
 	 (_latency_thres[c] >= 0.0) &&
 	 ((latency / count) > _latency_thres[c])) {
 	lat_exc_class = c;
+	lat_exc_value = (latency / count) ;
+	lat_exc_accpted = min;
       }
       
       cout << "latency change    = " << latency_change << endl;
@@ -1331,7 +1335,8 @@ bool TrafficManager::_SingleSim( )
     // Fail safe for latency mode, throughput will ust continue
     if ( _measure_latency && ( lat_exc_class >= 0 ) ) {
       
-      cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
+      cout << "Average latency for class " << lat_exc_class << " omgomg " << lat_exc_value<<" exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
+      cout << "unstable node "<<	lat_exc_accpted <<endl;
       converged = 0; 
       _sim_state = warming_up;
       break;

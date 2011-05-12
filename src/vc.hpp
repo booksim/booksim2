@@ -71,6 +71,11 @@ private:
   int _last_id;
   int _last_pid;
 
+
+  bool _queuing_age;
+  int _pri_granularity;
+  int _pri_cap;
+  int _hop_offset;
 public:
   
   VC( const Configuration& config, int outputs,
