@@ -44,7 +44,7 @@ LFLAGS =
 
 
 OBJDIR := obj
-PROG   := booksim
+PROG   := booksim_test
 
 # simulator source files
 CPP_SRCS = main.cpp \

@@ -81,6 +81,8 @@ vector<vector<int> > gStatInjectVCDist;
 vector<int> gStatInjectVCBlock;
 vector<int> gStatInjectVCMiss;
 
+vector<int> gStatFlowMerged;
+
 Stats* gStatROBRange;
 
 Stats* gStatFlowSenderLatency;
@@ -200,6 +202,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   gStatInjectVCBlock.resize(_nodes,0);
   gStatInjectVCMiss.resize(_nodes,0);
+  gStatFlowMerged.resize(_nodes,0);
 
   gStatROBRange =  new Stats( this, "rob_range" , 1.0, 300 );
   
@@ -566,8 +569,15 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _router[i] = _net[i]->GetRouters();
   }
 
-  //seed the network
-  RandomSeed(config.GetInt("seed"));
+ if(config.GetInt("seed")==54321){
+    cout<<"You have hit the secret code. Time random seed is on\n";
+    int time_seed = int(time(NULL));
+    cout<<"Today's seed is "<<time_seed<<endl;
+     RandomSeed(time_seed);
+  } else {
+    RandomSeed(config.GetInt("seed"));
+  }
+
 
   string sim_type = config.GetStr( "sim_type" );
 
@@ -737,7 +747,7 @@ Flit* TrafficManager::IssueSpecial(int src, Flit* ff){
   f->src = src;
   f->dest = ff->src;
   f->time = _time;
-  f->cl = 0;
+  f->cl = ff->cl;
   f->type = Flit::ANY_TYPE;
   f->head = true;
   f->tail = true;
@@ -848,7 +858,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     }
     //the return time is offset by the reservation packet latency to prevent schedule fragmentation
     ff->payload  = MAX(_time, _reservation_schedule[dest]-3*(_time-f->time));
-    _reservation_schedule[dest] =_reservation_schedule[dest]+f->payload;//ff->payload+f->payload ;//
+    _reservation_schedule[dest] =_reservation_schedule[dest]+int((float)f->payload*1.02);//ff->payload+f->payload ;//
     ff->res_type = RES_TYPE_GRANT;
     ff->pri = FLIT_PRI_GRANT;
     ff->vc = 1;
@@ -1390,6 +1400,7 @@ void TrafficManager::_Inject(){
 	    flow_buffer_ready+= (_flow_buffer[input][i] ->receive_ready())?1:0;
 	    //insert the flow into a flowbuffer with the same destination
 	    if(FLOW_DEST_MERGE && _flow_buffer[input][i]->fl->dest == _pending_flow[input]->dest){
+	      gStatFlowMerged[input]++;
 	      _flow_buffer[input][i]->_flow_queue.push(_pending_flow[input]);
 	      _pending_flow[input]=NULL;
 	      break;
@@ -1891,6 +1902,9 @@ void TrafficManager::_ClearStats( )
   }
   gStatInjectVCBlock.clear();
   gStatInjectVCBlock.resize(_nodes,0);
+
+  gStatFlowMerged.clear();
+  gStatFlowMerged.resize(_nodes,0);
 
   gStatROBRange->Clear();
   
@@ -2597,6 +2611,9 @@ void TrafficManager::_DisplayTedsShit(){
     *_stats_out<<"inject_vc_block = "
 	       <<gStatInjectVCBlock<<";\n";
     
+    *_stats_out<<"flowbuffer_merge = "
+	       <<gStatFlowMerged<<";\n";
+
     *_stats_out<< "rob_range = "
 	       <<*gStatROBRange<<";\n";
 
