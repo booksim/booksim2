@@ -189,6 +189,7 @@ TransposeTrafficPattern::TransposeTrafficPattern(int nodes)
 	 << "be an even power of two." << endl;
     exit(-1);
   }
+  _shift >>= 2;
 }
 
 int TransposeTrafficPattern::dest(int source)
