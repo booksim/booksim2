@@ -169,6 +169,7 @@ protected:
   vector<int> _reservation_schedule;
 
   //sender
+  vector<flow*> _pending_flow;
   int _flow_buffer_capacity;
   int _max_flow_buffers;
   vector< vector< FlowBuffer*> > _flow_buffer;

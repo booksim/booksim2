@@ -16,6 +16,10 @@
 #define FLOW_STAT_FINAL_NOT_READY 7
 #define FLOW_STAT_LIFETIME 9
 
+#define FLOW_DONE_NOT 0
+#define FLOW_DONE_DONE 1
+#define FLOW_DONE_MORE 2
+
 struct flow{
   int flid;
   int vc;
@@ -24,12 +28,15 @@ struct flow{
   bool collect;
   int create_time;
   queue<Flit*> data;
+  int dest;
 };
 
 class FlowBuffer{
 public:
-  FlowBuffer(int id, int size, bool reservation_enabled, flow* fl);
+  FlowBuffer(int src, int id, int size, bool reservation_enabled, flow* fl);
   ~FlowBuffer();
+  void Init( flow* fl);
+  void Reset();
 
   bool ack(int sn);
   bool nack(int sn);
@@ -39,7 +46,7 @@ public:
   bool receive_ready();
   bool send_norm_ready();
   bool send_spec_ready();
-  bool done();
+  int done();
 
 
   Flit* send();
@@ -51,10 +58,13 @@ public:
 
   map<int, int> _flit_status;
   map<int, Flit*> _flit_buffer;
+  queue<flow*> _flow_queue;
   flow* fl;
   Flit* _reservation_flit;
   int _capacity;			       
+  int _src;
   int _id;
+  bool _use_reservation;
 
   int _status;
   bool _tail_sent; //if the last flit sent was a tail

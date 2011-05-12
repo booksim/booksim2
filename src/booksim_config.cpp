@@ -40,6 +40,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 BookSimConfig::BookSimConfig( )
 { 
+  _int_map["flow_merge"] = 1;
+  _int_map["fast_retransmit"] = 1;
   _int_map["flow_buffer_capacity"] = 128;
   _int_map["res_vcs"] = 1;
   _int_map["hotspot_reservation"] = 0;

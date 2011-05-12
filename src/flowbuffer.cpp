@@ -1,11 +1,19 @@
 #include "flowbuffer.hpp"
 
-#define FAST_RETRANSMIT_ENABLE (true)
+extern bool  FAST_RETRANSMIT_ENABLE;
 
-FlowBuffer::FlowBuffer(int id, int size, bool res, flow* f){
+
+FlowBuffer::FlowBuffer(int src, int id, int size, bool res, flow* f){
+  _src = src;
   _id = id;
-  fl = f;
   _capacity = size;
+  _use_reservation = res;
+
+  Init(f);
+}
+
+void FlowBuffer::Init( flow* f){
+  fl = f;
 
   _vc = -1;
   _last_sn = -1;
@@ -14,7 +22,7 @@ FlowBuffer::FlowBuffer(int id, int size, bool res, flow* f){
   _guarantee_sent = 0;
   _received = 0;
   _ready = 0;
-  if(res){
+  if(_use_reservation){
     _reservation_flit  = Flit::New();
     _reservation_flit->flid = fl->flid;
     _reservation_flit->flbid = _id;
@@ -36,6 +44,10 @@ FlowBuffer::FlowBuffer(int id, int size, bool res, flow* f){
     _status =FLOW_STATUS_NORM;
     _spec_sent = true;
   }
+  
+  _flit_status.clear();
+  _flit_buffer.clear();
+  
 
   _watch = false;
 
@@ -43,9 +55,11 @@ FlowBuffer::FlowBuffer(int id, int size, bool res, flow* f){
   _fast_retransmit = 0;
   _no_retransmit_loss = 0;
   _spec_outstanding = 0;
+  _stats.clear();
   _stats.resize(FLOW_STAT_LIFETIME+1,0);
   _stats[FLOW_STAT_LIFETIME]=GetSimTime()-fl->create_time;
 }
+
 
 FlowBuffer::~FlowBuffer(){
   delete fl;
@@ -324,8 +338,8 @@ Flit* FlowBuffer::send(){
       _reservation_flit->vc=0;
       _reservation_flit->time = GetSimTime();
       f = _reservation_flit;
-      f->src = _flit_buffer[0]->src;
-      f->dest =_flit_buffer[0]->dest;
+      f->src = _src;
+      f->dest = fl->dest;
       _spec_sent = true;
     } else {
       if(_flit_buffer.count(_last_sn+1)!=0){
@@ -364,6 +378,7 @@ Flit*  FlowBuffer::receive(){
   assert(receive_ready());
   assert(!fl->data.empty());
   Flit *f = fl->data.front();
+  assert(f);
   fl->data.pop();
 
   f->flbid = _id;
@@ -431,12 +446,24 @@ bool FlowBuffer::send_spec_ready(){
   return false;
 }
 
-bool FlowBuffer::done(){
-  bool d = (_guarantee_sent == fl->flow_size);
-  if(_watch && d){
+int FlowBuffer::done(){
+  int  d = (_guarantee_sent == fl->flow_size)?FLOW_DONE_DONE:FLOW_DONE_NOT;
+  if(_watch && d!=FLOW_DONE_NOT){
     cout<<"flow "<<fl->flid
 	<<" ready to terminate\n";
   } 
+  if(d == FLOW_DONE_DONE  && !_flow_queue.empty()){
+    d=FLOW_DONE_MORE;
+  }
   return  d;
+}
+
+void FlowBuffer::Reset(){
+  assert(_guarantee_sent == fl->flow_size);
+  assert(!_flow_queue.empty());
+  delete fl;
+  Init(_flow_queue.front());
+  //  receive();
+  _flow_queue.pop();
 }
 

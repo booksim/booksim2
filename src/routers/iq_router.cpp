@@ -56,7 +56,7 @@ extern vector< Network * > net;
 extern TrafficManager * trafficManager;
 extern map<int, vector<int> > gDropStats;
 
-#define VC_ALLOC_DROP (true)
+extern bool  VC_ALLOC_DROP;
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )

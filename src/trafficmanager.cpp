@@ -41,6 +41,10 @@
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
+bool FLOW_DEST_MERGE = true;
+bool  VC_ALLOC_DROP = true;
+bool  FAST_RETRANSMIT_ENABLE = true;;
+
 #define WATCH_FLID -1
 #define MAX(X,Y) (X>Y?(X):(Y))
 
@@ -122,6 +126,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _last_normal_vc.resize(_nodes,0);
   _last_spec_vc.resize(_nodes,0);
   _flow_buffer.resize(_nodes);
+  
+  _pending_flow.resize(_nodes,NULL);
 
   _flow_buffer_arb.resize(_nodes);
   for(int i = 0; i<_nodes; i++){
@@ -141,6 +147,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _cur_flid = 0;
   gExpirationTime =  config.GetInt("expiration_time");
 
+  FLOW_DEST_MERGE= (config.GetInt("flow_merge")==1);
+  FAST_RETRANSMIT_ENABLE = (config.GetInt("fast_retransmit")==1);
 
 
   gStatAckReceived.resize(_nodes,0);
@@ -766,15 +774,20 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     if( receive_flow_buffer!=NULL &&
 	receive_flow_buffer->fl->flid == f->flid){
       gStatAckEffective[dest]+= receive_flow_buffer->ack(f->sn)?1:0;
-      if(receive_flow_buffer->done()){
+      int flow_done_status = receive_flow_buffer->done();
+      if(flow_done_status!=FLOW_DONE_NOT){
 	for(size_t i = 0; i<gStatFlowStats.size()-1; i++){
 	  gStatFlowStats[i]+=receive_flow_buffer->_stats[i];
 	}
 	gStatFlowStats[gStatFlowStats.size()-1]++;
 	gStatFlowSenderLatency->AddSample(_time-receive_flow_buffer->fl->create_time);
 	gStatFastRetransmit->AddSample(receive_flow_buffer->_fast_retransmit);
-	delete _flow_buffer[dest][f->flbid];
-	_flow_buffer[dest][f->flbid]=NULL;
+	if(flow_done_status==FLOW_DONE_DONE){
+	  delete _flow_buffer[dest][f->flbid];
+	  _flow_buffer[dest][f->flbid]=NULL;
+	} else {
+	  receive_flow_buffer->Reset();
+	}
       }
     }
     f->Free();
@@ -1320,7 +1333,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       fl->data.push( f );
     }
   }
-
+  fl->dest = packet_destination;
   fl->rtime = -1;
   fl->vc = -1;
   fl->create_time = time;
@@ -1328,48 +1341,26 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   fl->flow_size = sequence_number;
   fl->data.front()->payload = fl->flow_size;
   fl->data.back()->flow_tail = true;
-  int empty_flow = 0;
-  for(empty_flow= 0; empty_flow<_max_flow_buffers; empty_flow++){
-    if(_flow_buffer[source][empty_flow] == NULL){
-      break;
-    }
-  }
-  assert(empty_flow!=_max_flow_buffers);
-  _flow_buffer[source][empty_flow] = new FlowBuffer(empty_flow, _flow_buffer_capacity, gReservation, fl);
-  if(fl->flid == WATCH_FLID){
-    _flow_buffer[source][empty_flow]->_watch = true;
-  }
+  assert(_pending_flow[source]==NULL);
+  _pending_flow[source] = fl;
 }
 
 void TrafficManager::_Inject(){
 
   for ( int input = 0; input < _nodes; ++input ) {
     for ( int c = 0; c < _classes; ++c ) {
-      int flow_buffer_taken = 0;
-      int flow_buffer_ready = 0;
-      for(int i = 0; i<_max_flow_buffers; i++){
-	if(_flow_buffer[input][i] != NULL){
-	  flow_buffer_taken++;
-	  flow_buffer_ready+= (_flow_buffer[input][i] ->receive_ready())?1:0;
-	}
-      }
-      gStatReadyFlowBuffers->AddSample(flow_buffer_ready);
-      gStatActiveFlowBuffers->AddSample(flow_buffer_taken);
-      
-      //if no currently active flow is ready to receive and there is flow buffer available
-      if (flow_buffer_ready==0 && flow_buffer_taken<_max_flow_buffers) {
-	bool generated = false;
 
+
+      //if no currently active flow is ready to receive and there is flow buffer available
+      if (_pending_flow[input]==NULL){
+	bool generated = false;
 	if ( !_empty_network ) {
 	  while( !generated && ( _qtime[input][c] <= _time ) ) {
 	    int stype = _IssuePacket( input, c );
-
 	    if ( stype != 0 ) { //generate a packet
 		_GeneratePacket( input, stype, c, 
 				 _include_queuing==1 ? 
-				 _qtime[input][c] : _time );
-	      
-	   
+				 _qtime[input][c] : _time );	   
 	      generated = true;
 	    }
 	    //this is not a request packet
@@ -1383,6 +1374,49 @@ void TrafficManager::_Inject(){
 	       ( _qtime[input][c] > _drain_time ) ) {
 	    _qdrained[input][c] = true;
 	  }
+	}
+      }
+
+      //
+      /*
+	
+       */
+      if(_pending_flow[input]!=NULL){
+	int flow_buffer_taken = 0;
+	int flow_buffer_ready = 0;
+	for(int i = 0; i<_max_flow_buffers; i++){
+	  if(_flow_buffer[input][i] != NULL){
+	    flow_buffer_taken++;
+	    flow_buffer_ready+= (_flow_buffer[input][i] ->receive_ready())?1:0;
+	    //insert the flow into a flowbuffer with the same destination
+	    if(FLOW_DEST_MERGE && _flow_buffer[input][i]->fl->dest == _pending_flow[input]->dest){
+	      _flow_buffer[input][i]->_flow_queue.push(_pending_flow[input]);
+	      _pending_flow[input]=NULL;
+	      break;
+	    }
+	  }
+	}
+	gStatReadyFlowBuffers->AddSample(flow_buffer_ready);
+	gStatActiveFlowBuffers->AddSample(flow_buffer_taken);
+	
+	//flow could have been taken care of above
+	//otherwise find an opportutnity to insert
+	if(_pending_flow[input]!=NULL &&
+	   (flow_buffer_ready==0 && flow_buffer_taken<_max_flow_buffers)) {
+	  
+	  int empty_flow = 0;
+	  for(empty_flow= 0; empty_flow<_max_flow_buffers; empty_flow++){
+	    if(_flow_buffer[input][empty_flow] == NULL){
+	      break;
+	    }
+	  }
+	  assert(empty_flow!=_max_flow_buffers);
+	  _flow_buffer[input][empty_flow] = 
+	    new FlowBuffer(input, empty_flow, _flow_buffer_capacity, gReservation, _pending_flow[input]);
+	  if(_pending_flow[input]->flid == WATCH_FLID){
+	    _flow_buffer[input][empty_flow]->_watch = true;
+	  }
+	  _pending_flow[input]=NULL;
 	}
       }
     }
@@ -1660,8 +1694,8 @@ void TrafficManager::_Step( )
 	f->ntime = _time;
 	_net[0]->WriteSpecialFlit(f, source);
 	_sent_flits[0][source]->AddSample(1);
-	
-	if(ready_flow_buffer->done()){
+	int flow_done_status = ready_flow_buffer->done();
+	if(flow_done_status !=FLOW_DONE_NOT){
 	  for(size_t i = 0; i<gStatFlowStats.size()-1; i++){
 	    gStatFlowStats[i]+=ready_flow_buffer->_stats[i];
 	  }
@@ -1669,9 +1703,13 @@ void TrafficManager::_Step( )
 	  gStatFlowStats[gStatFlowStats.size()-1]++;
 	  gStatFlowSenderLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
 	  gStatFastRetransmit->AddSample(ready_flow_buffer->_fast_retransmit);
-	  delete _flow_buffer[source][f->flbid];
-	  _flow_buffer[source][f->flbid]=NULL;
 	  _last_send_flow_buffer[source] =-1;
+	  if(flow_done_status==FLOW_DONE_DONE){
+	    delete _flow_buffer[source][f->flbid];
+	    _flow_buffer[source][f->flbid]=NULL;
+	  } else {
+	    ready_flow_buffer->Reset();
+	  }
 	}
       }
     }
@@ -2135,6 +2173,7 @@ bool TrafficManager::_SingleSim( )
 	*_stats_out << "%=================================" << endl;
 
       int lat_exc_class = -1;
+      double lat_exc_value = 0.0;
       int lat_chg_exc_class = -1;
       int acc_chg_exc_class = -1;
 
@@ -2216,7 +2255,7 @@ bool TrafficManager::_SingleSim( )
 	  *_stats_out <<"run_time = "<<_time<<";"<<endl;
 	}
 	
-	double latency = cur_latency;
+	double latency = (double)_plat_stats[c]->Sum();
 	double count = (double)_plat_stats[c]->NumSamples();
 	  
 	map<int, Flit *>::const_iterator iter;
@@ -2231,6 +2270,7 @@ bool TrafficManager::_SingleSim( )
 	   (_latency_thres[c] >= 0.0) &&
 	   ((latency / count) > _latency_thres[c])) {
 	  lat_exc_class = c;
+	  lat_exc_value = (latency / count);
 	}
 	
 	cout << "latency change    = " << latency_change << endl;
@@ -2264,7 +2304,7 @@ bool TrafficManager::_SingleSim( )
       // Fail safe for latency mode, throughput will ust continue
       if ( ( _sim_mode == latency ) && ( lat_exc_class >= 0 ) ) {
 
-	cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
+	cout << "Average latency for class " << lat_exc_class <<" is "<<lat_exc_value<< " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
 	converged = 0; 
 	_sim_state = warming_up;
 	break;
