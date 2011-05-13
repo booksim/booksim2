@@ -78,6 +78,12 @@ bool BatchTrafficManager::_IssuePacket( int source, int cl )
   return false;
 }
 
+void BatchTrafficManager::_ClearStats( )
+{
+  TrafficManager::_ClearStats();
+  _batch_time->Clear( );
+}
+
 bool BatchTrafficManager::_SingleSim( )
 {
   int batch_index = 0;

@@ -195,7 +195,7 @@ protected:
 
   void _GeneratePacket( int source, int dest, int size, int cl, int time, int tid, int ttime );
 
-  void _ClearStats( );
+  virtual void _ClearStats( );
 
   int  _ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const;
 
