@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 BatchTrafficManager::BatchTrafficManager( const Configuration &config, 
 					  const vector<Network *> & net )
-: TrafficManager(config, net), _last_batch_time(-1), _last_id(-1), _last_pid(-1)
+: SyntheticTrafficManager(config, net), _last_batch_time(-1), _last_id(-1), _last_pid(-1)
 {
 
   _batch_size = config.GetIntArray("batch_size");

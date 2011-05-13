@@ -130,14 +130,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     }
   }
 
-  vector<string> traffic = config.GetStrArray("traffic");
-  traffic.resize(_classes, traffic.back());
-
-  _traffic_pattern.resize(_classes);
-  for(int c = 0; c < _classes; ++c) {
-    _traffic_pattern[c] = TrafficPattern::New(traffic[c], _nodes, config);
-  }
-
   _class_priority = config.GetIntArray("class_priority"); 
   if(_class_priority.empty()) {
     _class_priority.push_back(config.GetInt("class_priority"));
@@ -164,15 +156,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   // ============ Injection queues ============ 
 
-  _qtime.resize(_classes);
-  _qdrained.resize(_classes);
   _partial_packets.resize(_classes);
   _sent_packets.resize(_classes);
   _requests_outstanding.resize(_classes);
 
   for ( int c = 0; c < _classes; ++c ) {
-    _qtime[c].resize(_nodes);
-    _qdrained[c].resize(_nodes);
     _partial_packets[c].resize(_nodes);
     _sent_packets[c].resize(_nodes);
     _requests_outstanding[c].resize(_nodes);
@@ -704,35 +692,6 @@ void TrafficManager::_GeneratePacket( int source, int dest, int size,
   }
 }
 
-void TrafficManager::_Inject(){
-
-  for ( int c = 0; c < _classes; ++c ) {
-    for ( int source = 0; source < _nodes; ++source ) {
-      // Potentially generate packets for any (source,class)
-      // that is currently empty
-      if ( _partial_packets[c][source].empty() ) {
-	if((_request_class[c] >= 0) ||
-	   ((_max_outstanding[c] > 0) && 
-	    (_requests_outstanding[c][source] >= _max_outstanding[c]))) {
-	  _qtime[c][source] = _time;
-	} else {
-	  while(_qtime[c][source] <= _time) {
-	    ++_qtime[c][source];
-	    if(_IssuePacket(source, c)) { //generate a packet
-	      _requests_outstanding[c][source]++;
-	      _sent_packets[c][source]++;
-	      break;
-	    }
-	  }
-	}
-	if((_sim_state == draining) && (_qtime[c][source] > _drain_time)) {
-	  _qdrained[c][source] = true;
-	}
-      }
-    }
-  }
-}
-
 void TrafficManager::_Step( )
 {
   bool flits_in_flight = false;
@@ -964,27 +923,21 @@ void TrafficManager::_Step( )
 bool TrafficManager::_PacketsOutstanding( ) const
 {
   for ( int c = 0; c < _classes; ++c ) {
-    if ( _measure_stats[c] ) {
-      if ( _measured_in_flight_flits[c].empty() ) {
-	
-	for ( int s = 0; s < _nodes; ++s ) {
-	  if ( !_qdrained[c][s] ) {
-#ifdef DEBUG_DRAIN
-	    cout << "waiting on queue " << s << " class " << c;
-	    cout << ", time = " << _time << " qtime = " << _qtime[c][s] << endl;
-#endif
-	    return true;
-	  }
-	}
-      } else {
-#ifdef DEBUG_DRAIN
-	cout << "in flight = " << _measured_in_flight_flits[c].size() << endl;
-#endif
-	return true;
-      }
+    if ( !_measured_in_flight_flits[c].empty() ) {
+      return true;
     }
   }
   return false;
+}
+
+void TrafficManager::_ResetSim( )
+{
+  _time = 0;
+  
+  //remove any pending request from the previous simulations
+  for ( int c = 0; c < _classes; ++c ) {
+    _requests_outstanding[c].assign(_nodes, 0);
+  }
 }
 
 void TrafficManager::_ClearStats( )
@@ -1074,17 +1027,9 @@ bool TrafficManager::Run( )
 {
   for ( int sim = 0; sim < _total_sims; ++sim ) {
 
-    _time = 0;
-
-    //remove any pending request from the previous simulations
-    //reset queuetime for all sources
-    for ( int c = 0; c < _classes; ++c ) {
-      _requests_outstanding[c].assign(_nodes, 0);
-      _qtime[c].assign(_nodes, 0);
-      _qdrained[c].assign(_nodes, false);
-    }
-
     _ClearStats( );
+
+    _ResetSim( );
 
     if ( !_SingleSim( ) ) {
       cout << "Simulation unstable, ending ..." << endl;

@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "flit.hpp"
 #include "buffer_state.hpp"
 #include "stats.hpp"
-#include "traffic.hpp"
 #include "routefunc.hpp"
 #include "outputset.hpp"
 
@@ -57,10 +56,9 @@ protected:
 
   // ============ Traffic ============ 
 
-  int    _classes;
+  int _classes;
 
   int _subnets;
-
   vector<int> _subnet;
 
   vector<int> _packet_size;
@@ -71,8 +69,6 @@ protected:
   vector<int> _class_priority;
 
   vector<int> _last_class;
-
-  vector<TrafficPattern *> _traffic_pattern;
 
   // ============ Message priorities ============ 
 
@@ -91,8 +87,6 @@ protected:
 
   // ============ Injection queues ============ 
 
-  vector<vector<int> > _qtime;
-  vector<vector<bool> > _qdrained;
   vector<vector<list<Flit *> > > _partial_packets;
 
   vector<map<int, Flit *> > _total_in_flight_flits;
@@ -185,7 +179,7 @@ protected:
 
   virtual void _RetireFlit( Flit *f, int dest );
 
-  void _Inject();
+  virtual void _Inject() = 0;
   
   void _Step( );
 
@@ -194,6 +188,8 @@ protected:
   virtual bool _IssuePacket( int source, int cl ) = 0;
 
   void _GeneratePacket( int source, int dest, int size, int cl, int time, int tid, int ttime );
+
+  virtual void _ResetSim( );
 
   virtual void _ClearStats( );
 
@@ -207,13 +203,14 @@ protected:
 
   virtual void _UpdateOverallStats();
 
+  TrafficManager( const Configuration &config, const vector<Network *> & net );
+
 public:
+
+  virtual ~TrafficManager( );
 
   static TrafficManager * NewTrafficManager(Configuration const & config, 
 					    vector<Network *> const & net);
-
-  TrafficManager( const Configuration &config, const vector<Network *> & net );
-  virtual ~TrafficManager( );
 
   bool Run( );
 

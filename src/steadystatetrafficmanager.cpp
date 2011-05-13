@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "steadystatetrafficmanager.hpp"
 
 SteadyStateTrafficManager::SteadyStateTrafficManager( const Configuration &config, const vector<Network *> & net )
-: TrafficManager(config, net)
+: SyntheticTrafficManager(config, net)
 {
   _load = config.GetFloatArray("injection_rate"); 
   if(_load.empty()) {

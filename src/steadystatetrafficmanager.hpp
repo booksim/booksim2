@@ -33,10 +33,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 
-#include "trafficmanager.hpp"
+#include "synthetictrafficmanager.hpp"
 #include "injection.hpp"
 
-class SteadyStateTrafficManager : public TrafficManager {
+class SteadyStateTrafficManager : public SyntheticTrafficManager {
 
 protected:
 

@@ -28,42 +28,32 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _BATCHTRAFFICMANAGER_HPP_
-#define _BATCHTRAFFICMANAGER_HPP_
+#ifndef _SYNTHETICTRAFFICMANAGER_HPP_
+#define _SYNTHETICTRAFFICMANAGER_HPP_
 
-#include <iostream>
-#include <vector>
+#include "trafficmanager.hpp"
+#include "traffic.hpp"
 
-#include "synthetictrafficmanager.hpp"
-
-class BatchTrafficManager : public SyntheticTrafficManager {
+class SyntheticTrafficManager : public TrafficManager {
 
 protected:
 
-  vector<int> _batch_size;
-  int _batch_count;
-  int _last_batch_time;
-  int _last_id;
-  int _last_pid;
+  vector<TrafficPattern *> _traffic_pattern;
 
-  Stats * _batch_time;
-  Stats * _overall_batch_time;
+  vector<vector<int> > _qtime;
+  vector<vector<bool> > _qdrained;
 
-  virtual void _RetireFlit( Flit *f, int dest );
+  virtual void _Inject( );
 
-  virtual bool _IssuePacket( int source, int cl );
-  virtual void _ClearStats( );
-  virtual bool _SingleSim( );
+  virtual bool _PacketsOutstanding( ) const;
 
-  virtual void _UpdateOverallStats( );
+  virtual void _ResetSim( );
+
+  SyntheticTrafficManager( const Configuration &config, const vector<Network *> & net );
 
 public:
 
-  BatchTrafficManager( const Configuration &config, const vector<Network *> & net );
-  virtual ~BatchTrafficManager( );
-
-  virtual void DisplayStats( ostream & os = cout ) const;
-  virtual void DisplayOverallStats( ostream & os = cout ) const;
+  virtual ~SyntheticTrafficManager( );
 
 };
 
