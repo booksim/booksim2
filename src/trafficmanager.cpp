@@ -1084,12 +1084,6 @@ bool TrafficManager::Run( )
       _qdrained[c].assign(_nodes, false);
     }
 
-    // warm-up ...
-    // reset stats, all packets after warmup_time marked
-    // converge
-    // draing, wait until all packets finish
-    _sim_state    = warming_up;
-  
     _ClearStats( );
 
     if ( !_SingleSim( ) ) {

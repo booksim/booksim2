@@ -117,6 +117,13 @@ bool SteadyStateTrafficManager::_IssuePacket( int source, int cl )
 
 bool SteadyStateTrafficManager::_SingleSim( )
 {
+  // warm-up
+  // all packets after warmup_time are marked
+  // converge
+  // drain, wait until all packets finish
+
+  _sim_state = warming_up;
+  
   int converged = 0;
   
   //once warmed up, we require 3 converging runs to end the simulation 
