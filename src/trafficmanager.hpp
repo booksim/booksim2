@@ -231,7 +231,7 @@ protected:
   virtual int  _IssuePacket( int source, int cl );
   void _GeneratePacket( int source, int size, int cl, int time );
 
-  void _ClearStats( );
+  virtual void _ClearStats( );
 
   int  _ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const;
 
