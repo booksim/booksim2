@@ -37,28 +37,29 @@ using namespace std;
 
 class InjectionProcess {
 protected:
+  int _nodes;
   double _rate;
-  InjectionProcess(double rate);
+  InjectionProcess(int nodes, double rate);
 public:
-  virtual bool test() = 0;
-  static InjectionProcess * New(string const & inject, double load);
+  virtual bool test(int source) = 0;
+  static InjectionProcess * New(string const & inject, int nodes, double load);
 };
 
 class BernoulliInjectionProcess : public InjectionProcess {
 public:
-  BernoulliInjectionProcess(double rate);
-  virtual bool test();
+  BernoulliInjectionProcess(int nodes, double rate);
+  virtual bool test(int source);
 };
 
 class OnOffInjectionProcess : public InjectionProcess {
 private:
   double _alpha;
   double _beta;
-  bool _state;
+  vector<bool> _state;
 public:
-  OnOffInjectionProcess(double rate, double alpha, double beta, 
+  OnOffInjectionProcess(int nodes, double rate, double alpha, double beta, 
 			bool initial = false);
-  virtual bool test();
+  virtual bool test(int source);
 };
 
 #endif 

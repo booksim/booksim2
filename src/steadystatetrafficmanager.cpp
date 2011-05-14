@@ -51,10 +51,7 @@ SteadyStateTrafficManager::SteadyStateTrafficManager( const Configuration &confi
 
   _injection_process.resize(_classes);
   for(int c = 0; c < _classes; ++c) {
-    _injection_process[c].resize(_nodes);
-    for(int n = 0; n < _nodes; ++n) {
-      _injection_process[c][n] = InjectionProcess::New(injection_process[c], _load[c]);
-    }
+    _injection_process[c] = InjectionProcess::New(injection_process[c], _nodes, _load[c]);
   }
 
   _measure_latency = (config.GetStr("sim_type") == "latency");
@@ -97,15 +94,13 @@ SteadyStateTrafficManager::SteadyStateTrafficManager( const Configuration &confi
 SteadyStateTrafficManager::~SteadyStateTrafficManager( )
 {
   for ( int c = 0; c < _classes; ++c ) {
-    for ( int source = 0; source < _nodes; ++source ) {
-      delete _injection_process[c][source];
-    }
+    delete _injection_process[c];
   }
 }
 
 bool SteadyStateTrafficManager::_IssuePacket( int source, int cl )
 {
-  if(_injection_process[cl][source]->test()) {
+  if(_injection_process[cl]->test(source)) {
     int dest = _traffic_pattern[cl]->dest(source);
     int size = _packet_size[cl];
     int time = ((_include_queuing == 1) ? _qtime[cl][source] : _time);

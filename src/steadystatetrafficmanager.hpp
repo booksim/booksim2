@@ -42,7 +42,7 @@ protected:
 
   vector<double> _load;
 
-  vector<vector<InjectionProcess *> > _injection_process;
+  vector<InjectionProcess *> _injection_process;
 
   bool _measure_latency;
 
