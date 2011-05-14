@@ -89,7 +89,7 @@ protected:
   map<int, pair<int, vector<int> > > _class_prio_map;
 
   vector<TrafficPattern *> _traffic_pattern;
-  vector<vector<InjectionProcess *> > _injection_process;
+  vector<InjectionProcess *> _injection_process;
 
   // ============ Message priorities ============ 
 
