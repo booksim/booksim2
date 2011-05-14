@@ -36,16 +36,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace std;
 
-InjectionProcess::InjectionProcess(double rate)
-: _rate(rate)
+InjectionProcess::InjectionProcess(int nodes, double rate)
+  : _nodes(nodes), _rate(rate)
 {
+  if(nodes <= 0) {
+    cout << "Error: Number of nodes must be greater than zero." << endl;
+    exit(-1);
+  }
   if((rate < 0.0) || (rate > 1.0)) {
-    cout << "Error: Injection process must have load between 0.0 and 1.0." << endl;
+    cout << "Error: Injection process must have load between 0.0 and 1.0."
+	 << endl;
     exit(-1);
   }
 }
 
-InjectionProcess * InjectionProcess::New(string const & inject, double load)
+InjectionProcess * InjectionProcess::New(string const & inject, int nodes, 
+					 double load)
 {
   string process_name;
   string param_str;
@@ -66,7 +72,7 @@ InjectionProcess * InjectionProcess::New(string const & inject, double load)
 
   InjectionProcess * result = NULL;
   if(process_name == "bernoulli") {
-    result = new BernoulliInjectionProcess(load);
+    result = new BernoulliInjectionProcess(nodes, load);
   } else if(process_name == "on_off") {
     if(params.size() < 2) {
       cout << "Missing parameters for injection process: " << inject << endl;
@@ -75,7 +81,7 @@ InjectionProcess * InjectionProcess::New(string const & inject, double load)
     double alpha = strtod(params[0].c_str(), NULL);
     double beta = strtod(params[1].c_str(), NULL);
     bool initial = (params.size() > 2) ? atoi(params[2].c_str()) : false;
-    result = new OnOffInjectionProcess(load, alpha, beta, initial);
+    result = new OnOffInjectionProcess(nodes, load, alpha, beta, initial);
   } else {
     cout << "Invalid injection process: " << inject << endl;
     exit(-1);
@@ -85,45 +91,49 @@ InjectionProcess * InjectionProcess::New(string const & inject, double load)
 
 //=============================================================
 
-BernoulliInjectionProcess::BernoulliInjectionProcess(double rate)
-  : InjectionProcess(rate)
+BernoulliInjectionProcess::BernoulliInjectionProcess(int nodes, double rate)
+  : InjectionProcess(nodes, rate)
 {
 
 }
 
-bool BernoulliInjectionProcess::test()
+bool BernoulliInjectionProcess::test(int source)
 {
+  assert((source >= 0) && (source < _nodes));
   return (RandomFloat() < _rate);
 }
 
 //=============================================================
 
-OnOffInjectionProcess::OnOffInjectionProcess(double rate, double alpha, 
-					     double beta, bool initial)
-  : InjectionProcess(rate), _alpha(alpha), _beta(beta), _state(initial)
+OnOffInjectionProcess::OnOffInjectionProcess(int nodes, double rate, 
+					     double alpha, double beta, 
+					     bool initial)
+  : InjectionProcess(nodes, rate), _alpha(alpha), _beta(beta)
 {
   assert((alpha >= 0.0) && (alpha <= 1.0));
   assert((beta >= 0.0) && (beta <= 1.0));
+  _state.resize(nodes, initial);
 }
 
-bool OnOffInjectionProcess::test()
+bool OnOffInjectionProcess::test(int source)
 {
+  assert((source >= 0) && (source < _nodes));
 
   // advance state
 
-  if(!_state) {
+  if(!_state[source]) {
     if(RandomFloat() < _alpha) { // from off to on
-      _state = true;
+      _state[source] = true;
     }
   } else {
     if(RandomFloat() < _beta) { // from on to off
-      _state = false;
+      _state[source] = false;
     }
   }
 
   // generate packet
 
-  if(_state) { // on?
+  if(_state[source]) { // on?
     double r1 = _rate * (_alpha + _beta) / _alpha;
     return (RandomFloat() < r1);
   }

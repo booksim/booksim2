@@ -174,8 +174,14 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _class_priority.resize(_classes, _class_priority.back());
 
+  vector<string> injection_process = config.GetStrArray("injection_process");
+  injection_process.resize(_classes, injection_process.back());
+
+  _injection_process.resize(_classes);
+
   for(int c = 0; c < _classes; ++c) {
     _traffic_pattern[c] = TrafficPattern::New(_traffic[c], _nodes, config);
+    _injection_process[c] = InjectionProcess::New(injection_process[c], _nodes, _load[c]);
 
     int const & prio = _class_priority[c];
     if(_class_prio_map.count(prio) > 0) {
@@ -187,18 +193,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   // ============ Injection VC states  ============ 
 
-  vector<string> injection_process = config.GetStrArray("injection_process");
-  injection_process.resize(_classes, injection_process.back());
-
-  _injection_process.resize(_nodes);
   _buf_states.resize(_nodes);
   _last_vc.resize(_nodes);
 
   for ( int source = 0; source < _nodes; ++source ) {
-    _injection_process[source].resize(_classes);
-    for(int c = 0; c < _classes; ++c) {
-      _injection_process[source][c] = InjectionProcess::New(injection_process[c], _load[c]);
-    }
     _buf_states[source].resize(_subnets);
     _last_vc[source].resize(_subnets);
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {
@@ -529,6 +527,9 @@ TrafficManager::~TrafficManager( )
     delete _overall_accepted[c];
     delete _overall_accepted_min[c];
     
+    delete _traffic_pattern[c];
+    delete _injection_process[c];
+
     for ( int source = 0; source < _nodes; ++source ) {
       delete _sent_flits[c][source];
       
@@ -536,8 +537,6 @@ TrafficManager::~TrafficManager( )
 	delete _pair_plat[c][source*_nodes+dest];
 	delete _pair_tlat[c][source*_nodes+dest];
       }
-
-      delete _injection_process[source][c];
     }
     
     for ( int dest = 0; dest < _nodes; ++dest ) {
@@ -698,7 +697,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
        (_requestsOutstanding[source] < _maxOutstanding)) {
       
       //produce a packet
-      if(_injection_process[source][cl]->test()) {
+      if(_injection_process[cl]->test(source)) {
 	
 	//coin toss to determine request type.
 	result = (RandomFloat() < 0.5) ? -2 : -1;
@@ -706,7 +705,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
       }
     }
   } else { //normal mode
-    result = _injection_process[source][cl]->test() ? 1 : 0;
+    result = _injection_process[cl]->test(source) ? 1 : 0;
   } 
   if(result != 0) {
     _sent_packets[source]++;
