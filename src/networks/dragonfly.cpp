@@ -416,6 +416,7 @@ double DragonFlyNew::Capacity( ) const
 void DragonFlyNew::RegisterRoutingFunctions(){
 
   gRoutingFunctionMap["min_dragonflynew"] = &min_dragonflynew;
+  gRoutingFunctionMap["ugal_dragonflynew"] = &ugal_dragonflynew;
 }
 
 
@@ -463,5 +464,121 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
     *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 	       << "	through output port : " << out_port 
 	       << " out vc: " << out_vc << endl;
+  outputs->AddRange( out_port, out_vc, out_vc );
+}
+
+
+//Basic adaptive routign algorithm for the dragonfly
+void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel, 
+			OutputSet *outputs, bool inject )
+{
+  //need 3 VCs for deadlock freedom
+
+  assert(gNumVCs==3);
+  outputs->Clear( );
+  if(inject) {
+    int inject_vc= RandomInt(gNumVCs-1);
+    outputs->AddRange(0,inject_vc, inject_vc);
+    return;
+  }
+  
+  //this constant biases the adaptive decision toward minimum routing
+  //negative value woudl biases it towards nonminimum routing
+  int adaptive_threshold = 30;
+
+  int _grp_num_routers= gA;
+  int _grp_num_nodes =_grp_num_routers*gP;
+  int _network_size =  gA * gP * gG;
+
+ 
+  int dest  = f->dest;
+  int rID =  r->GetID(); 
+  int grp_ID = (int) (rID / _grp_num_routers);
+  int dest_grp_ID = int(dest/_grp_num_nodes);
+
+  int debug = f->watch;
+  int out_port = -1;
+  int out_vc = 0;
+  int min_queue_size, min_hopcnt;
+  int nonmin_queue_size, nonmin_hopcnt;
+  int intm_grp_ID;
+  int intm_rID;
+
+  if(debug){
+    cout<<"At router "<<rID<<endl;
+  }
+  int min_router_output, nonmin_router_output;
+  
+  //at the source router, make the adaptive routing decision
+  if ( in_channel < gP )   {
+    //dest are in the same group, only use minimum routing
+    if (dest_grp_ID == grp_ID) {
+      f->ph = 2;
+      f->minimal = 1;
+    } else {
+      //select a random node
+      f->intm =RandomInt(_network_size - 1);
+      intm_grp_ID = (int)(f->intm/_grp_num_nodes);
+      if (debug){
+	cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
+      }
+      
+      //random intermediate are in the same group, use minimum routing
+      if(grp_ID == intm_grp_ID){
+	f->ph = 1;
+	f->minimal = 1;
+      } else {
+	//congestion metrics using queue length, obtained by GetCredit()
+	min_hopcnt = dragonflynew_hopcnt(f->src, f->dest);
+	min_router_output = dragonfly_port(rID, f->src, f->dest); 
+      	min_queue_size = MAX(r->GetCredit(min_router_output, 0, gNumVCs-1),0) ; 
+
+      
+	nonmin_hopcnt = dragonflynew_hopcnt(f->src, f->intm) +
+	  dragonflynew_hopcnt(f->intm,f->dest);
+	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
+	nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output, 0, gNumVCs-1),0);
+
+	//congestion comparison, could use hopcnt instead of 1 and 2
+	if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {	  
+	  if (debug)  cout << " MINIMAL routing " << endl;
+	  f->ph = 1;
+	  f->minimal = 1;
+	} else {
+	  f->ph = 0;
+	  f->minimal = 0;
+	}
+      }
+    }
+  }
+
+  //transition from nonminimal phase to minimal
+  if(f->ph==0){
+    intm_rID= (int)(f->intm/gP);
+    if( rID == intm_rID){
+      f->ph = 1;
+    }
+  }
+
+  //port assignement based on the phase
+  if(f->ph == 0){
+    assert(f->minimal!=1);
+    out_port = dragonfly_port(rID, f->src, f->intm);
+  } else if(f->ph == 1){
+    out_port = dragonfly_port(rID, f->src, f->dest);
+  } else if(f->ph == 2){
+    out_port = dragonfly_port(rID, f->src, f->dest);
+  } else {
+    assert(false);
+  }
+
+  //optical dateline
+  if (f->ph == 1 && out_port >=gP + (gA-1)) {
+    f->ph = 2;
+  }  
+
+  //vc assignemnt based on phase
+  out_vc = f->ph;
+
   outputs->AddRange( out_port, out_vc, out_vc );
 }
