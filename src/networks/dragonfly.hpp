@@ -47,6 +47,9 @@ class DragonFlyNew : public Network {
   int _numinput;
   int _stages;
   int _num_of_switch;
+  int _grp_num_routers;
+  int _grp_num_nodes;
+
 
   void _ComputeSize( const Configuration &config );
   void _BuildNet( const Configuration &config );
@@ -62,12 +65,20 @@ public:
   double Capacity( ) const;
   static void RegisterRoutingFunctions();
   void InsertRandomFaults( const Configuration &config );
+
 };
-int flatfly_selfrouting(int dest);
+int dragonfly_port(int rID, int source, int dest);
+
+void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
+		       OutputSet *outputs, bool inject );
+void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
+		       OutputSet *outputs, bool inject );
+void min_dragonflynew( const Router *r, const Flit *f, int in_channel, 
+		       OutputSet *outputs, bool inject );
+
+
 void res_dragonflynew( const Router *r, const Flit *f, int in_channel,
 		       OutputSet *outputs, bool inject );
 void compressed_dragonflynew( const Router *r, const Flit *f, int in_channel,
-		       OutputSet *outputs, bool inject );
-void min_dragonflynew( const Router *r, const Flit *f, int in_channel, 
 		       OutputSet *outputs, bool inject );
 #endif 
