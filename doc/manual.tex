@@ -107,13 +107,14 @@ Section~\ref{sec:config_params} for reference.
 \subsection{Downloading and building the simulator}
 \label{sec:download}
 
-The latest official release of the simulator can be checked out from Booksim's sourceforge subversion (SVN) repository. Make sure SVN is installed on your machine and run the following command:
+The latest official release of the simulator can be checked out from our subversion (SVN) repository. Make sure a subversion client is installed on your machine; under UNIX, you can use the following command to check out a working copy:
+
 \begin{verbatim}
-svn co https://booksim.svn.sourceforge.net/svnroot/booksim
+svn co https://nocs.stanford.edu/cgi-bin/svn.cgi/booksim2.0
 \end{verbatim}
 
-The simulator files should now be in the \texttt{booksim/trunk/src/} directory.
-The simulator itself is written in C++ and has been specifically tested with GNU's G++ compiler (version $\ge3$).
+The simulator files should now be in the \texttt{booksim2.0/trunk/src/} directory.
+The simulator itself is written in C++ and has been specifically tested with the GNU G++ compiler (version $\ge3$).
 The front end of the simulator uses LEX and YACC generated parser to process the simulator configuration file; however, unless you plan on making changes to the front end parser, LEX and YACC are not needed.
 The \texttt{Makefile} should be edited so that the first few lines reflect the correct paths to the tools for your particular system.
 The default \texttt{Makefile} should work on the Stanford Leland machines.
