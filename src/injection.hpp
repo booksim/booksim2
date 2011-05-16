@@ -42,6 +42,7 @@ protected:
   InjectionProcess(int nodes, double rate);
 public:
   virtual bool test(int source) = 0;
+  virtual void reset();
   static InjectionProcess * New(string const & inject, int nodes, double load);
 };
 
@@ -55,10 +56,12 @@ class OnOffInjectionProcess : public InjectionProcess {
 private:
   double _alpha;
   double _beta;
-  vector<bool> _state;
+  vector<int> _initial;
+  vector<int> _state;
 public:
   OnOffInjectionProcess(int nodes, double rate, double alpha, double beta, 
-			bool initial = false);
+			vector<int> initial);
+  virtual void reset();
   virtual bool test(int source);
 };
 
