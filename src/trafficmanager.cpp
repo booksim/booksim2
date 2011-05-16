@@ -1439,6 +1439,11 @@ bool TrafficManager::Run( )
   
     _ClearStats( );
 
+    for(int c = 0; c < _classes; ++c) {
+      _traffic_pattern[c]->reset();
+      _injection_process[c]->reset();
+    }
+
     if ( !_SingleSim( ) ) {
       cout << "Simulation unstable, ending ..." << endl;
       return false;
