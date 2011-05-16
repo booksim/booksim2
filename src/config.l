@@ -39,11 +39,11 @@ StrConst [A-Za-z_\-/\.][A-Za-z0-9_\-/\.\+(\{\,)\}]*
 
 \{[A-Za-z0-9_\-\.(\{\,)\}]+(\,[A-Za-z0-9_\-\.(\{\,)\}]+)*\} { configlval.name = strdup( yytext ); return STR; }
 
--?[0-9]+     { configlval.num = strtoul( yytext, 0, 10 ); return NUM; }
+-?[0-9]+     { configlval.num = atoi( yytext ); return NUM; }
 
--?[0-9]*\.[0-9]+ { configlval.fnum = strtod( yytext, 0 ); return FNUM; }
+-?[0-9]*\.[0-9]+ { configlval.fnum = atof( yytext ); return FNUM; }
 
--?{DblConst}  { configlval.fnum = strtod(yytext, 0); return FNUM;}
+-?{DblConst}  { configlval.fnum = atof( yytext ); return FNUM;}
 
 .          { return yytext[0]; }
 
