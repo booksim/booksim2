@@ -42,6 +42,11 @@ TrafficPattern::TrafficPattern(int nodes)
   }
 }
 
+void TrafficPattern::reset()
+{
+
+}
+
 TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
 {
   string pattern_name;
