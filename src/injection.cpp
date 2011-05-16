@@ -78,8 +78,8 @@ InjectionProcess * InjectionProcess::New(string const & inject, int nodes,
       cout << "Missing parameters for injection process: " << inject << endl;
       exit(-1);
     }
-    double alpha = strtod(params[0].c_str(), NULL);
-    double beta = strtod(params[1].c_str(), NULL);
+    double alpha = atof(params[0].c_str());
+    double beta = atof(params[1].c_str());
     bool initial = (params.size() > 2) ? atoi(params[2].c_str()) : false;
     result = new OnOffInjectionProcess(nodes, load, alpha, beta, initial);
   } else {
