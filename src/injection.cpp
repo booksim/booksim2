@@ -50,6 +50,11 @@ InjectionProcess::InjectionProcess(int nodes, double rate)
   }
 }
 
+void InjectionProcess::reset()
+{
+
+}
+
 InjectionProcess * InjectionProcess::New(string const & inject, int nodes, 
 					 double load)
 {
@@ -80,7 +85,18 @@ InjectionProcess * InjectionProcess::New(string const & inject, int nodes,
     }
     double alpha = atof(params[0].c_str());
     double beta = atof(params[1].c_str());
-    bool initial = (params.size() > 2) ? atoi(params[2].c_str()) : false;
+    vector<int> initial(nodes);
+    if(params.size() > 2) {
+      vector<string> initial_str = tokenize(params[2]);
+      initial_str.resize(nodes, initial_str.back());
+      for(int n = 0; n < nodes; ++n) {
+	initial[n] = atoi(initial_str[n].c_str());
+      }
+    } else {
+      for(int n = 0; n < nodes; ++n) {
+	initial[n] = RandomInt(1);
+      }
+    }
     result = new OnOffInjectionProcess(nodes, load, alpha, beta, initial);
   } else {
     cout << "Invalid injection process: " << inject << endl;
@@ -107,12 +123,17 @@ bool BernoulliInjectionProcess::test(int source)
 
 OnOffInjectionProcess::OnOffInjectionProcess(int nodes, double rate, 
 					     double alpha, double beta, 
-					     bool initial)
-  : InjectionProcess(nodes, rate), _alpha(alpha), _beta(beta)
+					     vector<int> initial)
+  : InjectionProcess(nodes, rate), _alpha(alpha), _beta(beta), _initial(initial)
 {
   assert((alpha >= 0.0) && (alpha <= 1.0));
   assert((beta >= 0.0) && (beta <= 1.0));
-  _state.resize(nodes, initial);
+  reset();
+}
+
+void OnOffInjectionProcess::reset()
+{
+  _state = _initial;
 }
 
 bool OnOffInjectionProcess::test(int source)
