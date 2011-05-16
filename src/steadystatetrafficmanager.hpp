@@ -60,6 +60,8 @@ protected:
 
   virtual bool _IssuePacket( int source, int cl );
 
+  virtual void _ResetSim( );
+
   virtual bool _SingleSim( );
 
 public:

@@ -117,9 +117,10 @@ void SyntheticTrafficManager::_ResetSim( )
 {
   TrafficManager::_ResetSim();
 
-  //reset queuetime for all sources
+  //reset queuetime for all sources and initialize traffic patterns
   for ( int c = 0; c < _classes; ++c ) {
     _qtime[c].assign(_nodes, 0);
     _qdrained[c].assign(_nodes, false);
+    _traffic_pattern[c]->reset();
   }
 }

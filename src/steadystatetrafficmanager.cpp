@@ -110,6 +110,15 @@ bool SteadyStateTrafficManager::_IssuePacket( int source, int cl )
   return false;
 }
 
+void SteadyStateTrafficManager::_ResetSim( )
+{
+  SyntheticTrafficManager::_ResetSim();
+
+  for(int c = 0; c < _classes; ++c) {
+    _injection_process[c]->reset();
+  }
+}
+
 bool SteadyStateTrafficManager::_SingleSim( )
 {
   // warm-up
