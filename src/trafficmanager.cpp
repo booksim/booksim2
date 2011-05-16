@@ -685,7 +685,6 @@ int TrafficManager::_IssuePacket( int source, int cl )
   if(_use_read_write[cl]){ //use read and write
     //check queue for waiting replies.
     //check to make sure it is on time yet
-    int pending_time = numeric_limits<int>::max(); //reset to maxtime+1
     if (!_repliesPending[source].empty()) {
       int reply = _repliesPending[source].front();
       if(_repliesDetails.find(result)->second->time <= _qtime[source][cl]) {
