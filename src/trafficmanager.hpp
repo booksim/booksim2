@@ -187,7 +187,7 @@ protected:
   
   virtual bool _IssuePacket( int source, int cl ) = 0;
 
-  void _GeneratePacket( int source, int dest, int size, int cl, int time, int tid, int ttime );
+  void _GeneratePacket( int source, int dest, int size, int cl, int time, int tid = -1, int ttime = -1 );
 
   virtual void _ResetSim( );
 

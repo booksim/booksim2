@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "trafficmanager.hpp"
 #include "steadystatetrafficmanager.hpp"
 #include "batchtrafficmanager.hpp"
+#include "workloadtrafficmanager.hpp"
 #include "random_utils.hpp" 
 #include "vc.hpp"
 
@@ -49,6 +50,8 @@ TrafficManager * TrafficManager::NewTrafficManager(Configuration const & config,
     result = new SteadyStateTrafficManager(config, net);
   } else if(sim_type == "batch") {
     result = new BatchTrafficManager(config, net);
+  } else if(sim_type == "workload") {
+    result = new WorkloadTrafficManager(config, net);
   } else {
     cerr << "Unknown simulation type: " << sim_type << endl;
   } 
@@ -599,8 +602,10 @@ void TrafficManager::_GeneratePacket( int source, int dest, int size,
   if(tid < 0) {
     tid = _cur_tid++;
     assert(_cur_tid);
-    ttime = time;
     begin_trans = true;
+  }
+  if(ttime < 0) {
+    ttime = time;
   }
 
   int pid = _cur_pid++;

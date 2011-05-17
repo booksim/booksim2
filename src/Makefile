@@ -60,6 +60,7 @@ CPP_SRCS = main.cpp \
    synthetictrafficmanager.cpp \
    steadystatetrafficmanager.cpp \
    batchtrafficmanager.cpp \
+   workloadtrafficmanager.cpp \
    buffer_state.cpp \
    stats.cpp \
    credit.cpp \
@@ -71,7 +72,8 @@ CPP_SRCS = main.cpp \
    rng_double_wrapper.cpp\
    power_module.cpp \
    switch_monitor.cpp \
-   buffer_monitor.cpp
+   buffer_monitor.cpp \
+   workload.cpp
 
 ifeq ($(DEFINE) , $(DEFINE_TEST))
 	CPP_SRCS += \
