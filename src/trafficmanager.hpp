@@ -104,7 +104,6 @@ protected:
 
   vector<vector<int> > _sent_packets;
   vector<vector<int> > _requests_outstanding;
-  vector<int> _max_outstanding;
 
   // ============ Statistics ============
 

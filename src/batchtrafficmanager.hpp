@@ -40,6 +40,7 @@ class BatchTrafficManager : public SyntheticTrafficManager {
 
 protected:
 
+  vector<int> _max_outstanding;
   vector<int> _batch_size;
   int _batch_count;
   int _last_batch_time;

@@ -37,6 +37,12 @@ BatchTrafficManager::BatchTrafficManager( const Configuration &config,
 : SyntheticTrafficManager(config, net), _last_batch_time(-1), _last_id(-1), _last_pid(-1)
 {
 
+  _max_outstanding = config.GetIntArray("max_outstanding_requests");
+  if(_max_outstanding.empty()) {
+    _max_outstanding.push_back(config.GetInt("max_outstanding_requests"));
+  }
+  _max_outstanding.resize(_classes, _max_outstanding.back());
+
   _batch_size = config.GetIntArray("batch_size");
   if(_batch_size.empty()) {
     _batch_size.push_back(config.GetInt("batch_size"));
@@ -68,7 +74,9 @@ void BatchTrafficManager::_RetireFlit( Flit *f, int dest )
 
 bool BatchTrafficManager::_IssuePacket( int source, int cl )
 {
-  if(_sent_packets[cl][source] < _batch_size[cl]) {
+  if(((_max_outstanding[cl] <= 0) ||
+      (_requests_outstanding[cl][source] < _max_outstanding[cl])) &&
+     (_sent_packets[cl][source] < _batch_size[cl])) {
     int dest = _traffic_pattern[cl]->dest(source);
     int size = _packet_size[cl];
     int time = ((_include_queuing == 1) ? _qtime[cl][source] : _time);

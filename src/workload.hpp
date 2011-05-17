@@ -53,7 +53,6 @@ public:
   virtual int dest() const = 0;
   virtual int size() const = 0;
   virtual int time() const = 0;
-  virtual void stall() = 0;
   virtual void inject() = 0;
   virtual void defer() = 0;
 };
@@ -67,7 +66,6 @@ class SyntheticWorkload : public Workload {
   vector<int> _qtime;
   queue<int> _ready;
   queue<int> _pending;
-  queue<int> _stalled;
   queue<int> _deferred;
 public:
   SyntheticWorkload(int nodes, double load, int size, string injection, string traffic);
@@ -79,7 +77,6 @@ public:
   virtual int dest() const;
   virtual int size() const;
   virtual int time() const;
-  virtual void stall();
   virtual void inject();
   virtual void defer();
 };

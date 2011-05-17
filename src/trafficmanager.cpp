@@ -173,12 +173,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _measured_in_flight_flits.resize(_classes);
   _retired_packets.resize(_classes);
 
-  _max_outstanding = config.GetIntArray("max_outstanding_requests");
-  if(_max_outstanding.empty()) {
-    _max_outstanding.push_back(config.GetInt("max_outstanding_requests"));
-  }
-  _max_outstanding.resize(_classes, _max_outstanding.back());
-
   // ============ Statistics ============ 
 
   _plat_stats.resize(_classes);

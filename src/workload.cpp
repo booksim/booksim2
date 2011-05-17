@@ -110,9 +110,6 @@ void SyntheticWorkload::reset()
   while(!_pending.empty()) {
     _pending.pop();
   }
-  while(!_stalled.empty()) {
-    _stalled.pop();
-  }
   while(!_deferred.empty()) {
     _deferred.pop();
   }
@@ -128,12 +125,6 @@ void SyntheticWorkload::reset()
 void SyntheticWorkload::advanceTime()
 {
   ++_time;
-  while(!_stalled.empty()) {
-    int const & source = _stalled.front();
-    _qtime[source] = _time;
-    _pending.push(source);
-    _stalled.pop();
-  }
   while(!_deferred.empty()) {
     int const & source = _deferred.front();
     _pending.push(source);
@@ -188,14 +179,6 @@ int SyntheticWorkload::time() const
   assert(!_pending.empty());
   int const & source = _pending.front();
   return _qtime[source];
-}
-
-void SyntheticWorkload::stall()
-{
-  assert(!_pending.empty());
-  int const & source = _pending.front();
-  _stalled.push(source);
-  _pending.pop();
 }
 
 void SyntheticWorkload::inject()

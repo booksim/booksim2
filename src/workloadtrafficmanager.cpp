@@ -71,15 +71,10 @@ void WorkloadTrafficManager::_Inject( )
     while(!wl->empty()) {
       int const source = wl->source();
       if(_partial_packets[c][source].empty()) {
-	if((_max_outstanding[c] > 0) &&
-	   (_requests_outstanding[c][source] >= _max_outstanding[c])) {
-	  wl->stall();
-	} else {
-	  _IssuePacket(source, c);
-	  ++_requests_outstanding[c][source];
-	  ++_sent_packets[c][source];
-	  wl->inject();
-	}
+	_IssuePacket(source, c);
+	++_requests_outstanding[c][source];
+	++_sent_packets[c][source];
+	wl->inject();
       } else {
 	wl->defer();
       }
