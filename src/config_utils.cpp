@@ -324,7 +324,7 @@ void Configuration::WriteMatlabFile(ostream * config_out) const {
 
 }
 
-vector<string> tokenize(string const & data, char open, char close, char sep)
+vector<string> tokenize(string const & data)
 {
   vector<string> values;
 
@@ -335,7 +335,7 @@ vector<string> tokenize(string const & data, char open, char close, char sep)
 
   // doesn't start with an opening brace --> treat as single element
   // note that this element can potentially contain nested lists 
-  if(data[0] != open) {
+  if(data[0] != '{') {
     values.push_back(data);
     return values;
   }
@@ -343,15 +343,13 @@ vector<string> tokenize(string const & data, char open, char close, char sep)
   size_t start = 1;
   int nested = 0;
 
-  string const separators = string(&open, 1) + string(&sep, 1) + string(&close, 1);
-
   size_t curr = start;
 
-  while(string::npos != (curr = data.find_first_of(separators, curr))) {
+  while(string::npos != (curr = data.find_first_of("{,}", curr))) {
     
-    if(data[curr] == open) {
+    if(data[curr] == '{') {
       ++nested;
-    } else if((data[curr] == close) && nested) {
+    } else if((data[curr] == '}') && nested) {
       --nested;
     } else if(!nested) {
       if(curr > start) {

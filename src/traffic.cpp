@@ -54,7 +54,6 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
   size_t left = pattern.find_first_of('(');
   if(left == string::npos) {
     pattern_name = pattern;
-    param_str = "{}";
   } else {
     pattern_name = pattern.substr(0, left);
     size_t right = pattern.find_last_of(')');
@@ -64,7 +63,7 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
       param_str = pattern.substr(left+1, right-left-1);
     }
   }
-  vector<string> params = tokenize('{' + param_str + '}');
+  vector<string> params = tokenize(param_str);
   
   TrafficPattern * result = NULL;
   if(pattern_name == "bitcomp") {
