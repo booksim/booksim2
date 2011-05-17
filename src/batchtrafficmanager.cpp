@@ -75,16 +75,16 @@ int BatchTrafficManager::_IssuePacket( int source, int cl )
 	_repliesPending[source].pop_front();
 	result = reply;
       }
-    }
-    if((_sent_packets[source] < _batch_size) && 
-       ((_maxOutstanding <= 0) || 
-	(_requestsOutstanding[source] < _maxOutstanding))) {
-
-      //coin toss to determine request type.
-      result = (RandomFloat() < 0.5) ? -2 : -1;
-
-    }
+    } else {
+      if((_sent_packets[source] < _batch_size) && 
+	 ((_maxOutstanding <= 0) || 
+	  (_requestsOutstanding[source] < _maxOutstanding))) {
+	
+	//coin toss to determine request type.
+	result = (RandomFloat() < 0.5) ? -2 : -1;
       
+      }
+    }
   } else { //normal
     if((_sent_packets[source] < _batch_size) && 
        ((_maxOutstanding <= 0) || 

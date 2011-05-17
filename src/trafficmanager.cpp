@@ -691,16 +691,17 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	_repliesPending[source].pop_front();
 	result = reply;
       }
-    }
-    if((_maxOutstanding <= 0) || 
-       (_requestsOutstanding[source] < _maxOutstanding)) {
-      
-      //produce a packet
-      if(_injection_process[cl]->test(source)) {
+    } else {
+      if((_maxOutstanding <= 0) || 
+	 (_requestsOutstanding[source] < _maxOutstanding)) {
 	
-	//coin toss to determine request type.
-	result = (RandomFloat() < 0.5) ? -2 : -1;
-	
+	//produce a packet
+	if(_injection_process[cl]->test(source)) {
+	  
+	  //coin toss to determine request type.
+	  result = (RandomFloat() < 0.5) ? -2 : -1;
+	  
+	}
       }
     }
   } else { //normal mode
