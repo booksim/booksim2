@@ -39,6 +39,8 @@ BatchTrafficManager::BatchTrafficManager( const Configuration &config,
 : TrafficManager(config, net), _last_batch_time(-1), _last_id(-1), _last_pid(-1)
 {
 
+  _maxOutstanding = config.GetInt ("max_outstanding_requests");  
+
   _batch_size = config.GetInt( "batch_size" );
   _batch_count = config.GetInt( "batch_count" );
 
