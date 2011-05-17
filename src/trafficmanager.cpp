@@ -226,7 +226,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _sent_packets.resize(_nodes);
   _repliesPending.resize(_nodes);
   _requestsOutstanding.resize(_nodes);
-  _maxOutstanding = config.GetInt ("max_outstanding_requests");  
 
   // ============ Statistics ============ 
 
@@ -692,16 +691,13 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	result = reply;
       }
     } else {
-      if((_maxOutstanding <= 0) || 
-	 (_requestsOutstanding[source] < _maxOutstanding)) {
+      
+      //produce a packet
+      if(_injection_process[cl]->test(source)) {
 	
-	//produce a packet
-	if(_injection_process[cl]->test(source)) {
-	  
-	  //coin toss to determine request type.
-	  result = (RandomFloat() < 0.5) ? -2 : -1;
-	  
-	}
+	//coin toss to determine request type.
+	result = (RandomFloat() < 0.5) ? -2 : -1;
+	
       }
     }
   } else { //normal mode

@@ -134,7 +134,6 @@ protected:
   vector<list<int> > _repliesPending;
   map<int, PacketReplyInfo*> _repliesDetails;
   vector<int> _requestsOutstanding;
-  int _maxOutstanding;
   bool _replies_inherit_priority;
 
   // ============ Statistics ============
