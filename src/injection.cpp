@@ -63,7 +63,6 @@ InjectionProcess * InjectionProcess::New(string const & inject, int nodes,
   size_t left = inject.find_first_of('(');
   if(left == string::npos) {
     process_name = inject;
-    param_str = "{}";
   } else {
     process_name = inject.substr(0, left);
     size_t right = inject.find_last_of(')');
@@ -73,7 +72,7 @@ InjectionProcess * InjectionProcess::New(string const & inject, int nodes,
       param_str = inject.substr(left+1, right-left-1);
     }
   }
-  vector<string> params = tokenize('{' + param_str + '}');
+  vector<string> params = tokenize(param_str);
 
   InjectionProcess * result = NULL;
   if(process_name == "bernoulli") {
