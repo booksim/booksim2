@@ -64,30 +64,6 @@ int gNumClasses;
 vector<int> gBeginVCs;
 vector<int> gEndVCs;
 
-// ----------------------------------------------------------------------
-//
-//   Crossbar Network 
-//
-// ----------------------------------------------------------------------
-void dest_tag_crossbar( const Router *r, 
-			const Flit *f, 
-			int in_channel, 
-			OutputSet *outputs, 
-			bool inject ) {
-  
-  outputs->Clear() ;
-
-  // Output port determined by those bits of destination above 
-  //  concentration bits
-  int out_port = inject ? 0 : ( f->dest >> log_two( gC ) ) ;
-
-  int vcBegin = gBeginVCs[f->cl];
-  int vcEnd = gEndVCs[f->cl];
-  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
-
-  outputs->AddRange( out_port, vcBegin, vcEnd );
-}
-
 // ============================================================
 //  QTree: Nearest Common Ancestor
 // ===
@@ -1645,7 +1621,6 @@ void InitializeRoutingMap( const Configuration & config )
   gRoutingFunctionMap["anca_tree4"]          = &tree4_anca;
   gRoutingFunctionMap["dor_mesh"]            = &dim_order_mesh;
   gRoutingFunctionMap["xy_yx_mesh"]          = &xy_yx_mesh;
-  gRoutingFunctionMap["dest_tag_crossbar"]   = &dest_tag_crossbar ;
   // End Balfour-Schultz
   // ===================================================
 
