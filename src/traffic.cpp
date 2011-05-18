@@ -92,8 +92,16 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
     result = new AsymmetricTrafficPattern(nodes);
   } else if(pattern_name == "taper64") {
     result = new Taper64TrafficPattern(nodes);
+  } else if(pattern_name == "bad_dragon") {
+    if(params.size() < 2) {
+      cout << "Error: Missing parameters for dragonfly bad permutation traffic pattern: " << pattern << endl;
+      exit(-1);
+    }
+    int k = atoi(params[0].c_str());
+    int n = atoi(params[1].c_str());
+    result = new BadPermDFlyTrafficPattern(nodes, k, n);
   } else if((pattern_name == "tornado") || (pattern_name == "neighbor") ||
-	    (pattern_name == "bad_dragon") || (pattern_name == "badperm_yarc")) {
+	    (pattern_name == "badperm_yarc")) {
     if(params.size() < 3) {
       cout << "Error: Missing parameters for digit permutation traffic pattern: " << pattern << endl;
       exit(-1);
@@ -105,8 +113,6 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
       result = new TornadoTrafficPattern(nodes, k, n, xr);
     } else if(pattern_name == "neighbor") {
       result = new NeighborTrafficPattern(nodes, k, n, xr);
-    } else if(pattern_name == "bad_dragon") {
-      result = new BadPermDFlyTrafficPattern(nodes, k, n, xr);
     } else if(pattern_name == "badperm_yarc") {
       result = new BadPermYarcTrafficPattern(nodes, k, n, xr);
     }
@@ -410,9 +416,8 @@ int Taper64TrafficPattern::dest(int source)
   }
 }
 
-BadPermDFlyTrafficPattern::BadPermDFlyTrafficPattern(int nodes, int k, int n, 
-						     int xr)
-  : DigitPermutationTrafficPattern(nodes, k, n, xr)
+BadPermDFlyTrafficPattern::BadPermDFlyTrafficPattern(int nodes, int k, int n)
+  : DigitPermutationTrafficPattern(nodes, k, n, 1)
 {
   
 }
@@ -421,8 +426,8 @@ int BadPermDFlyTrafficPattern::dest(int source)
 {
   assert((source >= 0) && (source < _nodes));
 
-  int const grp_size_routers = 2 * (_xr * _k);
-  int const grp_size_nodes = grp_size_routers * (_xr * _k);
+  int const grp_size_routers = 2 * _k;
+  int const grp_size_nodes = grp_size_routers * _k;
 
   return ((RandomInt(grp_size_nodes - 1) + ((source / grp_size_nodes) + 1) * grp_size_nodes) % _nodes);
 }
