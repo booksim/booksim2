@@ -29,23 +29,21 @@
 
 //A single cross 10X10 cross bar under injection mode
 
-topology = single;
+topology = fly;
 
-in_ports = 10;
-out_ports = 10;
+k = 10;
+n = 1;
 
-num_vcs = 8 ;
+num_vcs = 8;
 
 vc_buf_size = 8;
 
 vc_allocator = separable_input_first; 
 sw_allocator = separable_input_first;
 
-routing_function = single;
+routing_function = dest_tag;
 
 traffic = uniform;
-
-use_read_write = 0;
 
 injection_rate = 1.0;
 
