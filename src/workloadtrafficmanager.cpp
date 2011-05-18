@@ -59,7 +59,7 @@ bool WorkloadTrafficManager::_IssuePacket( int source, int cl )
   Workload * const & wl = _workload[cl];
   int const dest = wl->dest();
   int const size = wl->size();
-  int const time = wl->time();
+  int const time = (_include_queuing == 1) ? wl->time() : _time;
   _GeneratePacket(source, dest, size, cl, time);
   return true;
 }

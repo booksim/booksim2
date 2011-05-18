@@ -35,12 +35,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Workload::Workload()
 {
-
+  
 }
 
 Workload::~Workload()
 {
-
+  
 }
 
 Workload * Workload::New(string const & workload, int nodes)
@@ -74,16 +74,36 @@ Workload * Workload::New(string const & workload, int nodes)
     string const & injection = params[2];
     string const & traffic = params[3];
     result = new SyntheticWorkload(nodes, load, size, injection, traffic);
+  } else if(workload_name == "trace") {
+    if(params.size() < 2) {
+      cout << "Error: Missing parameter in trace workload definition: "
+	   << workload << endl;
+      exit(-1);
+    }
+    string const & filename = params[0];
+    vector<string> psize_str = tokenize(params[1]);
+    vector<int> psize(psize_str.size());
+    for(size_t i = 0; i < psize_str.size(); ++i) {
+      psize[i] = atoi(psize_str[i].c_str());
+    }
+    result = new TraceWorkload(filename, psize);
   }
   return result;
 }
 
 void Workload::reset()
 {
-
+  _time = 0;
 }
 
-SyntheticWorkload::SyntheticWorkload(int nodes, double load, int size, string injection, string traffic)
+void Workload::advanceTime()
+{
+  ++_time;
+}
+
+SyntheticWorkload::SyntheticWorkload(int nodes, double load, int size, 
+				     string const & injection, 
+				     string const & traffic)
   : _nodes(nodes), _size(size)
 {
   _injection = InjectionProcess::New(injection, nodes, load);
@@ -100,7 +120,7 @@ SyntheticWorkload::~SyntheticWorkload()
 
 void SyntheticWorkload::reset()
 {
-  _time = 0;
+  Workload::reset();
   _qtime.assign(_nodes, 0);
   _injection->reset();
   _traffic->reset();
@@ -124,13 +144,13 @@ void SyntheticWorkload::reset()
 
 void SyntheticWorkload::advanceTime()
 {
-  ++_time;
+  Workload::advanceTime();
   while(!_deferred.empty()) {
     int const & source = _deferred.front();
     _pending.push(source);
     _deferred.pop();
   }
-  for(int i = 0; i < _ready.size(); ++i) {
+  for(size_t i = 0; i < _ready.size(); ++i) {
     int const & source = _ready.front();
     bool generated = false;
     while(_qtime[source] < _time) {
@@ -156,34 +176,34 @@ bool SyntheticWorkload::empty() const
 
 int SyntheticWorkload::source() const
 {
-  assert(!_pending.empty());
+  assert(!empty());
   int const & source = _pending.front();
   return source;
 }
 
 int SyntheticWorkload::dest() const
 {
-  assert(!_pending.empty());
+  assert(!empty());
   int const & source = _pending.front();
   return _traffic->dest(source);
 }
 
 int SyntheticWorkload::size() const
 {
-  assert(!_pending.empty());
+  assert(!empty());
   return _size;
 }
 
 int SyntheticWorkload::time() const
 {
-  assert(!_pending.empty());
+  assert(!empty());
   int const & source = _pending.front();
   return _qtime[source];
 }
 
 void SyntheticWorkload::inject()
 {
-  assert(!_pending.empty());
+  assert(!empty());
   int const & source = _pending.front();
   _ready.push(source);
   _pending.pop();
@@ -191,8 +211,104 @@ void SyntheticWorkload::inject()
 
 void SyntheticWorkload::defer()
 {
-  assert(!_pending.empty());
+  assert(!empty());
   int const & source = _pending.front();
   _deferred.push(source);
   _pending.pop();
+}
+
+TraceWorkload::TraceWorkload(string const & filename, 
+			     vector<int> const & packet_size)
+  : _packet_size(packet_size)
+{
+  _trace.open(filename.c_str());
+}
+
+TraceWorkload::~TraceWorkload()
+{
+  _trace.close();
+}
+
+void TraceWorkload::_readPackets()
+{
+  while(!_trace.eof()) {
+    int delay, source, dest, type;
+    _trace >> delay >> source >> dest >> type;
+    if(type >= 0) {
+      _next_packet.time = _time + delay;
+      _next_packet.source = source;
+      _next_packet.dest = dest;
+      _next_packet.size = _packet_size[type];
+      if(delay > 0) {
+	break;
+      }
+      _queueNextPacket();
+    }
+  }
+}
+
+void TraceWorkload::_queueNextPacket()
+{
+  _pending_packets.push_back(_next_packet);
+  _next_packet.time = -1;
+}
+
+void TraceWorkload::reset()
+{
+  Workload::reset();
+  _trace.seekg(0);
+  _next_packet.time = -1;
+  _readPackets();
+  _current_packet = _pending_packets.begin();
+}
+
+void TraceWorkload::advanceTime()
+{
+  Workload::advanceTime();
+  if(_next_packet.time == _time) {
+    _queueNextPacket();
+    _readPackets();
+    _current_packet = _pending_packets.begin();
+  }
+}
+
+bool TraceWorkload::empty() const
+{
+  return (_current_packet == _pending_packets.end());
+}
+
+int TraceWorkload::source() const
+{
+  assert(!empty());
+  return _current_packet->source;
+}
+
+int TraceWorkload::dest() const
+{
+  assert(!empty());
+  return _current_packet->dest;
+}
+
+int TraceWorkload::size() const
+{
+  assert(!empty());
+  return _current_packet->size;
+}
+
+int TraceWorkload::time() const
+{
+  assert(!empty());
+  return _current_packet->time;
+}
+
+void TraceWorkload::inject()
+{
+  assert(!empty());
+  _current_packet = _pending_packets.erase(_current_packet);
+}
+
+void TraceWorkload::defer()
+{
+  assert(!empty());
+  ++_current_packet;
 }

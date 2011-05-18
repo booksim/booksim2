@@ -34,6 +34,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <vector>
 #include <queue>
+#include <list>
+#include <fstream>
 
 #include "injection.hpp"
 #include "traffic.hpp"
@@ -42,12 +44,13 @@ using namespace std;
 
 class Workload {
 protected:
+  int _time;
   Workload();
 public:
   virtual ~Workload();
   static Workload * New(string const & workload, int nodes);
   virtual void reset();
-  virtual void advanceTime() = 0;
+  virtual void advanceTime();
   virtual bool empty() const = 0;
   virtual int source() const = 0;
   virtual int dest() const = 0;
@@ -58,9 +61,9 @@ public:
 };
 
 class SyntheticWorkload : public Workload {
+protected:
   int const _nodes;
   int const _size;
-  int _time;
   InjectionProcess * _injection;
   TrafficPattern * _traffic;
   vector<int> _qtime;
@@ -68,7 +71,8 @@ class SyntheticWorkload : public Workload {
   queue<int> _pending;
   queue<int> _deferred;
 public:
-  SyntheticWorkload(int nodes, double load, int size, string injection, string traffic);
+  SyntheticWorkload(int nodes, double load, int size, string const & injection, 
+		    string const & traffic);
   virtual ~SyntheticWorkload();
   virtual void reset();
   virtual void advanceTime();
@@ -79,6 +83,46 @@ public:
   virtual int time() const;
   virtual void inject();
   virtual void defer();
+};
+
+class TraceWorkload : public Workload {
+
+protected:
+
+  struct PacketInfo {
+    int time;
+    int source;
+    int dest;
+    int size;
+  };
+  
+  vector<int> _packet_size;
+
+  PacketInfo _next_packet;
+  
+  list<PacketInfo>::iterator _current_packet ;
+  list<PacketInfo> _pending_packets;
+  
+  ifstream _trace;
+  
+  void _readPackets();
+  void _queueNextPacket();
+  
+public:
+  
+  TraceWorkload(string const & filename, vector<int> const & packet_size);
+  
+  virtual ~TraceWorkload();
+  virtual void reset();
+  virtual void advanceTime();
+  virtual bool empty() const;
+  virtual int source() const;
+  virtual int dest() const;
+  virtual int size() const;
+  virtual int time() const;
+  virtual void inject();
+  virtual void defer();
+  
 };
 
 #endif
