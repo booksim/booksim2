@@ -105,12 +105,15 @@ protected:
   
   ifstream _trace;
   
+  int _scale;
+
   void _readPackets();
   void _queueNextPacket();
   
 public:
   
-  TraceWorkload(string const & filename, vector<int> const & packet_size);
+  TraceWorkload(string const & filename, vector<int> const & packet_size, 
+		int scale = 1);
   
   virtual ~TraceWorkload();
   virtual void reset();

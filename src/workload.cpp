@@ -86,7 +86,12 @@ Workload * Workload::New(string const & workload, int nodes)
     for(size_t i = 0; i < psize_str.size(); ++i) {
       psize[i] = atoi(psize_str[i].c_str());
     }
-    result = new TraceWorkload(filename, psize);
+    if(params.size() > 2) {
+      int const scale = atoi(params[2].c_str());
+      result = new TraceWorkload(filename, psize, scale);
+    } else {
+      result = new TraceWorkload(filename, psize);
+    }
   }
   return result;
 }
@@ -218,8 +223,8 @@ void SyntheticWorkload::defer()
 }
 
 TraceWorkload::TraceWorkload(string const & filename, 
-			     vector<int> const & packet_size)
-  : _packet_size(packet_size)
+			     vector<int> const & packet_size, int scale)
+  : _packet_size(packet_size), _scale(scale)
 {
   _trace.open(filename.c_str());
 }
@@ -235,6 +240,7 @@ void TraceWorkload::_readPackets()
     int delay, source, dest, type;
     _trace >> delay >> source >> dest >> type;
     if(type >= 0) {
+      delay *= _scale;
       _next_packet.time = _time + delay;
       _next_packet.source = source;
       _next_packet.dest = dest;
