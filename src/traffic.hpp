@@ -152,7 +152,7 @@ public:
 
 class BadPermDFlyTrafficPattern : public DigitPermutationTrafficPattern {
 public:
-  BadPermDFlyTrafficPattern(int nodes, int k, int n, int xr = 1);
+  BadPermDFlyTrafficPattern(int nodes, int k, int n);
   virtual int dest(int source);
 };
 
