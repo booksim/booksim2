@@ -72,42 +72,6 @@ int gWriteReqBeginVC, gWriteReqEndVC;
 int gReadReplyBeginVC, gReadReplyEndVC;
 int gWriteReplyBeginVC, gWriteReplyEndVC;
 
-// ----------------------------------------------------------------------
-//
-//   Crossbar Network 
-//
-// ----------------------------------------------------------------------
-void dest_tag_crossbar( const Router *r, 
-			const Flit *f, 
-			int in_channel, 
-			OutputSet *outputs, 
-			bool inject ) {
-  
-  outputs->Clear() ;
-
-  // Output port determined by those bits of destination above 
-  //  concentration bits
-  int out_port = inject ? 0 : ( f->dest >> log_two( gC ) ) ;
-
-  int vcBegin = 0, vcEnd = gNumVCs-1;
-  if ( f->type == Flit::READ_REQUEST ) {
-    vcBegin = gReadReqBeginVC;
-    vcEnd = gReadReqEndVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-    vcBegin = gWriteReqBeginVC;
-    vcEnd = gWriteReqEndVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-    vcBegin = gReadReplyBeginVC;
-    vcEnd = gReadReplyEndVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-    vcBegin = gWriteReplyBeginVC;
-    vcEnd = gWriteReplyEndVC;
-  }
-  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
-
-  outputs->AddRange( out_port, vcBegin, vcEnd );
-}
-
 // ============================================================
 //  QTree: Nearest Common Ancestor
 // ===
@@ -1909,7 +1873,6 @@ void InitializeRoutingMap( const Configuration & config )
   gRoutingFunctionMap["anca_tree4"]          = &tree4_anca;
   gRoutingFunctionMap["dor_mesh"]            = &dim_order_mesh;
   gRoutingFunctionMap["xy_yx_mesh"]          = &xy_yx_mesh;
-  gRoutingFunctionMap["dest_tag_crossbar"]   = &dest_tag_crossbar ;
   // End Balfour-Schultz
   // ===================================================
 
