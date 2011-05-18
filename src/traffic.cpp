@@ -151,7 +151,7 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes, Configur
     int n = config.GetInt("n");
     int xr = config.GetInt("xr");
     ostringstream ss;
-    ss << pattern << '(' << k << ',' << n << ',' << xr << ')';
+    ss << pattern << '(' << '{' << k << ',' << n << ',' << xr << '}' << ')';
     result = New(ss.str(), nodes);
   } else {
     result = New(pattern, nodes);
