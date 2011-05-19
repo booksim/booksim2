@@ -38,6 +38,7 @@ class SyntheticTrafficManager : public TrafficManager {
 
 protected:
 
+  vector<string> _traffic;
   vector<TrafficPattern *> _traffic_pattern;
 
   vector<vector<int> > _qtime;
@@ -48,6 +49,8 @@ protected:
   virtual bool _PacketsOutstanding( ) const;
 
   virtual void _ResetSim( );
+
+  virtual string _OverallStatsCSV(int c) const;
 
   SyntheticTrafficManager( const Configuration &config, const vector<Network *> & net );
 

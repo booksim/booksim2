@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <cmath>
+#include <sstream>
 
 #include "steadystatetrafficmanager.hpp"
 
@@ -310,4 +311,11 @@ bool SteadyStateTrafficManager::_SingleSim( )
   }
   
   return ( converged > 0 );
+}
+
+string SteadyStateTrafficManager::_OverallStatsCSV(int c) const
+{
+  ostringstream os;
+  os << _load[c] << ',' << TrafficManager::_OverallStatsCSV(c);
+  return os.str();
 }

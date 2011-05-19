@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <limits>
+#include <sstream>
 
 #include "batchtrafficmanager.hpp"
 
@@ -177,6 +178,13 @@ void BatchTrafficManager::_UpdateOverallStats() {
   _overall_batch_time->AddSample(_batch_time->Sum( ));
 }
   
+string BatchTrafficManager::_OverallStatsCSV(int c) const
+{
+  ostringstream os;
+  os << TrafficManager::_OverallStatsCSV(c) << ',' << _overall_batch_time->Average();
+  return os.str();
+}
+
 void BatchTrafficManager::DisplayStats(ostream & os) const {
   os << "Batch duration = " << _last_batch_time << endl;
   TrafficManager::DisplayStats();

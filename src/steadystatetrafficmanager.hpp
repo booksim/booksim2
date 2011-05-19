@@ -64,6 +64,8 @@ protected:
 
   virtual bool _SingleSim( );
 
+  virtual string _OverallStatsCSV(int c) const;
+
 public:
 
   SteadyStateTrafficManager( const Configuration &config, const vector<Network *> & net );

@@ -28,6 +28,8 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <sstream>
+
 #include "synthetictrafficmanager.hpp"
 
 SyntheticTrafficManager::SyntheticTrafficManager( const Configuration &config, const vector<Network *> & net )
@@ -36,12 +38,12 @@ SyntheticTrafficManager::SyntheticTrafficManager( const Configuration &config, c
 
   // ============ Traffic ============ 
 
-  vector<string> traffic = config.GetStrArray("traffic");
-  traffic.resize(_classes, traffic.back());
+  _traffic = config.GetStrArray("traffic");
+  _traffic.resize(_classes, _traffic.back());
 
   _traffic_pattern.resize(_classes);
   for(int c = 0; c < _classes; ++c) {
-    _traffic_pattern[c] = TrafficPattern::New(traffic[c], _nodes, config);
+    _traffic_pattern[c] = TrafficPattern::New(_traffic[c], _nodes, config);
   }
 
   // ============ Injection queues ============ 
@@ -121,4 +123,11 @@ void SyntheticTrafficManager::_ResetSim( )
     _qdrained[c].assign(_nodes, false);
     _traffic_pattern[c]->reset();
   }
+}
+
+string SyntheticTrafficManager::_OverallStatsCSV(int c) const
+{
+  ostringstream os;
+  os << _traffic[c] << ',' << TrafficManager::_OverallStatsCSV(c);
+  return os.str();
 }

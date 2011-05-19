@@ -202,6 +202,8 @@ protected:
 
   virtual void _UpdateOverallStats();
 
+  virtual string _OverallStatsCSV(int c = 0) const;
+
   TrafficManager( const Configuration &config, const vector<Network *> & net );
 
 public:
