@@ -93,8 +93,8 @@ BufferState::BufferPolicy * BufferState::BufferPolicy::NewBufferPolicy(Configura
     sp = new PrivateBufferPolicy(config, parent, name);
   } else if(buffer_policy == "shared") {
     sp = new SharedBufferPolicy(config, parent, name);
-  } else if(buffer_policy == "variable") {
-    sp = new VariableBufferPolicy(config, parent, name);
+  } else if(buffer_policy == "limited_shared") {
+    sp = new LimitedSharedBufferPolicy(config, parent, name);
   } else {
     cout << "Unknown buffer policy: " << buffer_policy << endl;
   }
@@ -254,28 +254,36 @@ bool BufferState::SharedBufferPolicy::IsFullFor(int vc) const
 	  (_shared_buf_occupancy >= _shared_buf_size));
 }
 
-BufferState::VariableBufferPolicy::VariableBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
+BufferState::LimitedSharedBufferPolicy::LimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
   : SharedBufferPolicy(config, parent, name)
 {
-  _max_shared_slots = _shared_buf_size;
+  _max_shared_slots = config.GetInt("max_shared_slots");
+  if(_max_shared_slots < 0) {
+    _max_shared_slots = _shared_buf_size;
+    _dynamic = true;
+  } else {
+    _dynamic = false;
+  }
 }
 
-void BufferState::VariableBufferPolicy::AllocVC(int vc)
+void BufferState::LimitedSharedBufferPolicy::AllocVC(int vc)
 {
   BufferPolicy::AllocVC(vc);
   assert(_active_vcs);
-  _max_shared_slots = _shared_buf_size / _active_vcs;
-}
-
-void BufferState::VariableBufferPolicy::FreeVC(int vc)
-{
-  SharedBufferPolicy::FreeVC(vc);
-  if(_active_vcs) {
+  if(_dynamic) {
     _max_shared_slots = _shared_buf_size / _active_vcs;
   }
 }
 
-bool BufferState::VariableBufferPolicy::IsFullFor(int vc) const
+void BufferState::LimitedSharedBufferPolicy::FreeVC(int vc)
+{
+  SharedBufferPolicy::FreeVC(vc);
+  if(_dynamic && _active_vcs) {
+    _max_shared_slots = _shared_buf_size / _active_vcs;
+  }
+}
+
+bool BufferState::LimitedSharedBufferPolicy::IsFullFor(int vc) const
 {
   int i = _private_buf_vc_map[vc];
   return ((_reserved_slots[vc] == 0) &&
