@@ -188,7 +188,7 @@ void BatchTrafficManager::_UpdateOverallStats() {
 string BatchTrafficManager::_OverallStatsCSV(int c) const
 {
   ostringstream os;
-  os << TrafficManager::_OverallStatsCSV() << ',' << _overall_batch_time->Average();
+  os << TrafficManager::_OverallStatsCSV(c) << ',' << _overall_batch_time->Average();
   return os.str();
 }
 
