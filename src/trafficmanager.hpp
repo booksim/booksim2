@@ -242,6 +242,8 @@ protected:
 
   virtual void _UpdateOverallStats();
 
+  virtual string _OverallStatsCSV(int c = 0) const;
+
 public:
 
   static TrafficManager * NewTrafficManager(Configuration const & config, 

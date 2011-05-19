@@ -1637,27 +1637,31 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
   
 }
 
+string TrafficManager::_OverallStatsCSV(int c) const
+{
+  ostringstream os;
+  os << "," << _traffic[c]
+     << "," << _use_read_write[c]
+     << "," << _packet_size[c]
+     << "," << _load[c]
+     << "," << _overall_min_plat[c]->Average( )
+     << "," << _overall_avg_plat[c]->Average( )
+     << "," << _overall_max_plat[c]->Average( )
+     << "," << _overall_min_tlat[c]->Average( )
+     << "," << _overall_avg_tlat[c]->Average( )
+     << "," << _overall_max_tlat[c]->Average( )
+     << "," << _overall_min_frag[c]->Average( )
+     << "," << _overall_avg_frag[c]->Average( )
+     << "," << _overall_max_frag[c]->Average( )
+     << "," << _overall_accepted[c]->Average( )
+     << "," << _overall_accepted_min[c]->Average( )
+     << "," << _hop_stats[c]->Average( );
+  return os.str();
+}
+
 void TrafficManager::DisplayOverallStatsCSV(ostream & os) const {
   for(int c = 0; c < _classes; ++c) {
-    os << "results:"
-       << c
-       << "," << _traffic[c]
-       << "," << _use_read_write[c]
-       << "," << _packet_size[c]
-       << "," << _load[c]
-       << "," << _overall_min_plat[c]->Average( )
-       << "," << _overall_avg_plat[c]->Average( )
-       << "," << _overall_max_plat[c]->Average( )
-       << "," << _overall_min_tlat[c]->Average( )
-       << "," << _overall_avg_tlat[c]->Average( )
-       << "," << _overall_max_tlat[c]->Average( )
-       << "," << _overall_min_frag[c]->Average( )
-       << "," << _overall_avg_frag[c]->Average( )
-       << "," << _overall_max_frag[c]->Average( )
-       << "," << _overall_accepted[c]->Average( )
-       << "," << _overall_accepted_min[c]->Average( )
-       << "," << _hop_stats[c]->Average( )
-       << endl;
+    os << "results:" << c << _OverallStatsCSV() << endl;
   }
 }
 
