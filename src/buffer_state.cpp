@@ -133,6 +133,8 @@ BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config
   int num_private_bufs = config.GetInt("private_bufs");
   if(num_private_bufs < 0) {
     num_private_bufs = _vcs;
+  } else if(num_private_bufs == 0) {
+    num_private_bufs = 1;
   }
   
   _private_buf_occupancy.resize(num_private_bufs, 0);
