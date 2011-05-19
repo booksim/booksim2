@@ -179,6 +179,11 @@ bool SyntheticWorkload::empty() const
   return _pending.empty();
 }
 
+bool SyntheticWorkload::completed() const
+{
+  return false;
+}
+
 int SyntheticWorkload::source() const
 {
   assert(!empty());
@@ -281,6 +286,11 @@ void TraceWorkload::advanceTime()
 bool TraceWorkload::empty() const
 {
   return (_current_packet == _pending_packets.end());
+}
+
+bool TraceWorkload::completed() const
+{
+  return _trace.eof();
 }
 
 int TraceWorkload::source() const

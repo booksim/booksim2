@@ -52,6 +52,8 @@ protected:
   virtual void _ResetSim( );
   virtual bool _SingleSim( );
 
+  bool _Completed( );
+
 public:
 
   WorkloadTrafficManager( const Configuration &config, const vector<Network *> & net );

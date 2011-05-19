@@ -52,6 +52,7 @@ public:
   virtual void reset();
   virtual void advanceTime();
   virtual bool empty() const = 0;
+  virtual bool completed() const = 0;
   virtual int source() const = 0;
   virtual int dest() const = 0;
   virtual int size() const = 0;
@@ -77,6 +78,7 @@ public:
   virtual void reset();
   virtual void advanceTime();
   virtual bool empty() const;
+  virtual bool completed() const;
   virtual int source() const;
   virtual int dest() const;
   virtual int size() const;
@@ -119,6 +121,7 @@ public:
   virtual void reset();
   virtual void advanceTime();
   virtual bool empty() const;
+  virtual bool completed() const;
   virtual int source() const;
   virtual int dest() const;
   virtual int size() const;
