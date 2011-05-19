@@ -1252,7 +1252,7 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
 }
 
 void TrafficManager::DisplayOverallStatsCSV(ostream & os) const {
-  for(int c = 0; c <= _classes; ++c) {
+  for(int c = 0; c < _classes; ++c) {
     os << "results:"
        << c
        << "," << _overall_min_plat[c]->Average( )
