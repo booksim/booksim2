@@ -82,6 +82,7 @@ class BufferState : public Module {
   
   class SharedBufferPolicy : public BufferPolicy {
   protected:
+    int _buf_size;
     vector<int> _private_buf_vc_map;
     vector<int> _private_buf_size;
     vector<int> _private_buf_occupancy;
@@ -101,7 +102,7 @@ class BufferState : public Module {
   class LimitedSharedBufferPolicy : public SharedBufferPolicy {
   private:
     bool _dynamic;
-    int _max_shared_slots;
+    int _max_held_slots;
   public:
     LimitedSharedBufferPolicy(Configuration const & config, 
 			      BufferState * parent,
