@@ -35,8 +35,6 @@ StrConst [A-Za-z_\-/\.][A-Za-z0-9_\-/\.\+(\{\,)\}]*
 
    /* Commands */
 
-{StrConst} { configlval.name = strdup( yytext ); return STR; }
-
 \{[A-Za-z0-9_\-\.(\{\,)\}]+(\,[A-Za-z0-9_\-\.(\{\,)\}]+)*\} { configlval.name = strdup( yytext ); return STR; }
 
 -?[0-9]+     { configlval.num = atoi( yytext ); return NUM; }
@@ -44,6 +42,8 @@ StrConst [A-Za-z_\-/\.][A-Za-z0-9_\-/\.\+(\{\,)\}]*
 -?[0-9]*\.[0-9]+ { configlval.fnum = atof( yytext ); return FNUM; }
 
 -?{DblConst}  { configlval.fnum = atof( yytext ); return FNUM;}
+
+{StrConst} { configlval.name = strdup( yytext ); return STR; }
 
 .          { return yytext[0]; }
 
