@@ -98,12 +98,14 @@ class BufferState : public Module {
     virtual bool IsFullFor(int vc = 0) const;
   };
 
-  class VariableBufferPolicy : public SharedBufferPolicy {
+  class LimitedSharedBufferPolicy : public SharedBufferPolicy {
   private:
+    bool _dynamic;
     int _max_shared_slots;
   public:
-    VariableBufferPolicy(Configuration const & config, BufferState * parent,
-			 const string & name);
+    LimitedSharedBufferPolicy(Configuration const & config, 
+			      BufferState * parent,
+			      const string & name);
     virtual void AllocVC(int vc = 0);
     virtual void FreeVC(int vc = 0);
     virtual bool IsFullFor(int vc = 0) const;
