@@ -86,6 +86,7 @@ int BatchTrafficManager::_IssuePacket( int source, int cl )
 	//coin toss to determine request type.
 	result = (RandomFloat() < 0.5) ? -2 : -1;
       
+	_requestsOutstanding[source]++;
       }
     }
   } else { //normal
@@ -93,11 +94,11 @@ int BatchTrafficManager::_IssuePacket( int source, int cl )
        ((_maxOutstanding <= 0) || 
 	(_requestsOutstanding[source] < _maxOutstanding))) {
       result = _packet_size[cl];
+      _requestsOutstanding[source]++;
     }
   }
   if(result != 0) {
     _sent_packets[source]++;
-    _requestsOutstanding[source]++;
   }
   return result;
 }
