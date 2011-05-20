@@ -698,14 +698,15 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	//coin toss to determine request type.
 	result = (RandomFloat() < 0.5) ? -2 : -1;
 	
+	_requestsOutstanding[source]++;
       }
     }
   } else { //normal mode
     result = _injection_process[cl]->test(source) ? 1 : 0;
+    _requestsOutstanding[source]++;
   } 
   if(result != 0) {
     _sent_packets[source]++;
-    _requestsOutstanding[source]++;
   }
   return result;
 }
