@@ -47,8 +47,10 @@ protected:
   int _last_id;
   int _last_pid;
 
-  Stats * _batch_time;
-  Stats * _overall_batch_time;
+  int _batch_time_sum;
+  int _batch_time_samples;
+  double _overall_batch_time_sum;
+  int _overall_batch_time_samples;
 
   virtual void _RetireFlit( Flit *f, int dest );
 

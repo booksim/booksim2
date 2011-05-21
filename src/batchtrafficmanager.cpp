@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 BatchTrafficManager::BatchTrafficManager( const Configuration &config, 
 					  const vector<Network *> & net )
-: SyntheticTrafficManager(config, net), _last_batch_time(-1), _last_id(-1), _last_pid(-1)
+: SyntheticTrafficManager(config, net), _last_id(-1), _last_pid(-1)
 {
 
   _max_outstanding = config.GetIntArray("max_outstanding_requests");
@@ -52,18 +52,13 @@ BatchTrafficManager::BatchTrafficManager( const Configuration &config,
 
   _batch_count = config.GetInt( "batch_count" );
 
-  _batch_time = new Stats( this, "batch_time" );
-  _stats["batch_time"] = _batch_time;
-  
-  _overall_batch_time = new Stats( this, "overall_batch_time" );
-  _stats["overall_batch_time"] = _overall_batch_time;
-  
+  _overall_batch_time_sum = 0.0;
+  _overall_batch_time_samples = 0;
 }
 
 BatchTrafficManager::~BatchTrafficManager( )
 {
-  delete _batch_time;
-  delete _overall_batch_time;
+
 }
 
 void BatchTrafficManager::_RetireFlit( Flit *f, int dest )
@@ -90,7 +85,8 @@ bool BatchTrafficManager::_IssuePacket( int source, int cl )
 void BatchTrafficManager::_ClearStats( )
 {
   SyntheticTrafficManager::_ClearStats();
-  _batch_time->Clear( );
+  _batch_time_sum = 0;
+  _batch_time_samples = 0;
 }
 
 bool BatchTrafficManager::_SingleSim( )
@@ -153,9 +149,8 @@ bool BatchTrafficManager::_SingleSim( )
     cout << endl;
     cout << "Batch " << batch_index + 1 << " ("<<_batch_size  <<  " packets) received. Time used is " << _time - _drain_time << " cycles. Last packet was " << _last_pid << ", last flit was " << _last_id << "." <<endl;
 
-    _last_batch_time = _time - start_time;
-
-    _batch_time->AddSample(_last_batch_time);
+    _batch_time_sum += _time - start_time;
+    ++_batch_time_samples;
 
     cout << _sim_state << endl;
 
@@ -175,31 +170,38 @@ bool BatchTrafficManager::_SingleSim( )
 void BatchTrafficManager::_UpdateOverallStats()
 {
   SyntheticTrafficManager::_UpdateOverallStats();
-  _overall_batch_time->AddSample(_batch_time->Sum( ));
+  double batch_time = (double)_batch_time_sum/(double)_batch_time_samples;
+  _overall_batch_time_sum += batch_time;
+  ++_overall_batch_time_samples;
 }
   
 string BatchTrafficManager::_OverallStatsCSV(int c) const
 {
+  double overall_batch_time = _overall_batch_time_sum/(double)_overall_batch_time_samples;
   ostringstream os;
-  os << TrafficManager::_OverallStatsCSV(c) << ',' << _overall_batch_time->Average();
+  os << TrafficManager::_OverallStatsCSV(c) << ',' << overall_batch_time;
   return os.str();
 }
 
 void BatchTrafficManager::DisplayClassStats(int c, ostream & os) const
 {
+  
   TrafficManager::DisplayClassStats(c);
-  os << "Batch duration = " << _last_batch_time << endl;
+  double batch_time = (double)_batch_time_sum/(double)_batch_time_samples;
+  os << "Average batch duration = " << batch_time << endl;
 }
 
 void BatchTrafficManager::WriteClassStats(int c, ostream & os) const
 {
   SyntheticTrafficManager::WriteClassStats(c, os);
-  os << "batch_time(" << c+1 << ") = " << _last_batch_time << ";" << endl;
+  double batch_time = (double)_batch_time_sum/(double)_batch_time_samples;
+  os << "batch_time(" << c+1 << ") = " << batch_time << ";" << endl;
 }
 
 void BatchTrafficManager::DisplayOverallStats(int c, ostream & os) const
 {
   SyntheticTrafficManager::DisplayOverallStats(c, os);
-  os << "Overall batch duration = " << _overall_batch_time->Average( )
-     << " (" << _overall_batch_time->NumSamples( ) << " samples)" << endl;
+  double overall_batch_time = _overall_batch_time_sum/(double)_overall_batch_time_samples;
+  os << "Overall average batch duration = " << overall_batch_time
+     << " (" << _overall_batch_time_samples << " samples)" << endl;
 }
