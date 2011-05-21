@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
 #include <vector>
+#include <list>
 
 #include "trafficmanager.hpp"
 #include "workload.hpp"
@@ -47,6 +48,10 @@ protected:
 
   vector<Workload *> _workload;
 
+  int _runtime;
+  int _runtime_sum;
+  int _runtime_samples;
+
   virtual bool _IssuePacket( int source, int cl );
   virtual void _Inject( );
   virtual void _ResetSim( );
@@ -54,10 +59,16 @@ protected:
 
   bool _Completed( );
 
+  virtual void _UpdateOverallStats( );
+
+  virtual string _OverallStatsCSV(int c = 0) const;
+
 public:
 
   WorkloadTrafficManager( const Configuration &config, const vector<Network *> & net );
   virtual ~WorkloadTrafficManager( );
+
+  virtual void DisplayOverallStats(int c, ostream & os = cout) const;
 
 };
 

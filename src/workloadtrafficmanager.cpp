@@ -28,6 +28,8 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <sstream>
+
 #include "workloadtrafficmanager.hpp"
 
 WorkloadTrafficManager::WorkloadTrafficManager( const Configuration &config, 
@@ -154,6 +156,8 @@ bool WorkloadTrafficManager::_SingleSim( )
 
   cout << "Completed measurements after " << t << " cycles." << endl;
 
+  _runtime = t - _warmup_periods * _sample_period;
+
   _sim_state = draining;
   _drain_time = _time;
 
@@ -169,4 +173,27 @@ bool WorkloadTrafficManager::_Completed( )
     }
   }
   return true;
+}
+
+void WorkloadTrafficManager::_UpdateOverallStats()
+{
+  TrafficManager::_UpdateOverallStats();
+  _runtime_sum += _runtime;
+  ++_runtime_samples;
+}
+  
+string WorkloadTrafficManager::_OverallStatsCSV(int c) const
+{
+  double runtime = (double)_runtime_sum / (double)_runtime_samples;
+  ostringstream os;
+  os << TrafficManager::_OverallStatsCSV(c) << ',' << runtime;
+  return os.str();
+}
+
+void WorkloadTrafficManager::DisplayOverallStats(int c, ostream & os) const
+{
+  TrafficManager::DisplayOverallStats(c, os);
+  double runtime = (double)_runtime_sum / (double)_runtime_samples;
+  os << "Overall workload runtime = " << runtime
+     << " (" << _runtime_samples << " samples)" << endl;
 }
