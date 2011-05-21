@@ -177,6 +177,7 @@ protected:
   // ============ Internal methods ============ 
 
   virtual void _RetireFlit( Flit *f, int dest );
+  virtual void _RetirePacket( Flit * head, Flit * tail, int dest );
 
   virtual void _Inject() = 0;
   
