@@ -65,8 +65,9 @@ public:
   BatchTrafficManager( const Configuration &config, const vector<Network *> & net );
   virtual ~BatchTrafficManager( );
 
-  virtual void DisplayStats( ostream & os = cout ) const;
-  virtual void DisplayOverallStats( ostream & os = cout ) const;
+  virtual void DisplayClassStats( int c, ostream & os = cout ) const;
+  virtual void WriteClassStats( int c, ostream & os = cout ) const;
+  virtual void DisplayOverallStats( int c, ostream & os = cout ) const;
 
 };
 

@@ -163,17 +163,17 @@ bool BatchTrafficManager::_SingleSim( )
       *_stats_out << "%=================================" << endl;
     
     DisplayStats();
-        
     if(_stats_out) {
-      *_stats_out << "batch_time = " << _last_batch_time << ";" << endl;
+      WriteStats(*_stats_out);
     }
-
+        
     ++batch_index;
   }
   return 1;
 }
 
-void BatchTrafficManager::_UpdateOverallStats() {
+void BatchTrafficManager::_UpdateOverallStats()
+{
   TrafficManager::_UpdateOverallStats();
   _overall_batch_time->AddSample(_batch_time->Sum( ));
 }
@@ -185,13 +185,21 @@ string BatchTrafficManager::_OverallStatsCSV(int c) const
   return os.str();
 }
 
-void BatchTrafficManager::DisplayStats(ostream & os) const {
+void BatchTrafficManager::DisplayClassStats(int c, ostream & os) const
+{
+  TrafficManager::DisplayClassStats(c);
   os << "Batch duration = " << _last_batch_time << endl;
-  TrafficManager::DisplayStats();
 }
 
-void BatchTrafficManager::DisplayOverallStats(ostream & os) const {
+void BatchTrafficManager::WriteClassStats(int c, ostream & os) const
+{
+  TrafficManager::WriteClassStats(c, os);
+  os << "batch_time(" << c+1 << ") = " << _last_batch_time << ";" << endl;
+}
+
+void BatchTrafficManager::DisplayOverallStats(int c, ostream & os) const
+{
+  TrafficManager::DisplayOverallStats(c, os);
   os << "Overall batch duration = " << _overall_batch_time->Average( )
      << " (" << _overall_batch_time->NumSamples( ) << " samples)" << endl;
-  TrafficManager::DisplayOverallStats(os);
 }

@@ -1087,10 +1087,19 @@ bool TrafficManager::Run( )
     _UpdateOverallStats();
   }
   
-  if(_print_csv_results)
-    DisplayOverallStatsCSV();
-  else
-    DisplayOverallStats();
+  if(_print_csv_results) {
+    for(int c = 0; c < _classes; ++c) {
+      DisplayOverallStatsCSV(c);
+    }
+  } else {
+    for ( int c = 0; c < _classes; ++c ) {
+      if(_measure_stats[c] == 0) {
+	continue;
+      }
+      cout << "====== Traffic class " << c << " ======" << endl;
+      DisplayOverallStats(c);
+    }
+  }
   
   return true;
 }
@@ -1129,133 +1138,127 @@ void TrafficManager::_UpdateOverallStats() {
 }
 
 void TrafficManager::DisplayStats(ostream & os) const {
-  
   for(int c = 0; c < _classes; ++c) {
-    
-    if(_measure_stats[c] == 0) {
-      continue;
+    if(_measure_stats[c]) {
+      os << "Class " << c << ":" << endl;
+      DisplayClassStats(c, os);
     }
-    
-    cout << "Class " << c << ":" << endl;
-    
-    cout << "Minimum latency = " << _plat_stats[c]->Min() << endl;
-    cout << "Average latency = " << _plat_stats[c]->Average() << endl;
-    cout << "Maximum latency = " << _plat_stats[c]->Max() << endl;
-    cout << "Average fragmentation = " << _frag_stats[c]->Average() << endl;
-
-    double min, avg;
-    int dmin = _ComputeStats(_accepted_flits[c], &avg, &min);
-    cout << "Accepted packets = " << min
-	 << " at node " << dmin
-	 << " (avg = " << avg << ")"
-	 << endl;
-    
-    cout << "Total in-flight flits = " << _total_in_flight_flits[c].size()
-	 << " (" << _measured_in_flight_flits[c].size() << " measured)"
-	 << endl;
-    
-    //c+1 due to matlab array starting at 1
-    if(_stats_out) {
-      *_stats_out << "lat(" << c+1 << ") = " << _plat_stats[c]->Average()
-		  << ";" << endl
-		  << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c]
-		  << ";" << endl
-		  << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c]
-		  << ";" << endl
-		  << "pair_sent(" << c+1 << ",:) = [ ";
-      for(int i = 0; i < _nodes; ++i) {
-	for(int j = 0; j < _nodes; ++j) {
-	  *_stats_out << _pair_plat[c][i*_nodes+j]->NumSamples() << " ";
-	}
-      }
-      *_stats_out << "];" << endl
-		  << "pair_lat(" << c+1 << ",:) = [ ";
-      for(int i = 0; i < _nodes; ++i) {
-	for(int j = 0; j < _nodes; ++j) {
-	  *_stats_out << _pair_plat[c][i*_nodes+j]->Average( ) << " ";
-	}
-      }
-      *_stats_out << "];" << endl
-		  << "pair_lat(" << c+1 << ",:) = [ ";
-      for(int i = 0; i < _nodes; ++i) {
-	for(int j = 0; j < _nodes; ++j) {
-	  *_stats_out << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";
-	}
-      }
-      *_stats_out << "];" << endl
-		  << "sent(" << c+1 << ",:) = [ ";
-      for ( int d = 0; d < _nodes; ++d ) {
-	*_stats_out << _sent_flits[c][d]->Average( ) << " ";
-      }
-      *_stats_out << "];" << endl
-		  << "accepted(" << c+1 << ",:) = [ ";
-      for ( int d = 0; d < _nodes; ++d ) {
-	*_stats_out << _accepted_flits[c][d]->Average( ) << " ";
-      }
-      *_stats_out << "];" << endl;
-      *_stats_out << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
-    }
-  }    
+  }
 }
 
-void TrafficManager::DisplayOverallStats( ostream & os ) const {
-
-  for ( int c = 0; c < _classes; ++c ) {
-
-    if(_measure_stats[c] == 0) {
-      continue;
-    }
-
-    os << "====== Traffic class " << c << " ======" << endl;
-    
-    if(_overall_min_plat[c]->NumSamples() > 0) {
-      os << "Overall minimum latency = " << _overall_min_plat[c]->Average( )
-	 << " (" << _overall_min_plat[c]->NumSamples( ) << " samples)" << endl;
-      assert(_overall_avg_plat[c]->NumSamples() > 0);
-      os << "Overall average latency = " << _overall_avg_plat[c]->Average( )
-	 << " (" << _overall_avg_plat[c]->NumSamples( ) << " samples)" << endl;
-      assert(_overall_max_plat[c]->NumSamples() > 0);
-      os << "Overall maximum latency = " << _overall_max_plat[c]->Average( )
-	 << " (" << _overall_max_plat[c]->NumSamples( ) << " samples)" << endl;
-    }
-    if(_overall_min_tlat[c]->NumSamples() > 0) {
-      os << "Overall minimum transaction latency = " << _overall_min_tlat[c]->Average( )
-	 << " (" << _overall_min_tlat[c]->NumSamples( ) << " samples)" << endl;
-      assert(_overall_avg_tlat[c]->NumSamples() > 0);
-      os << "Overall average transaction latency = " << _overall_avg_tlat[c]->Average( )
-	 << " (" << _overall_avg_tlat[c]->NumSamples( ) << " samples)" << endl;
-      assert(_overall_max_tlat[c]->NumSamples() > 0);
-      os << "Overall maximum transaction latency = " << _overall_max_tlat[c]->Average( )
-	 << " (" << _overall_max_tlat[c]->NumSamples( ) << " samples)" << endl;
-    }
-    if(_overall_min_frag[c]->NumSamples() > 0) {
-      os << "Overall minimum fragmentation = " << _overall_min_frag[c]->Average( )
-	 << " (" << _overall_min_frag[c]->NumSamples( ) << " samples)" << endl;
-      assert(_overall_avg_frag[c]->NumSamples() > 0);
-      os << "Overall average fragmentation = " << _overall_avg_frag[c]->Average( )
-	 << " (" << _overall_avg_frag[c]->NumSamples( ) << " samples)" << endl;
-      assert(_overall_max_frag[c]->NumSamples() > 0);
-      os << "Overall maximum fragmentation = " << _overall_max_frag[c]->Average( )
-	 << " (" << _overall_max_frag[c]->NumSamples( ) << " samples)" << endl;
-    }
-    if(_overall_accepted[c]->NumSamples() > 0) {
-      os << "Overall average accepted rate = " << _overall_accepted[c]->Average( )
-	 << " (" << _overall_accepted[c]->NumSamples( ) << " samples)" << endl;
-      assert(_overall_accepted_min[c]->NumSamples() > 0);
-      os << "Overall min accepted rate = " << _overall_accepted_min[c]->Average( )
-	 << " (" << _overall_accepted_min[c]->NumSamples( ) << " samples)" << endl;
-    }
-    if(_hop_stats[c]->NumSamples() > 0) {
-      os << "Average hops = " << _hop_stats[c]->Average( )
-	 << " (" << _hop_stats[c]->NumSamples( ) << " samples)" << endl;
-    }
-    
-    if(_slowest_flit[c] >= 0) {
-      os << "Slowest flit = " << _slowest_flit[c] << endl;
-    }
+void TrafficManager::DisplayClassStats(int c, ostream & os) const {
   
+  os << "Minimum latency = " << _plat_stats[c]->Min() << endl;
+  os << "Average latency = " << _plat_stats[c]->Average() << endl;
+  os << "Maximum latency = " << _plat_stats[c]->Max() << endl;
+  os << "Average fragmentation = " << _frag_stats[c]->Average() << endl;
+  
+  double min, avg;
+  int dmin = _ComputeStats(_accepted_flits[c], &avg, &min);
+  os << "Accepted packets = " << min
+       << " at node " << dmin
+       << " (avg = " << avg << ")"
+       << endl;
+  
+  os << "Total in-flight flits = " << _total_in_flight_flits[c].size()
+       << " (" << _measured_in_flight_flits[c].size() << " measured)"
+       << endl;
+}
+
+void TrafficManager::WriteStats(ostream & os) const {
+  for(int c = 0; c < _classes; ++c) {
+    if(_measure_stats[c]) {
+      WriteClassStats(c, os);
+    }
+  }
+}
+
+void TrafficManager::WriteClassStats(int c, ostream & os) const {
+  
+  os << "lat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
+     << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
+     << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
+     << "pair_sent(" << c+1 << ",:) = [ ";
+  for(int i = 0; i < _nodes; ++i) {
+    for(int j = 0; j < _nodes; ++j) {
+      os << _pair_plat[c][i*_nodes+j]->NumSamples() << " ";
+    }
+  }
+  os << "];" << endl
+     << "pair_lat(" << c+1 << ",:) = [ ";
+  for(int i = 0; i < _nodes; ++i) {
+    for(int j = 0; j < _nodes; ++j) {
+      os << _pair_plat[c][i*_nodes+j]->Average( ) << " ";
+    }
+  }
+  os << "];" << endl
+     << "pair_lat(" << c+1 << ",:) = [ ";
+  for(int i = 0; i < _nodes; ++i) {
+    for(int j = 0; j < _nodes; ++j) {
+      os << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";
+    }
+  }
+  os << "];" << endl
+     << "sent(" << c+1 << ",:) = [ ";
+  for ( int d = 0; d < _nodes; ++d ) {
+    os << _sent_flits[c][d]->Average( ) << " ";
+  }
+  os << "];" << endl
+     << "accepted(" << c+1 << ",:) = [ ";
+  for ( int d = 0; d < _nodes; ++d ) {
+    os << _accepted_flits[c][d]->Average( ) << " ";
+  }
+  os << "];" << endl;
+  os << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
+}
+
+void TrafficManager::DisplayOverallStats( int c, ostream & os ) const {
+  
+  if(_overall_min_plat[c]->NumSamples() > 0) {
+    os << "Overall minimum latency = " << _overall_min_plat[c]->Average( )
+       << " (" << _overall_min_plat[c]->NumSamples( ) << " samples)" << endl;
+    assert(_overall_avg_plat[c]->NumSamples() > 0);
+    os << "Overall average latency = " << _overall_avg_plat[c]->Average( )
+       << " (" << _overall_avg_plat[c]->NumSamples( ) << " samples)" << endl;
+    assert(_overall_max_plat[c]->NumSamples() > 0);
+    os << "Overall maximum latency = " << _overall_max_plat[c]->Average( )
+       << " (" << _overall_max_plat[c]->NumSamples( ) << " samples)" << endl;
+  }
+  if(_overall_min_tlat[c]->NumSamples() > 0) {
+    os << "Overall minimum transaction latency = " << _overall_min_tlat[c]->Average( )
+       << " (" << _overall_min_tlat[c]->NumSamples( ) << " samples)" << endl;
+    assert(_overall_avg_tlat[c]->NumSamples() > 0);
+    os << "Overall average transaction latency = " << _overall_avg_tlat[c]->Average( )
+       << " (" << _overall_avg_tlat[c]->NumSamples( ) << " samples)" << endl;
+    assert(_overall_max_tlat[c]->NumSamples() > 0);
+    os << "Overall maximum transaction latency = " << _overall_max_tlat[c]->Average( )
+       << " (" << _overall_max_tlat[c]->NumSamples( ) << " samples)" << endl;
+  }
+  if(_overall_min_frag[c]->NumSamples() > 0) {
+    os << "Overall minimum fragmentation = " << _overall_min_frag[c]->Average( )
+       << " (" << _overall_min_frag[c]->NumSamples( ) << " samples)" << endl;
+    assert(_overall_avg_frag[c]->NumSamples() > 0);
+    os << "Overall average fragmentation = " << _overall_avg_frag[c]->Average( )
+       << " (" << _overall_avg_frag[c]->NumSamples( ) << " samples)" << endl;
+    assert(_overall_max_frag[c]->NumSamples() > 0);
+    os << "Overall maximum fragmentation = " << _overall_max_frag[c]->Average( )
+       << " (" << _overall_max_frag[c]->NumSamples( ) << " samples)" << endl;
+  }
+  if(_overall_accepted[c]->NumSamples() > 0) {
+    os << "Overall average accepted rate = " << _overall_accepted[c]->Average( )
+       << " (" << _overall_accepted[c]->NumSamples( ) << " samples)" << endl;
+    assert(_overall_accepted_min[c]->NumSamples() > 0);
+    os << "Overall min accepted rate = " << _overall_accepted_min[c]->Average( )
+       << " (" << _overall_accepted_min[c]->NumSamples( ) << " samples)" << endl;
+  }
+  if(_hop_stats[c]->NumSamples() > 0) {
+    os << "Average hops = " << _hop_stats[c]->Average( )
+       << " (" << _hop_stats[c]->NumSamples( ) << " samples)" << endl;
   }
   
+  if(_slowest_flit[c] >= 0) {
+    os << "Slowest flit = " << _slowest_flit[c] << endl;
+  }
 }
 
 string TrafficManager::_OverallStatsCSV(int c) const
@@ -1277,10 +1280,8 @@ string TrafficManager::_OverallStatsCSV(int c) const
   return os.str();
 }
 
-void TrafficManager::DisplayOverallStatsCSV(ostream & os) const {
-  for(int c = 0; c < _classes; ++c) {
-    os << "results:" << c << ',' << _OverallStatsCSV() << endl;
-  }
+void TrafficManager::DisplayOverallStatsCSV(int c, ostream & os) const {
+  os << "results:" << c << ',' << _OverallStatsCSV() << endl;
 }
 
 //read the watchlist

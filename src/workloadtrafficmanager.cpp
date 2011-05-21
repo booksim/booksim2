@@ -113,7 +113,6 @@ bool WorkloadTrafficManager::_SingleSim( )
 	
 	cout << "### " << t << " cycles ###" << endl;
 	DisplayStats();
-	
       }
 
       ++t;
@@ -144,6 +143,9 @@ bool WorkloadTrafficManager::_SingleSim( )
       
       cout << "### " << t << " cycles ###" << endl;
       DisplayStats();
+      if(_stats_out) {
+	WriteStats(*_stats_out);
+      }
       
     }
 

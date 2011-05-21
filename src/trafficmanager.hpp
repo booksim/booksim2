@@ -215,9 +215,13 @@ public:
 
   bool Run( );
 
-  virtual void DisplayStats( ostream & os = cout ) const ;
-  virtual void DisplayOverallStats( ostream & os = cout ) const ;
-  virtual void DisplayOverallStatsCSV( ostream & os = cout ) const ;
+  void DisplayStats(ostream & os = cout) const;
+  void WriteStats(ostream & os = cout) const;
+
+  virtual void DisplayClassStats( int c, ostream & os = cout ) const ;
+  virtual void WriteClassStats( int c, ostream & os = cout ) const ;
+  virtual void DisplayOverallStats( int c, ostream & os = cout ) const ;
+  virtual void DisplayOverallStatsCSV( int c, ostream & os = cout ) const ;
 
   const Stats * GetOverallLatency(int c = 0) { return _overall_avg_plat[c]; }
   const Stats * GetAccepted(int c = 0) { return _overall_accepted[c]; }

@@ -154,6 +154,9 @@ bool SteadyStateTrafficManager::_SingleSim( )
       *_stats_out << "%=================================" << endl;
     
     DisplayStats();
+    if(_stats_out) {
+      WriteStats(*_stats_out);
+    }
     
     int lat_exc_class = -1;
     int lat_chg_exc_class = -1;
