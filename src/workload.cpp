@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "workload.hpp"
 
-Workload::Workload()
+Workload::Workload(int nodes) : _nodes(nodes)
 {
   
 }
@@ -80,18 +80,30 @@ Workload * Workload::New(string const & workload, int nodes)
 	   << workload << endl;
       exit(-1);
     }
-    string const & filename = params[0];
-    vector<string> psize_str = tokenize(params[1]);
-    vector<int> psize(psize_str.size());
-    for(size_t i = 0; i < psize_str.size(); ++i) {
-      psize[i] = atoi(psize_str[i].c_str());
+    vector<string> filenames = tokenize(params[0]);
+    filenames.resize(nodes, filenames.back());
+    vector<string> packet_sizes_str = tokenize(params[1]);
+    vector<int> packet_sizes(packet_sizes_str.size());
+    for(size_t i = 0; i < packet_sizes_str.size(); ++i) {
+      packet_sizes[i] = atoi(packet_sizes_str[i].c_str());
     }
+    vector<int> scales;
+    vector<int> skips;
     if(params.size() > 2) {
-      int const scale = atoi(params[2].c_str());
-      result = new TraceWorkload(filename, psize, scale);
-    } else {
-      result = new TraceWorkload(filename, psize);
+      vector<string> skips_str = tokenize(params[2]);
+      skips.resize(skips_str.size());
+      for(size_t i = 0; i < skips_str.size(); ++i) {
+	skips[i] = atoi(skips_str[i].c_str());
+      }
+      if(params.size() > 3) {
+	vector<string> scales_str = tokenize(params[3]);
+	scales.resize(scales_str.size());
+	for(size_t i = 0; i < scales_str.size(); ++i) {
+	  scales[i] = atoi(scales_str[i].c_str());
+	}
+      }
     }
+    result = new TraceWorkload(nodes, filenames, packet_sizes, skips, scales);
   }
   return result;
 }
@@ -109,7 +121,7 @@ void Workload::advanceTime()
 SyntheticWorkload::SyntheticWorkload(int nodes, double load, int size, 
 				     string const & injection, 
 				     string const & traffic)
-  : _nodes(nodes), _size(size)
+  : Workload(nodes), _size(size)
 {
   _injection = InjectionProcess::New(injection, nodes, load);
   _traffic = TrafficPattern::New(traffic, nodes);
@@ -227,104 +239,166 @@ void SyntheticWorkload::defer()
   _pending.pop();
 }
 
-TraceWorkload::TraceWorkload(string const & filename, 
-			     vector<int> const & packet_size, int scale)
-  : _packet_size(packet_size), _scale(scale)
+TraceWorkload::TraceWorkload(int nodes, vector<string> const & filenames, 
+			     vector<int> const & packet_sizes,
+			     vector<int> const & skips, 
+			     vector<int> const & scales)
+  : Workload(nodes), _packet_sizes(packet_sizes), _scales(scales), _skips(skips)
 {
-  _trace.open(filename.c_str());
+ if(_scales.empty()) {
+    _scales.push_back(1);
+  }
+  _scales.resize(nodes, _scales.back());
+
+  if(_skips.empty()) {
+    _skips.push_back(0);
+  }
+  _skips.resize(nodes, _skips.back());
+
+  for(int n = 0; n < nodes; ++n) {
+    _skips[n] *= _scales[n];
+  }
+
+  _traces.resize(nodes);
+  for(int n = 0; n < _nodes; ++n) {
+    string const & filename = (n < filenames.size()) ? filenames[n] : filenames.back();
+    _traces[n] = new ifstream(filename.c_str());
+  }
 }
 
 TraceWorkload::~TraceWorkload()
 {
-  _trace.close();
-}
-
-void TraceWorkload::_readPackets()
-{
-  while(!_trace.eof()) {
-    int delay, source, dest, type;
-    _trace >> delay >> source >> dest >> type;
-    if(type >= 0) {
-      delay *= _scale;
-      _next_packet.time = _time + delay;
-      _next_packet.source = source;
-      _next_packet.dest = dest;
-      _next_packet.size = _packet_size[type];
-      if(delay > 0) {
-	break;
-      }
-      _queueNextPacket();
-    }
+  for(int n = 0; n < _nodes; ++n) {
+    ifstream * const trace = _traces[n];
+    trace->close();
+    delete trace;
   }
-}
-
-void TraceWorkload::_queueNextPacket()
-{
-  _pending_packets.push_back(_next_packet);
-  _next_packet.time = -1;
 }
 
 void TraceWorkload::reset()
 {
   Workload::reset();
-  _trace.seekg(0);
-  _next_packet.time = -1;
-  _readPackets();
-  _current_packet = _pending_packets.begin();
+
+  // get first packet for each node
+  for(int n = 0; n < _nodes; ++n) {
+    ifstream * trace = _traces[n];
+    trace->seekg(0);
+    int const skip = _skips[n];
+    int const scale = _scales[n];
+    int time = 0;
+    while(!trace->eof()) {
+      int delay, source, dest, type;
+      *trace >> delay >> source >> dest >> type;
+      time += delay * scale;
+      if((time >= skip) && (source == n) && (type >= 0)) {
+	PacketInfo pi;
+	pi.time = time - skip;
+	pi.source = source;
+	pi.dest = dest;
+	pi.size = _packet_sizes[type];
+	assert(pi.size > 0);
+	if(time > skip) {
+	  _waiting_packets.push_back(pi);
+	} else {
+	  _ready_packets.push_back(pi);
+	}
+	break;
+      }
+    }
+  }
+  _ready_iter = _ready_packets.begin();
 }
 
 void TraceWorkload::advanceTime()
 {
   Workload::advanceTime();
-  if(_next_packet.time == _time) {
-    _queueNextPacket();
-    _readPackets();
-    _current_packet = _pending_packets.begin();
+
+  // promote from waiting to ready
+  list<PacketInfo>::iterator iter = _waiting_packets.begin();
+  while(iter != _waiting_packets.end()) {
+    if(iter->time <= _time) {
+      list<PacketInfo>::iterator source_iter = iter;
+      ++iter;
+      _ready_packets.splice(_ready_packets.end(), _ready_packets, source_iter);
+    } else {
+      ++iter;
+    }
   }
+
+  assert(_ready_iter == _ready_packets.end());
+  _ready_iter = _ready_packets.begin();
 }
 
 bool TraceWorkload::empty() const
 {
-  return (_current_packet == _pending_packets.end());
+  return (_ready_iter == _ready_packets.end());
 }
 
 bool TraceWorkload::completed() const
 {
-  return _trace.eof();
+  return (_waiting_packets.empty() && _ready_packets.empty());
 }
 
 int TraceWorkload::source() const
 {
   assert(!empty());
-  return _current_packet->source;
+  return _ready_iter->source;
 }
 
 int TraceWorkload::dest() const
 {
   assert(!empty());
-  return _current_packet->dest;
+  return _ready_iter->dest;
 }
 
 int TraceWorkload::size() const
 {
   assert(!empty());
-  return _current_packet->size;
+  assert(_ready_iter->size > 0);
+  return _ready_iter->size;
 }
 
 int TraceWorkload::time() const
 {
   assert(!empty());
-  return _current_packet->time;
+  return _ready_iter->time;
 }
 
 void TraceWorkload::inject()
 {
   assert(!empty());
-  _current_packet = _pending_packets.erase(_current_packet);
+  int const n = _ready_iter->source;
+  int const scale = _scales[n];
+  ifstream * trace = _traces[n];
+  int time = _ready_iter->time;
+  bool empty = true;
+  while(!trace->eof()) {
+    int delay, source, dest, type;
+    *trace >> delay >> source >> dest >> type;
+    time += delay * scale;
+    if((source == n) && (type >= 0)) {
+      _ready_iter->time = time;
+      assert(_ready_iter->source == source);
+      _ready_iter->dest = dest;
+      _ready_iter->size = _packet_sizes[type];
+      assert(_ready_iter->size > 0);
+      empty = false;
+      break;
+    }
+  }
+  if(empty) {
+    _ready_iter = _ready_packets.erase(_ready_iter);
+  } else if(time > _time) {
+    list<PacketInfo>::iterator source_iter = _ready_iter;
+    ++_ready_iter;
+    _waiting_packets.splice(_waiting_packets.end(), _waiting_packets, source_iter);
+  } else {
+    ++_ready_iter;
+  }
 }
 
 void TraceWorkload::defer()
 {
   assert(!empty());
-  ++_current_packet;
+  ++_ready_iter;
 }

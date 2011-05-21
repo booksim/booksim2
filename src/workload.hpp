@@ -44,12 +44,13 @@ using namespace std;
 
 class Workload {
 protected:
+  int const _nodes;
   int _time;
-  Workload();
+  Workload(int nodes);
 public:
   virtual ~Workload();
   static Workload * New(string const & workload, int nodes);
-  virtual void reset();
+  virtual void reset() = 0;
   virtual void advanceTime();
   virtual bool empty() const = 0;
   virtual bool completed() const = 0;
@@ -63,7 +64,6 @@ public:
 
 class SyntheticWorkload : public Workload {
 protected:
-  int const _nodes;
   int const _size;
   InjectionProcess * _injection;
   TrafficPattern * _traffic;
@@ -91,31 +91,30 @@ class TraceWorkload : public Workload {
 
 protected:
 
+  vector<int> _packet_sizes;
+
   struct PacketInfo {
     int time;
     int source;
     int dest;
     int size;
   };
-  
-  vector<int> _packet_size;
 
-  PacketInfo _next_packet;
-  
-  list<PacketInfo>::iterator _current_packet ;
-  list<PacketInfo> _pending_packets;
-  
-  ifstream _trace;
-  
-  int _scale;
+  list<PacketInfo>::iterator _ready_iter;
+  list<PacketInfo> _waiting_packets;
+  list<PacketInfo> _ready_packets;
 
-  void _readPackets();
-  void _queueNextPacket();
+  vector<ifstream *> _traces;
   
+  vector<int> _scales;
+  vector<int> _skips;
+
 public:
   
-  TraceWorkload(string const & filename, vector<int> const & packet_size, 
-		int scale = 1);
+  TraceWorkload(int nodes, vector<string> const & filenames,
+		vector<int> const & packet_size,
+		vector<int> const & skips = vector<int>(),
+		vector<int> const & scales = vector<int>());
   
   virtual ~TraceWorkload();
   virtual void reset();
