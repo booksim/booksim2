@@ -262,7 +262,12 @@ TraceWorkload::TraceWorkload(int nodes, vector<string> const & filenames,
   _traces.resize(nodes);
   for(int n = 0; n < _nodes; ++n) {
     string const & filename = (n < filenames.size()) ? filenames[n] : filenames.back();
-    _traces[n] = new ifstream(filename.c_str());
+    ifstream * trace = new ifstream(filename.c_str());
+    _traces[n] = trace;
+    if(!trace->is_open()) {
+      cerr << "Unable to open trace file: " << filename << endl;
+      exit(-1);
+    }
   }
 }
 
@@ -270,8 +275,12 @@ TraceWorkload::~TraceWorkload()
 {
   for(int n = 0; n < _nodes; ++n) {
     ifstream * const trace = _traces[n];
-    trace->close();
-    delete trace;
+    if(trace) {
+      if(trace->is_open()) {
+	trace->close();
+      }
+      delete trace;
+    }
   }
 }
 
