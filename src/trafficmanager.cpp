@@ -544,6 +544,15 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	// request-reply transactions complete when reply arrives
 	_requests_outstanding[request_class][dest]--;
       }
+
+      // Only record statistics once per packet (at tail)
+      // and based on the simulation state
+      if ( ( _sim_state == warming_up ) || f->record ) {
+	int const cl = (request_class < 0) ? f->cl : request_class;
+	_tlat_stats[cl]->AddSample( f->atime - f->ttime );
+	_pair_tlat[cl][dest*_nodes+f->src]->AddSample( f->atime - f->ttime );
+      }
+
     } else {
       _sent_packets[f->cl][dest]++;
       _GeneratePacket( f->dest, f->src, _packet_size[reply_class], 
@@ -557,16 +566,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       _hop_stats[f->cl]->AddSample( f->hops );
 
       if((_slowest_flit[f->cl] < 0) ||
-	 (_plat_stats[f->cl]->Max() < (f->atime - f->time)))
+	 (_plat_stats[f->cl]->Max() < (f->atime - f->time))) {
 	_slowest_flit[f->cl] = f->id;
+      }
       _plat_stats[f->cl]->AddSample( f->atime - f->time);
       _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
       if(reply_class < 0) {
-	int const & request_class = _request_class[f->cl];
-	assert(request_class < _classes);
-	int const cl = (request_class < 0) ? f->cl : request_class;
-	_tlat_stats[cl]->AddSample( f->atime - f->ttime );
-	_pair_tlat[cl][dest*_nodes+f->src]->AddSample( f->atime - f->ttime );
       }
       _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->time );
     }
