@@ -96,47 +96,64 @@ bool WorkloadTrafficManager::_SingleSim( )
 {
   _sim_state = warming_up;
   
+  int t = 0;
+
   if(_warmup_periods > 0) {
     
-    cout << "% Warming up..." << endl;
+    cout << "Warming up..." << endl;
     
-    for(int wp = 0; wp < _warmup_periods; ++wp) {
-      for(int t = 0; t < _sample_period; ++t) {
-	_Step();
+    while(t < _warmup_periods * _sample_period) {
+      
+      _Step();
+      
+      if((t % _sample_period) == 0) {
+	
+	if(_stats_out)
+	  *_stats_out << "%=================================" << endl;
+	
+	cout << "### " << t << " cycles ###" << endl;
+	DisplayStats();
+	
       }
+
+      ++t;
+    
+    }
+
+    _ClearStats();
+    
+    cout << "Warmup ends after " << _warmup_periods * _sample_period
+	 << " cycles." << endl;
+    
+  }
+
+  _sim_state = running;
+  
+  cout << "Beginning measurements..." << endl;
+    
+  while(!_Completed() && 
+	((_max_samples < 0) || 
+	 (t < (_warmup_periods + _max_samples) * _sample_period))) {
+    
+    _Step();
+    
+    if((t % _sample_period) == 0) {
       
       if(_stats_out)
 	*_stats_out << "%=================================" << endl;
       
+      cout << "### " << t << " cycles ###" << endl;
       DisplayStats();
       
     }
-    
-    _ClearStats();
-    
-    cout << "% Beginning measurements after " << _warmup_periods << " warmup sample periods..." << endl;
-    
-  } else {
 
-    cout << "% Beginning measurements..." << endl;
-    
+    ++t;
   }
 
-  int sp = 0;
-  while(!_Completed() && ((_max_samples < 0) || (sp < _max_samples))) {
-    for(int t = 0; !_Completed() && (t < _sample_period); ++t) {
-      _Step();
-    }
-    
-    if(_stats_out)
-      *_stats_out << "%=================================" << endl;
-    
-    DisplayStats();
-    
-    ++sp;
-  }
+  cout << "Completed measurements after " << t << " cycles." << endl;
 
-  cout << "% Terminating simulation after " << sp << " measurement periods." << endl;
+  _sim_state = draining;
+  _drain_time = _time;
 
   return 1;
 }
@@ -144,9 +161,10 @@ bool WorkloadTrafficManager::_SingleSim( )
 bool WorkloadTrafficManager::_Completed( )
 {
   for(int c = 0; c < _classes; ++c) {
-    if(_workload[c]->completed()) {
-      return true;
+    if(_measure_stats[c] &&
+       (!_workload[c]->completed() || !_measured_in_flight_flits[c].empty())) {
+      return false;
     }
   }
-  return false;
+  return true;
 }
