@@ -106,32 +106,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _classes = config.GetInt("classes");
 
-  _packet_size = config.GetIntArray( "packet_size" );
-  if(_packet_size.empty()) {
-    _packet_size.push_back(config.GetInt("packet_size"));
-  }
-  _packet_size.resize(_classes, _packet_size.back());
-  
   _subnet = config.GetIntArray("subnet"); 
   if(_subnet.empty()) {
     _subnet.push_back(config.GetInt("subnet"));
   }
   _subnet.resize(_classes, _subnet.back());
-
-  _reply_class = config.GetIntArray("reply_class"); 
-  if(_reply_class.empty()) {
-    _reply_class.push_back(config.GetInt("reply_class"));
-  }
-  _reply_class.resize(_classes, _reply_class.back());
-
-  _request_class.resize(_classes, -1);
-  for(int c = 0; c < _classes; ++c) {
-    int const & reply_class = _reply_class[c];
-    if(reply_class >= 0) {
-      assert(_request_class[reply_class] < 0);
-      _request_class[reply_class] = c;
-    }
-  }
 
   _class_priority = config.GetIntArray("class_priority"); 
   if(_class_priority.empty()) {
@@ -180,18 +159,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_avg_plat.resize(_classes);
   _overall_max_plat.resize(_classes);
 
-  _tlat_stats.resize(_classes);
-  _overall_min_tlat.resize(_classes);
-  _overall_avg_tlat.resize(_classes);
-  _overall_max_tlat.resize(_classes);
-
   _frag_stats.resize(_classes);
   _overall_min_frag.resize(_classes);
   _overall_avg_frag.resize(_classes);
   _overall_max_frag.resize(_classes);
 
   _pair_plat.resize(_classes);
-  _pair_tlat.resize(_classes);
   
   _hop_stats.resize(_classes);
   
@@ -221,24 +194,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _stats[tmp_name.str()] = _overall_max_plat[c];
     tmp_name.str("");  
 
-    tmp_name << "tlat_stat_" << c;
-    _tlat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _tlat_stats[c];
-    tmp_name.str("");
-
-    tmp_name << "overall_min_tlat_stat_" << c;
-    _overall_min_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_min_tlat[c];
-    tmp_name.str("");  
-    tmp_name << "overall_avg_tlat_stat_" << c;
-    _overall_avg_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_avg_tlat[c];
-    tmp_name.str("");  
-    tmp_name << "overall_max_tlat_stat_" << c;
-    _overall_max_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_max_tlat[c];
-    tmp_name.str("");  
-
     tmp_name << "frag_stat_" << c;
     _frag_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
     _stats[tmp_name.str()] = _frag_stats[c];
@@ -262,7 +217,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     tmp_name.str("");
 
     _pair_plat[c].resize(_nodes*_nodes);
-    _pair_tlat[c].resize(_nodes*_nodes);
 
     _sent_flits[c].resize(_nodes);
     _accepted_flits[c].resize(_nodes);
@@ -277,11 +231,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 	tmp_name << "pair_plat_stat_" << c << "_" << i << "_" << j;
 	_pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
 	_stats[tmp_name.str()] = _pair_plat[c][i*_nodes+j];
-	tmp_name.str("");
-	
-	tmp_name << "pair_tlat_stat_" << c << "_" << i << "_" << j;
-	_pair_tlat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-	_stats[tmp_name.str()] = _pair_tlat[c][i*_nodes+j];
 	tmp_name.str("");
       }
     }
@@ -302,7 +251,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _overall_accepted_min[c] = new Stats( this, tmp_name.str( ) );
     _stats[tmp_name.str()] = _overall_accepted_min[c];
     tmp_name.str("");
-    
   }
 
   _slowest_flit.resize(_classes, -1);
@@ -424,11 +372,6 @@ TrafficManager::~TrafficManager( )
     delete _overall_avg_plat[c];
     delete _overall_max_plat[c];
 
-    delete _tlat_stats[c];
-    delete _overall_min_tlat[c];
-    delete _overall_avg_tlat[c];
-    delete _overall_max_tlat[c];
-
     delete _frag_stats[c];
     delete _overall_min_frag[c];
     delete _overall_avg_frag[c];
@@ -443,7 +386,6 @@ TrafficManager::~TrafficManager( )
       
       for ( int dest = 0; dest < _nodes; ++dest ) {
 	delete _pair_plat[c][source*_nodes+dest];
-	delete _pair_tlat[c][source*_nodes+dest];
       }
     }
     
@@ -555,43 +497,16 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
 void TrafficManager::_RetirePacket(Flit * head, Flit * tail, int dest)
 {
-  int const & reply_class = _reply_class[tail->cl];
-  assert(reply_class < _classes);
-  
-  if (reply_class < 0) {
-    if ( tail->watch ) { 
-      *gWatchOut << GetSimTime() << " | "
-		 << "node" << dest << " | "
-		 << "Completing transation " << tail->tid
-		 << " (lat = " << tail->atime - head->ttime
-		 << ", src = " << head->src 
-		 << ", dest = " << head->dest
-		 << ")." << endl;
-    }
-    int const & request_class = _request_class[tail->cl];
-    assert(request_class < _classes);
-    if(request_class < 0) {
-      // single-packet transactions "magically" notify source of completion 
-      // when packet arrives at destination
-      _requests_outstanding[tail->cl][tail->src]--;
-    } else {
-      // request-reply transactions complete when reply arrives
-      _requests_outstanding[request_class][dest]--;
-    }
-    
-    // Only record statistics once per packet (at tail)
-    // and based on the simulation state
-    if ( ( _sim_state == warming_up ) || tail->record ) {
-      int const cl = (request_class < 0) ? tail->cl : request_class;
-      _tlat_stats[cl]->AddSample( tail->atime - tail->ttime );
-      _pair_tlat[cl][dest*_nodes+tail->src]->AddSample( tail->atime - tail->ttime );
-    }
-    
-  } else {
-    _sent_packets[tail->cl][dest]++;
-    _GeneratePacket( head->dest, head->src, _packet_size[reply_class], 
-		     reply_class, tail->atime + 1, tail->tid, tail->ttime );
-  }  
+  if ( tail->watch ) { 
+    *gWatchOut << GetSimTime() << " | "
+	       << "node" << dest << " | "
+	       << "Completing transation " << tail->tid
+	       << " (lat = " << tail->atime - head->ttime
+	       << ", src = " << head->src 
+	       << ", dest = " << head->dest
+	       << ")." << endl;
+  }
+  _requests_outstanding[tail->cl][tail->src]--;
 }
 
 void TrafficManager::_GeneratePacket( int source, int dest, int size, 
@@ -956,7 +871,6 @@ void TrafficManager::_ClearStats( )
   for ( int c = 0; c < _classes; ++c ) {
 
     _plat_stats[c]->Clear( );
-    _tlat_stats[c]->Clear( );
     _frag_stats[c]->Clear( );
   
     for ( int i = 0; i < _nodes; ++i ) {
@@ -965,7 +879,6 @@ void TrafficManager::_ClearStats( )
       
       for ( int j = 0; j < _nodes; ++j ) {
 	_pair_plat[c][i*_nodes+j]->Clear( );
-	_pair_tlat[c][i*_nodes+j]->Clear( );
       }
     }
 
@@ -1120,11 +1033,6 @@ void TrafficManager::_UpdateOverallStats() {
       _overall_avg_plat[c]->AddSample( _plat_stats[c]->Average( ) );
       _overall_max_plat[c]->AddSample( _plat_stats[c]->Max( ) );
     }
-    if(_tlat_stats[c]->NumSamples() > 0) {
-      _overall_min_tlat[c]->AddSample( _tlat_stats[c]->Min( ) );
-      _overall_avg_tlat[c]->AddSample( _tlat_stats[c]->Average( ) );
-      _overall_max_tlat[c]->AddSample( _tlat_stats[c]->Max( ) );
-    }
     if(_frag_stats[c]->NumSamples() > 0) {
       _overall_min_frag[c]->AddSample( _frag_stats[c]->Min( ) );
       _overall_avg_frag[c]->AddSample( _frag_stats[c]->Average( ) );
@@ -1135,7 +1043,6 @@ void TrafficManager::_UpdateOverallStats() {
     _ComputeStats( _accepted_flits[c], &avg, &min );
     _overall_accepted[c]->AddSample( avg );
     _overall_accepted_min[c]->AddSample( min );
-    
 
   }
 }
@@ -1158,10 +1065,9 @@ void TrafficManager::DisplayClassStats(int c, ostream & os) const {
   
   double min, avg;
   int dmin = _ComputeStats(_accepted_flits[c], &avg, &min);
-  os << "Accepted packets = " << min
-       << " at node " << dmin
-       << " (avg = " << avg << ")"
-       << endl;
+  os << "Accepted packets = " << avg
+     << " (min: " << min << " at node " << dmin << ")"
+     << endl;
   
   os << "Total in-flight flits = " << _total_in_flight_flits[c].size()
        << " (" << _measured_in_flight_flits[c].size() << " measured)"
@@ -1195,13 +1101,6 @@ void TrafficManager::WriteClassStats(int c, ostream & os) const {
     }
   }
   os << "];" << endl
-     << "pair_lat(" << c+1 << ",:) = [ ";
-  for(int i = 0; i < _nodes; ++i) {
-    for(int j = 0; j < _nodes; ++j) {
-      os << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";
-    }
-  }
-  os << "];" << endl
      << "sent(" << c+1 << ",:) = [ ";
   for ( int d = 0; d < _nodes; ++d ) {
     os << _sent_flits[c][d]->Average( ) << " ";
@@ -1226,16 +1125,6 @@ void TrafficManager::DisplayOverallStats( int c, ostream & os ) const {
     assert(_overall_max_plat[c]->NumSamples() > 0);
     os << "Overall maximum latency = " << _overall_max_plat[c]->Average( )
        << " (" << _overall_max_plat[c]->NumSamples( ) << " samples)" << endl;
-  }
-  if(_overall_min_tlat[c]->NumSamples() > 0) {
-    os << "Overall minimum transaction latency = " << _overall_min_tlat[c]->Average( )
-       << " (" << _overall_min_tlat[c]->NumSamples( ) << " samples)" << endl;
-    assert(_overall_avg_tlat[c]->NumSamples() > 0);
-    os << "Overall average transaction latency = " << _overall_avg_tlat[c]->Average( )
-       << " (" << _overall_avg_tlat[c]->NumSamples( ) << " samples)" << endl;
-    assert(_overall_max_tlat[c]->NumSamples() > 0);
-    os << "Overall maximum transaction latency = " << _overall_max_tlat[c]->Average( )
-       << " (" << _overall_max_tlat[c]->NumSamples( ) << " samples)" << endl;
   }
   if(_overall_min_frag[c]->NumSamples() > 0) {
     os << "Overall minimum fragmentation = " << _overall_min_frag[c]->Average( )
@@ -1267,13 +1156,9 @@ void TrafficManager::DisplayOverallStats( int c, ostream & os ) const {
 string TrafficManager::_OverallStatsCSV(int c) const
 {
   ostringstream os;
-  os << _packet_size[c]
-     << ',' << _overall_min_plat[c]->Average( )
+  os << _overall_min_plat[c]->Average( )
      << ',' << _overall_avg_plat[c]->Average( )
      << ',' << _overall_max_plat[c]->Average( )
-     << ',' << _overall_min_tlat[c]->Average( )
-     << ',' << _overall_avg_tlat[c]->Average( )
-     << ',' << _overall_max_tlat[c]->Average( )
      << ',' << _overall_min_frag[c]->Average( )
      << ',' << _overall_avg_frag[c]->Average( )
      << ',' << _overall_max_frag[c]->Average( )

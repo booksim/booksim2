@@ -31,8 +31,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _SYNTHETICTRAFFICMANAGER_HPP_
 #define _SYNTHETICTRAFFICMANAGER_HPP_
 
+#include <vector>
+
 #include "trafficmanager.hpp"
 #include "traffic.hpp"
+#include "stats.hpp"
 
 class SyntheticTrafficManager : public TrafficManager {
 
@@ -41,14 +44,32 @@ protected:
   vector<string> _traffic;
   vector<TrafficPattern *> _traffic_pattern;
 
+  vector<int> _packet_size;
+
+  vector<int> _reply_class;
+  vector<int> _request_class;
+
   vector<vector<int> > _qtime;
   vector<vector<bool> > _qdrained;
+
+  vector<Stats *> _tlat_stats;     
+  vector<Stats *> _overall_min_tlat;  
+  vector<Stats *> _overall_avg_tlat;  
+  vector<Stats *> _overall_max_tlat;  
+
+  vector<vector<Stats *> > _pair_tlat;
+
+  virtual void _RetirePacket(Flit * head, Flit * tail, int dest);
 
   virtual void _Inject( );
 
   virtual bool _PacketsOutstanding( ) const;
 
   virtual void _ResetSim( );
+
+  virtual void _ClearStats( );
+
+  virtual void _UpdateOverallStats( );
 
   virtual string _OverallStatsCSV(int c) const;
 
@@ -57,6 +78,9 @@ protected:
 public:
 
   virtual ~SyntheticTrafficManager( );
+
+  virtual void WriteClassStats(int c, ostream & os = cout) const;
+  virtual void DisplayOverallStats(int c, ostream & os = cout) const;
 
 };
 

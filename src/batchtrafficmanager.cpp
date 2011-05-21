@@ -89,7 +89,7 @@ bool BatchTrafficManager::_IssuePacket( int source, int cl )
 
 void BatchTrafficManager::_ClearStats( )
 {
-  TrafficManager::_ClearStats();
+  SyntheticTrafficManager::_ClearStats();
   _batch_time->Clear( );
 }
 
@@ -174,7 +174,7 @@ bool BatchTrafficManager::_SingleSim( )
 
 void BatchTrafficManager::_UpdateOverallStats()
 {
-  TrafficManager::_UpdateOverallStats();
+  SyntheticTrafficManager::_UpdateOverallStats();
   _overall_batch_time->AddSample(_batch_time->Sum( ));
 }
   
@@ -193,13 +193,13 @@ void BatchTrafficManager::DisplayClassStats(int c, ostream & os) const
 
 void BatchTrafficManager::WriteClassStats(int c, ostream & os) const
 {
-  TrafficManager::WriteClassStats(c, os);
+  SyntheticTrafficManager::WriteClassStats(c, os);
   os << "batch_time(" << c+1 << ") = " << _last_batch_time << ";" << endl;
 }
 
 void BatchTrafficManager::DisplayOverallStats(int c, ostream & os) const
 {
-  TrafficManager::DisplayOverallStats(c, os);
+  SyntheticTrafficManager::DisplayOverallStats(c, os);
   os << "Overall batch duration = " << _overall_batch_time->Average( )
      << " (" << _overall_batch_time->NumSamples( ) << " samples)" << endl;
 }

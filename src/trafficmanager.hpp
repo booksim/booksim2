@@ -61,11 +61,6 @@ protected:
   int _subnets;
   vector<int> _subnet;
 
-  vector<int> _packet_size;
-
-  vector<int> _reply_class;
-  vector<int> _request_class;
-
   vector<int> _class_priority;
 
   vector<int> _last_class;
@@ -112,18 +107,12 @@ protected:
   vector<Stats *> _overall_avg_plat;  
   vector<Stats *> _overall_max_plat;  
 
-  vector<Stats *> _tlat_stats;     
-  vector<Stats *> _overall_min_tlat;  
-  vector<Stats *> _overall_avg_tlat;  
-  vector<Stats *> _overall_max_tlat;  
-
   vector<Stats *> _frag_stats;
   vector<Stats *> _overall_min_frag;
   vector<Stats *> _overall_avg_frag;
   vector<Stats *> _overall_max_frag;
 
   vector<vector<Stats *> > _pair_plat;
-  vector<vector<Stats *> > _pair_tlat;
   vector<Stats *> _hop_stats;
 
   vector<vector<Stats *> > _sent_flits;

@@ -319,6 +319,7 @@ bool SteadyStateTrafficManager::_SingleSim( )
 string SteadyStateTrafficManager::_OverallStatsCSV(int c) const
 {
   ostringstream os;
-  os << _load[c] << ',' << TrafficManager::_OverallStatsCSV(c);
+  os << _load[c] << ','
+     << TrafficManager::_OverallStatsCSV(c);
   return os.str();
 }
