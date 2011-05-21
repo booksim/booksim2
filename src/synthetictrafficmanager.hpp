@@ -70,17 +70,16 @@ protected:
   virtual void _ClearStats( );
 
   virtual void _UpdateOverallStats( );
-
-  virtual string _OverallStatsCSV(int c) const;
+  
+  virtual string _OverallClassStatsCSV(int c) const;
+  virtual void _DisplayOverallClassStats(int c, ostream & os) const;
+  virtual void _WriteClassStats(int c, ostream & os) const;
 
   SyntheticTrafficManager( const Configuration &config, const vector<Network *> & net );
 
 public:
 
   virtual ~SyntheticTrafficManager( );
-
-  virtual void WriteClassStats(int c, ostream & os = cout) const;
-  virtual void DisplayOverallStats(int c, ostream & os = cout) const;
 
 };
 

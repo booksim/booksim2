@@ -61,14 +61,14 @@ protected:
 
   virtual void _UpdateOverallStats( );
 
-  virtual string _OverallStatsCSV(int c = 0) const;
+  virtual string _OverallClassStatsCSV(int c) const;
+
+  virtual void _DisplayOverallClassStats(int c, ostream & os) const;
 
 public:
 
   WorkloadTrafficManager( const Configuration &config, const vector<Network *> & net );
   virtual ~WorkloadTrafficManager( );
-
-  virtual void DisplayOverallStats(int c, ostream & os = cout) const;
 
 };
 

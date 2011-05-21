@@ -316,10 +316,10 @@ bool SteadyStateTrafficManager::_SingleSim( )
   return ( converged > 0 );
 }
 
-string SteadyStateTrafficManager::_OverallStatsCSV(int c) const
+string SteadyStateTrafficManager::_OverallClassStatsCSV(int c) const
 {
   ostringstream os;
   os << _load[c] << ','
-     << TrafficManager::_OverallStatsCSV(c);
+     << TrafficManager::_OverallClassStatsCSV(c);
   return os.str();
 }

@@ -175,32 +175,32 @@ void BatchTrafficManager::_UpdateOverallStats()
   ++_overall_batch_time_samples;
 }
   
-string BatchTrafficManager::_OverallStatsCSV(int c) const
+string BatchTrafficManager::_OverallClassStatsCSV(int c) const
 {
   double overall_batch_time = _overall_batch_time_sum/(double)_overall_batch_time_samples;
   ostringstream os;
-  os << TrafficManager::_OverallStatsCSV(c) << ',' << overall_batch_time;
+  os << SyntheticTrafficManager::_OverallClassStatsCSV(c) << ',' << overall_batch_time;
   return os.str();
 }
 
-void BatchTrafficManager::DisplayClassStats(int c, ostream & os) const
+void BatchTrafficManager::_DisplayClassStats(int c, ostream & os) const
 {
   
-  TrafficManager::DisplayClassStats(c);
+  TrafficManager::_DisplayClassStats(c, os);
   double batch_time = (double)_batch_time_sum/(double)_batch_time_samples;
   os << "Average batch duration = " << batch_time << endl;
 }
 
-void BatchTrafficManager::WriteClassStats(int c, ostream & os) const
+void BatchTrafficManager::_WriteClassStats(int c, ostream & os) const
 {
-  SyntheticTrafficManager::WriteClassStats(c, os);
+  SyntheticTrafficManager::_WriteClassStats(c, os);
   double batch_time = (double)_batch_time_sum/(double)_batch_time_samples;
   os << "batch_time(" << c+1 << ") = " << batch_time << ";" << endl;
 }
 
-void BatchTrafficManager::DisplayOverallStats(int c, ostream & os) const
+void BatchTrafficManager::_DisplayOverallClassStats(int c, ostream & os) const
 {
-  SyntheticTrafficManager::DisplayOverallStats(c, os);
+  SyntheticTrafficManager::_DisplayOverallClassStats(c, os);
   double overall_batch_time = _overall_batch_time_sum/(double)_overall_batch_time_samples;
   os << "Overall average batch duration = " << overall_batch_time
      << " (" << _overall_batch_time_samples << " samples)" << endl;

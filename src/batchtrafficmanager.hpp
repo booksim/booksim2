@@ -60,16 +60,16 @@ protected:
 
   virtual void _UpdateOverallStats( );
 
-  virtual string _OverallStatsCSV(int c = 0) const;
+  virtual string _OverallClassStatsCSV(int c) const;
+  virtual void _DisplayOverallClassStats( int c, ostream & os ) const;
+  virtual void _DisplayClassStats( int c, ostream & os ) const;
+  virtual void _WriteClassStats( int c, ostream & os ) const;
+
 
 public:
 
   BatchTrafficManager( const Configuration &config, const vector<Network *> & net );
   virtual ~BatchTrafficManager( );
-
-  virtual void DisplayClassStats( int c, ostream & os = cout ) const;
-  virtual void WriteClassStats( int c, ostream & os = cout ) const;
-  virtual void DisplayOverallStats( int c, ostream & os = cout ) const;
 
 };
 

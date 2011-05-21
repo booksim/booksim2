@@ -194,7 +194,11 @@ protected:
 
   virtual void _UpdateOverallStats();
 
-  virtual string _OverallStatsCSV(int c = 0) const;
+  virtual string _OverallClassStatsCSV(int c = 0) const;
+
+  virtual void _DisplayClassStats( int c, ostream & os ) const ;
+  virtual void _WriteClassStats( int c, ostream & os ) const ;
+  virtual void _DisplayOverallClassStats( int c, ostream & os ) const ;
 
   TrafficManager( const Configuration &config, const vector<Network *> & net );
 
@@ -209,11 +213,8 @@ public:
 
   void DisplayStats(ostream & os = cout) const;
   void WriteStats(ostream & os = cout) const;
-
-  virtual void DisplayClassStats( int c, ostream & os = cout ) const ;
-  virtual void WriteClassStats( int c, ostream & os = cout ) const ;
-  virtual void DisplayOverallStats( int c, ostream & os = cout ) const ;
-  virtual void DisplayOverallStatsCSV( int c, ostream & os = cout ) const ;
+  void DisplayOverallStats(ostream & os = cout) const;
+  void DisplayOverallStatsCSV(ostream & os = cout) const;
 
   const Stats * GetOverallLatency(int c = 0) { return _overall_avg_plat[c]; }
   const Stats * GetAccepted(int c = 0) { return _overall_accepted[c]; }

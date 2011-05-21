@@ -261,21 +261,21 @@ void SyntheticTrafficManager::_UpdateOverallStats( )
   }
 }
 
-string SyntheticTrafficManager::_OverallStatsCSV(int c) const
+string SyntheticTrafficManager::_OverallClassStatsCSV(int c) const
 {
   ostringstream os;
   os << _traffic[c] << ','
      << _packet_size[c] << ','
-     << TrafficManager::_OverallStatsCSV(c)
+     << TrafficManager::_OverallClassStatsCSV(c)
      << ',' << _overall_min_tlat[c]->Average( )
      << ',' << _overall_avg_tlat[c]->Average( )
      << ',' << _overall_max_tlat[c]->Average( );
   return os.str();
 }
 
-void SyntheticTrafficManager::WriteClassStats(int c, ostream & os) const
+void SyntheticTrafficManager::_WriteClassStats(int c, ostream & os) const
 {
-  TrafficManager::WriteClassStats(c, os);
+  TrafficManager::_WriteClassStats(c, os);
   os << "pair_lat(" << c+1 << ",:) = [ ";
   for(int i = 0; i < _nodes; ++i) {
     for(int j = 0; j < _nodes; ++j) {
@@ -285,9 +285,9 @@ void SyntheticTrafficManager::WriteClassStats(int c, ostream & os) const
   os << "];" << endl;
 }
 
-void SyntheticTrafficManager::DisplayOverallStats(int c, ostream & os) const
+void SyntheticTrafficManager::_DisplayOverallClassStats(int c, ostream & os) const
 {
-  TrafficManager::DisplayOverallStats(c, os);
+  TrafficManager::_DisplayOverallClassStats(c, os);
   if(_overall_min_tlat[c]->NumSamples() > 0) {
     os << "Overall minimum transaction latency = " << _overall_min_tlat[c]->Average( )
        << " (" << _overall_min_tlat[c]->NumSamples( ) << " samples)" << endl;

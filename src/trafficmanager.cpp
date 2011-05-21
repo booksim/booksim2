@@ -1010,21 +1010,31 @@ bool TrafficManager::Run( )
     _UpdateOverallStats();
   }
   
+  DisplayOverallStats();
   if(_print_csv_results) {
-    for(int c = 0; c < _classes; ++c) {
-      DisplayOverallStatsCSV(c);
-    }
-  } else {
-    for ( int c = 0; c < _classes; ++c ) {
-      if(_measure_stats[c] == 0) {
-	continue;
-      }
-      cout << "====== Traffic class " << c << " ======" << endl;
-      DisplayOverallStats(c);
-    }
+    DisplayOverallStatsCSV();
   }
   
   return true;
+}
+
+void TrafficManager::DisplayOverallStats(ostream & os) const
+{
+  for ( int c = 0; c < _classes; ++c ) {
+    if(_measure_stats[c]) {
+      cout << "====== Traffic class " << c << " ======" << endl;
+      _DisplayOverallClassStats(c, os);
+    }
+  }
+}
+
+void TrafficManager::DisplayOverallStatsCSV(ostream & os) const
+{
+  for(int c = 0; c < _classes; ++c) {
+    if(_measure_stats[c]) {
+      os << "results:" << c << ',' << _OverallClassStatsCSV(c) << endl;
+    }
+  }
 }
 
 void TrafficManager::_UpdateOverallStats() {
@@ -1062,12 +1072,12 @@ void TrafficManager::DisplayStats(ostream & os) const {
   for(int c = 0; c < _classes; ++c) {
     if(_measure_stats[c]) {
       os << "Class " << c << ":" << endl;
-      DisplayClassStats(c, os);
+      _DisplayClassStats(c, os);
     }
   }
 }
 
-void TrafficManager::DisplayClassStats(int c, ostream & os) const {
+void TrafficManager::_DisplayClassStats(int c, ostream & os) const {
   
   os << "Minimum latency = " << _plat_stats[c]->Min() << endl;
   os << "Average latency = " << _plat_stats[c]->Average() << endl;
@@ -1088,12 +1098,12 @@ void TrafficManager::DisplayClassStats(int c, ostream & os) const {
 void TrafficManager::WriteStats(ostream & os) const {
   for(int c = 0; c < _classes; ++c) {
     if(_measure_stats[c]) {
-      WriteClassStats(c, os);
+      _WriteClassStats(c, os);
     }
   }
 }
 
-void TrafficManager::WriteClassStats(int c, ostream & os) const {
+void TrafficManager::_WriteClassStats(int c, ostream & os) const {
   
   os << "lat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
      << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
@@ -1125,7 +1135,7 @@ void TrafficManager::WriteClassStats(int c, ostream & os) const {
   os << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
 }
 
-void TrafficManager::DisplayOverallStats( int c, ostream & os ) const {
+void TrafficManager::_DisplayOverallClassStats( int c, ostream & os ) const {
   
   if(_overall_min_plat[c]->NumSamples() > 0) {
     os << "Overall minimum latency = " << _overall_min_plat[c]->Average( )
@@ -1164,7 +1174,7 @@ void TrafficManager::DisplayOverallStats( int c, ostream & os ) const {
   }
 }
 
-string TrafficManager::_OverallStatsCSV(int c) const
+string TrafficManager::_OverallClassStatsCSV(int c) const
 {
   ostringstream os;
   os << _overall_min_plat[c]->Average( )
@@ -1177,10 +1187,6 @@ string TrafficManager::_OverallStatsCSV(int c) const
      << ',' << _overall_accepted_min[c]->Average( )
      << ',' << _overall_hop_stats[c]->Average( );
   return os.str();
-}
-
-void TrafficManager::DisplayOverallStatsCSV(int c, ostream & os) const {
-  os << "results:" << c << ',' << _OverallStatsCSV() << endl;
 }
 
 //read the watchlist
