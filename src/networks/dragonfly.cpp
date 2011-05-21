@@ -432,7 +432,6 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
   }
 
   int _grp_num_routers= gA;
-  int _grp_num_nodes =_grp_num_routers*gP;
 
   int dest  = f->dest;
   int rID =  r->GetID(); 
