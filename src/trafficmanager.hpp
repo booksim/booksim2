@@ -113,7 +113,9 @@ protected:
   vector<Stats *> _overall_max_frag;
 
   vector<vector<Stats *> > _pair_plat;
+
   vector<Stats *> _hop_stats;
+  vector<Stats *> _overall_hop_stats;
 
   vector<vector<Stats *> > _sent_flits;
   vector<vector<Stats *> > _accepted_flits;

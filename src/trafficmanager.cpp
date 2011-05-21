@@ -167,7 +167,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _pair_plat.resize(_classes);
   
   _hop_stats.resize(_classes);
-  
+  _overall_hop_stats.resize(_classes);
+
   _sent_flits.resize(_classes);
   _accepted_flits.resize(_classes);
   
@@ -214,6 +215,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     tmp_name << "hop_stat_" << c;
     _hop_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 20 );
     _stats[tmp_name.str()] = _hop_stats[c];
+    tmp_name.str("");
+    tmp_name << "overall_hop_stat_" << c;
+    _overall_hop_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 20 );
+    _stats[tmp_name.str()] = _overall_hop_stats[c];
     tmp_name.str("");
 
     _pair_plat[c].resize(_nodes*_nodes);
@@ -378,6 +383,8 @@ TrafficManager::~TrafficManager( )
     delete _overall_max_frag[c];
     
     delete _hop_stats[c];
+    delete _overall_hop_stats[c];
+
     delete _overall_accepted[c];
     delete _overall_accepted_min[c];
     
@@ -1039,6 +1046,10 @@ void TrafficManager::_UpdateOverallStats() {
       _overall_max_frag[c]->AddSample( _frag_stats[c]->Max( ) );
     }
     
+    if(_hop_stats[c]->NumSamples() > 0) {
+      _overall_hop_stats[c]->AddSample( _hop_stats[c]->Average( ) );
+    }
+
     double min, avg;
     _ComputeStats( _accepted_flits[c], &avg, &min );
     _overall_accepted[c]->AddSample( avg );
@@ -1143,9 +1154,9 @@ void TrafficManager::DisplayOverallStats( int c, ostream & os ) const {
     os << "Overall min accepted rate = " << _overall_accepted_min[c]->Average( )
        << " (" << _overall_accepted_min[c]->NumSamples( ) << " samples)" << endl;
   }
-  if(_hop_stats[c]->NumSamples() > 0) {
-    os << "Average hops = " << _hop_stats[c]->Average( )
-       << " (" << _hop_stats[c]->NumSamples( ) << " samples)" << endl;
+  if(_overall_hop_stats[c]->NumSamples() > 0) {
+    os << "Average hops = " << _overall_hop_stats[c]->Average( )
+       << " (" << _overall_hop_stats[c]->NumSamples( ) << " samples)" << endl;
   }
   
   if(_slowest_flit[c] >= 0) {
@@ -1164,7 +1175,7 @@ string TrafficManager::_OverallStatsCSV(int c) const
      << ',' << _overall_max_frag[c]->Average( )
      << ',' << _overall_accepted[c]->Average( )
      << ',' << _overall_accepted_min[c]->Average( )
-     << ',' << _hop_stats[c]->Average( );
+     << ',' << _overall_hop_stats[c]->Average( );
   return os.str();
 }
 
