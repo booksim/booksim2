@@ -332,7 +332,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _drain_measured_only = config.GetInt( "drain_measured_only" );
 
   string watch_file = config.GetStr( "watch_file" );
-  _LoadWatchList(watch_file);
+  if((watch_file != "") && (watch_file != "-")) {
+    _LoadWatchList(watch_file);
+  }
 
   vector<int> watch_flits = config.GetIntArray("watch_flits");
   for(size_t i = 0; i < watch_flits.size(); ++i) {
@@ -1302,6 +1304,6 @@ void TrafficManager::_LoadWatchList(const string & filename){
     }
     
   } else {
-    //cout<<"Unable to open flit watch file, continuing with simulation\n";
+    Error("Unable to open flit watch file: " + filename);
   }
 }
