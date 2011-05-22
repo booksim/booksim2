@@ -77,6 +77,7 @@ void BufferState::BufferPolicy::AllocSlotFor(int vc)
 void BufferState::BufferPolicy::FreeSlotFor(int vc)
 {
   assert((vc >= 0) && (vc < _vcs));
+  assert(_vc_occupancy[vc] > 0);
   --_vc_occupancy[vc];
   if(_vc_occupancy[vc] < 0) {
     ostringstream err;
@@ -194,6 +195,7 @@ BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config
   }
   assert(_shared_buf_size >= 0);
 
+  _active_vcs_hold_slot = config.GetInt("active_vcs_hold_slot");
   _reserved_slots.resize(_vcs, 0);
 }
 
@@ -217,17 +219,19 @@ void BufferState::SharedBufferPolicy::ProcessFreeSlot(int vc)
 void BufferState::SharedBufferPolicy::FreeVC(int vc)
 {
   BufferPolicy::FreeVC(vc);
-  assert((_vc_occupancy[vc] > 0) || (_reserved_slots[vc] > 0));
-  while(_reserved_slots[vc]) {
-    --_reserved_slots[vc];
-    ProcessFreeSlot(vc);
+  if(_active_vcs_hold_slot) {
+    assert((_vc_occupancy[vc] > 0) || (_reserved_slots[vc] > 0));
+    while(_reserved_slots[vc]) {
+      --_reserved_slots[vc];
+      ProcessFreeSlot(vc);
+    }
   }
 }
 
 void BufferState::SharedBufferPolicy::AllocSlotFor(int vc)
 {
   BufferPolicy::AllocSlotFor(vc);
-  if(_reserved_slots[vc] > 0) {
+  if(_active_vcs_hold_slot && (_reserved_slots[vc] > 0)) {
     --_reserved_slots[vc];
   } else {
     int i = _private_buf_vc_map[vc];
@@ -244,7 +248,7 @@ void BufferState::SharedBufferPolicy::AllocSlotFor(int vc)
 void BufferState::SharedBufferPolicy::FreeSlotFor(int vc)
 {
   BufferPolicy::FreeSlotFor(vc);
-  if(_vc_occupancy[vc] == 0) {
+  if(_active_vcs_hold_slot && (_vc_occupancy[vc] == 0)) {
     ++_reserved_slots[vc];
   } else {
     ProcessFreeSlot(vc);
