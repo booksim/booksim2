@@ -261,6 +261,18 @@ void SyntheticTrafficManager::_UpdateOverallStats( )
   }
 }
 
+string SyntheticTrafficManager::_OverallStatsHeaderCSV() const
+{
+  ostringstream os;
+  os << "traffic"
+     << ',' << "psize"
+     << ',' << TrafficManager::_OverallStatsHeaderCSV()
+     << ',' << "min_tlat"
+     << ',' << "avg_tlat"
+     << ',' << "max_tlat";
+  return os.str();
+}
+
 string SyntheticTrafficManager::_OverallClassStatsCSV(int c) const
 {
   ostringstream os;

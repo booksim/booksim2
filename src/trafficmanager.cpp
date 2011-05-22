@@ -1030,6 +1030,7 @@ void TrafficManager::DisplayOverallStats(ostream & os) const
 
 void TrafficManager::DisplayOverallStatsCSV(ostream & os) const
 {
+  os << "header:class," << _OverallStatsHeaderCSV() << endl;
   for(int c = 0; c < _classes; ++c) {
     if(_measure_stats[c]) {
       os << "results:" << c << ',' << _OverallClassStatsCSV(c) << endl;
@@ -1172,6 +1173,21 @@ void TrafficManager::_DisplayOverallClassStats( int c, ostream & os ) const {
   if(_slowest_flit[c] >= 0) {
     os << "Slowest flit = " << _slowest_flit[c] << endl;
   }
+}
+
+string TrafficManager::_OverallStatsHeaderCSV() const
+{
+  ostringstream os;
+  os << "min_plat"
+     << ',' << "avg_plat"
+     << ',' << "max_plat"
+     << ',' << "min_frag"
+     << ',' << "avg_frag"
+     << ',' << "max_frag"
+     << ',' << "avg_acc"
+     << ',' << "min_acc"
+     << ',' << "hops";
+  return os.str();
 }
 
 string TrafficManager::_OverallClassStatsCSV(int c) const

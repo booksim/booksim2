@@ -64,6 +64,7 @@ protected:
 
   virtual bool _SingleSim( );
 
+  virtual string _OverallStatsHeaderCSV() const;
   virtual string _OverallClassStatsCSV(int c) const;
 
 public:

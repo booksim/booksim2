@@ -182,11 +182,20 @@ void WorkloadTrafficManager::_UpdateOverallStats()
   ++_runtime_samples;
 }
   
+string WorkloadTrafficManager::_OverallStatsHeaderCSV() const
+{
+  ostringstream os;
+  os << TrafficManager::_OverallStatsHeaderCSV()
+     << ',' << "runtime";
+  return os.str();
+}
+
 string WorkloadTrafficManager::_OverallClassStatsCSV(int c) const
 {
   double runtime = (double)_runtime_sum / (double)_runtime_samples;
   ostringstream os;
-  os << TrafficManager::_OverallClassStatsCSV(c) << ',' << runtime;
+  os << TrafficManager::_OverallClassStatsCSV(c)
+     << ',' << runtime;
   return os.str();
 }
 

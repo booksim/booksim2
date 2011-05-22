@@ -175,11 +175,20 @@ void BatchTrafficManager::_UpdateOverallStats()
   ++_overall_batch_time_samples;
 }
   
+string BatchTrafficManager::_OverallStatsHeaderCSV() const
+{
+  ostringstream os;
+  os << SyntheticTrafficManager::_OverallStatsHeaderCSV()
+     << ',' << "batch_time";
+  return os.str();
+}
+
 string BatchTrafficManager::_OverallClassStatsCSV(int c) const
 {
   double overall_batch_time = _overall_batch_time_sum/(double)_overall_batch_time_samples;
   ostringstream os;
-  os << SyntheticTrafficManager::_OverallClassStatsCSV(c) << ',' << overall_batch_time;
+  os << SyntheticTrafficManager::_OverallClassStatsCSV(c)
+     << ',' << overall_batch_time;
   return os.str();
 }
 
