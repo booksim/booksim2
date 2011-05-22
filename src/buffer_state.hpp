@@ -100,18 +100,33 @@ class BufferState : public Module {
   };
 
   class LimitedSharedBufferPolicy : public SharedBufferPolicy {
-  private:
-    bool _dynamic;
+  protected:
     int _max_held_slots;
   public:
     LimitedSharedBufferPolicy(Configuration const & config, 
 			      BufferState * parent,
 			      const string & name);
-    virtual void AllocVC(int vc = 0);
-    virtual void FreeVC(int vc = 0);
     virtual bool IsFullFor(int vc = 0) const;
   };
     
+  class DynamicLimitedSharedBufferPolicy : public LimitedSharedBufferPolicy {
+  public:
+    DynamicLimitedSharedBufferPolicy(Configuration const & config, 
+				     BufferState * parent,
+				     const string & name);
+    virtual void AllocVC(int vc = 0);
+    virtual void FreeVC(int vc = 0);
+  };
+  
+  class ShiftingDynamicLimitedSharedBufferPolicy : public DynamicLimitedSharedBufferPolicy {
+  public:
+    ShiftingDynamicLimitedSharedBufferPolicy(Configuration const & config, 
+					     BufferState * parent,
+					     const string & name);
+    virtual void AllocVC(int vc = 0);
+    virtual void FreeVC(int vc = 0);
+  };
+  
   bool _wait_for_tail_credit;
   bool _vc_busy_when_full;
   int  _size;
