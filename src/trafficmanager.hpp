@@ -258,6 +258,7 @@ public:
 
   bool Run( );
 
+  virtual void WriteStats( ostream & os = cout ) const ;
   virtual void DisplayStats( ostream & os = cout ) const ;
   virtual void DisplayOverallStats( ostream & os = cout ) const ;
   virtual void DisplayOverallStatsCSV( ostream & os = cout ) const ;

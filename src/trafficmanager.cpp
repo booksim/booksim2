@@ -1298,9 +1298,7 @@ bool TrafficManager::_SingleSim( )
       _Step( );
     
     cout << _sim_state << endl;
-    if(_stats_out)
-      *_stats_out << "%=================================" << endl;
-    
+
     DisplayStats();
     
     int lat_exc_class = -1;
@@ -1538,13 +1536,16 @@ bool TrafficManager::Run( )
     //the power script depend on it
     cout << "Time taken is " << _time << " cycles" <<endl; 
 
+    if(_stats_out) {
+      WriteStats(*_stats_out);
+    }
     _UpdateOverallStats();
   }
   
-  if(_print_csv_results)
+  DisplayOverallStats();
+  if(_print_csv_results) {
     DisplayOverallStatsCSV();
-  else
-    DisplayOverallStats();
+  }
   
   return true;
 }
@@ -1578,6 +1579,54 @@ void TrafficManager::_UpdateOverallStats() {
       _overall_max_accepted[c]->AddSample( max );
     }
     
+  }
+}
+
+void TrafficManager::WriteStats(ostream & os) const {
+  
+  os << "%=================================" << endl;
+
+  for(int c = 0; c < _classes; ++c) {
+    
+    if(_measure_stats[c] == 0) {
+      continue;
+    }
+    
+    //c+1 due to matlab array starting at 1
+    os << "lat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
+       << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
+       << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
+       << "pair_sent(" << c+1 << ",:) = [ ";
+    for(int i = 0; i < _nodes; ++i) {
+      for(int j = 0; j < _nodes; ++j) {
+	os << _pair_plat[c][i*_nodes+j]->NumSamples() << " ";
+      }
+    }
+    os << "];" << endl
+       << "pair_lat(" << c+1 << ",:) = [ ";
+    for(int i = 0; i < _nodes; ++i) {
+      for(int j = 0; j < _nodes; ++j) {
+	os << _pair_plat[c][i*_nodes+j]->Average( ) << " ";
+      }
+    }
+    os << "];" << endl
+       << "pair_lat(" << c+1 << ",:) = [ ";
+    for(int i = 0; i < _nodes; ++i) {
+      for(int j = 0; j < _nodes; ++j) {
+	os << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";
+      }
+    }
+    os << "];" << endl
+       << "sent(" << c+1 << ",:) = [ ";
+    for ( int d = 0; d < _nodes; ++d ) {
+      os << _sent_flits[c][d]->Average( ) << " ";
+    }
+    os << "];" << endl
+       << "accepted(" << c+1 << ",:) = [ ";
+    for ( int d = 0; d < _nodes; ++d ) {
+      os << _accepted_flits[c][d]->Average( ) << " ";
+    }
+    os << "];" << endl;
   }
 }
 
@@ -1615,48 +1664,7 @@ void TrafficManager::DisplayStats(ostream & os) const {
 	 << " (" << _measured_in_flight_flits[c].size() << " measured)"
 	 << endl;
     
-    //c+1 due to matlab array starting at 1
-    if(_stats_out) {
-      *_stats_out << "lat(" << c+1 << ") = " << _plat_stats[c]->Average()
-		  << ";" << endl
-		  << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c]
-		  << ";" << endl
-		  << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c]
-		  << ";" << endl
-		  << "pair_sent(" << c+1 << ",:) = [ ";
-      for(int i = 0; i < _nodes; ++i) {
-	for(int j = 0; j < _nodes; ++j) {
-	  *_stats_out << _pair_plat[c][i*_nodes+j]->NumSamples() << " ";
-	}
-      }
-      *_stats_out << "];" << endl
-		  << "pair_lat(" << c+1 << ",:) = [ ";
-      for(int i = 0; i < _nodes; ++i) {
-	for(int j = 0; j < _nodes; ++j) {
-	  *_stats_out << _pair_plat[c][i*_nodes+j]->Average( ) << " ";
-	}
-      }
-      *_stats_out << "];" << endl
-		  << "pair_lat(" << c+1 << ",:) = [ ";
-      for(int i = 0; i < _nodes; ++i) {
-	for(int j = 0; j < _nodes; ++j) {
-	  *_stats_out << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";
-	}
-      }
-      *_stats_out << "];" << endl
-		  << "sent(" << c+1 << ",:) = [ ";
-      for ( int d = 0; d < _nodes; ++d ) {
-	*_stats_out << _sent_flits[c][d]->Average( ) << " ";
-      }
-      *_stats_out << "];" << endl
-		  << "accepted(" << c+1 << ",:) = [ ";
-      for ( int d = 0; d < _nodes; ++d ) {
-	*_stats_out << _accepted_flits[c][d]->Average( ) << " ";
-      }
-      *_stats_out << "];" << endl;
-      *_stats_out << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
-    }
-  }    
+  }
 }
 
 void TrafficManager::DisplayOverallStats( ostream & os ) const {
