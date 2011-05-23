@@ -107,11 +107,6 @@ bool WorkloadTrafficManager::_SingleSim( )
       _Step();
       
       if((_time % _sample_period) == 0) {
-	
-	if(_stats_out)
-	  *_stats_out << "%=================================" << endl;
-	
-	cout << "### " << _time << " cycles ###" << endl;
 	DisplayStats();
       }
 
@@ -135,16 +130,7 @@ bool WorkloadTrafficManager::_SingleSim( )
     _Step();
     
     if((_time % _sample_period) == 0) {
-      
-      if(_stats_out)
-	*_stats_out << "%=================================" << endl;
-      
-      cout << "### " << _time << " cycles ###" << endl;
       DisplayStats();
-      if(_stats_out) {
-	WriteStats(*_stats_out);
-      }
-      
     }
 
   }

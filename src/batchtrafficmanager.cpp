@@ -155,9 +155,6 @@ bool BatchTrafficManager::_SingleSim( )
     cout << _sim_state << endl;
 
     DisplayStats();
-    if(_stats_out) {
-      WriteStats(*_stats_out);
-    }
         
     ++batch_index;
   }
