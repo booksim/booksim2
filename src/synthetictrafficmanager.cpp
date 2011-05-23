@@ -288,7 +288,7 @@ string SyntheticTrafficManager::_OverallClassStatsCSV(int c) const
 void SyntheticTrafficManager::_WriteClassStats(int c, ostream & os) const
 {
   TrafficManager::_WriteClassStats(c, os);
-  os << "pair_lat(" << c+1 << ",:) = [ ";
+  os << "pair_tlat(" << c+1 << ",:) = [ ";
   for(int i = 0; i < _nodes; ++i) {
     for(int j = 0; j < _nodes; ++j) {
       os << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";

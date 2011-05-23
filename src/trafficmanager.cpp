@@ -1056,6 +1056,9 @@ bool TrafficManager::Run( )
     //the power script depend on it
     cout << "Time taken is " << _time << " cycles" <<endl; 
 
+    if(_stats_out) {
+      WriteStats(*_stats_out);
+    }
     _UpdateOverallStats();
   }
   
@@ -1143,6 +1146,12 @@ void TrafficManager::_DisplayClassStats(int c, ostream & os) const {
   
   double min, avg, max;
   int min_pos, max_pos;
+  _ComputeStats(_sent_flits[c], &avg, &min, &max, &min_pos, &max_pos);
+  cout << "Minimum sent packets = " << min 
+       << " (at node " << min_pos << ")" << endl
+       << "Average sent packets = " << avg << endl
+       << "Maximum sent packets = " << max
+       << " (at node " << max_pos << ")" << endl;
   _ComputeStats(_accepted_flits[c], &avg, &min, &max, &min_pos, &max_pos);
   cout << "Minimum accepted packets = " << min 
        << " (at node " << min_pos << ")" << endl
@@ -1156,6 +1165,7 @@ void TrafficManager::_DisplayClassStats(int c, ostream & os) const {
 }
 
 void TrafficManager::WriteStats(ostream & os) const {
+  os << "%=================================" << endl;
   for(int c = 0; c < _classes; ++c) {
     if(_measure_stats[c]) {
       _WriteClassStats(c, os);
@@ -1175,7 +1185,7 @@ void TrafficManager::_WriteClassStats(int c, ostream & os) const {
     }
   }
   os << "];" << endl
-     << "pair_lat(" << c+1 << ",:) = [ ";
+     << "pair_plat(" << c+1 << ",:) = [ ";
   for(int i = 0; i < _nodes; ++i) {
     for(int j = 0; j < _nodes; ++j) {
       os << _pair_plat[c][i*_nodes+j]->Average( ) << " ";
@@ -1192,7 +1202,6 @@ void TrafficManager::_WriteClassStats(int c, ostream & os) const {
     os << _accepted_flits[c][d]->Average( ) << " ";
   }
   os << "];" << endl;
-  os << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
 }
 
 void TrafficManager::_DisplayOverallClassStats( int c, ostream & os ) const {

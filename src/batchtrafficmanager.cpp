@@ -154,9 +154,6 @@ bool BatchTrafficManager::_SingleSim( )
 
     cout << _sim_state << endl;
 
-    if(_stats_out)
-      *_stats_out << "%=================================" << endl;
-    
     DisplayStats();
     if(_stats_out) {
       WriteStats(*_stats_out);
