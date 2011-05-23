@@ -98,27 +98,23 @@ bool WorkloadTrafficManager::_SingleSim( )
 {
   _sim_state = warming_up;
   
-  int t = 0;
-
   if(_warmup_periods > 0) {
     
     cout << "Warming up..." << endl;
     
-    while(t < _warmup_periods * _sample_period) {
+    while(_time < _warmup_periods * _sample_period) {
       
       _Step();
       
-      if((t % _sample_period) == 0) {
+      if((_time % _sample_period) == 0) {
 	
 	if(_stats_out)
 	  *_stats_out << "%=================================" << endl;
 	
-	cout << "### " << t << " cycles ###" << endl;
+	cout << "### " << _time << " cycles ###" << endl;
 	DisplayStats();
       }
 
-      ++t;
-    
     }
 
     _ClearStats();
@@ -134,16 +130,16 @@ bool WorkloadTrafficManager::_SingleSim( )
     
   while(!_Completed() && 
 	((_max_samples < 0) || 
-	 (t < (_warmup_periods + _max_samples) * _sample_period))) {
+	 (_time < (_warmup_periods + _max_samples) * _sample_period))) {
     
     _Step();
     
-    if((t % _sample_period) == 0) {
+    if((_time % _sample_period) == 0) {
       
       if(_stats_out)
 	*_stats_out << "%=================================" << endl;
       
-      cout << "### " << t << " cycles ###" << endl;
+      cout << "### " << _time << " cycles ###" << endl;
       DisplayStats();
       if(_stats_out) {
 	WriteStats(*_stats_out);
@@ -151,12 +147,11 @@ bool WorkloadTrafficManager::_SingleSim( )
       
     }
 
-    ++t;
   }
 
-  cout << "Completed measurements after " << t << " cycles." << endl;
+  cout << "Completed measurements after " << _time << " cycles." << endl;
 
-  _runtime = t - _warmup_periods * _sample_period;
+  _runtime = _time - _warmup_periods * _sample_period;
 
   _sim_state = draining;
   _drain_time = _time;
