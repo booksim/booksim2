@@ -167,15 +167,8 @@ bool BatchTrafficManager::_SingleSim( )
 
     cout << _sim_state << endl;
 
-    if(_stats_out)
-      *_stats_out << "%=================================" << endl;
-    
     DisplayStats();
         
-    if(_stats_out) {
-      *_stats_out << "batch_time = " << _last_batch_time << ";" << endl;
-    }
-
     ++batch_index;
   }
   return 1;
@@ -192,6 +185,12 @@ string BatchTrafficManager::_OverallStatsCSV(int c) const
   os << TrafficManager::_OverallStatsCSV(c) << ',' << _overall_batch_time->Average();
   return os.str();
 }
+
+void BatchTrafficManager::WriteStats(ostream & os) const
+{
+  os << "batch_time = " << _last_batch_time << ";" << endl;
+  TrafficManager::WriteStats(os);
+}    
 
 void BatchTrafficManager::DisplayStats(ostream & os) const {
   os << "Batch duration = " << _last_batch_time << endl;
