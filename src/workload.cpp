@@ -328,7 +328,7 @@ void TraceWorkload::advanceTime()
     if(iter->time <= _time) {
       list<PacketInfo>::iterator source_iter = iter;
       ++iter;
-      _ready_packets.splice(_ready_packets.end(), _ready_packets, source_iter);
+      _ready_packets.splice(_ready_packets.end(), _waiting_packets, source_iter);
     } else {
       ++iter;
     }
@@ -400,7 +400,7 @@ void TraceWorkload::inject()
   } else if(time > _time) {
     list<PacketInfo>::iterator source_iter = _ready_iter;
     ++_ready_iter;
-    _waiting_packets.splice(_waiting_packets.end(), _waiting_packets, source_iter);
+    _waiting_packets.splice(_waiting_packets.end(), _ready_packets, source_iter);
   } else {
     ++_ready_iter;
   }
