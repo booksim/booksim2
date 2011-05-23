@@ -159,8 +159,9 @@ protected:
 
   vector<vector<Stats *> > _sent_flits;
   vector<vector<Stats *> > _accepted_flits;
-  vector<Stats *> _overall_accepted;
-  vector<Stats *> _overall_accepted_min;
+  vector<Stats *> _overall_min_accepted;
+  vector<Stats *> _overall_avg_accepted;
+  vector<Stats *> _overall_max_accepted;
   
   vector<int> _slowest_flit;
 
@@ -232,7 +233,7 @@ protected:
 
   virtual void _ClearStats( );
 
-  int  _ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const;
+  void _ComputeStats( const vector<Stats *> & stats, double *avg, double *min = NULL, double *max = NULL, int *min_pos = NULL, int *max_pos = NULL ) const;
 
   virtual bool _SingleSim( );
 
