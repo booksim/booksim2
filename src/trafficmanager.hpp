@@ -158,6 +158,9 @@ protected:
   vector<Stats *> _hop_stats;
 
   vector<vector<Stats *> > _sent_flits;
+  vector<Stats *> _overall_min_sent;
+  vector<Stats *> _overall_avg_sent;
+  vector<Stats *> _overall_max_sent;
   vector<vector<Stats *> > _accepted_flits;
   vector<Stats *> _overall_min_accepted;
   vector<Stats *> _overall_avg_accepted;
