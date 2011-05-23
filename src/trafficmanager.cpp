@@ -250,8 +250,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _hop_stats.resize(_classes);
   
   _sent_flits.resize(_classes);
+  _overall_min_sent.resize(_classes);
+  _overall_avg_sent.resize(_classes);
+  _overall_max_sent.resize(_classes);
+
   _accepted_flits.resize(_classes);
-  
   _overall_min_accepted.resize(_classes);
   _overall_avg_accepted.resize(_classes);
   _overall_max_accepted.resize(_classes);
@@ -328,6 +331,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
       _stats[tmp_name.str()] = _sent_flits[c][i];
       tmp_name.str("");    
       
+      tmp_name << "accepted_stat_" << c << "_" << i;
+      _accepted_flits[c][i] = new Stats( this, tmp_name.str( ) );
+      _stats[tmp_name.str()] = _accepted_flits[c][i];
+      tmp_name.str("");    
+
       for ( int j = 0; j < _nodes; ++j ) {
 	tmp_name << "pair_plat_stat_" << c << "_" << i << "_" << j;
 	_pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
@@ -341,12 +349,20 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
       }
     }
     
-    for ( int i = 0; i < _nodes; ++i ) {
-      tmp_name << "accepted_stat_" << c << "_" << i;
-      _accepted_flits[c][i] = new Stats( this, tmp_name.str( ) );
-      _stats[tmp_name.str()] = _accepted_flits[c][i];
-      tmp_name.str("");    
-    }
+    tmp_name << "overall_min_injection_" << c;
+    _overall_min_sent[c] = new Stats( this, tmp_name.str( ) );
+    _stats[tmp_name.str()] = _overall_min_sent[c];
+    tmp_name.str("");
+
+    tmp_name << "overall_avg_injection_" << c;
+    _overall_avg_sent[c] = new Stats( this, tmp_name.str( ) );
+    _stats[tmp_name.str()] = _overall_avg_sent[c];
+    tmp_name.str("");
+
+    tmp_name << "overall_max_injection_" << c;
+    _overall_max_sent[c] = new Stats( this, tmp_name.str( ) );
+    _stats[tmp_name.str()] = _overall_max_sent[c];
+    tmp_name.str("");
     
     tmp_name << "overall_min_acceptance_" << c;
     _overall_min_accepted[c] = new Stats( this, tmp_name.str( ) );
@@ -531,6 +547,11 @@ TrafficManager::~TrafficManager( )
     delete _overall_max_frag[c];
     
     delete _hop_stats[c];
+
+    delete _overall_min_sent[c];
+    delete _overall_avg_sent[c];
+    delete _overall_max_sent[c];
+
     delete _overall_min_accepted[c];
     delete _overall_avg_accepted[c];
     delete _overall_max_accepted[c];
@@ -538,17 +559,14 @@ TrafficManager::~TrafficManager( )
     delete _traffic_pattern[c];
     delete _injection_process[c];
 
-    for ( int source = 0; source < _nodes; ++source ) {
-      delete _sent_flits[c][source];
+    for ( int i = 0; i < _nodes; ++i ) {
+      delete _sent_flits[c][i];
+      delete _accepted_flits[c][i];
       
-      for ( int dest = 0; dest < _nodes; ++dest ) {
-	delete _pair_plat[c][source*_nodes+dest];
-	delete _pair_tlat[c][source*_nodes+dest];
+      for ( int j = 0; j < _nodes; ++j ) {
+	delete _pair_plat[c][i*_nodes+j];
+	delete _pair_tlat[c][i*_nodes+j];
       }
-    }
-    
-    for ( int dest = 0; dest < _nodes; ++dest ) {
-      delete _accepted_flits[c][dest];
     }
   }
   
@@ -1543,6 +1561,10 @@ void TrafficManager::_UpdateOverallStats() {
     _overall_max_frag[c]->AddSample( _frag_stats[c]->Max( ) );
     
     double min, avg, max;
+    _ComputeStats( _sent_flits[c], &avg, &min, &max );
+    _overall_min_sent[c]->AddSample( min );
+    _overall_avg_sent[c]->AddSample( avg );
+    _overall_max_sent[c]->AddSample( max );
     _ComputeStats( _accepted_flits[c], &avg, &min, &max );
     _overall_min_accepted[c]->AddSample( min );
     _overall_avg_accepted[c]->AddSample( avg );
@@ -1568,6 +1590,12 @@ void TrafficManager::DisplayStats(ostream & os) const {
     
     double min, avg, max;
     int min_pos, max_pos;
+    _ComputeStats(_sent_flits[c], &avg, &min, &max, &min_pos, &max_pos);
+    cout << "Minimum injected packets = " << min 
+	 << " (at node " << min_pos << ")" << endl
+	 << "Average injected packets = " << avg << endl
+	 << "Maximum injected packets = " << max
+	 << " (at node " << max_pos << ")" << endl;
     _ComputeStats(_accepted_flits[c], &avg, &min, &max, &min_pos, &max_pos);
     cout << "Minimum accepted packets = " << min 
 	 << " (at node " << min_pos << ")" << endl
@@ -1653,6 +1681,13 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
     os << "Overall maximum fragmentation = " << _overall_max_frag[c]->Average( )
        << " (" << _overall_max_frag[c]->NumSamples( ) << " samples)" << endl;
 
+    os << "Overall minimum sent rate = " << _overall_min_sent[c]->Average( )
+       << " (" << _overall_min_sent[c]->NumSamples( ) << " samples)" << endl;
+    os << "Overall average sent rate = " << _overall_avg_sent[c]->Average( )
+       << " (" << _overall_avg_sent[c]->NumSamples( ) << " samples)" << endl;
+    os << "Overall maximum sent rate = " << _overall_max_sent[c]->Average( )
+       << " (" << _overall_max_sent[c]->NumSamples( ) << " samples)" << endl;
+    
     os << "Overall minimum accepted rate = " << _overall_min_accepted[c]->Average( )
        << " (" << _overall_min_accepted[c]->NumSamples( ) << " samples)" << endl;
     os << "Overall average accepted rate = " << _overall_avg_accepted[c]->Average( )
@@ -1685,6 +1720,9 @@ string TrafficManager::_OverallStatsCSV(int c) const
      << ',' << _overall_min_frag[c]->Average( )
      << ',' << _overall_avg_frag[c]->Average( )
      << ',' << _overall_max_frag[c]->Average( )
+     << ',' << _overall_min_sent[c]->Average( )
+     << ',' << _overall_avg_sent[c]->Average( )
+     << ',' << _overall_max_sent[c]->Average( )
      << ',' << _overall_min_accepted[c]->Average( )
      << ',' << _overall_avg_accepted[c]->Average( )
      << ',' << _overall_max_accepted[c]->Average( )
