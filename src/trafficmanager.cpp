@@ -650,8 +650,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       rinfo->ttime = f->ttime;
       rinfo->record = f->record;
       rinfo->type = f->type;
-      _repliesDetails[f->id] = rinfo;
-      _repliesPending[dest].push_back(f->id);
+      _repliesPending[dest].push_back(rinfo);
     } else {
       if ( f->watch ) { 
 	*gWatchOut << GetSimTime() << " | "
@@ -712,10 +711,8 @@ int TrafficManager::_IssuePacket( int source, int cl )
     //check queue for waiting replies.
     //check to make sure it is on time yet
     if (!_repliesPending[source].empty()) {
-      int reply = _repliesPending[source].front();
-      if(_repliesDetails.find(result)->second->time <= _qtime[source][cl]) {
-	_repliesPending[source].pop_front();
-	result = reply;
+      if(_repliesPending[source].front()->time <= _qtime[source][cl]) {
+	result = -1;
       }
     } else {
       
@@ -723,7 +720,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
       if(_injection_process[cl]->test(source)) {
 	
 	//coin toss to determine request type.
-	result = (RandomFloat() < 0.5) ? -2 : -1;
+	result = (RandomFloat() < 0.5) ? 2 : 1;
 	
 	_requestsOutstanding[source]++;
       }
@@ -754,11 +751,11 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   bool watch = gWatchOut && ((_packets_to_watch.count(pid) > 0) ||
 			     (_transactions_to_watch.count(tid) > 0));
   if(_use_read_write[cl]){
-    if(stype < 0) {
-      if (stype ==-1) {
+    if(stype > 0) {
+      if (stype == 1) {
 	packet_type = Flit::READ_REQUEST;
 	size = _read_request_size[cl];
-      } else if (stype == -2) {
+      } else if (stype == 2) {
 	packet_type = Flit::WRITE_REQUEST;
 	size = _write_request_size[cl];
       } else {
@@ -775,10 +772,8 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       }
       ++_cur_tid;
       assert(_cur_tid);
-    } else  {
-      map<int, PacketReplyInfo*>::iterator iter = _repliesDetails.find(stype);
-      PacketReplyInfo* rinfo = iter->second;
-      
+    } else {
+      PacketReplyInfo* rinfo = _repliesPending[source].front();
       if (rinfo->type == Flit::READ_REQUEST) {//read reply
 	size = _read_reply_size[cl];
 	packet_type = Flit::READ_REPLY;
@@ -795,7 +790,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       time = rinfo->time;
       ttime = rinfo->ttime;
       record = rinfo->record;
-      _repliesDetails.erase(iter);
+      _repliesPending[source].pop_front();
       rinfo->Free();
     }
   } else {
@@ -1467,7 +1462,10 @@ bool TrafficManager::Run( )
     //remove any pending request from the previous simulations
     _requestsOutstanding.assign(_nodes, 0);
     for (int i=0;i<_nodes;i++) {
-      _repliesPending[i].clear();
+      while(!_repliesPending[i].empty()) {
+	_repliesPending[i].front()->Free();
+	_repliesPending[i].pop_front();
+      }
     }
 
     //reset queuetime for all sources

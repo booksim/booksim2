@@ -131,8 +131,7 @@ protected:
   // ============ request & replies ==========================
 
   vector<int> _sent_packets;
-  vector<list<int> > _repliesPending;
-  map<int, PacketReplyInfo*> _repliesDetails;
+  vector<list<PacketReplyInfo*> > _repliesPending;
   vector<int> _requestsOutstanding;
   bool _replies_inherit_priority;
 

@@ -73,10 +73,8 @@ int BatchTrafficManager::_IssuePacket( int source, int cl )
     //check queue for waiting replies.
     //check to make sure it is on time yet
     if(!_repliesPending[source].empty()) {
-      int reply = _repliesPending[source].front();
-      if(_repliesDetails.find(reply)->second->time <= _qtime[source][cl]) {
-	_repliesPending[source].pop_front();
-	result = reply;
+      if(_repliesPending[source].front()->time <= _qtime[source][cl]) {
+	result = -1;
       }
     } else {
       if((_sent_packets[source] < _batch_size) && 
@@ -84,7 +82,7 @@ int BatchTrafficManager::_IssuePacket( int source, int cl )
 	  (_requestsOutstanding[source] < _maxOutstanding))) {
 	
 	//coin toss to determine request type.
-	result = (RandomFloat() < 0.5) ? -2 : -1;
+	result = (RandomFloat() < 0.5) ? 2 : 1;
       
 	_requestsOutstanding[source]++;
       }
