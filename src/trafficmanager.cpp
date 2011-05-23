@@ -1196,10 +1196,6 @@ void TrafficManager::_ClearStats( )
 
 bool TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, double *min, double *max, int *min_pos, int *max_pos ) const 
 {
-  if(stats.empty() || (stats[0]->NumSamples() == 0)) {
-    return false;
-  }
-
   if(min_pos) {
     *min_pos = -1;
   }
@@ -1217,6 +1213,10 @@ bool TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, 
   *avg = 0.0;
 
   int const count = stats.size();
+
+  if((count == 0) || (stats[0]->NumSamples() == 0)) {
+    return false;
+  }
 
   for ( int i = 0; i < count; ++i ) {
     assert(stats[i]->NumSamples() > 0);
@@ -1315,7 +1315,7 @@ bool TrafficManager::_SingleSim( )
 
       double cur_latency = _plat_stats[c]->Average( );
 
-      double cur_accepted = 0.0;
+      double cur_accepted;
       _ComputeStats( _accepted_flits[c], &cur_accepted );
 
       double latency_change = fabs((cur_latency - prev_latency[c]) / cur_latency);
