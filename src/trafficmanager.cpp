@@ -1291,9 +1291,8 @@ bool TrafficManager::_SingleSim( )
 
       double cur_latency = _plat_stats[c]->Average( );
 
-      double avg;
-      _ComputeStats( _accepted_flits[c], &avg );
-      double cur_accepted = avg;
+      double cur_accepted;
+      _ComputeStats( _accepted_flits[c], &cur_accepted );
 
       double latency_change = fabs((cur_latency - prev_latency[c]) / cur_latency);
       prev_latency[c] = cur_latency;
