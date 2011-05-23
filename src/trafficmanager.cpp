@@ -920,7 +920,7 @@ void TrafficManager::_ClearStats( )
 
 }
 
-void TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, double *min, double *max, int *min_pos, int *max_pos ) const 
+bool TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, double *min, double *max, int *min_pos, int *max_pos ) const 
 {
   if(min_pos) {
     *min_pos = -1;
@@ -940,7 +940,12 @@ void TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, 
 
   int const count = stats.size();
 
+  if((count == 0) || (stats[0]->NumSamples() == 0)) {
+    return false;
+  }
+
   for ( int i = 0; i < count; ++i ) {
+    assert(stats[i]->NumSamples() > 0);
     double curr = stats[i]->Average( );
     if ( min  && ( curr < *min ) ) {
       *min = curr;
@@ -954,11 +959,12 @@ void TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, 
 	*max_pos = i;
       }
     }
-    
     *avg += curr;
   }
-
+  
   *avg /= (double)count;
+
+  return true;
 }
 
 void TrafficManager::_DisplayRemaining( ostream & os ) const 
@@ -1105,14 +1111,16 @@ void TrafficManager::_UpdateOverallStats() {
     }
 
     double min, avg, max;
-    _ComputeStats( _sent_flits[c], &avg, &min, &max );
-    _overall_min_sent[c]->AddSample( min );
-    _overall_avg_sent[c]->AddSample( avg );
-    _overall_max_sent[c]->AddSample( max );
-    _ComputeStats( _accepted_flits[c], &avg, &min, &max );
-    _overall_min_accepted[c]->AddSample( min );
-    _overall_avg_accepted[c]->AddSample( avg );
-    _overall_max_accepted[c]->AddSample( max );
+    if ( _ComputeStats( _sent_flits[c], &avg, &min, &max ) ) {
+      _overall_min_sent[c]->AddSample( min );
+      _overall_avg_sent[c]->AddSample( avg );
+      _overall_max_sent[c]->AddSample( max );
+    }
+    if ( _ComputeStats( _accepted_flits[c], &avg, &min, &max ) ) {
+      _overall_min_accepted[c]->AddSample( min );
+      _overall_avg_accepted[c]->AddSample( avg );
+      _overall_max_accepted[c]->AddSample( max );
+    }
 
   }
 }

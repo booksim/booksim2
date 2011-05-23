@@ -188,7 +188,7 @@ protected:
 
   virtual void _ClearStats( );
 
-  void _ComputeStats( const vector<Stats *> & stats, double *avg, double *min = NULL, double *max = NULL, int *min_pos = NULL, int *max_pos = NULL ) const;
+  bool _ComputeStats( const vector<Stats *> & stats, double *avg, double *min = NULL, double *max = NULL, int *min_pos = NULL, int *max_pos = NULL ) const;
 
   virtual bool _SingleSim( ) = 0;
 
