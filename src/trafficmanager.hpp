@@ -258,11 +258,6 @@ public:
   virtual void DisplayOverallStats( ostream & os = cout ) const ;
   virtual void DisplayOverallStatsCSV( ostream & os = cout ) const ;
 
-  const Stats * GetOverallLatency(int c = 0) { return _overall_avg_plat[c]; }
-  const Stats * GetAccepted(int c = 0) { return _overall_accepted[c]; }
-  const Stats * GetAcceptedMin(int c = 0) { return _overall_accepted_min[c]; }
-  const Stats * GetHops(int c = 0) { return _hop_stats[c]; }
-
   inline int getTime() { return _time;}
   Stats * getStats(const string & name) { return _stats[name]; }
 
