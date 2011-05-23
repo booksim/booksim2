@@ -1603,14 +1603,14 @@ void TrafficManager::WriteStats(ostream & os) const {
       }
     }
     os << "];" << endl
-       << "pair_lat(" << c+1 << ",:) = [ ";
+       << "pair_plat(" << c+1 << ",:) = [ ";
     for(int i = 0; i < _nodes; ++i) {
       for(int j = 0; j < _nodes; ++j) {
 	os << _pair_plat[c][i*_nodes+j]->Average( ) << " ";
       }
     }
     os << "];" << endl
-       << "pair_lat(" << c+1 << ",:) = [ ";
+       << "pair_tlat(" << c+1 << ",:) = [ ";
     for(int i = 0; i < _nodes; ++i) {
       for(int j = 0; j < _nodes; ++j) {
 	os << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";
