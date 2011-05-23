@@ -170,9 +170,8 @@ bool SteadyStateTrafficManager::_SingleSim( )
 
       double cur_latency = _plat_stats[c]->Average( );
 
-      double min, avg;
-      _ComputeStats( _accepted_flits[c], &avg, &min );
-      double cur_accepted = avg;
+      double cur_accepted;
+      _ComputeStats( _accepted_flits[c], &cur_accepted );
 
       double latency_change = fabs((cur_latency - prev_latency[c]) / cur_latency);
       prev_latency[c] = cur_latency;

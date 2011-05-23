@@ -118,9 +118,13 @@ protected:
   vector<Stats *> _overall_hop_stats;
 
   vector<vector<Stats *> > _sent_flits;
+  vector<Stats *> _overall_min_sent;
+  vector<Stats *> _overall_avg_sent;
+  vector<Stats *> _overall_max_sent;
   vector<vector<Stats *> > _accepted_flits;
-  vector<Stats *> _overall_accepted;
-  vector<Stats *> _overall_accepted_min;
+  vector<Stats *> _overall_min_accepted;
+  vector<Stats *> _overall_avg_accepted;
+  vector<Stats *> _overall_max_accepted;
   
   vector<int> _slowest_flit;
 
@@ -184,7 +188,7 @@ protected:
 
   virtual void _ClearStats( );
 
-  int  _ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const;
+  void _ComputeStats( const vector<Stats *> & stats, double *avg, double *min = NULL, double *max = NULL, int *min_pos = NULL, int *max_pos = NULL ) const;
 
   virtual bool _SingleSim( ) = 0;
 
@@ -216,11 +220,6 @@ public:
   void WriteStats(ostream & os = cout) const;
   void DisplayOverallStats(ostream & os = cout) const;
   void DisplayOverallStatsCSV(ostream & os = cout) const;
-
-  const Stats * GetOverallLatency(int c = 0) { return _overall_avg_plat[c]; }
-  const Stats * GetAccepted(int c = 0) { return _overall_accepted[c]; }
-  const Stats * GetAcceptedMin(int c = 0) { return _overall_accepted_min[c]; }
-  const Stats * GetHops(int c = 0) { return _hop_stats[c]; }
 
   inline int getTime() { return _time;}
   Stats * getStats(const string & name) { return _stats[name]; }
