@@ -325,6 +325,7 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
       if(drop_f==NULL){
 	if(_out_queue_credits.count(input) == 0) {
 	  _out_queue_credits.insert(make_pair(input, Credit::New()));
+	  _out_queue_credits.find(input)->second->id=666;
 	}
 	_out_queue_credits.find(input)->second->vc.push_back(f->vc);
       }
@@ -835,6 +836,7 @@ void IQRouter::_VCAllocUpdate( )
 	if(!f->head){
 	  if(_out_queue_credits.count(input) == 0) {
 	    _out_queue_credits.insert(make_pair(input, Credit::New()));
+	    _out_queue_credits.find(input)->second->id=888;
 	  }
 	  _out_queue_credits.find(input)->second->vc.push_back(f->vc);
 	}
@@ -1056,6 +1058,7 @@ void IQRouter::_SWHoldUpdate( )
       
       if(_out_queue_credits.count(input) == 0) {
 	_out_queue_credits.insert(make_pair(input, Credit::New()));
+	_out_queue_credits.find(input)->second->id=999;
       }
       _out_queue_credits.find(input)->second->vc.push_back(vc);
       if(cur_buf->Empty(vc)) {
@@ -1773,6 +1776,7 @@ void IQRouter::_SWAllocUpdate( )
 
       if(_out_queue_credits.count(input) == 0) {
 	_out_queue_credits.insert(make_pair(input, Credit::New()));
+	_out_queue_credits.find(input)->second->id = 999;
       }
       _out_queue_credits.find(input)->second->vc.push_back(vc);
       if(cur_buf->Empty(vc)) {

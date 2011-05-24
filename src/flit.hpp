@@ -107,6 +107,8 @@ public:
   static void FreeAll();
 
   static int Allocated(){return _all.size();};
+  static int OutStanding();
+  
 private:
 
   Flit();

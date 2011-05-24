@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 #include <stack>
+#include <set>
 
 class Credit {
 
@@ -49,7 +50,8 @@ public:
   static Credit * New();
   void Free();
   static void FreeAll();
-
+  static int OutStanding();
+  static Credit* Diff();
 private:
 
   static stack<Credit *> _all;

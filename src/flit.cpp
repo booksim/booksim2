@@ -127,3 +127,8 @@ void Flit::FreeAll() {
     _all.pop();
   }
 }
+
+
+int Flit::OutStanding(){
+  return _all.size()-_free.size();
+}

@@ -35,10 +35,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "booksim.hpp"
 #include "credit.hpp"
+#include <set>
 
 stack<Credit *> Credit::_all;
 stack<Credit *> Credit::_free;
-
 Credit::Credit()
 {
   Reset();
@@ -75,3 +75,38 @@ void Credit::FreeAll() {
     _all.pop();
   }
 }
+
+int Credit::OutStanding(){
+  return _all.size()-_free.size();
+}
+
+Credit*  Credit::Diff(){
+  set<Credit*> free_set;
+  set<Credit*> all_set;
+  while(!_free.empty()){
+    free_set.insert(_free.top());
+    _free.pop();
+  }
+  Credit* found = NULL;
+  while(!_all.empty()){
+    if(free_set.count(_all.top())){
+      found = _all.top();
+    }
+    all_set.insert(_all.top());
+    _all.pop();
+  }
+  
+  size_t limit = free_set.size();
+  for(size_t i = 0; i<limit; i++){
+    _free.push(*free_set.begin());
+    free_set.erase(free_set.begin());
+  }
+    limit = all_set.size();
+  for(size_t i = 0; i<limit; i++){
+    _all.push(*all_set.begin());
+    all_set.erase(all_set.begin());
+  }
+
+  return found;
+}
+
