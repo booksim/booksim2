@@ -118,13 +118,16 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
     }
   } else if(pattern_name == "hotspot") {
     if(params.empty()) {
-      cout << "Error: Missing parameter for hotspot traffic pattern: " << pattern << endl;
-      exit(-1);
+      params.push_back("-1");
     } 
     vector<string> hotspots_str = tokenize(params[0]);
     vector<int> hotspots(hotspots_str.size());
     for(size_t i = 0; i < hotspots.size(); ++i) {
-      hotspots[i] = atoi(hotspots_str[i].c_str());
+      int hotspot = atoi(hotspots_str[i].c_str());
+      if(hotspot < 0) {
+	hotspot = RandomInt(nodes - 1);
+      }
+      hotspots[i] = hotspot;
     }
     vector<int> rates(hotspots.size(), 1);
     if(params.size() >= 2) {
