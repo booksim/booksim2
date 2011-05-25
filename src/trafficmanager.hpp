@@ -102,6 +102,7 @@ protected:
 
   // ============ Statistics ============
 
+  vector<int> _generated_flit_count;
   vector<int> _injected_flit_count;
   vector<int> _ejected_flit_count;
 
@@ -120,6 +121,10 @@ protected:
   vector<Stats *> _hop_stats;
   vector<Stats *> _overall_hop_stats;
 
+  vector<vector<Stats *> > _offered_flits;
+  vector<Stats *> _overall_min_offered;
+  vector<Stats *> _overall_avg_offered;
+  vector<Stats *> _overall_max_offered;
   vector<vector<Stats *> > _sent_flits;
   vector<Stats *> _overall_min_sent;
   vector<Stats *> _overall_avg_sent;
