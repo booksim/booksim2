@@ -102,6 +102,9 @@ protected:
 
   // ============ Statistics ============
 
+  vector<int> _injected_flit_count;
+  vector<int> _ejected_flit_count;
+
   vector<Stats *> _plat_stats;     
   vector<Stats *> _overall_min_plat;  
   vector<Stats *> _overall_avg_plat;  
@@ -162,6 +165,7 @@ protected:
 
   ostream * _sent_packets_out;
   ostream * _active_packets_out;
+  ostream * _generated_flits_out;
   ostream * _injected_flits_out;
   ostream * _ejected_flits_out;
   ostream * _received_flits_out;

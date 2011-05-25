@@ -154,6 +154,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   // ============ Statistics ============ 
 
+  _injected_flit_count.resize(_classes*_subnets*_nodes);
+  _ejected_flit_count.resize(_classes*_subnets*_nodes);
+
   _plat_stats.resize(_classes);
   _overall_min_plat.resize(_classes);
   _overall_avg_plat.resize(_classes);
@@ -669,8 +672,11 @@ void TrafficManager::_Step( )
     }
   }
 
+  _injected_flit_count.assign(_classes*_subnets*_nodes, 0);
+  _ejected_flit_count.assign(_classes*_subnets*_nodes, 0);
+
   vector<map<int, Flit *> > flits(_subnets);
-  
+
   for ( int subnet = 0; subnet < _subnets; ++subnet ) {
     for ( int dest = 0; dest < _nodes; ++dest ) {
       Flit * const f = _net[subnet]->ReadFlit( dest );
@@ -683,12 +689,8 @@ void TrafficManager::_Step( )
 		     << " from VC " << f->vc
 		     << "." << endl;
 	}
+	++_ejected_flit_count[(f->cl*_subnets+subnet)*_nodes+dest];
 	flits[subnet].insert(make_pair(dest, f));
-      }
-      if( ( _sim_state == warming_up ) || ( _sim_state == running ) ) {
-	for(int c = 0; c < _classes; ++c) {
-	  _accepted_flits[c][dest]->AddSample( (f && (f->cl == c)) ? 1 : 0 );
-	}
       }
     }
     _net[subnet]->ReadInputs( );
@@ -698,12 +700,9 @@ void TrafficManager::_Step( )
     _Inject();
   }
 
-  vector<int> injected_flits(_classes*_subnets*_nodes);
-
   for(int source = 0; source < _nodes; ++source) {
     
     vector<Flit *> flits_sent_by_subnet(_subnets);
-    vector<int> flits_sent_by_class(_classes);
     
     int const last_class = _last_class[source];
 
@@ -800,28 +799,19 @@ void TrafficManager::_Step( )
 	  nf->vc = f->vc;
 	}
 	
-	++flits_sent_by_class[c];
-	if(_flow_out) ++injected_flits[(c*_subnets+subnet)*_nodes+source];
+	++_injected_flit_count[(c*_subnets+subnet)*_nodes+source];
 	
 	_net[f->subnetwork]->WriteFlit(f, source);
 
       }	
     }
-    if((_sim_state == warming_up) || (_sim_state == running)) {
-      for(int c = 0; c < _classes; ++c) {
-	_sent_flits[c][source]->AddSample(flits_sent_by_class[c]);
-      }
-    }
   }
-
-  vector<int> ejected_flits(_classes*_subnets*_nodes);
 
   for(int subnet = 0; subnet < _subnets; ++subnet) {
     for(int dest = 0; dest < _nodes; ++dest) {
       map<int, Flit *>::const_iterator iter = flits[subnet].find(dest);
       if(iter != flits[subnet].end()) {
 	Flit * const & f = iter->second;
-	if(_flow_out) ++ejected_flits[(f->cl*_subnets+subnet)*_nodes+dest];
 	f->atime = _time;
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
@@ -841,6 +831,21 @@ void TrafficManager::_Step( )
     _net[subnet]->WriteOutputs( );
   }
   
+  if( ( _sim_state == warming_up ) || ( _sim_state == running ) ) {
+    for(int c = 0; c < _classes; ++c) {
+      for(int n = 0; n < _nodes; ++n) {
+	int injected = 0;
+	int ejected = 0;
+	for(int s = 0; s < _subnets; ++s) {
+	  injected += _injected_flit_count[(c*_subnets+s)*_nodes+n];
+	  ejected += _ejected_flit_count[(c*_subnets+s)*_nodes+n];
+	}
+	_sent_flits[c][n]->AddSample(injected);
+	_accepted_flits[c][n]->AddSample(ejected);
+      }
+    }
+  }
+
   if(_flow_out) {
 
     vector<vector<int> > received_flits(_classes*_subnets*_routers);
@@ -860,11 +865,11 @@ void TrafficManager::_Step( )
 	}
       }
     }
-    if(_injected_flits_out) *_injected_flits_out << injected_flits << endl;
+    if(_injected_flits_out) *_injected_flits_out << _injected_flit_count << endl;
     if(_received_flits_out) *_received_flits_out << received_flits << endl;
     if(_stored_flits_out) *_stored_flits_out << stored_flits << endl;
     if(_sent_flits_out) *_sent_flits_out << sent_flits << endl;
-    if(_ejected_flits_out) *_ejected_flits_out << ejected_flits << endl;
+    if(_ejected_flits_out) *_ejected_flits_out << _ejected_flit_count << endl;
     if(_active_packets_out) *_active_packets_out << active_packets << endl;
   }
 
