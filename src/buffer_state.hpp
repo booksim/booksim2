@@ -88,7 +88,6 @@ class BufferState : public Module {
     vector<int> _private_buf_occupancy;
     int _shared_buf_size;
     int _shared_buf_occupancy;
-    int _active_vcs_hold_slot;
     vector<int> _reserved_slots;
     void ProcessFreeSlot(int vc = 0);
   public:
