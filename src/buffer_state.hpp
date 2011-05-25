@@ -152,6 +152,9 @@ public:
 
   void TakeBuffer( int vc = 0 );
 
+  inline bool IsFull() const {
+    return (_occupancy < _size);
+  }
   inline bool IsFullFor( int vc = 0 ) const {
     return _buffer_policy->IsFullFor(vc);
   }
