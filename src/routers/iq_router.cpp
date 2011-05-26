@@ -321,13 +321,13 @@ void IQRouter::_InputQueuing( )
       iter != _in_queue_flits.end();
       ++iter) {
 
-    int const & input = iter->first;
+    int const input = iter->first;
     assert((input >= 0) && (input < _inputs));
 
-    Flit * const & f = iter->second;
+    Flit * const f = iter->second;
     assert(f);
 
-    int const & vc = f->vc;
+    int const vc = f->vc;
     assert((vc >= 0) && (vc < _vcs));
 
     Buffer * const cur_buf = _buf[input];
@@ -394,15 +394,15 @@ void IQRouter::_InputQueuing( )
 
     pair<int, pair<Credit *, int> > const & item = _proc_credits.front();
 
-    int const & time = item.first;
+    int const time = item.first;
     if(GetSimTime() < time) {
       break;
     }
 
-    Credit * const & c = item.second.first;
+    Credit * const c = item.second.first;
     assert(c);
 
-    int const & output = item.second.second;
+    int const output = item.second.second;
     assert((output >= 0) && (output < _outputs));
     
     BufferState * const dest_buf = _next_buf[output];
@@ -424,15 +424,15 @@ void IQRouter::_RouteEvaluate( )
       iter != _route_vcs.end();
       ++iter) {
     
-    int const & time = iter->first;
+    int const time = iter->first;
     if(time >= 0) {
       break;
     }
     iter->first = GetSimTime() + _routing_delay - 1;
     
-    int const & input = iter->second.first;
+    int const input = iter->second.first;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = iter->second.second;
+    int const vc = iter->second.second;
     assert((vc >= 0) && (vc < _vcs));
 
     Buffer const * const cur_buf = _buf[input];
@@ -459,15 +459,15 @@ void IQRouter::_RouteUpdate( )
 
     pair<int, pair<int, int> > const & item = _route_vcs.front();
 
-    int const & time = item.first;
+    int const time = item.first;
     if((time < 0) || (GetSimTime() < time)) {
       break;
     }
     assert(GetSimTime() == time);
 
-    int const & input = item.second.first;
+    int const input = item.second.first;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = item.second.second;
+    int const vc = item.second.second;
     assert((vc >= 0) && (vc < _vcs));
     
     Buffer * const cur_buf = _buf[input];
@@ -512,14 +512,14 @@ void IQRouter::_VCAllocEvaluate( )
       iter != _vc_alloc_vcs.end();
       ++iter) {
 
-    int const & time = iter->first;
+    int const time = iter->first;
     if(time >= 0) {
       break;
     }
 
-    int const & input = iter->second.first.first;
+    int const input = iter->second.first.first;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = iter->second.first.second;
+    int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
 
     Buffer const * const cur_buf = _buf[input];
@@ -548,7 +548,7 @@ void IQRouter::_VCAllocEvaluate( )
 	iset != setlist.end();
 	++iset) {
 
-      int const & out_port = iset->output_port;
+      int const out_port = iset->output_port;
       assert((out_port >= 0) && (out_port < _outputs));
 
       BufferState const * const dest_buf = _next_buf[out_port];
@@ -556,7 +556,7 @@ void IQRouter::_VCAllocEvaluate( )
       for(int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc) {
 	assert((out_vc >= 0) && (out_vc < _vcs));
 
-	int const & in_priority = iset->pri;
+	int const in_priority = iset->pri;
 
 	// On the input input side, a VC might request several output VCs. 
 	// These VCs can be prioritized by the routing function, and this is 
@@ -603,19 +603,18 @@ void IQRouter::_VCAllocEvaluate( )
       iter != _vc_alloc_vcs.end();
       ++iter) {
 
-    int const & time = iter->first;
+    int const time = iter->first;
     if(time >= 0) {
       break;
     }
     iter->first = GetSimTime() + _vc_alloc_delay - 1;
 
-    int const & input = iter->second.first.first;
+    int const input = iter->second.first.first;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = iter->second.first.second;
+    int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
 
-    int & output_and_vc = iter->second.second;
-    output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
+    int output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
 
     if(output_and_vc >= 0) {
 
@@ -640,6 +639,8 @@ void IQRouter::_VCAllocEvaluate( )
 		   << " at input " << input
 		   << "." << endl;
       }
+
+      iter->second.second = output_and_vc;
     }
   }
 
@@ -651,13 +652,13 @@ void IQRouter::_VCAllocEvaluate( )
       iter != _vc_alloc_vcs.end();
       ++iter) {
     
-    int const & time = iter->first;
+    int const time = iter->first;
     assert(time >= 0);
     if(GetSimTime() < time) {
       break;
     }
     
-    int const & output_and_vc = iter->second.second;
+    int const output_and_vc = iter->second.second;
     
     if(output_and_vc >= 0) {
       
@@ -670,9 +671,9 @@ void IQRouter::_VCAllocEvaluate( )
       
       if(!dest_buf->IsAvailableFor(match_vc)) {
 	
-	int const & input = iter->second.first.first;
+	int const input = iter->second.first.first;
 	assert((input >= 0) && (input < _inputs));
-	int const & vc = iter->second.first.second;
+	int const vc = iter->second.first.second;
 	assert((vc >= 0) && (vc < _vcs));
 	
 	Buffer const * const cur_buf = _buf[input];
@@ -691,6 +692,7 @@ void IQRouter::_VCAllocEvaluate( )
 		     << " at output " << match_output
 		     << " is no longer available." << endl;
 	}
+
 	iter->second.second = -1;
       }
     }
@@ -703,15 +705,15 @@ void IQRouter::_VCAllocUpdate( )
 
     pair<int, pair<pair<int, int>, int> > const & item = _vc_alloc_vcs.front();
 
-    int const & time = item.first;
+    int const time = item.first;
     if((time < 0) || (GetSimTime() < time)) {
       break;
     }
     assert(GetSimTime() == time);
 
-    int const & input = item.second.first.first;
+    int const input = item.second.first.first;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = item.second.first.second;
+    int const vc = item.second.first.second;
     assert((vc >= 0) && (vc < _vcs));
     
     Buffer * const cur_buf = _buf[input];
@@ -730,7 +732,7 @@ void IQRouter::_VCAllocUpdate( )
 		 << ")." << endl;
     }
     
-    int const & output_and_vc = item.second.second;
+    int const output_and_vc = item.second.second;
     
     if(output_and_vc >= 0) {
       
@@ -782,15 +784,15 @@ void IQRouter::_SWHoldEvaluate( )
       iter != _sw_hold_vcs.end();
       ++iter) {
     
-    int const & time = iter->first;
+    int const time = iter->first;
     if(time >= 0) {
       break;
     }
     iter->first = GetSimTime();
     
-    int const & input = iter->second.first.first;
+    int const input = iter->second.first.first;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = iter->second.first.second;
+    int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
     
     Buffer const * const cur_buf = _buf[input];
@@ -851,15 +853,15 @@ void IQRouter::_SWHoldUpdate( )
     
     pair<int, pair<pair<int, int>, int> > const & item = _sw_hold_vcs.front();
     
-    int const & time = item.first;
+    int const time = item.first;
     if(time < 0) {
       break;
     }
     assert(GetSimTime() == time);
     
-    int const & input = item.second.first.first;
+    int const input = item.second.first.first;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = item.second.first.second;
+    int const vc = item.second.first.second;
     assert((vc >= 0) && (vc < _vcs));
     
     Buffer * const cur_buf = _buf[input];
@@ -880,7 +882,7 @@ void IQRouter::_SWHoldUpdate( )
     int const expanded_input = input * _input_speedup + vc % _input_speedup;
     assert(_switch_hold_vc[expanded_input] == vc);
     
-    int const & expanded_output = item.second.second;
+    int const expanded_output = item.second.second;
     
     if(expanded_output >= 0) {
       
@@ -1114,14 +1116,14 @@ void IQRouter::_SWAllocEvaluate( )
       iter != _sw_alloc_vcs.end();
       ++iter) {
 
-    int const & time = iter->first;
+    int const time = iter->first;
     if(time >= 0) {
       break;
     }
 
-    int const & input = iter->second.first.first;
+    int const input = iter->second.first.first;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = iter->second.first.second;
+    int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
     
     assert(_switch_hold_vc[input * _input_speedup + vc % _input_speedup] != vc);
@@ -1181,7 +1183,7 @@ void IQRouter::_SWAllocEvaluate( )
 	iset != setlist.end();
 	++iset) {
       
-      int const & dest_output = iset->output_port;
+      int const dest_output = iset->output_port;
       assert((dest_output >= 0) && (dest_output < _outputs));
       
       // for lower levels of speculation, ignore credit availability and always 
@@ -1249,15 +1251,15 @@ void IQRouter::_SWAllocEvaluate( )
       iter != _sw_alloc_vcs.end();
       ++iter) {
 
-    int const & time = iter->first;
+    int const time = iter->first;
     if(time >= 0) {
       break;
     }
     iter->first = GetSimTime() + _sw_alloc_delay - 1;
 
-    int const & input = iter->second.first.first;
+    int const input = iter->second.first.first;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = iter->second.first.second;
+    int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
 
     Buffer const * const cur_buf = _buf[input];
@@ -1344,13 +1346,13 @@ void IQRouter::_SWAllocEvaluate( )
       iter != _sw_alloc_vcs.end();
       ++iter) {
 
-    int const & time = iter->first;
+    int const time = iter->first;
     assert(time >= 0);
     if(GetSimTime() < time) {
       break;
     }
 
-    int const & expanded_output = iter->second.second;
+    int const expanded_output = iter->second.second;
     
     if(expanded_output >= 0) {
       
@@ -1359,10 +1361,10 @@ void IQRouter::_SWAllocEvaluate( )
       
       BufferState const * const dest_buf = _next_buf[output];
       
-      int const & input = iter->second.first.first;
+      int const input = iter->second.first.first;
       assert((input >= 0) && (input < _inputs));
       assert((input % _output_speedup) == (expanded_output % _output_speedup));
-      int const & vc = iter->second.first.second;
+      int const vc = iter->second.first.second;
       assert((vc >= 0) && (vc < _vcs));
       
       int const expanded_input = input * _input_speedup + vc % _input_speedup;
@@ -1509,15 +1511,15 @@ void IQRouter::_SWAllocUpdate( )
 
     pair<int, pair<pair<int, int>, int> > const & item = _sw_alloc_vcs.front();
 
-    int const & time = item.first;
+    int const time = item.first;
     if((time < 0) || (GetSimTime() < time)) {
       break;
     }
     assert(GetSimTime() == time);
 
-    int const & input = item.second.first.first;
+    int const input = item.second.first.first;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = item.second.first.second;
+    int const vc = item.second.first.second;
     assert((vc >= 0) && (vc < _vcs));
     
     Buffer * const cur_buf = _buf[input];
@@ -1536,7 +1538,7 @@ void IQRouter::_SWAllocUpdate( )
 		 << ")." << endl;
     }
     
-    int const & expanded_output = item.second.second;
+    int const expanded_output = item.second.second;
     
     if(expanded_output >= 0) {
       
@@ -1554,10 +1556,10 @@ void IQRouter::_SWAllocUpdate( )
 
       if(!_vc_allocator && (cur_buf->GetState(vc) == VC::vc_alloc)) {
 
-	int const & cl = f->cl;
+	int const cl = f->cl;
 	assert((cl >= 0) && (cl < _classes));
 
-	int const & vc_offset = _vc_rr_offset[output*_classes+cl];
+	int const vc_offset = _vc_rr_offset[output*_classes+cl];
 
 	match_vc = -1;
 	int match_prio = numeric_limits<int>::min();
@@ -1712,17 +1714,17 @@ void IQRouter::_SwitchEvaluate( )
       iter != _crossbar_flits.end();
       ++iter) {
     
-    int const & time = iter->first;
+    int const time = iter->first;
     if(time >= 0) {
       break;
     }
     iter->first = GetSimTime() + _crossbar_delay - 1;
 
-    Flit const * const & f = iter->second.first;
+    Flit const * const f = iter->second.first;
     assert(f);
 
-    int const & expanded_input = iter->second.second.first;
-    int const & expanded_output = iter->second.second.second;
+    int const expanded_input = iter->second.second.first;
+    int const expanded_output = iter->second.second.second;
       
     if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -1742,19 +1744,19 @@ void IQRouter::_SwitchUpdate( )
 
     pair<int, pair<Flit *, pair<int, int> > > const & item = _crossbar_flits.front();
 
-    int const & time = item.first;
+    int const time = item.first;
     if((time < 0) || (GetSimTime() < time)) {
       break;
     }
     assert(GetSimTime() == time);
 
-    Flit * const & f = item.second.first;
+    Flit * const f = item.second.first;
     assert(f);
 
-    int const & expanded_input = item.second.second.first;
+    int const expanded_input = item.second.second.first;
     int const input = expanded_input / _input_speedup;
     assert((input >= 0) && (input < _inputs));
-    int const & expanded_output = item.second.second.second;
+    int const expanded_output = item.second.second.second;
     int const output = expanded_output / _output_speedup;
     assert((output >= 0) && (output < _outputs));
 
@@ -1792,10 +1794,10 @@ void IQRouter::_OutputQueuing( )
       iter != _out_queue_credits.end();
       ++iter) {
 
-    int const & input = iter->first;
+    int const input = iter->first;
     assert((input >= 0) && (input < _inputs));
 
-    Credit * const & c = iter->second;
+    Credit * const c = iter->second;
     assert(c);
     assert(!c->vc.empty());
 
