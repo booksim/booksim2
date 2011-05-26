@@ -53,8 +53,7 @@ BatchTrafficManager::BatchTrafficManager( const Configuration &config,
 
   _batch_count = config.GetInt( "batch_count" );
 
-  _overall_batch_time_sum = 0.0;
-  _overall_batch_time_samples = 0;
+  _overall_batch_time = 0.0;
   string sent_packets_out_file = config.GetStr( "sent_packets_out" );
   if(sent_packets_out_file == "") {
     _sent_packets_out = NULL;
@@ -172,9 +171,8 @@ bool BatchTrafficManager::_SingleSim( )
 void BatchTrafficManager::_UpdateOverallStats()
 {
   SyntheticTrafficManager::_UpdateOverallStats();
-  double batch_time = (double)_batch_time_sum/(double)_batch_time_samples;
-  _overall_batch_time_sum += batch_time;
-  ++_overall_batch_time_samples;
+  assert(_batch_time_samples > 0);
+  _overall_batch_time += (double)_batch_time_sum/(double)_batch_time_samples;
 }
   
 string BatchTrafficManager::_OverallStatsHeaderCSV() const
@@ -187,10 +185,9 @@ string BatchTrafficManager::_OverallStatsHeaderCSV() const
 
 string BatchTrafficManager::_OverallClassStatsCSV(int c) const
 {
-  double overall_batch_time = _overall_batch_time_sum/(double)_overall_batch_time_samples;
   ostringstream os;
   os << SyntheticTrafficManager::_OverallClassStatsCSV(c)
-     << ',' << overall_batch_time;
+     << ',' << _overall_batch_time/(double)_total_sims;
   return os.str();
 }
 
@@ -212,7 +209,6 @@ void BatchTrafficManager::_WriteClassStats(int c, ostream & os) const
 void BatchTrafficManager::_DisplayOverallClassStats(int c, ostream & os) const
 {
   SyntheticTrafficManager::_DisplayOverallClassStats(c, os);
-  double overall_batch_time = _overall_batch_time_sum/(double)_overall_batch_time_samples;
-  os << "Overall average batch duration = " << overall_batch_time
-     << " (" << _overall_batch_time_samples << " samples)" << endl;
+  os << "Overall average batch duration = " << _overall_batch_time/(double)_total_sims
+     << " (" << _total_sims << " samples)" << endl;
 }

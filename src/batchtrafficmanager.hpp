@@ -49,8 +49,7 @@ protected:
 
   int _batch_time_sum;
   int _batch_time_samples;
-  double _overall_batch_time_sum;
-  int _overall_batch_time_samples;
+  double _overall_batch_time;
 
   ostream * _sent_packets_out;
 

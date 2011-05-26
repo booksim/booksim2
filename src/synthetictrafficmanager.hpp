@@ -53,9 +53,9 @@ protected:
   vector<vector<bool> > _qdrained;
 
   vector<Stats *> _tlat_stats;     
-  vector<Stats *> _overall_min_tlat;  
-  vector<Stats *> _overall_avg_tlat;  
-  vector<Stats *> _overall_max_tlat;  
+  vector<double> _overall_min_tlat;  
+  vector<double> _overall_avg_tlat;  
+  vector<double> _overall_max_tlat;  
 
   vector<vector<Stats *> > _pair_tlat;
 

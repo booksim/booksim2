@@ -80,9 +80,9 @@ SyntheticTrafficManager::SyntheticTrafficManager( const Configuration &config, c
   // ============ Statistics ============ 
 
   _tlat_stats.resize(_classes);
-  _overall_min_tlat.resize(_classes);
-  _overall_avg_tlat.resize(_classes);
-  _overall_max_tlat.resize(_classes);
+  _overall_min_tlat.resize(_classes, 0.0);
+  _overall_avg_tlat.resize(_classes, 0.0);
+  _overall_max_tlat.resize(_classes, 0.0);
 
   _pair_tlat.resize(_classes);
 
@@ -93,19 +93,6 @@ SyntheticTrafficManager::SyntheticTrafficManager( const Configuration &config, c
     _tlat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _tlat_stats[c];
     tmp_name.str("");
-
-    tmp_name << "overall_min_tlat_stat_" << c;
-    _overall_min_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_min_tlat[c];
-    tmp_name.str("");  
-    tmp_name << "overall_avg_tlat_stat_" << c;
-    _overall_avg_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_avg_tlat[c];
-    tmp_name.str("");  
-    tmp_name << "overall_max_tlat_stat_" << c;
-    _overall_max_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_max_tlat[c];
-    tmp_name.str("");  
 
     _pair_tlat[c].resize(_nodes*_nodes);
     for ( int i = 0; i < _nodes; ++i ) {
@@ -124,9 +111,6 @@ SyntheticTrafficManager::~SyntheticTrafficManager( )
   for ( int c = 0; c < _classes; ++c ) {
     delete _traffic_pattern[c];
     delete _tlat_stats[c];
-    delete _overall_min_tlat[c];
-    delete _overall_avg_tlat[c];
-    delete _overall_max_tlat[c];
     for ( int source = 0; source < _nodes; ++source ) {
       for ( int dest = 0; dest < _nodes; ++dest ) {
 	delete _pair_tlat[c][source*_nodes+dest];
@@ -253,11 +237,10 @@ void SyntheticTrafficManager::_UpdateOverallStats( )
     if(_measure_stats[c] == 0) {
       continue;
     }
-    if(_tlat_stats[c]->NumSamples() > 0) {
-      _overall_min_tlat[c]->AddSample( _tlat_stats[c]->Min( ) );
-      _overall_avg_tlat[c]->AddSample( _tlat_stats[c]->Average( ) );
-      _overall_max_tlat[c]->AddSample( _tlat_stats[c]->Max( ) );
-    }
+    assert(_tlat_stats[c]->NumSamples() > 0);
+    _overall_min_tlat[c] += _tlat_stats[c]->Min();
+    _overall_avg_tlat[c] += _tlat_stats[c]->Average();
+    _overall_max_tlat[c] += _tlat_stats[c]->Max();
   }
 }
 
@@ -279,9 +262,9 @@ string SyntheticTrafficManager::_OverallClassStatsCSV(int c) const
   os << _traffic[c] << ','
      << _packet_size[c] << ','
      << TrafficManager::_OverallClassStatsCSV(c)
-     << ',' << _overall_min_tlat[c]->Average( )
-     << ',' << _overall_avg_tlat[c]->Average( )
-     << ',' << _overall_max_tlat[c]->Average( );
+     << ',' << _overall_min_tlat[c] / (double)_total_sims
+     << ',' << _overall_avg_tlat[c] / (double)_total_sims
+     << ',' << _overall_max_tlat[c] / (double)_total_sims;
   return os.str();
 }
 
@@ -300,14 +283,10 @@ void SyntheticTrafficManager::_WriteClassStats(int c, ostream & os) const
 void SyntheticTrafficManager::_DisplayOverallClassStats(int c, ostream & os) const
 {
   TrafficManager::_DisplayOverallClassStats(c, os);
-  if(_overall_min_tlat[c]->NumSamples() > 0) {
-    os << "Overall minimum transaction latency = " << _overall_min_tlat[c]->Average( )
-       << " (" << _overall_min_tlat[c]->NumSamples( ) << " samples)" << endl;
-    assert(_overall_avg_tlat[c]->NumSamples() > 0);
-    os << "Overall average transaction latency = " << _overall_avg_tlat[c]->Average( )
-       << " (" << _overall_avg_tlat[c]->NumSamples( ) << " samples)" << endl;
-    assert(_overall_max_tlat[c]->NumSamples() > 0);
-    os << "Overall maximum transaction latency = " << _overall_max_tlat[c]->Average( )
-       << " (" << _overall_max_tlat[c]->NumSamples( ) << " samples)" << endl;
-  }
+  os << "Overall minimum transaction latency = " << _overall_min_tlat[c] / (double)_total_sims
+     << " (" << _total_sims << " samples)" << endl
+     << "Overall average transaction latency = " << _overall_avg_tlat[c] / (double)_total_sims
+     << " (" << _total_sims << " samples)" << endl
+     << "Overall maximum transaction latency = " << _overall_max_tlat[c] / (double)_total_sims
+     << " (" << _total_sims << " samples)" << endl;
 }

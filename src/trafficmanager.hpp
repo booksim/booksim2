@@ -107,32 +107,32 @@ protected:
   vector<int> _ejected_flit_count;
 
   vector<Stats *> _plat_stats;     
-  vector<Stats *> _overall_min_plat;  
-  vector<Stats *> _overall_avg_plat;  
-  vector<Stats *> _overall_max_plat;  
+  vector<double> _overall_min_plat;  
+  vector<double> _overall_avg_plat;  
+  vector<double> _overall_max_plat;  
 
   vector<Stats *> _frag_stats;
-  vector<Stats *> _overall_min_frag;
-  vector<Stats *> _overall_avg_frag;
-  vector<Stats *> _overall_max_frag;
+  vector<double> _overall_min_frag;
+  vector<double> _overall_avg_frag;
+  vector<double> _overall_max_frag;
 
   vector<vector<Stats *> > _pair_plat;
 
   vector<Stats *> _hop_stats;
-  vector<Stats *> _overall_hop_stats;
+  vector<double> _overall_hop_stats;
 
   vector<vector<Stats *> > _offered_flits;
-  vector<Stats *> _overall_min_offered;
-  vector<Stats *> _overall_avg_offered;
-  vector<Stats *> _overall_max_offered;
+  vector<double> _overall_min_offered;
+  vector<double> _overall_avg_offered;
+  vector<double> _overall_max_offered;
   vector<vector<Stats *> > _sent_flits;
-  vector<Stats *> _overall_min_sent;
-  vector<Stats *> _overall_avg_sent;
-  vector<Stats *> _overall_max_sent;
+  vector<double> _overall_min_sent;
+  vector<double> _overall_avg_sent;
+  vector<double> _overall_max_sent;
   vector<vector<Stats *> > _accepted_flits;
-  vector<Stats *> _overall_min_accepted;
-  vector<Stats *> _overall_avg_accepted;
-  vector<Stats *> _overall_max_accepted;
+  vector<double> _overall_min_accepted;
+  vector<double> _overall_avg_accepted;
+  vector<double> _overall_max_accepted;
   
   vector<int> _slowest_flit;
 
