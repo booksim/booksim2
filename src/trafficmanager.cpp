@@ -291,12 +291,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     
     for ( int i = 0; i < _nodes; ++i ) {
       tmp_name << "sent_stat_" << c << "_" << i;
-      _sent_flits[c][i] = new Stats( this, tmp_name.str( ) );
+      _sent_flits[c][i] = new Stats( this, tmp_name.str( ), 1.0, 2 );
       _stats[tmp_name.str()] = _sent_flits[c][i];
       tmp_name.str("");    
       
       tmp_name << "accepted_stat_" << c << "_" << i;
-      _accepted_flits[c][i] = new Stats( this, tmp_name.str( ), 1.0 );
+      _accepted_flits[c][i] = new Stats( this, tmp_name.str( ), 1.0, 2 );
       _stats[tmp_name.str()] = _accepted_flits[c][i];
       tmp_name.str("");    
 
