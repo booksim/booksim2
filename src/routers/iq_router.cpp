@@ -1271,8 +1271,7 @@ void IQRouter::_SWAllocEvaluate( )
     
     int const expanded_input = input * _input_speedup + vc % _input_speedup;
 
-    int & expanded_output = iter->second.second;
-    expanded_output = _sw_allocator->OutputAssigned(expanded_input);
+    int expanded_output = _sw_allocator->OutputAssigned(expanded_input);
 
     if(expanded_output >= 0) {
       assert((expanded_output % _output_speedup) == (input % _output_speedup));
@@ -1287,8 +1286,7 @@ void IQRouter::_SWAllocEvaluate( )
 		     << "." << endl;
 	}
 	_sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
-      } else {
-	expanded_output = -1;
+	iter->second.second = expanded_output;
       }
     } else if(_spec_sw_allocator) {
       expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
@@ -1305,7 +1303,6 @@ void IQRouter::_SWAllocEvaluate( )
 		       << "." << (expanded_output % _output_speedup)
 		       << " has non-speculative requests." << endl;
 	  }
-	  expanded_output = -1;
 	} else if(!_spec_mask_by_reqs &&
 		  (_sw_allocator->InputAssigned(expanded_output) >= 0)) {
 	  if(f->watch) {
@@ -1317,7 +1314,6 @@ void IQRouter::_SWAllocEvaluate( )
 		       << "." << (expanded_output % _output_speedup)
 		       << " has a non-speculative grant." << endl;
 	  }
-	  expanded_output = -1;
 	} else if(_spec_sw_allocator->ReadRequest(expanded_input, 
 						  expanded_output) == vc) {
 	  if(f->watch) {
@@ -1330,8 +1326,7 @@ void IQRouter::_SWAllocEvaluate( )
 		       << "." << endl;
 	  }
 	  _sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
-	} else {
-	  expanded_output = -1;
+	  iter->second.second = expanded_output;
 	}
       }
     }
