@@ -117,11 +117,6 @@ void Stats::AddSample( double val )
   _hist[b]++;
 }
 
-void Stats::AddSample( int val )
-{
-  AddSample( (double)val );
-}
-
 void Stats::Display( ostream & os ) const
 {
   os << *this << endl;
