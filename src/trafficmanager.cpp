@@ -296,7 +296,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
       tmp_name.str("");    
       
       tmp_name << "accepted_stat_" << c << "_" << i;
-      _accepted_flits[c][i] = new Stats( this, tmp_name.str( ) );
+      _accepted_flits[c][i] = new Stats( this, tmp_name.str( ), 1.0 );
       _stats[tmp_name.str()] = _accepted_flits[c][i];
       tmp_name.str("");    
 
@@ -840,20 +840,22 @@ void TrafficManager::_Step( )
     cout << "WARNING: Possible network deadlock.\n";
   }
 
-  for ( int source = 0; source < _nodes; ++source ) {
-    for ( int subnet = 0; subnet < _subnets; ++subnet ) {
+  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
+    for ( int source = 0; source < _nodes; ++source ) {
       Credit * const c = _net[subnet]->ReadCredit( source );
       if ( c ) {
 	_buf_states[source][subnet]->ProcessCredit(c);
 	c->Free();
       }
     }
+    _net[subnet]->ReadInputs( );
   }
 
   vector<map<int, Flit *> > flits(_subnets);
   
-  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
-    for ( int dest = 0; dest < _nodes; ++dest ) {
+  for ( int dest = 0; dest < _nodes; ++dest ) {
+    vector<int> flits_accepted_by_class(_classes);
+    for ( int subnet = 0; subnet < _subnets; ++subnet ) {
       Flit * const f = _net[subnet]->ReadFlit( dest );
       if ( f ) {
 	if(f->watch) {
@@ -865,14 +867,14 @@ void TrafficManager::_Step( )
 		     << "." << endl;
 	}
 	flits[subnet].insert(make_pair(dest, f));
-      }
-      if( ( _sim_state == warming_up ) || ( _sim_state == running ) ) {
-	for(int c = 0; c < _classes; ++c) {
-	  _accepted_flits[c][dest]->AddSample( (f && (f->cl == c)) ? 1 : 0 );
-	}
+	++flits_accepted_by_class[f->cl];
       }
     }
-    _net[subnet]->ReadInputs( );
+    if( ( _sim_state == warming_up ) || ( _sim_state == running ) ) {
+      for(int c = 0; c < _classes; ++c) {
+	_accepted_flits[c][dest]->AddSample(flits_accepted_by_class[c]);
+      }
+    }
   }
   
   if ( !_empty_network ) {
