@@ -51,6 +51,8 @@ protected:
   Stats * _batch_time;
   Stats * _overall_batch_time;
 
+  ostream * _sent_packets_out;
+
   virtual void _RetireFlit( Flit *f, int dest );
 
   virtual int _IssuePacket( int source, int cl );
