@@ -616,6 +616,8 @@ void IQRouter::_VCAllocEvaluate( )
     int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
 
+    assert(iter->second.second < 0);
+
     int const output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
 
     if(output_and_vc >= 0) {
@@ -1267,6 +1269,8 @@ void IQRouter::_SWAllocEvaluate( )
     assert((input >= 0) && (input < _inputs));
     int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
+
+    assert(iter->second.second < 0);
 
     Buffer const * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
