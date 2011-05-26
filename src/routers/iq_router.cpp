@@ -521,6 +521,8 @@ void IQRouter::_VCAllocEvaluate( )
     int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
 
+    assert(iter->second.second < 0);
+
     Buffer const * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
     assert(cur_buf->GetState(vc) == VC::vc_alloc);
@@ -794,6 +796,8 @@ void IQRouter::_SWHoldEvaluate( )
     int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
     
+    assert(iter->second.second < 0);
+
     Buffer const * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
     assert(cur_buf->GetState(vc) == VC::active);
@@ -1125,6 +1129,8 @@ void IQRouter::_SWAllocEvaluate( )
     int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
     
+    assert(iter->second.second < 0);
+
     assert(_switch_hold_vc[input * _input_speedup + vc % _input_speedup] != vc);
 
     Buffer const * const cur_buf = _buf[input];
