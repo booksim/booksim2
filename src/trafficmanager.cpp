@@ -1198,30 +1198,33 @@ bool TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, 
   }
 
   if(min) {
-    *min = numeric_limits<double>::max();
+    *min = numeric_limits<double>::quiet_NaN();
   }
   if(max) {
-    *max = numeric_limits<double>::min();
+    *max = numeric_limits<double>::quiet_NaN();
   }
-
-  *avg = 0.0;
 
   int const count = stats.size();
 
   if((count == 0) || (stats[0]->NumSamples() == 0)) {
+    *avg = numeric_limits<double>::quiet_NaN();
     return false;
   }
+
+  *avg = 0.0;
 
   for ( int i = 0; i < count; ++i ) {
     assert(stats[i]->NumSamples() > 0);
     double curr = stats[i]->Average( );
-    if ( min  && ( curr < *min ) ) {
+    // NOTE: the negation ensures that NaN values are handled correctly!
+    if ( min  && !( curr >= *min ) ) {
       *min = curr;
       if ( min_pos ) {
 	*min_pos = i;
       }
     }
-    if ( max && ( curr > *max ) ) {
+    // NOTE: the negation ensures that NaN values are handled correctly!
+    if ( max && !( curr <= *max ) ) {
       *max = curr;
       if ( max_pos ) {
 	*max_pos = i;
