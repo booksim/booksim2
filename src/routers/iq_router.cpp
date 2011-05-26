@@ -165,10 +165,13 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _bufferMonitor = new BufferMonitor(inputs, classes);
   _switchMonitor = new SwitchMonitor(inputs, outputs, classes);
 
+#ifdef TRACK_FLOWS
   for(int c = 0; c < _classes; ++c) {
     _stored_flits[c].resize(_inputs, 0);
     _active_packets[c].resize(_inputs, 0);
   }
+#endif
+
 }
 
 IQRouter::~IQRouter( )
@@ -282,7 +285,11 @@ bool IQRouter::_ReceiveFlits( )
   for(int input = 0; input < _inputs; ++input) { 
     Flit * const f = _input_channels[input]->Receive();
     if(f) {
+
+#ifdef TRACK_FLOWS
       ++_received_flits[f->cl][input];
+#endif
+
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "Received flit " << f->id
@@ -347,8 +354,12 @@ void IQRouter::_InputQueuing( )
       *gWatchOut << ")." << endl;
     }
     cur_buf->AddFlit(vc, f);
+
+#ifdef TRACK_FLOWS
     ++_stored_flits[f->cl][input];
     if(f->head) ++_active_packets[f->cl][input];
+#endif
+
     _bufferMonitor->write(input, f) ;
 
     if(cur_buf->GetState(vc) == VC::idle) {
@@ -914,8 +925,12 @@ void IQRouter::_SWHoldUpdate( )
       }
       
       cur_buf->RemoveFlit(vc);
+
+#ifdef TRACK_FLOWS
       --_stored_flits[f->cl][input];
       if(f->tail) --_active_packets[f->cl][input];
+#endif
+
       _bufferMonitor->read(input, f) ;
       
       f->hops++;
@@ -1630,8 +1645,12 @@ void IQRouter::_SWAllocUpdate( )
       }
 
       cur_buf->RemoveFlit(vc);
+
+#ifdef TRACK_FLOWS
       --_stored_flits[f->cl][input];
       if(f->tail) --_active_packets[f->cl][input];
+#endif
+
       _bufferMonitor->read(input, f) ;
 
       f->hops++;
@@ -1822,7 +1841,11 @@ void IQRouter::_SendFlits( )
       Flit * const f = _output_buffer[output].front( );
       assert(f);
       _output_buffer[output].pop( );
+
+#ifdef TRACK_FLOWS
       ++_sent_flits[f->cl][output];
+#endif
+
       if(f->watch)
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		    << "Sending flit " << f->id

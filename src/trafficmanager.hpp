@@ -166,8 +166,7 @@ protected:
   //flits to watch
   ostream * _stats_out;
 
-  bool _flow_out;
-
+#ifdef TRACK_FLOWS
   ostream * _active_packets_out;
   ostream * _generated_flits_out;
   ostream * _injected_flits_out;
@@ -175,6 +174,7 @@ protected:
   ostream * _received_flits_out;
   ostream * _sent_flits_out;
   ostream * _stored_flits_out;
+#endif
 
 
   // ============ Internal methods ============ 

@@ -62,7 +62,9 @@ public:
   int    NumSamples( ) const;
 
   void AddSample( double val );
-  void AddSample( int val );
+  inline void AddSample( int val ) {
+    AddSample( (double)val );
+  }
 
   int GetBin(int b){ return _hist[b];}
 

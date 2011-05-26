@@ -66,6 +66,7 @@ TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
   _internal_speedup = config.GetFloat( "internal_speedup" );
   _classes          = config.GetInt( "classes" );
 
+#ifdef TRACK_FLOWS
   _received_flits.resize(_classes);
   for(int c = 0; c < _classes; ++c)
     _received_flits[c].resize(_inputs);
@@ -74,6 +75,8 @@ TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
   for(int c = 0; c < _classes; ++c)
     _sent_flits[c].resize(_outputs);
   _active_packets.resize(_classes);
+#endif
+
 }
 
 void Router::AddInputChannel( FlitChannel *channel, CreditChannel *backchannel )

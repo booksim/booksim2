@@ -47,10 +47,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Stats::Stats( Module *parent, const string &name,
 	      double bin_size, int num_bins ) :
-  Module( parent, name ),
-   _num_samples(0), _sample_sum(0.0), _sample_squared_sum(0.0), _min(numeric_limits<double>::max()), _max(-numeric_limits<double>::max()), _num_bins( num_bins ), _bin_size( bin_size ), _hist(_num_bins, 0)
+  Module( parent, name ), _num_bins( num_bins ), _bin_size( bin_size )
 {
-
+  Clear();
 }
 
 void Stats::Clear( )
@@ -61,8 +60,8 @@ void Stats::Clear( )
 
   _hist.assign(_num_bins, 0);
 
-  _min = numeric_limits<double>::max();
-  _max = -numeric_limits<double>::max();
+  _min = numeric_limits<double>::quiet_NaN();
+  _max = -numeric_limits<double>::quiet_NaN();
   
   //  _reset = true;
 }
@@ -104,25 +103,18 @@ int Stats::NumSamples( ) const
 
 void Stats::AddSample( double val )
 {
-  int b;
-
-  _num_samples++;
+  ++_num_samples;
   _sample_sum += val;
 
-
-  _max = (val > _max)? val : _max;
-  _min = (val < _min)? val : _min;
+  // NOTE: the negation ensures that NaN values are handled correctly!
+  _max = !(val <= _max) ? val : _max;
+  _min = !(val >= _min) ? val : _min;
 
   //double clamp between 0 and num_bins-1
-  b = (int)fmax(floor( val / _bin_size ), 0.0);
+  int b = (int)fmax(floor( val / _bin_size ), 0.0);
   b = (b >= _num_bins) ? (_num_bins - 1) : b;
 
   _hist[b]++;
-}
-
-void Stats::AddSample( int val )
-{
-  AddSample( (double)val );
 }
 
 void Stats::Display( ostream & os ) const
