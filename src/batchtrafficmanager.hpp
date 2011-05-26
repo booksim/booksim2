@@ -52,6 +52,8 @@ protected:
   double _overall_batch_time_sum;
   int _overall_batch_time_samples;
 
+  ostream * _sent_packets_out;
+
   virtual void _RetireFlit( Flit *f, int dest );
 
   virtual bool _IssuePacket( int source, int cl );

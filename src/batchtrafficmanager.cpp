@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <limits>
 #include <sstream>
+#include <fstream>
 
 #include "batchtrafficmanager.hpp"
 
@@ -54,11 +55,18 @@ BatchTrafficManager::BatchTrafficManager( const Configuration &config,
 
   _overall_batch_time_sum = 0.0;
   _overall_batch_time_samples = 0;
+  string sent_packets_out_file = config.GetStr( "sent_packets_out" );
+  if(sent_packets_out_file == "") {
+    _sent_packets_out = NULL;
+  } else {
+    _sent_packets_out = new ofstream(sent_packets_out_file.c_str());
+  }
 }
 
 BatchTrafficManager::~BatchTrafficManager( )
 {
 
+  if(_sent_packets_out) delete _sent_packets_out;
 }
 
 void BatchTrafficManager::_RetireFlit( Flit *f, int dest )

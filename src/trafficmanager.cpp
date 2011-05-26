@@ -369,12 +369,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   
   _flow_out = config.GetInt("flow_out");
   if(_flow_out) {
-    string sent_packets_out_file = config.GetStr( "sent_packets_out" );
-    if(sent_packets_out_file == "") {
-      _sent_packets_out = NULL;
-    } else {
-      _sent_packets_out = new ofstream(sent_packets_out_file.c_str());
-    }
     string active_packets_out_file = config.GetStr( "active_packets_out" );
     if(active_packets_out_file == "") {
       _active_packets_out = NULL;
@@ -465,7 +459,6 @@ TrafficManager::~TrafficManager( )
   if(_stats_out && (_stats_out != &cout)) delete _stats_out;
 
   if(_flow_out) {
-    if(_sent_packets_out) delete _sent_packets_out;
     if(_active_packets_out) delete _active_packets_out;
     if(_injected_flits_out) delete _injected_flits_out;
     if(_ejected_flits_out) delete _ejected_flits_out;
@@ -1179,7 +1172,9 @@ void TrafficManager::_UpdateOverallStats() {
 }
 
 void TrafficManager::DisplayStats(ostream & os) const {
-  os << "===== Time: " << _time << " =====" << endl;
+  os << "===== Time: " << _time << " =====" << endl
+     << "sent_packets = " << _sent_packets << ";" << endl;
+
   for(int c = 0; c < _classes; ++c) {
     if(_measure_stats[c]) {
       os << "Class " << c << ":" << endl;

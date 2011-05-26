@@ -168,7 +168,6 @@ protected:
 
   bool _flow_out;
 
-  ostream * _sent_packets_out;
   ostream * _active_packets_out;
   ostream * _generated_flits_out;
   ostream * _injected_flits_out;
