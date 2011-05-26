@@ -1172,8 +1172,7 @@ void TrafficManager::_UpdateOverallStats() {
 }
 
 void TrafficManager::DisplayStats(ostream & os) const {
-  os << "===== Time: " << _time << " =====" << endl
-     << "sent_packets = " << _sent_packets << ";" << endl;
+  os << "===== Time: " << _time << " =====" << endl;
 
   for(int c = 0; c < _classes; ++c) {
     if(_measure_stats[c]) {

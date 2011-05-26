@@ -121,7 +121,7 @@ bool BatchTrafficManager::_SingleSim( )
 	}
       }
       if(_sent_packets_out) {
-	*_sent_packets_out << "sent_packets(" << _time << ",:) = " << _sent_packets << ";" << endl;
+	*_sent_packets_out << _sent_packets << ";" << endl;
       }
     } while(!batch_complete);
     cout << "Batch " << batch_index + 1 << " ("<<_batch_size  <<  " packets) sent. Time used is " << _time - start_time << " cycles." << endl;
