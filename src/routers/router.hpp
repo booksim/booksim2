@@ -66,11 +66,12 @@ protected:
   vector<CreditChannel *> _output_credits;
   vector<bool>            _channel_faults;
 
+#ifdef TRACK_FLOWS
   vector<int> _received_flits;
   vector<int> _stored_flits;
   vector<int> _sent_flits;
-
   vector<int> _active_packets;
+#endif
 
   virtual void _InternalStep() = 0;
 
@@ -108,6 +109,7 @@ public:
   virtual int GetCredit(int out, int vc_begin, int vc_end ) const = 0;
   virtual int GetBuffer(int i = -1) const = 0;
 
+#ifdef TRACK_FLOWS
   inline vector<int> const & GetReceivedFlits() const {
     return _received_flits;
   }
@@ -121,11 +123,11 @@ public:
   inline vector<int> const & GetActivePackets() const {
     return _active_packets;
   }
-
   inline void ResetStats() {
     _received_flits.assign(_received_flits.size(), 0);
     _sent_flits.assign(_sent_flits.size(), 0);
   }
+#endif
 
   inline int NumOutputs() const {return _outputs;}
 };

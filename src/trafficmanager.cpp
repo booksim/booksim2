@@ -473,45 +473,44 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     config.WriteMatlabFile(_stats_out);
   }
   
-  _flow_out = config.GetInt("flow_out");
-  if(_flow_out) {
-    string active_packets_out_file = config.GetStr( "active_packets_out" );
-    if(active_packets_out_file == "") {
-      _active_packets_out = NULL;
-    } else {
-      _active_packets_out = new ofstream(active_packets_out_file.c_str());
-    }
-    string injected_flits_out_file = config.GetStr( "injected_flits_out" );
-    if(injected_flits_out_file == "") {
-      _injected_flits_out = NULL;
-    } else {
-      _injected_flits_out = new ofstream(injected_flits_out_file.c_str());
-    }
-    string ejected_flits_out_file = config.GetStr( "ejected_flits_out" );
-    if(ejected_flits_out_file == "") {
-      _ejected_flits_out = NULL;
-    } else {
-      _ejected_flits_out = new ofstream(ejected_flits_out_file.c_str());
-    }
-    string received_flits_out_file = config.GetStr( "received_flits_out" );
-    if(received_flits_out_file == "") {
-      _received_flits_out = NULL;
-    } else {
-      _received_flits_out = new ofstream(received_flits_out_file.c_str());
-    }
-    string sent_flits_out_file = config.GetStr( "sent_flits_out" );
-    if(sent_flits_out_file == "") {
-      _sent_flits_out = NULL;
-    } else {
-      _sent_flits_out = new ofstream(sent_flits_out_file.c_str());
-    }
-    string stored_flits_out_file = config.GetStr( "stored_flits_out" );
-    if(stored_flits_out_file == "") {
-      _stored_flits_out = NULL;
-    } else {
-      _stored_flits_out = new ofstream(stored_flits_out_file.c_str());
-    }
+#ifdef TRACK_FLOWS
+  string active_packets_out_file = config.GetStr( "active_packets_out" );
+  if(active_packets_out_file == "") {
+    _active_packets_out = NULL;
+  } else {
+    _active_packets_out = new ofstream(active_packets_out_file.c_str());
   }
+  string injected_flits_out_file = config.GetStr( "injected_flits_out" );
+  if(injected_flits_out_file == "") {
+    _injected_flits_out = NULL;
+  } else {
+    _injected_flits_out = new ofstream(injected_flits_out_file.c_str());
+  }
+  string ejected_flits_out_file = config.GetStr( "ejected_flits_out" );
+  if(ejected_flits_out_file == "") {
+    _ejected_flits_out = NULL;
+  } else {
+    _ejected_flits_out = new ofstream(ejected_flits_out_file.c_str());
+  }
+  string received_flits_out_file = config.GetStr( "received_flits_out" );
+  if(received_flits_out_file == "") {
+    _received_flits_out = NULL;
+  } else {
+    _received_flits_out = new ofstream(received_flits_out_file.c_str());
+  }
+  string sent_flits_out_file = config.GetStr( "sent_flits_out" );
+  if(sent_flits_out_file == "") {
+    _sent_flits_out = NULL;
+  } else {
+    _sent_flits_out = new ofstream(sent_flits_out_file.c_str());
+  }
+  string stored_flits_out_file = config.GetStr( "stored_flits_out" );
+  if(stored_flits_out_file == "") {
+    _stored_flits_out = NULL;
+  } else {
+    _stored_flits_out = new ofstream(stored_flits_out_file.c_str());
+  }
+#endif
 
 }
 
@@ -567,14 +566,14 @@ TrafficManager::~TrafficManager( )
   if(gWatchOut && (gWatchOut != &cout)) delete gWatchOut;
   if(_stats_out && (_stats_out != &cout)) delete _stats_out;
 
-  if(_flow_out) {
-    if(_active_packets_out) delete _active_packets_out;
-    if(_injected_flits_out) delete _injected_flits_out;
-    if(_ejected_flits_out) delete _ejected_flits_out;
-    if(_received_flits_out) delete _received_flits_out;
-    if(_sent_flits_out) delete _sent_flits_out;
-    if(_stored_flits_out) delete _stored_flits_out;
-  }
+#ifdef TRACK_FLOWS
+  if(_active_packets_out) delete _active_packets_out;
+  if(_injected_flits_out) delete _injected_flits_out;
+  if(_ejected_flits_out) delete _ejected_flits_out;
+  if(_received_flits_out) delete _received_flits_out;
+  if(_sent_flits_out) delete _sent_flits_out;
+  if(_stored_flits_out) delete _stored_flits_out;
+#endif
 
   PacketReplyInfo::FreeAll();
   Flit::FreeAll();
@@ -1054,7 +1053,10 @@ void TrafficManager::_Step( )
 	    
 	    ++flits_sent_by_class[c];
 	    ++flits_sent_by_subnet[subnet];
-	    if(_flow_out) ++injected_flits[subnet*_nodes+source];
+
+#ifdef TRACK_FLOWS
+	    ++injected_flits[subnet*_nodes+source];
+#endif
 
 	    _net[subnet]->WriteFlit(f, source);
 	    iter->second.first = offset;
@@ -1077,7 +1079,11 @@ void TrafficManager::_Step( )
       map<int, Flit *>::const_iterator iter = flits[subnet].find(dest);
       if(iter != flits[subnet].end()) {
 	Flit * const & f = iter->second;
-	if(_flow_out) ++ejected_flits[subnet*_nodes+dest];
+
+#ifdef TRACK_FLOWS
+	++ejected_flits[subnet*_nodes+dest];
+#endif
+
 	f->atime = _time;
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
@@ -1097,30 +1103,30 @@ void TrafficManager::_Step( )
     _net[subnet]->WriteOutputs( );
   }
   
-  if(_flow_out) {
-
-    vector<vector<int> > received_flits(_subnets*_routers);
-    vector<vector<int> > sent_flits(_subnets*_routers);
-    vector<vector<int> > stored_flits(_subnets*_routers);
-    vector<vector<int> > active_packets(_subnets*_routers);
-
-    for (int subnet = 0; subnet < _subnets; ++subnet) {
-      for(int router = 0; router < _routers; ++router) {
-	Router * r = _router[subnet][router];
-	received_flits[subnet*_routers+router] = r->GetReceivedFlits();
-	sent_flits[subnet*_routers+router] = r->GetSentFlits();
-	stored_flits[subnet*_routers+router] = r->GetStoredFlits();
-	active_packets[subnet*_routers+router] = r->GetActivePackets();
-	r->ResetStats();
-      }
+#ifdef TRACK_FLOWS
+  vector<vector<int> > received_flits(_subnets*_routers);
+  vector<vector<int> > sent_flits(_subnets*_routers);
+  vector<vector<int> > stored_flits(_subnets*_routers);
+  vector<vector<int> > active_packets(_subnets*_routers);
+  
+  for (int subnet = 0; subnet < _subnets; ++subnet) {
+    for(int router = 0; router < _routers; ++router) {
+      Router * r = _router[subnet][router];
+      received_flits[subnet*_routers+router] = r->GetReceivedFlits();
+      sent_flits[subnet*_routers+router] = r->GetSentFlits();
+      stored_flits[subnet*_routers+router] = r->GetStoredFlits();
+      active_packets[subnet*_routers+router] = r->GetActivePackets();
+      r->ResetStats();
     }
-    if(_injected_flits_out) *_injected_flits_out << injected_flits << endl;
-    if(_received_flits_out) *_received_flits_out << received_flits << endl;
-    if(_stored_flits_out) *_stored_flits_out << stored_flits << endl;
-    if(_sent_flits_out) *_sent_flits_out << sent_flits << endl;
-    if(_ejected_flits_out) *_ejected_flits_out << ejected_flits << endl;
-    if(_active_packets_out) *_active_packets_out << active_packets << endl;
   }
+  if(_sent_packets_out) *_sent_packets_out << sent_packets << endl;
+  if(_injected_flits_out) *_injected_flits_out << injected_flits << endl;
+  if(_received_flits_out) *_received_flits_out << received_flits << endl;
+  if(_stored_flits_out) *_stored_flits_out << stored_flits << endl;
+  if(_sent_flits_out) *_sent_flits_out << sent_flits << endl;
+  if(_ejected_flits_out) *_ejected_flits_out << ejected_flits << endl;
+  if(_active_packets_out) *_active_packets_out << active_packets << endl;
+#endif
 
   ++_time;
   assert(_time);
