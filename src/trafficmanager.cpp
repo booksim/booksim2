@@ -230,88 +230,52 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   // ============ Statistics ============ 
 
   _plat_stats.resize(_classes);
-  _overall_min_plat.resize(_classes);
-  _overall_avg_plat.resize(_classes);
-  _overall_max_plat.resize(_classes);
+  _overall_min_plat.resize(_classes, 0.0);
+  _overall_avg_plat.resize(_classes, 0.0);
+  _overall_max_plat.resize(_classes, 0.0);
 
   _tlat_stats.resize(_classes);
-  _overall_min_tlat.resize(_classes);
-  _overall_avg_tlat.resize(_classes);
-  _overall_max_tlat.resize(_classes);
+  _overall_min_tlat.resize(_classes, 0.0);
+  _overall_avg_tlat.resize(_classes, 0.0);
+  _overall_max_tlat.resize(_classes, 0.0);
 
   _frag_stats.resize(_classes);
-  _overall_min_frag.resize(_classes);
-  _overall_avg_frag.resize(_classes);
-  _overall_max_frag.resize(_classes);
+  _overall_min_frag.resize(_classes, 0.0);
+  _overall_avg_frag.resize(_classes, 0.0);
+  _overall_max_frag.resize(_classes, 0.0);
 
   _pair_plat.resize(_classes);
   _pair_tlat.resize(_classes);
   
   _hop_stats.resize(_classes);
+  _overall_hop_stats.resize(_classes, 0.0);
   
   _sent_flits.resize(_classes);
-  _overall_min_sent.resize(_classes);
-  _overall_avg_sent.resize(_classes);
-  _overall_max_sent.resize(_classes);
+  _overall_min_sent.resize(_classes, 0.0);
+  _overall_avg_sent.resize(_classes, 0.0);
+  _overall_max_sent.resize(_classes, 0.0);
 
   _accepted_flits.resize(_classes);
-  _overall_min_accepted.resize(_classes);
-  _overall_avg_accepted.resize(_classes);
-  _overall_max_accepted.resize(_classes);
+  _overall_min_accepted.resize(_classes, 0.0);
+  _overall_avg_accepted.resize(_classes, 0.0);
+  _overall_max_accepted.resize(_classes, 0.0);
 
   for ( int c = 0; c < _classes; ++c ) {
     ostringstream tmp_name;
+
     tmp_name << "plat_stat_" << c;
     _plat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _plat_stats[c];
     tmp_name.str("");
-
-    tmp_name << "overall_min_plat_stat_" << c;
-    _overall_min_plat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_min_plat[c];
-    tmp_name.str("");  
-    tmp_name << "overall_avg_plat_stat_" << c;
-    _overall_avg_plat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_avg_plat[c];
-    tmp_name.str("");  
-    tmp_name << "overall_max_plat_stat_" << c;
-    _overall_max_plat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_max_plat[c];
-    tmp_name.str("");  
 
     tmp_name << "tlat_stat_" << c;
     _tlat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _tlat_stats[c];
     tmp_name.str("");
 
-    tmp_name << "overall_min_tlat_stat_" << c;
-    _overall_min_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_min_tlat[c];
-    tmp_name.str("");  
-    tmp_name << "overall_avg_tlat_stat_" << c;
-    _overall_avg_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_avg_tlat[c];
-    tmp_name.str("");  
-    tmp_name << "overall_max_tlat_stat_" << c;
-    _overall_max_tlat[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _overall_max_tlat[c];
-    tmp_name.str("");  
-
     tmp_name << "frag_stat_" << c;
     _frag_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
     _stats[tmp_name.str()] = _frag_stats[c];
-    tmp_name.str("");
-    tmp_name << "overall_min_frag_stat_" << c;
-    _overall_min_frag[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
-    _stats[tmp_name.str()] = _overall_min_frag[c];
-    tmp_name.str("");
-    tmp_name << "overall_avg_frag_stat_" << c;
-    _overall_avg_frag[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
-    _stats[tmp_name.str()] = _overall_avg_frag[c];
-    tmp_name.str("");
-    tmp_name << "overall_max_frag_stat_" << c;
-    _overall_max_frag[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
-    _stats[tmp_name.str()] = _overall_max_frag[c];
     tmp_name.str("");
 
     tmp_name << "hop_stat_" << c;
@@ -348,37 +312,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 	tmp_name.str("");
       }
     }
-    
-    tmp_name << "overall_min_injection_" << c;
-    _overall_min_sent[c] = new Stats( this, tmp_name.str( ) );
-    _stats[tmp_name.str()] = _overall_min_sent[c];
-    tmp_name.str("");
-
-    tmp_name << "overall_avg_injection_" << c;
-    _overall_avg_sent[c] = new Stats( this, tmp_name.str( ) );
-    _stats[tmp_name.str()] = _overall_avg_sent[c];
-    tmp_name.str("");
-
-    tmp_name << "overall_max_injection_" << c;
-    _overall_max_sent[c] = new Stats( this, tmp_name.str( ) );
-    _stats[tmp_name.str()] = _overall_max_sent[c];
-    tmp_name.str("");
-    
-    tmp_name << "overall_min_acceptance_" << c;
-    _overall_min_accepted[c] = new Stats( this, tmp_name.str( ) );
-    _stats[tmp_name.str()] = _overall_min_accepted[c];
-    tmp_name.str("");
-
-    tmp_name << "overall_avg_acceptance_" << c;
-    _overall_avg_accepted[c] = new Stats( this, tmp_name.str( ) );
-    _stats[tmp_name.str()] = _overall_avg_accepted[c];
-    tmp_name.str("");
-
-    tmp_name << "overall_max_acceptance_" << c;
-    _overall_max_accepted[c] = new Stats( this, tmp_name.str( ) );
-    _stats[tmp_name.str()] = _overall_max_accepted[c];
-    tmp_name.str("");
-    
   }
 
   _slowest_flit.resize(_classes, -1);
@@ -525,30 +458,10 @@ TrafficManager::~TrafficManager( )
   
   for ( int c = 0; c < _classes; ++c ) {
     delete _plat_stats[c];
-    delete _overall_min_plat[c];
-    delete _overall_avg_plat[c];
-    delete _overall_max_plat[c];
-
     delete _tlat_stats[c];
-    delete _overall_min_tlat[c];
-    delete _overall_avg_tlat[c];
-    delete _overall_max_tlat[c];
-
     delete _frag_stats[c];
-    delete _overall_min_frag[c];
-    delete _overall_avg_frag[c];
-    delete _overall_max_frag[c];
-    
     delete _hop_stats[c];
 
-    delete _overall_min_sent[c];
-    delete _overall_avg_sent[c];
-    delete _overall_max_sent[c];
-
-    delete _overall_min_accepted[c];
-    delete _overall_avg_accepted[c];
-    delete _overall_max_accepted[c];
-    
     delete _traffic_pattern[c];
     delete _injection_process[c];
 
@@ -1557,26 +1470,28 @@ void TrafficManager::_UpdateOverallStats() {
       continue;
     }
     
-    _overall_min_plat[c]->AddSample( _plat_stats[c]->Min( ) );
-    _overall_avg_plat[c]->AddSample( _plat_stats[c]->Average( ) );
-    _overall_max_plat[c]->AddSample( _plat_stats[c]->Max( ) );
-    _overall_min_tlat[c]->AddSample( _tlat_stats[c]->Min( ) );
-    _overall_avg_tlat[c]->AddSample( _tlat_stats[c]->Average( ) );
-    _overall_max_tlat[c]->AddSample( _tlat_stats[c]->Max( ) );
-    _overall_min_frag[c]->AddSample( _frag_stats[c]->Min( ) );
-    _overall_avg_frag[c]->AddSample( _frag_stats[c]->Average( ) );
-    _overall_max_frag[c]->AddSample( _frag_stats[c]->Max( ) );
+    _overall_min_plat[c] += _plat_stats[c]->Min();
+    _overall_avg_plat[c] += _plat_stats[c]->Average();
+    _overall_max_plat[c] += _plat_stats[c]->Max();
+    _overall_min_tlat[c] += _tlat_stats[c]->Min();
+    _overall_avg_tlat[c] += _tlat_stats[c]->Average();
+    _overall_max_tlat[c] += _tlat_stats[c]->Max();
+    _overall_min_frag[c] += _frag_stats[c]->Min();
+    _overall_avg_frag[c] += _frag_stats[c]->Average();
+    _overall_max_frag[c] += _frag_stats[c]->Max();
     
+    _overall_hop_stats[c] += _hop_stats[c]->Average();
+
     double min, avg, max;
     if ( _ComputeStats( _sent_flits[c], &avg, &min, &max ) ) {
-      _overall_min_sent[c]->AddSample( min );
-      _overall_avg_sent[c]->AddSample( avg );
-      _overall_max_sent[c]->AddSample( max );
+      _overall_min_sent[c] += min;
+      _overall_avg_sent[c] += avg;
+      _overall_max_sent[c] += max;
     }
     if ( _ComputeStats( _accepted_flits[c], &avg, &min, &max ) ) {
-      _overall_min_accepted[c]->AddSample( min );
-      _overall_avg_accepted[c]->AddSample( avg );
-      _overall_max_accepted[c]->AddSample( max );
+      _overall_min_accepted[c] += min;
+      _overall_avg_accepted[c] += avg;
+      _overall_max_accepted[c] += max;
     }
     
   }
@@ -1677,44 +1592,42 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
 
     os << "====== Traffic class " << c << " ======" << endl;
     
-    os << "Overall minimum latency = " << _overall_min_plat[c]->Average( )
-       << " (" << _overall_min_plat[c]->NumSamples( ) << " samples)" << endl;
-    os << "Overall average latency = " << _overall_avg_plat[c]->Average( )
-       << " (" << _overall_avg_plat[c]->NumSamples( ) << " samples)" << endl;
-    os << "Overall maximum latency = " << _overall_max_plat[c]->Average( )
-       << " (" << _overall_max_plat[c]->NumSamples( ) << " samples)" << endl;
-    os << "Overall minimum transaction latency = " << _overall_min_tlat[c]->Average( )
-       << " (" << _overall_min_tlat[c]->NumSamples( ) << " samples)" << endl;
-    os << "Overall average transaction latency = " << _overall_avg_tlat[c]->Average( )
-       << " (" << _overall_avg_tlat[c]->NumSamples( ) << " samples)" << endl;
-    os << "Overall maximum transaction latency = " << _overall_max_tlat[c]->Average( )
-       << " (" << _overall_max_tlat[c]->NumSamples( ) << " samples)" << endl;
+    os << "Overall minimum latency = " << _overall_min_plat[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall average latency = " << _overall_avg_plat[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall maximum latency = " << _overall_max_plat[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall minimum transaction latency = " << _overall_min_tlat[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall average transaction latency = " << _overall_avg_tlat[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall maximum transaction latency = " << _overall_max_tlat[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
     
-    os << "Overall minimum fragmentation = " << _overall_min_frag[c]->Average( )
-       << " (" << _overall_min_frag[c]->NumSamples( ) << " samples)" << endl;
-    os << "Overall average fragmentation = " << _overall_avg_frag[c]->Average( )
-       << " (" << _overall_avg_frag[c]->NumSamples( ) << " samples)" << endl;
-    os << "Overall maximum fragmentation = " << _overall_max_frag[c]->Average( )
-       << " (" << _overall_max_frag[c]->NumSamples( ) << " samples)" << endl;
+    os << "Overall minimum fragmentation = " << _overall_min_frag[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall average fragmentation = " << _overall_avg_frag[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall maximum fragmentation = " << _overall_max_frag[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
 
-    os << "Overall minimum sent rate = " << _overall_min_sent[c]->Average( )
-       << " (" << _overall_min_sent[c]->NumSamples( ) << " samples)" << endl;
-    os << "Overall average sent rate = " << _overall_avg_sent[c]->Average( )
-       << " (" << _overall_avg_sent[c]->NumSamples( ) << " samples)" << endl;
-    os << "Overall maximum sent rate = " << _overall_max_sent[c]->Average( )
-       << " (" << _overall_max_sent[c]->NumSamples( ) << " samples)" << endl;
+    os << "Overall minimum sent rate = " << _overall_min_sent[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall average sent rate = " << _overall_avg_sent[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall maximum sent rate = " << _overall_max_sent[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
     
-    os << "Overall minimum accepted rate = " << _overall_min_accepted[c]->Average( )
-       << " (" << _overall_min_accepted[c]->NumSamples( ) << " samples)" << endl;
-    os << "Overall average accepted rate = " << _overall_avg_accepted[c]->Average( )
-       << " (" << _overall_avg_accepted[c]->NumSamples( ) << " samples)" << endl;
-    os << "Overall maximum accepted rate = " << _overall_max_accepted[c]->Average( )
-       << " (" << _overall_max_accepted[c]->NumSamples( ) << " samples)" << endl;
+    os << "Overall minimum accepted rate = " << _overall_min_accepted[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall average accepted rate = " << _overall_avg_accepted[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall maximum accepted rate = " << _overall_max_accepted[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
     
-    os << "Average hops = " << _hop_stats[c]->Average( )
-       << " (" << _hop_stats[c]->NumSamples( ) << " samples)" << endl;
-
-    os << "Slowest flit = " << _slowest_flit[c] << endl;
+    os << "Overall average hops = " << _overall_hop_stats[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
     
   }
   
@@ -1727,22 +1640,22 @@ string TrafficManager::_OverallStatsCSV(int c) const
      << ',' << _use_read_write[c]
      << ',' << _packet_size[c]
      << ',' << _load[c]
-     << ',' << _overall_min_plat[c]->Average( )
-     << ',' << _overall_avg_plat[c]->Average( )
-     << ',' << _overall_max_plat[c]->Average( )
-     << ',' << _overall_min_tlat[c]->Average( )
-     << ',' << _overall_avg_tlat[c]->Average( )
-     << ',' << _overall_max_tlat[c]->Average( )
-     << ',' << _overall_min_frag[c]->Average( )
-     << ',' << _overall_avg_frag[c]->Average( )
-     << ',' << _overall_max_frag[c]->Average( )
-     << ',' << _overall_min_sent[c]->Average( )
-     << ',' << _overall_avg_sent[c]->Average( )
-     << ',' << _overall_max_sent[c]->Average( )
-     << ',' << _overall_min_accepted[c]->Average( )
-     << ',' << _overall_avg_accepted[c]->Average( )
-     << ',' << _overall_max_accepted[c]->Average( )
-     << ',' << _hop_stats[c]->Average( );
+     << ',' << _overall_min_plat[c] / (double)_total_sims
+     << ',' << _overall_avg_plat[c] / (double)_total_sims
+     << ',' << _overall_max_plat[c] / (double)_total_sims
+     << ',' << _overall_min_tlat[c] / (double)_total_sims
+     << ',' << _overall_avg_tlat[c] / (double)_total_sims
+     << ',' << _overall_max_tlat[c] / (double)_total_sims
+     << ',' << _overall_min_frag[c] / (double)_total_sims
+     << ',' << _overall_avg_frag[c] / (double)_total_sims
+     << ',' << _overall_max_frag[c] / (double)_total_sims
+     << ',' << _overall_min_sent[c] / (double)_total_sims
+     << ',' << _overall_avg_sent[c] / (double)_total_sims
+     << ',' << _overall_max_sent[c] / (double)_total_sims
+     << ',' << _overall_min_accepted[c] / (double)_total_sims
+     << ',' << _overall_avg_accepted[c] / (double)_total_sims
+     << ',' << _overall_max_accepted[c] / (double)_total_sims
+     << ',' << _overall_hop_stats[c] / (double)_total_sims;
   return os.str();
 }
 
