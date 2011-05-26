@@ -1577,8 +1577,6 @@ void TrafficManager::WriteStats(ostream & os) const {
   
   os << "%=================================" << endl;
 
-  os << "sent_packets = " << _sent_packets << ";" << endl;
-
   for(int c = 0; c < _classes; ++c) {
     
     if(_measure_stats[c] == 0) {
