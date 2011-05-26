@@ -614,7 +614,7 @@ void IQRouter::_VCAllocEvaluate( )
     int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
 
-    int output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
+    int const output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
 
     if(output_and_vc >= 0) {
 
