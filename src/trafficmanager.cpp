@@ -864,7 +864,9 @@ void TrafficManager::_Step( )
     _Inject();
   }
 
+#ifdef TRACK_FLOWS
   vector<int> injected_flits(_subnets*_nodes);
+#endif
 
   for(int source = 0; source < _nodes; ++source) {
     
@@ -967,7 +969,9 @@ void TrafficManager::_Step( )
     }
   }
 
+#ifdef TRACK_FLOWS
   vector<int> ejected_flits(_subnets*_nodes);
+#endif
 
   for(int subnet = 0; subnet < _subnets; ++subnet) {
     for(int dest = 0; dest < _nodes; ++dest) {
@@ -1016,10 +1020,10 @@ void TrafficManager::_Step( )
   }
   if(_sent_packets_out) *_sent_packets_out << sent_packets << endl;
   if(_injected_flits_out) *_injected_flits_out << injected_flits << endl;
+  if(_ejected_flits_out) *_ejected_flits_out << ejected_flits << endl;
   if(_received_flits_out) *_received_flits_out << received_flits << endl;
   if(_stored_flits_out) *_stored_flits_out << stored_flits << endl;
   if(_sent_flits_out) *_sent_flits_out << sent_flits << endl;
-  if(_ejected_flits_out) *_ejected_flits_out << ejected_flits << endl;
   if(_active_packets_out) *_active_packets_out << active_packets << endl;
 #endif
 
