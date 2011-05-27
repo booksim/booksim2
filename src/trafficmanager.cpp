@@ -58,7 +58,7 @@ TrafficManager * TrafficManager::NewTrafficManager(Configuration const & config,
 }
 
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
-: Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
+  : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _reset_time(0), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
 
   _nodes = _net[0]->NumNodes( );
@@ -286,20 +286,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _pair_plat[c].resize(_nodes*_nodes);
     _pair_tlat[c].resize(_nodes*_nodes);
 
-    _sent_flits[c].resize(_nodes);
-    _accepted_flits[c].resize(_nodes);
+    _sent_flits[c].resize(_nodes, 0);
+    _accepted_flits[c].resize(_nodes, 0);
     
     for ( int i = 0; i < _nodes; ++i ) {
-      tmp_name << "sent_stat_" << c << "_" << i;
-      _sent_flits[c][i] = new Stats( this, tmp_name.str( ), 1.0, 2 );
-      _stats[tmp_name.str()] = _sent_flits[c][i];
-      tmp_name.str("");    
-      
-      tmp_name << "accepted_stat_" << c << "_" << i;
-      _accepted_flits[c][i] = new Stats( this, tmp_name.str( ), 1.0, 2 );
-      _stats[tmp_name.str()] = _accepted_flits[c][i];
-      tmp_name.str("");    
-
       for ( int j = 0; j < _nodes; ++j ) {
 	tmp_name << "pair_plat_stat_" << c << "_" << i << "_" << j;
 	_pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
@@ -466,9 +456,6 @@ TrafficManager::~TrafficManager( )
     delete _injection_process[c];
 
     for ( int i = 0; i < _nodes; ++i ) {
-      delete _sent_flits[c][i];
-      delete _accepted_flits[c][i];
-      
       for ( int j = 0; j < _nodes; ++j ) {
 	delete _pair_plat[c][i*_nodes+j];
 	delete _pair_tlat[c][i*_nodes+j];
@@ -854,7 +841,6 @@ void TrafficManager::_Step( )
   vector<map<int, Flit *> > flits(_subnets);
   
   for ( int dest = 0; dest < _nodes; ++dest ) {
-    vector<int> flits_accepted_by_class(_classes);
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {
       Flit * const f = _net[subnet]->ReadFlit( dest );
       if ( f ) {
@@ -867,12 +853,9 @@ void TrafficManager::_Step( )
 		     << "." << endl;
 	}
 	flits[subnet].insert(make_pair(dest, f));
-	++flits_accepted_by_class[f->cl];
-      }
-    }
-    if( ( _sim_state == warming_up ) || ( _sim_state == running ) ) {
-      for(int c = 0; c < _classes; ++c) {
-	_accepted_flits[c][dest]->AddSample(flits_accepted_by_class[c]);
+	if((_sim_state == warming_up) || (_sim_state == running)) {
+	  ++_accepted_flits[f->cl][dest];
+	}
       }
     }
   }
@@ -885,7 +868,6 @@ void TrafficManager::_Step( )
 
   for(int source = 0; source < _nodes; ++source) {
     
-    vector<int> flits_sent_by_class(_classes);
     vector<int> flits_sent_by_subnet(_subnets);
     
     for(map<int, pair<int, vector<int> > >::reverse_iterator iter = _class_prio_map.rbegin();
@@ -966,7 +948,10 @@ void TrafficManager::_Step( )
 	      nf->vc = f->vc;
 	    }
 	    
-	    ++flits_sent_by_class[c];
+	    if((_sim_state == warming_up) || (_sim_state == running)) {
+	      ++_sent_flits[c][source];
+	    }
+
 	    ++flits_sent_by_subnet[subnet];
 
 #ifdef TRACK_FLOWS
@@ -978,11 +963,6 @@ void TrafficManager::_Step( )
 	    
 	  }
 	}
-      }
-    }
-    if((_sim_state == warming_up) || (_sim_state == running)) {
-      for(int c = 0; c < _classes; ++c) {
-	_sent_flits[c][source]->AddSample(flits_sent_by_class[c]);
       }
     }
   }
@@ -1087,10 +1067,10 @@ void TrafficManager::_ClearStats( )
     _tlat_stats[c]->Clear( );
     _frag_stats[c]->Clear( );
   
+    _sent_flits[c].assign(_nodes, 0);
+    _accepted_flits[c].assign(_nodes, 0);
+
     for ( int i = 0; i < _nodes; ++i ) {
-      _sent_flits[c][i]->Clear( );
-      _accepted_flits[c][i]->Clear( );
-      
       for ( int j = 0; j < _nodes; ++j ) {
 	_pair_plat[c][i*_nodes+j]->Clear( );
 	_pair_tlat[c][i*_nodes+j]->Clear( );
@@ -1100,57 +1080,46 @@ void TrafficManager::_ClearStats( )
     _hop_stats[c]->Clear();
 
   }
-
+  _reset_time = _time;
 }
 
-bool TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, double *min, double *max, int *min_pos, int *max_pos ) const 
+void TrafficManager::_ComputeStats( const vector<int> & stats, int *sum, int *min, int *max, int *min_pos, int *max_pos ) const 
 {
+  int const count = stats.size();
+  assert(count > 0);
+
   if(min_pos) {
-    *min_pos = -1;
+    *min_pos = 0;
   }
   if(max_pos) {
-    *max_pos = -1;
+    *max_pos = 0;
   }
 
   if(min) {
-    *min = numeric_limits<double>::quiet_NaN();
+    *min = stats[0];
   }
   if(max) {
-    *max = numeric_limits<double>::quiet_NaN();
+    *max = stats[0];
   }
 
-  int const count = stats.size();
+  *sum = stats[0];
 
-  if((count == 0) || (stats[0]->NumSamples() == 0)) {
-    *avg = numeric_limits<double>::quiet_NaN();
-    return false;
-  }
-
-  *avg = 0.0;
-
-  for ( int i = 0; i < count; ++i ) {
-    assert(stats[i]->NumSamples() > 0);
-    double curr = stats[i]->Average( );
-    // NOTE: the negation ensures that NaN values are handled correctly!
-    if ( min  && !( curr >= *min ) ) {
+  for ( int i = 1; i < count; ++i ) {
+    int curr = stats[i];
+    if ( min  && ( curr < *min ) ) {
       *min = curr;
       if ( min_pos ) {
 	*min_pos = i;
       }
     }
-    // NOTE: the negation ensures that NaN values are handled correctly!
-    if ( max && !( curr <= *max ) ) {
+    if ( max && ( curr > *max ) ) {
       *max = curr;
       if ( max_pos ) {
 	*max_pos = i;
       }
     }
-    *avg += curr;
+    *sum += curr;
   }
-  
-  *avg /= (double)count;
-
-  return true;
 }
 
 void TrafficManager::_DisplayRemaining( ostream & os ) const 
@@ -1225,8 +1194,10 @@ bool TrafficManager::_SingleSim( )
 
       double cur_latency = _plat_stats[c]->Average( );
 
-      double cur_accepted;
-      _ComputeStats( _accepted_flits[c], &cur_accepted );
+      int total_accepted_count;
+      _ComputeStats( _accepted_flits[c], &total_accepted_count );
+      double total_accepted_rate = (double)total_accepted_count / (double)(_time - _reset_time);
+      double cur_accepted = total_accepted_rate / (double)_nodes;
 
       double latency_change = fabs((cur_latency - prev_latency[c]) / cur_latency);
       prev_latency[c] = cur_latency;
@@ -1284,7 +1255,8 @@ bool TrafficManager::_SingleSim( )
       
       cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
       converged = 0; 
-      _sim_state = warming_up;
+      _sim_state = draining;
+      _drain_time = _time;
       break;
       
     }
@@ -1312,10 +1284,11 @@ bool TrafficManager::_SingleSim( )
   if ( _sim_state == running ) {
     ++converged;
     
+    _sim_state  = draining;
+    _drain_time = _time;
+
     if ( _measure_latency ) {
       cout << "Draining all recorded packets ..." << endl;
-      _sim_state  = draining;
-      _drain_time = _time;
       int empty_steps = 0;
       while( _PacketsOutstanding( ) ) { 
 	_Step( ); 
@@ -1484,18 +1457,26 @@ void TrafficManager::_UpdateOverallStats() {
     
     _overall_hop_stats[c] += _hop_stats[c]->Average();
 
-    double min, avg, max;
-    if ( _ComputeStats( _sent_flits[c], &avg, &min, &max ) ) {
-      _overall_min_sent[c] += min;
-      _overall_avg_sent[c] += avg;
-      _overall_max_sent[c] += max;
-    }
-    if ( _ComputeStats( _accepted_flits[c], &avg, &min, &max ) ) {
-      _overall_min_accepted[c] += min;
-      _overall_avg_accepted[c] += avg;
-      _overall_max_accepted[c] += max;
-    }
-    
+    int count_min, count_sum, count_max;
+    double rate_min, rate_sum, rate_max;
+    double rate_avg;
+    double time_delta = (double)(_drain_time - _reset_time);
+    _ComputeStats( _sent_flits[c], &count_sum, &count_min, &count_max );
+    rate_min = (double)count_min / time_delta;
+    rate_sum = (double)count_sum / time_delta;
+    rate_max = (double)count_max / time_delta;
+    rate_avg = rate_sum / (double)_nodes;
+    _overall_min_sent[c] += rate_min;
+    _overall_avg_sent[c] += rate_avg;
+    _overall_max_sent[c] += rate_max;
+    _ComputeStats( _accepted_flits[c], &count_sum, &count_min, &count_max );
+    rate_min = (double)count_min / time_delta;
+    rate_sum = (double)count_sum / time_delta;
+    rate_max = (double)count_max / time_delta;
+    rate_avg = rate_sum / (double)_nodes;
+    _overall_min_accepted[c] += rate_min;
+    _overall_avg_accepted[c] += rate_avg;
+    _overall_max_accepted[c] += rate_max;
   }
 }
 
@@ -1509,6 +1490,8 @@ void TrafficManager::WriteStats(ostream & os) const {
       continue;
     }
     
+    double time_delta = (double)(_time - _reset_time);
+
     //c+1 due to matlab array starting at 1
     os << "lat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
        << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
@@ -1536,12 +1519,12 @@ void TrafficManager::WriteStats(ostream & os) const {
     os << "];" << endl
        << "sent(" << c+1 << ",:) = [ ";
     for ( int d = 0; d < _nodes; ++d ) {
-      os << _sent_flits[c][d]->Average( ) << " ";
+      os << (double)_sent_flits[c][d] / time_delta << " ";
     }
     os << "];" << endl
        << "accepted(" << c+1 << ",:) = [ ";
     for ( int d = 0; d < _nodes; ++d ) {
-      os << _accepted_flits[c][d]->Average( ) << " ";
+      os << (double)_accepted_flits[c][d] / time_delta << " ";
     }
     os << "];" << endl;
   }
@@ -1562,19 +1545,30 @@ void TrafficManager::DisplayStats(ostream & os) const {
 	 << "Maximum latency = " << _plat_stats[c]->Max() << endl
 	 << "Average fragmentation = " << _frag_stats[c]->Average() << endl;
     
-    double min, avg, max;
+    int count_sum, count_min, count_max;
+    double rate_sum, rate_min, rate_max;
+    double rate_avg;
     int min_pos, max_pos;
-    _ComputeStats(_sent_flits[c], &avg, &min, &max, &min_pos, &max_pos);
-    cout << "Minimum injected packets = " << min 
+    double time_delta = (double)(_time - _reset_time);
+    _ComputeStats(_sent_flits[c], &count_sum, &count_min, &count_max, &min_pos, &max_pos);
+    rate_sum = (double)count_sum / time_delta;
+    rate_min = (double)count_min / time_delta;
+    rate_max = (double)count_max / time_delta;
+    rate_avg = rate_sum / (double)_nodes;
+    cout << "Minimum injected packets = " << rate_min 
 	 << " (at node " << min_pos << ")" << endl
-	 << "Average injected packets = " << avg << endl
-	 << "Maximum injected packets = " << max
+	 << "Average injected packets = " << rate_avg << endl
+	 << "Maximum injected packets = " << rate_max
 	 << " (at node " << max_pos << ")" << endl;
-    _ComputeStats(_accepted_flits[c], &avg, &min, &max, &min_pos, &max_pos);
-    cout << "Minimum accepted packets = " << min 
+    _ComputeStats(_accepted_flits[c], &count_sum, &count_min, &count_max, &min_pos, &max_pos);
+    rate_sum = (double)count_sum / time_delta;
+    rate_min = (double)count_min / time_delta;
+    rate_max = (double)count_max / time_delta;
+    rate_avg = rate_sum / (double)_nodes;
+    cout << "Minimum accepted packets = " << rate_min 
 	 << " (at node " << min_pos << ")" << endl
-	 << "Average accepted packets = " << avg << endl
-	 << "Maximum accepted packets = " << max
+	 << "Average accepted packets = " << rate_avg << endl
+	 << "Maximum accepted packets = " << rate_max
 	 << " (at node " << max_pos << ")" << endl;
     
     cout << "Total in-flight flits = " << _total_in_flight_flits[c].size()
