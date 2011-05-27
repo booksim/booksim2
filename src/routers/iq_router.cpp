@@ -532,7 +532,7 @@ void IQRouter::_VCAllocEvaluate( )
     int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
 
-    assert(iter->second.second < 0);
+    assert(iter->second.second == -1);
 
     Buffer const * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
@@ -636,7 +636,7 @@ void IQRouter::_VCAllocEvaluate( )
       continue;
     }
 
-    assert(iter->second.second < 0);
+    assert(iter->second.second == -1);
 
     Buffer const * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
@@ -846,7 +846,7 @@ void IQRouter::_SWHoldEvaluate( )
     int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
     
-    assert(iter->second.second < 0);
+    assert(iter->second.second == -1);
 
     Buffer const * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
@@ -1187,7 +1187,7 @@ void IQRouter::_SWAllocEvaluate( )
     int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
     
-    assert(iter->second.second < 0);
+    assert(iter->second.second == -1);
 
     assert(_switch_hold_vc[input * _input_speedup + vc % _input_speedup] != vc);
 
@@ -1331,7 +1331,7 @@ void IQRouter::_SWAllocEvaluate( )
       continue;
     }
 
-    assert(iter->second.second < 0);
+    assert(iter->second.second == -1);
 
     Buffer const * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
@@ -1359,6 +1359,14 @@ void IQRouter::_SWAllocEvaluate( )
 	}
 	_sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
 	iter->second.second = expanded_output;
+      } else {
+	if(f->watch) {
+	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		     << "Switch allocation failed for VC " << vc
+		     << " at input " << input
+		     << "." << endl;
+	}
+	iter->second.second = STALL_CROSSBAR_CONFLICT;
       }
     } else if(_spec_sw_allocator) {
       expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
@@ -1401,6 +1409,14 @@ void IQRouter::_SWAllocEvaluate( )
 	  }
 	  _sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
 	  iter->second.second = expanded_output;
+	} else {
+	  if(f->watch) {
+	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		       << "Switch allocation failed for VC " << vc
+		       << " at input " << input
+		       << "." << endl;
+	  }
+	  iter->second.second = STALL_CROSSBAR_CONFLICT;
 	}
       } else {
 
