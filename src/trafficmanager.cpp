@@ -1528,6 +1528,7 @@ void TrafficManager::WriteStats(ostream & os) const {
     os << "lat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
        << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
        << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
+       << "hops(" << c+1 << ",:) = " << *_hop_stats[c] << ";" << endl
        << "pair_sent(" << c+1 << ",:) = [ ";
     for(int i = 0; i < _nodes; ++i) {
       for(int j = 0; j < _nodes; ++j) {
