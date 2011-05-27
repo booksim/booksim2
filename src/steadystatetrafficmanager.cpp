@@ -47,12 +47,12 @@ SteadyStateTrafficManager::SteadyStateTrafficManager( const Configuration &confi
       _load[c] /= (double)_packet_size[c];
   }
 
-  vector<string> injection_process = config.GetStrArray("injection_process");
-  injection_process.resize(_classes, injection_process.back());
+  _injection = config.GetStrArray("injection_process");
+  _injection.resize(_classes, _injection.back());
 
   _injection_process.resize(_classes);
   for(int c = 0; c < _classes; ++c) {
-    _injection_process[c] = InjectionProcess::New(injection_process[c], _nodes, _load[c]);
+    _injection_process[c] = InjectionProcess::New(_injection[c], _nodes, _load[c]);
   }
 
   _measure_latency = (config.GetStr("sim_type") == "latency");
@@ -313,7 +313,8 @@ bool SteadyStateTrafficManager::_SingleSim( )
 string SteadyStateTrafficManager::_OverallStatsHeaderCSV() const
 {
   ostringstream os;
-  os << "load"
+  os << "injection"
+     << ',' << "load"
      << ',' << TrafficManager::_OverallStatsHeaderCSV();
   return os.str();
 }
