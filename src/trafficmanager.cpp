@@ -1555,20 +1555,20 @@ void TrafficManager::DisplayStats(ostream & os) const {
     rate_min = (double)count_min / time_delta;
     rate_max = (double)count_max / time_delta;
     rate_avg = rate_sum / (double)_nodes;
-    cout << "Minimum injected packets = " << rate_min 
+    cout << "Minimum injected flit rate = " << rate_min 
 	 << " (at node " << min_pos << ")" << endl
-	 << "Average injected packets = " << rate_avg << endl
-	 << "Maximum injected packets = " << rate_max
+	 << "Average injected flit rate = " << rate_avg << endl
+	 << "Maximum injected flit rate = " << rate_max
 	 << " (at node " << max_pos << ")" << endl;
     _ComputeStats(_accepted_flits[c], &count_sum, &count_min, &count_max, &min_pos, &max_pos);
     rate_sum = (double)count_sum / time_delta;
     rate_min = (double)count_min / time_delta;
     rate_max = (double)count_max / time_delta;
     rate_avg = rate_sum / (double)_nodes;
-    cout << "Minimum accepted packets = " << rate_min 
+    cout << "Minimum accepted flit rate = " << rate_min 
 	 << " (at node " << min_pos << ")" << endl
-	 << "Average accepted packets = " << rate_avg << endl
-	 << "Maximum accepted packets = " << rate_max
+	 << "Average accepted flit rate = " << rate_avg << endl
+	 << "Maximum accepted flit rate = " << rate_max
 	 << " (at node " << max_pos << ")" << endl;
     
     cout << "Total in-flight flits = " << _total_in_flight_flits[c].size()
