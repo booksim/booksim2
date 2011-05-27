@@ -56,9 +56,7 @@ Router::Router( const Configuration& config,
 		Module *parent, const string & name, int id,
 		int inputs, int outputs ) :
 TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
-   _partial_internal_cycles(0.0), _buffer_busy_stalls(0), 
-   _buffer_conflict_stalls(0), _buffer_full_stalls(0), 
-   _crossbar_conflict_stalls(0)
+   _partial_internal_cycles(0.0)
 {
   _crossbar_delay   = ( config.GetInt( "st_prepare_delay" ) + 
 			config.GetInt( "st_final_delay" ) );
@@ -70,6 +68,13 @@ TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
 #ifdef TRACK_FLOWS
   _received_flits.resize(inputs, 0);
   _sent_flits.resize(inputs, 0);
+#endif
+
+#ifdef TRACK_STALLS
+  _buffer_busy_stalls = 0;
+  _buffer_conflict_stalls = 0;
+  _buffer_full_stalls = 0;
+  _crossbar_conflict_stalls = 0;
 #endif
 
 }
