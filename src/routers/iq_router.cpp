@@ -171,7 +171,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     _active_packets[c].resize(_inputs, 0);
   }
 #endif
-
 }
 
 IQRouter::~IQRouter( )
@@ -519,7 +518,7 @@ void IQRouter::_VCAllocEvaluate( )
 {
   bool watched = false;
 
-  for(deque<pair<int, pair<pair<int, int>, int> > >::const_iterator iter = _vc_alloc_vcs.begin();
+  for(deque<pair<int, pair<pair<int, int>, int> > >::iterator iter = _vc_alloc_vcs.begin();
       iter != _vc_alloc_vcs.end();
       ++iter) {
 
@@ -557,6 +556,8 @@ void IQRouter::_VCAllocEvaluate( )
     int const out_priority = cur_buf->GetPriority(vc);
     set<OutputSet::sSetElement> const setlist = route_set->GetSet();
 
+    bool requested = false;
+
     for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
 	iset != setlist.end();
 	++iset) {
@@ -589,6 +590,7 @@ void IQRouter::_VCAllocEvaluate( )
 	  }
 	  _vc_allocator->AddRequest(input*_vcs + vc, out_port*_vcs + out_vc, 0, 
 				    in_priority, out_priority);
+	  requested = true;
 	} else {
 	  if(f->watch)
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -597,6 +599,9 @@ void IQRouter::_VCAllocEvaluate( )
 		       << " is busy." << endl;
 	}
       }
+    }
+    if(!requested) {
+      iter->second.second = STALL_BUFFER_BUSY;
     }
   }
 
@@ -627,7 +632,19 @@ void IQRouter::_VCAllocEvaluate( )
     int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
 
+    if(iter->second.second < -1) {
+      continue;
+    }
+
     assert(iter->second.second < 0);
+
+    Buffer const * const cur_buf = _buf[input];
+    assert(!cur_buf->Empty(vc));
+    assert(cur_buf->GetState(vc) == VC::vc_alloc);
+
+    Flit const * const f = cur_buf->FrontFlit(vc);
+    assert(f);
+    assert(f->head);
 
     int const output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
 
@@ -637,14 +654,6 @@ void IQRouter::_VCAllocEvaluate( )
       assert((match_output >= 0) && (match_output < _outputs));
       int const match_vc = output_and_vc % _vcs;
       assert((match_vc >= 0) && (match_vc < _vcs));
-
-      Buffer const * const cur_buf = _buf[input];
-      assert(!cur_buf->Empty(vc));
-      assert(cur_buf->GetState(vc) == VC::vc_alloc);
-
-      Flit const * const f = cur_buf->FrontFlit(vc);
-      assert(f);
-      assert(f->head);
 
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -656,6 +665,18 @@ void IQRouter::_VCAllocEvaluate( )
       }
 
       iter->second.second = output_and_vc;
+
+    } else {
+
+      if(f->watch) {
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		   << "VC allocation failed for VC " << vc
+		   << " at input " << input
+		   << "." << endl;
+      }
+      
+      iter->second.second = STALL_BUFFER_CONFLICT;
+
     }
   }
 
@@ -673,6 +694,8 @@ void IQRouter::_VCAllocEvaluate( )
       break;
     }
     
+    assert(iter->second.second != -1);
+
     int const output_and_vc = iter->second.second;
     
     if(output_and_vc >= 0) {
@@ -708,7 +731,7 @@ void IQRouter::_VCAllocEvaluate( )
 		     << " is no longer available." << endl;
 	}
 
-	iter->second.second = -1;
+	iter->second.second = STALL_BUFFER_BUSY;
       }
     }
   }
@@ -731,6 +754,8 @@ void IQRouter::_VCAllocUpdate( )
     int const vc = item.second.first.second;
     assert((vc >= 0) && (vc < _vcs));
     
+    assert(item.second.second != -1);
+
     Buffer * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
     assert(cur_buf->GetState(vc) == VC::vc_alloc);
@@ -778,6 +803,17 @@ void IQRouter::_VCAllocUpdate( )
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "  No output VC allocated." << endl;
       }
+
+#ifdef TRACK_STALLS
+      assert((output_and_vc == STALL_BUFFER_BUSY) ||
+	     (output_and_vc == STALL_BUFFER_CONFLICT));
+      if(output_and_vc == STALL_BUFFER_BUSY) {
+	++_buffer_busy_stalls[f->cl];
+      } else if(output_and_vc == STALL_BUFFER_CONFLICT) {
+	++_buffer_conflict_stalls[f->cl];
+      }
+#endif
+
       _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first, -1)));
     }
     _vc_alloc_vcs.pop_front();
@@ -849,7 +885,7 @@ void IQRouter::_SWHoldEvaluate( )
 		   << "." << (expanded_output % _output_speedup)
 		   << ": No credit available." << endl;
       }
-      iter->second.second = -1;
+      iter->second.second = STALL_BUFFER_FULL;
     } else {
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -881,6 +917,8 @@ void IQRouter::_SWHoldUpdate( )
     int const vc = item.second.first.second;
     assert((vc >= 0) && (vc < _vcs));
     
+    assert(item.second.second != -1);
+
     Buffer * const cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
     assert(cur_buf->GetState(vc) == VC::active);
@@ -1005,6 +1043,8 @@ void IQRouter::_SWHoldUpdate( )
       }
     } else {
       
+      assert(expanded_output == STALL_BUFFER_FULL);
+
       int const held_expanded_output = _switch_hold_in[expanded_input];
       assert(held_expanded_output >= 0);
       
@@ -1133,7 +1173,7 @@ void IQRouter::_SWAllocEvaluate( )
 {
   bool watched = false;
 
-  for(deque<pair<int, pair<pair<int, int>, int> > >::const_iterator iter = _sw_alloc_vcs.begin();
+  for(deque<pair<int, pair<pair<int, int>, int> > >::iterator iter = _sw_alloc_vcs.begin();
       iter != _sw_alloc_vcs.end();
       ++iter) {
 
@@ -1183,6 +1223,7 @@ void IQRouter::_SWAllocEvaluate( )
 		     << " at output " << dest_output 
 		     << " is full." << endl;
 	}
+	iter->second.second = STALL_BUFFER_FULL;
 	continue;
       }
       bool const requested = _SWAllocAddReq(input, vc, dest_output);
@@ -1244,6 +1285,7 @@ void IQRouter::_SWAllocEvaluate( )
 		     << "  Output " << dest_output 
 		     << " has no suitable VCs available." << endl;
 	}
+	iter->second.second = STALL_BUFFER_BUSY;
       }
     }
   }
@@ -1284,6 +1326,10 @@ void IQRouter::_SWAllocEvaluate( )
     assert((input >= 0) && (input < _inputs));
     int const vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
+
+    if(iter->second.second < -1) {
+      continue;
+    }
 
     assert(iter->second.second < 0);
 
@@ -1329,6 +1375,7 @@ void IQRouter::_SWAllocEvaluate( )
 		       << "." << (expanded_output % _output_speedup)
 		       << " has non-speculative requests." << endl;
 	  }
+	  iter->second.second = STALL_CROSSBAR_CONFLICT;
 	} else if(!_spec_mask_by_reqs &&
 		  (_sw_allocator->InputAssigned(expanded_output) >= 0)) {
 	  if(f->watch) {
@@ -1340,6 +1387,7 @@ void IQRouter::_SWAllocEvaluate( )
 		       << "." << (expanded_output % _output_speedup)
 		       << " has a non-speculative grant." << endl;
 	  }
+	  iter->second.second = STALL_CROSSBAR_CONFLICT;
 	} else if(_spec_sw_allocator->ReadRequest(expanded_input, 
 						  expanded_output) == vc) {
 	  if(f->watch) {
@@ -1354,7 +1402,29 @@ void IQRouter::_SWAllocEvaluate( )
 	  _sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
 	  iter->second.second = expanded_output;
 	}
+      } else {
+
+	if(f->watch) {
+	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		     << "Switch allocation failed for VC " << vc
+		     << " at input " << input
+		     << "." << endl;
+	}
+	
+	iter->second.second = STALL_CROSSBAR_CONFLICT;
+
       }
+    } else {
+      
+      if(f->watch) {
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		   << "Switch allocation failed for VC " << vc
+		   << " at input " << input
+		   << "." << endl;
+      }
+      
+      iter->second.second = STALL_CROSSBAR_CONFLICT;
+      
     }
   }
   
@@ -1371,6 +1441,8 @@ void IQRouter::_SWAllocEvaluate( )
     if(GetSimTime() < time) {
       break;
     }
+
+    assert(iter->second.second != -1);
 
     int const expanded_output = iter->second.second;
     
@@ -1419,7 +1491,7 @@ void IQRouter::_SWAllocEvaluate( )
 	  }
 	  *gWatchOut << "." << endl;
 	}
-	iter->second.second = -1;
+	iter->second.second = STALL_CROSSBAR_CONFLICT;
       } else if(_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)) {
 
 	assert(f->head);
@@ -1437,7 +1509,7 @@ void IQRouter::_SWAllocEvaluate( )
 			 << "." << (expanded_output % _output_speedup)
 			 << " due to misspeculation." << endl;
 	    }
-	    iter->second.second = -1;
+	    iter->second.second = -1; // stall is counted in VC allocation path!
 	  } else if((output_and_vc / _vcs) != output) {
 	    if(f->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -1447,7 +1519,7 @@ void IQRouter::_SWAllocEvaluate( )
 			 << "." << (expanded_output % _output_speedup)
 			 << " due to port mismatch between VC and switch allocator." << endl;
 	    }
-	    iter->second.second = -1;
+	    iter->second.second = STALL_BUFFER_CONFLICT; // count this case as if we had failed allocation
 	  } else if(dest_buf->IsFullFor((output_and_vc % _vcs))) {
 	    if(f->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -1457,7 +1529,7 @@ void IQRouter::_SWAllocEvaluate( )
 			 << "." << (expanded_output % _output_speedup)
 			 << " due to lack of credit." << endl;
 	    }
-	    iter->second.second = -1;
+	    iter->second.second = STALL_BUFFER_FULL;
 	  }
 
 	} else { // VC allocation is piggybacked onto switch allocation
@@ -1498,7 +1570,7 @@ void IQRouter::_SWAllocEvaluate( )
 			 << "." << (expanded_output % _output_speedup)
 			 << " because no suitable output VC for piggyback allocation is available." << endl;
 	    }
-	    iter->second.second = -1;
+	    iter->second.second = STALL_BUFFER_BUSY;
 	  }
 
 	}
@@ -1518,7 +1590,7 @@ void IQRouter::_SWAllocEvaluate( )
 		       << "." << (expanded_output % _output_speedup)
 		       << " due to lack of credit." << endl;
 	  }
-	  iter->second.second = -1;
+	  iter->second.second = STALL_BUFFER_FULL;
 	}
       }
     }
@@ -1721,6 +1793,18 @@ void IQRouter::_SWAllocUpdate( )
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "  No output port allocated." << endl;
       }
+
+#ifdef TRACK_STALLS
+      assert((expanded_output == -1) || // for stalls that are accounted for in VC allocation path
+	     (expanded_output == STALL_BUFFER_FULL) ||
+	     (expanded_output == STALL_CROSSBAR_CONFLICT));
+      if(expanded_output == STALL_BUFFER_FULL) {
+	++_buffer_full_stalls[f->cl];
+      } else if(expanded_output == STALL_CROSSBAR_CONFLICT) {
+	++_crossbar_conflict_stalls[f->cl];
+      }
+#endif
+
       _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first, -1)));
     }
     _sw_alloc_vcs.pop_front();

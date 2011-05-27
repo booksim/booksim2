@@ -184,6 +184,13 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_avg_accepted.resize(_classes, 0.0);
   _overall_max_accepted.resize(_classes, 0.0);
 
+#ifdef TRACK_STALLS
+  _overall_buffer_busy_stalls.resize(_classes, 0);
+  _overall_buffer_conflict_stalls.resize(_classes, 0);
+  _overall_buffer_full_stalls.resize(_classes, 0);
+  _overall_crossbar_conflict_stalls.resize(_classes, 0);
+#endif
+
   for ( int c = 0; c < _classes; ++c ) {
     ostringstream tmp_name;
 
@@ -736,13 +743,13 @@ void TrafficManager::_Step( )
   
   for (int subnet = 0; subnet < _subnets; ++subnet) {
     for(int router = 0; router < _routers; ++router) {
-      Router * r = _router[subnet][router];
+      Router * const r = _router[subnet][router];
       for(int c = 0; c < _classes; ++c) {
 	received_flits[(c*_subnets+subnet)*_routers+router] = r->GetReceivedFlits(c);
 	sent_flits[(c*_subnets+subnet)*_routers+router] = r->GetSentFlits(c);
 	stored_flits[(c*_subnets+subnet)*_routers+router] = r->GetStoredFlits(c);
 	active_packets[(c*_subnets+subnet)*_routers+router] = r->GetActivePackets(c);
-	r->ResetStats(c);
+	r->ResetFlowStats(c);
       }
     }
   }
@@ -802,6 +809,17 @@ void TrafficManager::_ClearStats( )
     _hop_stats[c]->Clear();
 
   }
+
+#ifdef TRACK_STALLS
+  for(int s = 0; s < _subnets; ++s) {
+    for(int r = 0; r < _routers; ++r) {
+      for(int c = 0; c < _classes; ++c) {
+	_router[s][r]->ResetStallStats(c);
+      }
+    }
+  }
+#endif
+
   _reset_time = _time;
 }
 
@@ -1015,6 +1033,21 @@ void TrafficManager::_UpdateOverallStats() {
     _overall_min_accepted[c] += rate_min;
     _overall_avg_accepted[c] += rate_avg;
     _overall_max_accepted[c] += rate_max;
+
+#ifdef TRACK_STALLS
+    for(int subnet = 0; subnet < _subnets; ++subnet) {
+      for(int router = 0; router < _routers; ++router) {
+	Router const * const r = _router[subnet][router];
+	for(int c = 0; c < _classes; ++c) {
+	  _overall_buffer_busy_stalls[c] += r->GetBufferBusyStalls(c);
+	  _overall_buffer_conflict_stalls[c] += r->GetBufferConflictStalls(c);
+	  _overall_buffer_full_stalls[c] += r->GetBufferFullStalls(c);
+	  _overall_crossbar_conflict_stalls[c] += r->GetCrossbarConflictStalls(c);
+	}
+      }
+    }
+#endif
+
   }
 }
 
@@ -1162,6 +1195,14 @@ void TrafficManager::_DisplayOverallClassStats( int c, ostream & os ) const {
      << " (" << _total_sims << " samples)" << endl;
   os << "Overall average hops = " << _overall_hop_stats[c] / (double)_total_sims
      << " (" << _total_sims << " samples)" << endl;
+
+#ifdef TRACK_STALLS
+  os << "Overall buffer busy stalls = " << (double)_overall_buffer_busy_stalls[c] / (double)_total_sims << endl
+     << "Overall buffer conflict stalls = " << (double)_overall_buffer_conflict_stalls[c] / (double)_total_sims << endl
+     << "Overall buffer full stalls = " << (double)_overall_buffer_full_stalls[c] / (double)_total_sims << endl
+     << "Overall crossbar conflict stalls = " << (double)_overall_crossbar_conflict_stalls[c] / (double)_total_sims << endl;
+#endif
+
 }
 
 string TrafficManager::_OverallStatsHeaderCSV() const
@@ -1205,6 +1246,14 @@ string TrafficManager::_OverallClassStatsCSV(int c) const
      << ',' << _overall_avg_accepted[c] / (double)_total_sims
      << ',' << _overall_max_accepted[c] / (double)_total_sims
      << ',' << _overall_hop_stats[c] / (double)_total_sims;
+
+#ifdef TRACK_STALLS
+  os << ',' << (double)_overall_buffer_busy_stalls[c] / (double)_total_sims
+     << ',' << (double)_overall_buffer_conflict_stalls[c] / (double)_total_sims
+     << ',' << (double)_overall_buffer_full_stalls[c] / (double)_total_sims
+     << ',' << (double)_overall_crossbar_conflict_stalls[c] / (double)_total_sims;
+#endif
+
   return os.str();
 }
 

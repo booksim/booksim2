@@ -77,6 +77,13 @@ TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
   _active_packets.resize(_classes);
 #endif
 
+#ifdef TRACK_STALLS
+  _buffer_busy_stalls.resize(_classes, 0);
+  _buffer_conflict_stalls.resize(_classes, 0);
+  _buffer_full_stalls.resize(_classes, 0);
+  _crossbar_conflict_stalls.resize(_classes, 0);
+#endif
+
 }
 
 void Router::AddInputChannel( FlitChannel *channel, CreditChannel *backchannel )
