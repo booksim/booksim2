@@ -281,18 +281,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   } else {
     _active_packets_out = new ofstream(active_packets_out_file.c_str());
   }
-  string injected_flits_out_file = config.GetStr( "injected_flits_out" );
-  if(injected_flits_out_file == "") {
-    _injected_flits_out = NULL;
-  } else {
-    _injected_flits_out = new ofstream(injected_flits_out_file.c_str());
-  }
-  string ejected_flits_out_file = config.GetStr( "ejected_flits_out" );
-  if(ejected_flits_out_file == "") {
-    _ejected_flits_out = NULL;
-  } else {
-    _ejected_flits_out = new ofstream(ejected_flits_out_file.c_str());
-  }
   string received_flits_out_file = config.GetStr( "received_flits_out" );
   if(received_flits_out_file == "") {
     _received_flits_out = NULL;
@@ -341,8 +329,6 @@ TrafficManager::~TrafficManager( )
 
 #ifdef TRACK_FLOWS
   if(_active_packets_out) delete _active_packets_out;
-  if(_injected_flits_out) delete _injected_flits_out;
-  if(_ejected_flits_out) delete _ejected_flits_out;
   if(_received_flits_out) delete _received_flits_out;
   if(_sent_flits_out) delete _sent_flits_out;
   if(_stored_flits_out) delete _stored_flits_out;
