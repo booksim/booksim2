@@ -993,16 +993,13 @@ void TrafficManager::_UpdateOverallStats() {
       continue;
     }
     
-    assert(_plat_stats[c]->NumSamples() > 0);
     _overall_min_plat[c] += _plat_stats[c]->Min();
     _overall_avg_plat[c] += _plat_stats[c]->Average();
     _overall_max_plat[c] += _plat_stats[c]->Max();
-    assert(_frag_stats[c]->NumSamples() > 0);
     _overall_min_frag[c] += _frag_stats[c]->Min();
     _overall_avg_frag[c] += _frag_stats[c]->Average();
     _overall_max_frag[c] += _frag_stats[c]->Max();
     
-    assert(_hop_stats[c]->NumSamples() > 0);
     _overall_hop_stats[c] += _hop_stats[c]->Average();
 
     int count_min, count_sum, count_max;
