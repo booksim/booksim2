@@ -41,7 +41,7 @@ class BatchTrafficManager : public TrafficManager {
 
 protected:
 
-  int _maxOutstanding;
+  int _max_outstanding;
   int _batch_size;
   int _batch_count;
   int _last_id;
