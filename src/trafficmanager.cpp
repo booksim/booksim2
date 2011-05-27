@@ -1548,7 +1548,9 @@ void TrafficManager::DisplayStats(ostream & os) const {
     cout << "Minimum latency = " << _plat_stats[c]->Min() << endl
 	 << "Average latency = " << _plat_stats[c]->Average() << endl
 	 << "Maximum latency = " << _plat_stats[c]->Max() << endl
-	 << "Average fragmentation = " << _frag_stats[c]->Average() << endl;
+	 << "Minimum fragmentation = " << _frag_stats[c]->Min() << endl
+	 << "Average fragmentation = " << _frag_stats[c]->Average() << endl
+	 << "Maximum fragmentation = " << _frag_stats[c]->Max() << endl;
     
     int count_sum, count_min, count_max;
     double rate_sum, rate_min, rate_max;
