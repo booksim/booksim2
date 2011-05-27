@@ -43,7 +43,7 @@ BatchTrafficManager::BatchTrafficManager( const Configuration &config,
    _overall_max_batch_time(0)
 {
 
-  _maxOutstanding = config.GetInt ("max_outstanding_requests");  
+  _max_outstanding = config.GetInt ("max_outstanding_requests");  
 
   _batch_size = config.GetInt( "batch_size" );
   _batch_count = config.GetInt( "batch_count" );
@@ -84,8 +84,8 @@ int BatchTrafficManager::_IssuePacket( int source, int cl )
       }
     } else {
       if((_sent_packets[source] < _batch_size) && 
-	 ((_maxOutstanding <= 0) || 
-	  (_requestsOutstanding[source] < _maxOutstanding))) {
+	 ((_max_outstanding <= 0) || 
+	  (_requestsOutstanding[source] < _max_outstanding))) {
 	
 	//coin toss to determine request type.
 	result = (RandomFloat() < 0.5) ? 2 : 1;
@@ -95,8 +95,8 @@ int BatchTrafficManager::_IssuePacket( int source, int cl )
     }
   } else { //normal
     if((_sent_packets[source] < _batch_size) && 
-       ((_maxOutstanding <= 0) || 
-	(_requestsOutstanding[source] < _maxOutstanding))) {
+       ((_max_outstanding <= 0) || 
+	(_requestsOutstanding[source] < _max_outstanding))) {
       result = _packet_size[cl];
       _requestsOutstanding[source]++;
     }
