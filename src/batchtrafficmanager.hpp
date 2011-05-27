@@ -44,12 +44,13 @@ protected:
   int _maxOutstanding;
   int _batch_size;
   int _batch_count;
-  int _last_batch_time;
   int _last_id;
   int _last_pid;
 
   Stats * _batch_time;
-  Stats * _overall_batch_time;
+  double _overall_min_batch_time;
+  double _overall_avg_batch_time;
+  double _overall_max_batch_time;
 
   ostream * _sent_packets_out;
 
