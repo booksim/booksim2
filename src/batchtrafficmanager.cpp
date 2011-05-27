@@ -187,9 +187,9 @@ string BatchTrafficManager::_OverallStatsCSV(int c) const
 {
   ostringstream os;
   os << TrafficManager::_OverallStatsCSV(c) << ','
-     << _overall_min_batch_time << ','
-     << _overall_avg_batch_time << ','
-     << _overall_max_batch_time;
+     << _overall_min_batch_time / (double)_total_sims << ','
+     << _overall_avg_batch_time / (double)_total_sims << ','
+     << _overall_max_batch_time / (double)_total_sims;
   return os.str();
 }
 
