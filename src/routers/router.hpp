@@ -47,12 +47,10 @@ class Router : public TimedModule {
 
 protected:
 
-#ifdef TRACK_STALLS
   static int const STALL_BUFFER_BUSY = -2;
   static int const STALL_BUFFER_CONFLICT = -3;
   static int const STALL_BUFFER_FULL = -4;
   static int const STALL_CROSSBAR_CONFLICT = -5;
-#endif
 
   int _id;
   
