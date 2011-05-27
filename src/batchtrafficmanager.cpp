@@ -195,15 +195,15 @@ string BatchTrafficManager::_OverallStatsCSV(int c) const
 
 void BatchTrafficManager::WriteStats(ostream & os) const
 {
-  os << "batch_time = " << _batch_time->Average() << ";" << endl;
   TrafficManager::WriteStats(os);
+  os << "batch_time = " << _batch_time->Average() << ";" << endl;
 }    
 
 void BatchTrafficManager::DisplayStats(ostream & os) const {
+  TrafficManager::DisplayStats();
   os << "Minimum batch duration = " << _batch_time->Min() << endl;
   os << "Average batch duration = " << _batch_time->Average() << endl;
   os << "Maximum batch duration = " << _batch_time->Max() << endl;
-  TrafficManager::DisplayStats();
 }
 
 void BatchTrafficManager::DisplayOverallStats(ostream & os) const {
