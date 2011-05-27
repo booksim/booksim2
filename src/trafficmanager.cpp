@@ -1490,8 +1490,6 @@ void TrafficManager::WriteStats(ostream & os) const {
       continue;
     }
     
-    double time_delta = (double)(_time - _reset_time);
-
     //c+1 due to matlab array starting at 1
     os << "lat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
        << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
@@ -1516,6 +1514,9 @@ void TrafficManager::WriteStats(ostream & os) const {
 	os << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";
       }
     }
+
+    double time_delta = (double)(_time - _reset_time);
+
     os << "];" << endl
        << "sent(" << c+1 << ",:) = [ ";
     for ( int d = 0; d < _nodes; ++d ) {
