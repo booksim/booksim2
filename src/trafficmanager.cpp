@@ -260,10 +260,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_avg_accepted.resize(_classes, 0.0);
   _overall_max_accepted.resize(_classes, 0.0);
 
+#ifdef TRACK_STALLS
   _overall_buffer_busy_stalls = 0;
   _overall_buffer_conflict_stalls = 0;
   _overall_buffer_full_stalls = 0;
   _overall_crossbar_conflict_stalls = 0;
+#endif
 
   for ( int c = 0; c < _classes; ++c ) {
     ostringstream tmp_name;
