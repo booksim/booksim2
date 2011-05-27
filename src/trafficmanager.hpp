@@ -102,10 +102,6 @@ protected:
 
   // ============ Statistics ============
 
-  vector<int> _generated_flit_count;
-  vector<int> _injected_flit_count;
-  vector<int> _ejected_flit_count;
-
   vector<Stats *> _plat_stats;     
   vector<double> _overall_min_plat;  
   vector<double> _overall_avg_plat;  
@@ -121,15 +117,15 @@ protected:
   vector<Stats *> _hop_stats;
   vector<double> _overall_hop_stats;
 
-  vector<vector<Stats *> > _offered_flits;
+  vector<vector<int> > _offered_flits;
   vector<double> _overall_min_offered;
   vector<double> _overall_avg_offered;
   vector<double> _overall_max_offered;
-  vector<vector<Stats *> > _sent_flits;
+  vector<vector<int> > _sent_flits;
   vector<double> _overall_min_sent;
   vector<double> _overall_avg_sent;
   vector<double> _overall_max_sent;
-  vector<vector<Stats *> > _accepted_flits;
+  vector<vector<int> > _accepted_flits;
   vector<double> _overall_min_accepted;
   vector<double> _overall_avg_accepted;
   vector<double> _overall_max_accepted;
@@ -143,6 +139,7 @@ protected:
   enum eSimState { warming_up, running, draining, done };
   eSimState _sim_state;
 
+  int   _reset_time;
   int   _drain_time;
 
   int   _total_sims;
@@ -196,7 +193,7 @@ protected:
 
   virtual void _ClearStats( );
 
-  bool _ComputeStats( const vector<Stats *> & stats, double *avg, double *min = NULL, double *max = NULL, int *min_pos = NULL, int *max_pos = NULL ) const;
+  void _ComputeStats( const vector<int> & stats, int *sum, int *min = NULL, int *max = NULL, int *min_pos = NULL, int *max_pos = NULL ) const;
 
   virtual bool _SingleSim( ) = 0;
 

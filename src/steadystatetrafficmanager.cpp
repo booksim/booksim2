@@ -165,8 +165,10 @@ bool SteadyStateTrafficManager::_SingleSim( )
 
       double cur_latency = _plat_stats[c]->Average( );
 
-      double cur_accepted;
-      _ComputeStats( _accepted_flits[c], &cur_accepted );
+      int total_accepted_count;
+      _ComputeStats( _accepted_flits[c], &total_accepted_count );
+      double total_accepted_rate = (double)total_accepted_count / (double)(_time - _reset_time);
+      double cur_accepted = total_accepted_rate / (double)_nodes;
 
       double latency_change = fabs((cur_latency - prev_latency[c]) / cur_latency);
       prev_latency[c] = cur_latency;
@@ -224,7 +226,8 @@ bool SteadyStateTrafficManager::_SingleSim( )
       
       cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
       converged = 0; 
-      _sim_state = warming_up;
+      _sim_state  = draining;
+      _drain_time = _time;
       break;
       
     }

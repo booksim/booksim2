@@ -137,8 +137,6 @@ bool WorkloadTrafficManager::_SingleSim( )
 
   cout << "Completed measurements after " << _time << " cycles." << endl;
 
-  _runtime = _time - _warmup_periods * _sample_period;
-
   _sim_state = draining;
   _drain_time = _time;
 
@@ -159,8 +157,7 @@ bool WorkloadTrafficManager::_Completed( )
 void WorkloadTrafficManager::_UpdateOverallStats()
 {
   TrafficManager::_UpdateOverallStats();
-  _runtime_sum += _runtime;
-  ++_runtime_samples;
+  _overall_runtime += (_drain_time - _reset_time);
 }
   
 string WorkloadTrafficManager::_OverallStatsHeaderCSV() const
@@ -173,17 +170,15 @@ string WorkloadTrafficManager::_OverallStatsHeaderCSV() const
 
 string WorkloadTrafficManager::_OverallClassStatsCSV(int c) const
 {
-  double runtime = (double)_runtime_sum / (double)_runtime_samples;
   ostringstream os;
   os << TrafficManager::_OverallClassStatsCSV(c)
-     << ',' << runtime;
+     << ',' << (double)_overall_runtime / (double)_total_sims;
   return os.str();
 }
 
 void WorkloadTrafficManager::_DisplayOverallClassStats(int c, ostream & os) const
 {
   TrafficManager::_DisplayOverallClassStats(c, os);
-  double runtime = (double)_runtime_sum / (double)_runtime_samples;
-  os << "Overall workload runtime = " << runtime
-     << " (" << _runtime_samples << " samples)" << endl;
+  os << "Overall workload runtime = " << (double)_overall_runtime / (double)_total_sims
+     << " (" << _total_sims << " samples)" << endl;
 }

@@ -48,9 +48,7 @@ protected:
 
   vector<Workload *> _workload;
 
-  int _runtime;
-  int _runtime_sum;
-  int _runtime_samples;
+  int _overall_runtime;
 
   virtual bool _IssuePacket( int source, int cl );
   virtual void _Inject( );
