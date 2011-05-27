@@ -123,6 +123,7 @@ bool BatchTrafficManager::_SingleSim( )
     _sim_state = running;
     int start_time = _time;
     bool batch_complete;
+    cout << "Sending batch " << batch_index + 1 << " (" << _batch_size << " packets)..." << endl;
     do {
       _Step();
       batch_complete = true;
@@ -136,10 +137,11 @@ bool BatchTrafficManager::_SingleSim( )
 	*_sent_packets_out << _sent_packets << ";" << endl;
       }
     } while(!batch_complete);
-    cout << "Batch " << batch_index + 1 << " ("<<_batch_size  <<  " packets) sent. Time used is " << _time - start_time << " cycles." << endl;
-    cout << "Draining the Network...................\n";
-    _sim_state = draining;
-    _drain_time = _time;
+    cout << "Batch injected. Time used is " << _time - start_time << " cycles." << endl;
+
+    int sent_time = _time;
+    cout << "Waiting for batch to complete..." << endl;
+
     int empty_steps = 0;
     
     bool packets_left = false;
@@ -163,7 +165,8 @@ bool BatchTrafficManager::_SingleSim( )
       }
     }
     cout << endl;
-    cout << "Batch " << batch_index + 1 << " ("<<_batch_size  <<  " packets) received. Time used is " << _time - _drain_time << " cycles. Last packet was " << _last_pid << ", last flit was " << _last_id << "." <<endl;
+    cout << "Batch received. Time used is " << _time - sent_time << " cycles." << endl
+	 << "Last packet was " << _last_pid << ", last flit was " << _last_id << "." << endl;
 
     _batch_time->AddSample(_time - start_time);
 
@@ -173,6 +176,8 @@ bool BatchTrafficManager::_SingleSim( )
         
     ++batch_index;
   }
+  _sim_state = draining;
+  _drain_time = _time;
   return 1;
 }
 
