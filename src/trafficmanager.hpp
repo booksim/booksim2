@@ -179,7 +179,6 @@ protected:
   bool _measure_latency;
 
   int   _reset_time;
-  int   _end_time;
   int   _drain_time;
 
   int   _total_sims;
