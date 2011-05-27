@@ -46,6 +46,14 @@ typedef Channel<Credit> CreditChannel;
 class Router : public TimedModule {
 
 protected:
+
+#ifdef TRACK_STALLS
+  static int const STALL_BUFFER_BUSY = -2;
+  static int const STALL_BUFFER_CONFLICT = -3;
+  static int const STALL_BUFFER_FULL = -4;
+  static int const STALL_CROSSBAR_CONFLICT = -5;
+#endif
+
   int _id;
   
   int _inputs;
@@ -71,6 +79,13 @@ protected:
   vector<int> _stored_flits;
   vector<int> _sent_flits;
   vector<int> _active_packets;
+#endif
+
+#ifdef TRACK_STALLS
+  int _buffer_busy_stalls;
+  int _buffer_conflict_stalls;
+  int _buffer_full_stalls;
+  int _crossbar_conflict_stalls;
 #endif
 
   virtual void _InternalStep() = 0;
@@ -123,9 +138,32 @@ public:
   inline vector<int> const & GetActivePackets() const {
     return _active_packets;
   }
-  inline void ResetStats() {
+
+  inline void ResetFlowStats() {
     _received_flits.assign(_received_flits.size(), 0);
     _sent_flits.assign(_sent_flits.size(), 0);
+  }
+#endif
+
+#ifdef TRACK_STALLS
+  inline int GetBufferBusyStalls() const {
+    return _buffer_busy_stalls;
+  }
+  inline int GetBufferConflictStalls() const {
+    return _buffer_conflict_stalls;
+  }
+  inline int GetBufferFullStalls() const {
+    return _buffer_full_stalls;
+  }
+  inline int GetCrossbarConflictStalls() const {
+    return _crossbar_conflict_stalls;
+  }
+
+  inline void ResetStallStats() {
+    _buffer_busy_stalls = 0;
+    _buffer_conflict_stalls = 0;
+    _buffer_full_stalls = 0;
+    _crossbar_conflict_stalls = 0;
   }
 #endif
 
