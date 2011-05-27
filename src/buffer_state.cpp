@@ -273,11 +273,8 @@ BufferState::LimitedSharedBufferPolicy::LimitedSharedBufferPolicy(Configuration 
 bool BufferState::LimitedSharedBufferPolicy::IsFullFor(int vc) const
 {
   assert((vc >= 0) && (vc < _vcs));
-  int i = _private_buf_vc_map[vc];
-  return ((_reserved_slots[vc] == 0) &&
-	  (((_private_buf_occupancy[i] >= _private_buf_size[i]) &&
-	    (_shared_buf_occupancy >= _shared_buf_size)) ||
-	   (_vc_occupancy[vc] >= _max_held_slots)));
+  return (SharedBufferPolicy::IsFullFor(vc) ||
+	  (_vc_occupancy[vc] >= _max_held_slots));
 }
 
 BufferState::DynamicLimitedSharedBufferPolicy::DynamicLimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
@@ -289,8 +286,9 @@ BufferState::DynamicLimitedSharedBufferPolicy::DynamicLimitedSharedBufferPolicy(
 void BufferState::DynamicLimitedSharedBufferPolicy::AllocVC(int vc)
 {
   BufferPolicy::AllocVC(vc);
-  assert(_active_vcs);
+  assert(_active_vcs > 0);
   _max_held_slots = _buf_size / _active_vcs;
+  assert(_max_held_slots > 0);
 }
 
 void BufferState::DynamicLimitedSharedBufferPolicy::FreeVC(int vc)
@@ -299,6 +297,7 @@ void BufferState::DynamicLimitedSharedBufferPolicy::FreeVC(int vc)
   if(_active_vcs) {
     _max_held_slots = _buf_size / _active_vcs;
   }
+  assert(_max_held_slots > 0);
 }
 
 BufferState::ShiftingDynamicLimitedSharedBufferPolicy::ShiftingDynamicLimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
@@ -317,6 +316,7 @@ void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::AllocVC(int vc)
     _max_held_slots >>= 1;
     i >>= 1;
   }
+  assert(_max_held_slots > 0);
 }
 
 void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::FreeVC(int vc)
@@ -330,6 +330,7 @@ void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::FreeVC(int vc)
       i >>= 1;
     }
   }
+  assert(_max_held_slots > 0);
 }
 
 BufferState::BufferState( const Configuration& config, Module *parent, const string& name ) : 
