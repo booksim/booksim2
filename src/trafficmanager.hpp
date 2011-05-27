@@ -167,6 +167,13 @@ protected:
   vector<double> _overall_avg_accepted;
   vector<double> _overall_max_accepted;
   
+#ifdef TRACK_STALLS
+  int _overall_buffer_busy_stalls;
+  int _overall_buffer_conflict_stalls;
+  int _overall_buffer_full_stalls;
+  int _overall_crossbar_conflict_stalls;
+#endif
+
   vector<int> _slowest_flit;
 
   map<string, Stats *> _stats;
