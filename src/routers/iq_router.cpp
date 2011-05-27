@@ -1812,9 +1812,15 @@ void IQRouter::_SWAllocUpdate( )
 
 #ifdef TRACK_STALLS
       assert((expanded_output == -1) || // for stalls that are accounted for in VC allocation path
+	     (expanded_output == STALL_BUFFER_BUSY) ||
+	     (expanded_output == STALL_BUFFER_CONFLICT) ||
 	     (expanded_output == STALL_BUFFER_FULL) ||
 	     (expanded_output == STALL_CROSSBAR_CONFLICT));
-      if(expanded_output == STALL_BUFFER_FULL) {
+      if(expanded_output == STALL_BUFFER_BUSY) {
+	++_buffer_busy_stalls[f->cl];
+      } else if(expanded_output == STALL_BUFFER_CONFLICT) {
+	++_buffer_conflict_stalls[f->cl];
+      } else if(expanded_output == STALL_BUFFER_FULL) {
 	++_buffer_full_stalls[f->cl];
       } else if(expanded_output == STALL_CROSSBAR_CONFLICT) {
 	++_crossbar_conflict_stalls[f->cl];
