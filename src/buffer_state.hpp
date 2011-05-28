@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _BUFFER_STATE_HPP_
 
 #include <vector>
+#include <queue>
 
 #include "module.hpp"
 #include "flit.hpp"
@@ -124,6 +125,22 @@ class BufferState : public Module {
 					     const string & name);
     virtual void AllocVC(int vc = 0);
     virtual void FreeVC(int vc = 0);
+  };
+  
+  class FeedbackSharedBufferPolicy : public SharedBufferPolicy {
+  protected:
+    vector<int> _occupancy_limit;
+    vector<int> _round_trip_time;
+    queue<int> _flit_sent_time;
+    int _min_round_trip_time;
+    int _total_mapped_size;
+    int _aging_scale;
+  public:
+    FeedbackSharedBufferPolicy(Configuration const & config, 
+			       BufferState * parent, const string & name);
+    virtual void AllocSlotFor(int vc = 0);
+    virtual void FreeSlotFor(int vc = 0);
+    virtual bool IsFullFor(int vc = 0) const;
   };
   
   bool _wait_for_tail_credit;
