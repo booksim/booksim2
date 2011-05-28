@@ -32,7 +32,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _BUFFER_STATE_HPP_
 
 #include <vector>
-#include <algorithm>
 
 #include "module.hpp"
 #include "flit.hpp"
