@@ -42,6 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include "buffer_state.hpp"
 #include "random_utils.hpp"
+#include "globals.hpp"
 
 BufferState::BufferPolicy::BufferPolicy(Configuration const & config, BufferState * parent, const string & name)
 : Module(parent, name), _buffer_state(parent), _active_vcs(0)
@@ -100,6 +101,8 @@ BufferState::BufferPolicy * BufferState::BufferPolicy::NewBufferPolicy(Configura
     sp = new DynamicLimitedSharedBufferPolicy(config, parent, name);
   } else if(buffer_policy == "shifting") {
     sp = new ShiftingDynamicLimitedSharedBufferPolicy(config, parent, name);
+  } else if(buffer_policy == "feedback") {
+    sp = new FeedbackSharedBufferPolicy(config, parent, name);
   } else {
     cout << "Unknown buffer policy: " << buffer_policy << endl;
   }
@@ -330,6 +333,60 @@ void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::FreeVC(int vc)
     }
   }
   assert(_max_held_slots > 0);
+}
+
+BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
+  : SharedBufferPolicy(config, parent, name)
+{
+  _aging_scale = config.GetInt("feedback_aging_scale");
+
+  int const initial_limit = _buf_size / _vcs;
+  _occupancy_limit.resize(_vcs, initial_limit);
+  _round_trip_time.resize(_vcs, initial_limit);
+  _total_mapped_size = initial_limit * _vcs;
+  _min_round_trip_time = _buf_size;
+}
+
+void BufferState::FeedbackSharedBufferPolicy::AllocSlotFor(int vc)
+{
+  SharedBufferPolicy::AllocSlotFor(vc);
+  _flit_sent_time.push(GetSimTime());
+}
+
+void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
+{
+  SharedBufferPolicy::FreeSlotFor(vc);
+  assert(!_flit_sent_time.empty());
+  int const last_rtt = GetSimTime() - _flit_sent_time.front();
+  _flit_sent_time.pop();
+  
+  // determine minimum round trip time (could be hardcoded in a real network, 
+  // but since some of the topologies here have varying channel lengths, it's 
+  // easiest just to detect this on the fly)
+  if(last_rtt < _min_round_trip_time) {
+    _min_round_trip_time = last_rtt;
+  }
+
+  // update moving average of round-trip time
+  int rtt = _round_trip_time[vc];
+  rtt = ((rtt << _aging_scale) + last_rtt - rtt) >> _aging_scale;
+  _round_trip_time[vc] = rtt;
+  
+  // update occupancy limit for this VC
+  // 
+  // for every cycle that the measured average round trip time exceeded the 
+  // observed minimum round trip time, reduce buffer occupancy limit by one
+  int limit = _occupancy_limit[vc];
+  _total_mapped_size -= limit;
+  limit = max((_min_round_trip_time << 1) - rtt, 1);
+  _occupancy_limit[vc] = limit;
+  _total_mapped_size += limit;  
+}
+
+bool BufferState::FeedbackSharedBufferPolicy::IsFullFor(int vc) const
+{
+  return (SharedBufferPolicy::IsFullFor(vc) ||
+	  (_vc_occupancy[vc] >= _occupancy_limit[vc]));
 }
 
 BufferState::BufferState( const Configuration& config, Module *parent, const string& name ) : 
