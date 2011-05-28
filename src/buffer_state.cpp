@@ -272,7 +272,6 @@ BufferState::LimitedSharedBufferPolicy::LimitedSharedBufferPolicy(Configuration 
 
 bool BufferState::LimitedSharedBufferPolicy::IsFullFor(int vc) const
 {
-  assert((vc >= 0) && (vc < _vcs));
   return (SharedBufferPolicy::IsFullFor(vc) ||
 	  (_vc_occupancy[vc] >= _max_held_slots));
 }
