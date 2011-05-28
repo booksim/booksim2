@@ -126,7 +126,6 @@ SyntheticWorkload::SyntheticWorkload(int nodes, double load, int size,
   _injection = InjectionProcess::New(injection, nodes, load);
   _traffic = TrafficPattern::New(traffic, nodes);
   _qtime.resize(nodes);
-  reset();
 }
 
 SyntheticWorkload::~SyntheticWorkload()
