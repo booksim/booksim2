@@ -87,23 +87,27 @@ Workload * Workload::New(string const & workload, int nodes)
     for(size_t i = 0; i < packet_sizes_str.size(); ++i) {
       packet_sizes[i] = atoi(packet_sizes_str[i].c_str());
     }
+    int limit = -1;
     vector<int> scales;
     vector<int> skips;
     if(params.size() > 2) {
-      vector<string> skips_str = tokenize(params[2]);
-      skips.resize(skips_str.size());
-      for(size_t i = 0; i < skips_str.size(); ++i) {
-	skips[i] = atoi(skips_str[i].c_str());
-      }
+      limit = atoi(params[2].c_str());
       if(params.size() > 3) {
-	vector<string> scales_str = tokenize(params[3]);
-	scales.resize(scales_str.size());
-	for(size_t i = 0; i < scales_str.size(); ++i) {
-	  scales[i] = atoi(scales_str[i].c_str());
+	vector<string> skips_str = tokenize(params[3]);
+	skips.resize(skips_str.size());
+	for(size_t i = 0; i < skips_str.size(); ++i) {
+	  skips[i] = atoi(skips_str[i].c_str());
+	}
+	if(params.size() > 4) {
+	  vector<string> scales_str = tokenize(params[4]);
+	  scales.resize(scales_str.size());
+	  for(size_t i = 0; i < scales_str.size(); ++i) {
+	    scales[i] = atoi(scales_str[i].c_str());
+	  }
 	}
       }
     }
-    result = new TraceWorkload(nodes, filenames, packet_sizes, skips, scales);
+    result = new TraceWorkload(nodes, filenames, packet_sizes, limit, skips, scales);
   }
   return result;
 }
@@ -239,12 +243,13 @@ void SyntheticWorkload::defer()
 }
 
 TraceWorkload::TraceWorkload(int nodes, vector<string> const & filenames, 
-			     vector<int> const & packet_sizes,
+			     vector<int> const & packet_sizes, int limit,
 			     vector<int> const & skips, 
 			     vector<int> const & scales)
-  : Workload(nodes), _packet_sizes(packet_sizes), _scales(scales), _skips(skips)
+  : Workload(nodes), _packet_sizes(packet_sizes), _limit(limit), 
+    _scales(scales), _skips(skips)
 {
- if(_scales.empty()) {
+  if(_scales.empty()) {
     _scales.push_back(1);
   }
   _scales.resize(nodes, _scales.back());
@@ -287,14 +292,18 @@ void TraceWorkload::reset()
 {
   Workload::reset();
 
+  _counts.assign(_nodes, 0);
+
   // get first packet for each node
   for(int n = 0; n < _nodes; ++n) {
     ifstream * trace = _traces[n];
     trace->seekg(0);
+    int & count = _counts[n];
     int const skip = _skips[n];
     int const scale = _scales[n];
     int time = 0;
-    while(!trace->eof()) {
+    while(((_limit < 0) || (count < _limit)) && !trace->eof()) {
+      ++count;
       int delay, source, dest, type;
       *trace >> delay >> source >> dest >> type;
       time += delay * scale;
@@ -376,11 +385,13 @@ void TraceWorkload::inject()
 {
   assert(!empty());
   int const n = _ready_iter->source;
+  int & count = _counts[n];
   int const scale = _scales[n];
   ifstream * trace = _traces[n];
   int time = _ready_iter->time;
   bool empty = true;
-  while(!trace->eof()) {
+  while(((_limit < 0) || (count < _limit)) && !trace->eof()) {
+    ++count;
     int delay, source, dest, type;
     *trace >> delay >> source >> dest >> type;
     time += delay * scale;

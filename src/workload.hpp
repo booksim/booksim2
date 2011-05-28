@@ -106,13 +106,16 @@ protected:
 
   vector<ifstream *> _traces;
   
+  vector<int> _counts;
+  int _limit;
+
   vector<int> _scales;
   vector<int> _skips;
 
 public:
   
   TraceWorkload(int nodes, vector<string> const & filenames,
-		vector<int> const & packet_size,
+		vector<int> const & packet_size, int limit = -1,
 		vector<int> const & skips = vector<int>(),
 		vector<int> const & scales = vector<int>());
   
