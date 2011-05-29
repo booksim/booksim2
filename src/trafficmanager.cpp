@@ -1222,6 +1222,12 @@ string TrafficManager::_OverallStatsHeaderCSV() const
      << ',' << "avg_accepted"
      << ',' << "max_accepted"
      << ',' << "hops";
+#ifdef TRACK_STALLS
+  os << ',' << "buffer_busy"
+     << ',' << "buffer_conflict"
+     << ',' << "buffer_full"
+     << ',' << "crossbar_conflict";
+#endif
   return os.str();
 }
 
