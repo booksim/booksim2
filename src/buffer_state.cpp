@@ -339,6 +339,7 @@ BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuratio
   : SharedBufferPolicy(config, parent, name)
 {
   _aging_scale = config.GetInt("feedback_aging_scale");
+  _offset = config.GetInt("feedback_offset");
 
   int const initial_limit = _buf_size / _vcs;
   _occupancy_limit.resize(_vcs, initial_limit);
@@ -378,7 +379,7 @@ void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
   // observed minimum round trip time, reduce buffer occupancy limit by one
   int limit = _occupancy_limit[vc];
   _total_mapped_size -= limit;
-  limit = max((_min_round_trip_time << 1) - rtt, 1);
+  limit = max((_min_round_trip_time << 1) - rtt + _offset, 1);
   _occupancy_limit[vc] = limit;
   _total_mapped_size += limit;  
 }

@@ -112,6 +112,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["max_held_slots"] = -1;
 
   _int_map["feedback_aging_scale"] = 1;
+  _int_map["feedback_offset"] = 0;
 
   _int_map["wait_for_tail_credit"] = 0; // reallocate a VC before a tail credit?
   _int_map["vc_busy_when_full"] = 0; // mark VCs as in use when they have no credit available
