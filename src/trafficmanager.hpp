@@ -171,6 +171,7 @@ protected:
   int _overall_buffer_busy_stalls;
   int _overall_buffer_conflict_stalls;
   int _overall_buffer_full_stalls;
+  int _overall_buffer_reserved_stalls;
   int _overall_crossbar_conflict_stalls;
 #endif
 

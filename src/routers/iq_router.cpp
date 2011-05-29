@@ -884,7 +884,7 @@ void IQRouter::_SWHoldEvaluate( )
 		   << "." << (expanded_output % _output_speedup)
 		   << ": No credit available." << endl;
       }
-      iter->second.second = STALL_BUFFER_FULL;
+      iter->second.second = dest_buf->IsFull() ? STALL_BUFFER_FULL : STALL_BUFFER_RESERVED;
     } else {
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -1042,7 +1042,8 @@ void IQRouter::_SWHoldUpdate( )
       }
     } else {
       
-      assert(expanded_output == STALL_BUFFER_FULL);
+      assert((expanded_output == STALL_BUFFER_FULL) ||
+	     (expanded_output == STALL_BUFFER_RESERVED));
 
       int const held_expanded_output = _switch_hold_in[expanded_input];
       assert(held_expanded_output >= 0);
@@ -1222,7 +1223,7 @@ void IQRouter::_SWAllocEvaluate( )
 		     << " at output " << dest_output 
 		     << " is full." << endl;
 	}
-	iter->second.second = STALL_BUFFER_FULL;
+	iter->second.second = dest_buf->IsFull() ? STALL_BUFFER_FULL : STALL_BUFFER_RESERVED;
 	continue;
       }
       bool const requested = _SWAllocAddReq(input, vc, dest_output);
@@ -1544,7 +1545,7 @@ void IQRouter::_SWAllocEvaluate( )
 			 << "." << (expanded_output % _output_speedup)
 			 << " due to lack of credit." << endl;
 	    }
-	    iter->second.second = STALL_BUFFER_FULL;
+	    iter->second.second = dest_buf->IsFull() ? STALL_BUFFER_FULL : STALL_BUFFER_RESERVED;
 	  }
 
 	} else { // VC allocation is piggybacked onto switch allocation
@@ -1605,7 +1606,7 @@ void IQRouter::_SWAllocEvaluate( )
 		       << "." << (expanded_output % _output_speedup)
 		       << " due to lack of credit." << endl;
 	  }
-	  iter->second.second = STALL_BUFFER_FULL;
+	  iter->second.second = dest_buf->IsFull() ? STALL_BUFFER_FULL : STALL_BUFFER_RESERVED;
 	}
       }
     }
@@ -1814,6 +1815,7 @@ void IQRouter::_SWAllocUpdate( )
 	     (expanded_output == STALL_BUFFER_BUSY) ||
 	     (expanded_output == STALL_BUFFER_CONFLICT) ||
 	     (expanded_output == STALL_BUFFER_FULL) ||
+	     (expanded_output == STALL_BUFFER_RESERVED) ||
 	     (expanded_output == STALL_CROSSBAR_CONFLICT));
       if(expanded_output == STALL_BUFFER_BUSY) {
 	++_buffer_busy_stalls;
@@ -1821,6 +1823,8 @@ void IQRouter::_SWAllocUpdate( )
 	++_buffer_conflict_stalls;
       } else if(expanded_output == STALL_BUFFER_FULL) {
 	++_buffer_full_stalls;
+      } else if(expanded_output == STALL_BUFFER_RESERVED) {
+	++_buffer_reserved_stalls;
       } else if(expanded_output == STALL_CROSSBAR_CONFLICT) {
 	++_crossbar_conflict_stalls;
       }
