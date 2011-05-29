@@ -135,6 +135,7 @@ class BufferState : public Module {
     int _min_round_trip_time;
     int _total_mapped_size;
     int _aging_scale;
+    int _offset;
   public:
     FeedbackSharedBufferPolicy(Configuration const & config, 
 			       BufferState * parent, const string & name);
