@@ -50,8 +50,8 @@ protected:
   static int const STALL_BUFFER_BUSY = -2;
   static int const STALL_BUFFER_CONFLICT = -3;
   static int const STALL_BUFFER_FULL = -4;
-  static int const STALL_CROSSBAR_CONFLICT = -5;
-
+  static int const STALL_BUFFER_RESERVED = -5;
+  static int const STALL_CROSSBAR_CONFLICT = -6;
   int _id;
   
   int _inputs;
@@ -83,6 +83,7 @@ protected:
   int _buffer_busy_stalls;
   int _buffer_conflict_stalls;
   int _buffer_full_stalls;
+  int _buffer_reserved_stalls;
   int _crossbar_conflict_stalls;
 #endif
 
@@ -153,6 +154,9 @@ public:
   inline int GetBufferFullStalls() const {
     return _buffer_full_stalls;
   }
+  inline int GetBufferReservedStalls() const {
+    return _buffer_reserved_stalls;
+  }
   inline int GetCrossbarConflictStalls() const {
     return _crossbar_conflict_stalls;
   }
@@ -161,6 +165,7 @@ public:
     _buffer_busy_stalls = 0;
     _buffer_conflict_stalls = 0;
     _buffer_full_stalls = 0;
+    _buffer_reserved_stalls = 0;
     _crossbar_conflict_stalls = 0;
   }
 #endif

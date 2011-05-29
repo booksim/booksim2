@@ -264,6 +264,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_buffer_busy_stalls = 0;
   _overall_buffer_conflict_stalls = 0;
   _overall_buffer_full_stalls = 0;
+  _overall_buffer_reserved_stalls = 0;
   _overall_crossbar_conflict_stalls = 0;
 #endif
 
@@ -1506,6 +1507,7 @@ void TrafficManager::_UpdateOverallStats() {
 	_overall_buffer_busy_stalls += r->GetBufferBusyStalls();
 	_overall_buffer_conflict_stalls += r->GetBufferConflictStalls();
 	_overall_buffer_full_stalls += r->GetBufferFullStalls();
+	_overall_buffer_reserved_stalls += r->GetBufferReservedStalls();
 	_overall_crossbar_conflict_stalls += r->GetCrossbarConflictStalls();
       }
     }
@@ -1669,6 +1671,7 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
   os << "Overall buffer busy stalls = " << (double)_overall_buffer_busy_stalls / (double)_total_sims << endl
      << "Overall buffer conflict stalls = " << (double)_overall_buffer_conflict_stalls / (double)_total_sims << endl
      << "Overall buffer full stalls = " << (double)_overall_buffer_full_stalls / (double)_total_sims << endl
+     << "Overall buffer reserved stalls = " << (double)_overall_buffer_reserved_stalls / (double)_total_sims << endl
      << "Overall crossbar conflict stalls = " << (double)_overall_crossbar_conflict_stalls / (double)_total_sims << endl;
 #endif
 
@@ -1702,6 +1705,7 @@ string TrafficManager::_OverallStatsCSV(int c) const
   os << ',' << (double)_overall_buffer_busy_stalls / (double)_total_sims
      << ',' << (double)_overall_buffer_conflict_stalls / (double)_total_sims
      << ',' << (double)_overall_buffer_full_stalls / (double)_total_sims
+     << ',' << (double)_overall_buffer_reserved_stalls / (double)_total_sims
      << ',' << (double)_overall_crossbar_conflict_stalls / (double)_total_sims;
 #endif
 
