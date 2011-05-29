@@ -50,8 +50,8 @@ protected:
   static int const STALL_BUFFER_BUSY = -2;
   static int const STALL_BUFFER_CONFLICT = -3;
   static int const STALL_BUFFER_FULL = -4;
-  static int const STALL_CROSSBAR_CONFLICT = -5;
-
+  static int const STALL_BUFFER_RESERVED = -5;
+  static int const STALL_CROSSBAR_CONFLICT = -6;
   int _id;
   
   int _inputs;
@@ -86,6 +86,7 @@ protected:
   vector<int> _buffer_busy_stalls;
   vector<int> _buffer_conflict_stalls;
   vector<int> _buffer_full_stalls;
+  vector<int> _buffer_reserved_stalls;
   vector<int> _crossbar_conflict_stalls;
 #endif
 
@@ -164,6 +165,10 @@ public:
     assert((c >= 0) && (c < _classes));
     return _buffer_full_stalls[c];
   }
+  inline int GetBufferReservedStalls(int c) const {
+    assert((c >= 0) && (c < _classes));
+    return _buffer_reserved_stalls[c];
+  }
   inline int GetCrossbarConflictStalls(int c) const {
     assert((c >= 0) && (c < _classes));
     return _crossbar_conflict_stalls[c];
@@ -174,6 +179,7 @@ public:
     _buffer_busy_stalls[c] = 0;
     _buffer_conflict_stalls[c] = 0;
     _buffer_full_stalls[c] = 0;
+    _buffer_reserved_stalls[c] = 0;
     _crossbar_conflict_stalls[c] = 0;
   }
 #endif

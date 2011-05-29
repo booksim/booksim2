@@ -188,6 +188,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_buffer_busy_stalls.resize(_classes, 0);
   _overall_buffer_conflict_stalls.resize(_classes, 0);
   _overall_buffer_full_stalls.resize(_classes, 0);
+  _overall_buffer_reserved_stalls.resize(_classes, 0);
   _overall_crossbar_conflict_stalls.resize(_classes, 0);
 #endif
 
@@ -1039,6 +1040,7 @@ void TrafficManager::_UpdateOverallStats() {
 	  _overall_buffer_busy_stalls[c] += r->GetBufferBusyStalls(c);
 	  _overall_buffer_conflict_stalls[c] += r->GetBufferConflictStalls(c);
 	  _overall_buffer_full_stalls[c] += r->GetBufferFullStalls(c);
+	  _overall_buffer_reserved_stalls[c] += r->GetBufferReservedStalls(c);
 	  _overall_crossbar_conflict_stalls[c] += r->GetCrossbarConflictStalls(c);
 	}
       }
@@ -1198,6 +1200,7 @@ void TrafficManager::_DisplayOverallClassStats( int c, ostream & os ) const {
   os << "Overall buffer busy stalls = " << (double)_overall_buffer_busy_stalls[c] / (double)_total_sims << endl
      << "Overall buffer conflict stalls = " << (double)_overall_buffer_conflict_stalls[c] / (double)_total_sims << endl
      << "Overall buffer full stalls = " << (double)_overall_buffer_full_stalls[c] / (double)_total_sims << endl
+     << "Overall buffer reserved stalls = " << (double)_overall_buffer_reserved_stalls[c] / (double)_total_sims << endl
      << "Overall crossbar conflict stalls = " << (double)_overall_crossbar_conflict_stalls[c] / (double)_total_sims << endl;
 #endif
 
@@ -1226,6 +1229,7 @@ string TrafficManager::_OverallStatsHeaderCSV() const
   os << ',' << "buffer_busy"
      << ',' << "buffer_conflict"
      << ',' << "buffer_full"
+     << ',' << "buffer_reserved"
      << ',' << "crossbar_conflict";
 #endif
   return os.str();
@@ -1255,6 +1259,7 @@ string TrafficManager::_OverallClassStatsCSV(int c) const
   os << ',' << (double)_overall_buffer_busy_stalls[c] / (double)_total_sims
      << ',' << (double)_overall_buffer_conflict_stalls[c] / (double)_total_sims
      << ',' << (double)_overall_buffer_full_stalls[c] / (double)_total_sims
+     << ',' << (double)_overall_buffer_reserved_stalls[c] / (double)_total_sims
      << ',' << (double)_overall_crossbar_conflict_stalls[c] / (double)_total_sims;
 #endif
 

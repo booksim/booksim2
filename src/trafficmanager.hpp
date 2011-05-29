@@ -134,6 +134,7 @@ protected:
   vector<int> _overall_buffer_busy_stalls;
   vector<int> _overall_buffer_conflict_stalls;
   vector<int> _overall_buffer_full_stalls;
+  vector<int> _overall_buffer_reserved_stalls;
   vector<int> _overall_crossbar_conflict_stalls;
 #endif
 
