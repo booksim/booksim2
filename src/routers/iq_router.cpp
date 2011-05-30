@@ -1570,9 +1570,9 @@ void IQRouter::_SWAllocEvaluate( )
 		  found_vc = true;
 		  break;
 		}
-		if(found_vc) {
-		  break;
-		}
+	      }
+	      if(found_vc) {
+		break;
 	      }
 	    }
 	  }
