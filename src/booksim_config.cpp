@@ -93,7 +93,8 @@ BookSimConfig::BookSimConfig( )
   // Control of virtual channel speculation
   _int_map["speculative"] = 0 ;
   _int_map["spec_use_prio"] = 1 ;
-  _int_map["spec_check_elig"] = 0 ;
+  _int_map["spec_check_elig"] = 1 ;
+  _int_map["spec_check_cred"] = 1 ;
   _int_map["spec_mask_by_reqs"] = 0 ;
 
   _int_map["num_vcs"]         = 16;  

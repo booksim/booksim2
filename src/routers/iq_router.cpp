@@ -55,8 +55,12 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 : Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
   _vcs         = config.GetInt( "num_vcs" );
+
+  _vc_busy_when_full = (config.GetInt("vc_busy_when_full") > 0);
+
   _speculative = (config.GetInt("speculative") > 0);
   _spec_check_elig = (config.GetInt("spec_check_elig") > 0);
+  _spec_check_cred = (config.GetInt("spec_check_cred") > 0);
   _spec_mask_by_reqs = (config.GetInt("spec_mask_by_reqs") > 0);
 
   _routing_delay    = config.GetInt( "routing_delay" );
@@ -556,7 +560,9 @@ void IQRouter::_VCAllocEvaluate( )
     int const out_priority = cur_buf->GetPriority(vc);
     set<OutputSet::sSetElement> const setlist = route_set->GetSet();
 
-    bool requested = false;
+    bool elig = false;
+    bool cred = false;
+    bool reserved = false;
 
     for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
 	iset != setlist.end();
@@ -578,30 +584,42 @@ void IQRouter::_VCAllocEvaluate( )
 	// requesting the same output VC, the priority of VCs is based on the 
 	// actual packet priorities, which is reflected in "out_priority".
 	
-	if(dest_buf->IsAvailableFor(out_vc)) {
-	  if(f->watch){
-	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		       << "  Requesting VC " << out_vc
-		       << " at output " << out_port 
-		       << " (in_pri: " << in_priority
-		       << ", out_pri: " << out_priority
-		       << ")." << endl;
-	    watched = true;
-	  }
-	  _vc_allocator->AddRequest(input*_vcs + vc, out_port*_vcs + out_vc, 0, 
-				    in_priority, out_priority);
-	  requested = true;
-	} else {
+	if(!dest_buf->IsAvailableFor(out_vc)) {
 	  if(f->watch)
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		       << "  VC " << out_vc 
 		       << " at output " << out_port 
 		       << " is busy." << endl;
+	} else {
+	  elig = true;
+	  if(_vc_busy_when_full && dest_buf->IsFullFor(out_vc)) {
+	    if(f->watch)
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "  VC " << out_vc 
+			 << " at output " << out_port 
+			 << " is full." << endl;
+	    reserved |= !dest_buf->IsFull();
+	  } else {
+	    cred = true;
+	    if(f->watch){
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "  Requesting VC " << out_vc
+			 << " at output " << out_port 
+			 << " (in_pri: " << in_priority
+			 << ", out_pri: " << out_priority
+			 << ")." << endl;
+	      watched = true;
+	    }
+	    _vc_allocator->AddRequest(input*_vcs + vc, out_port*_vcs + out_vc, 
+				      0, in_priority, out_priority);
+	  }
 	}
       }
     }
-    if(!requested) {
+    if(!elig) {
       iter->second.second = STALL_BUFFER_BUSY;
+    } else if(_vc_busy_when_full && !cred) {
+      iter->second.second = reserved ? STALL_BUFFER_RESERVED : STALL_BUFFER_FULL;
     }
   }
 
@@ -707,21 +725,20 @@ void IQRouter::_VCAllocEvaluate( )
       
       BufferState const * const dest_buf = _next_buf[match_output];
       
+      int const input = iter->second.first.first;
+      assert((input >= 0) && (input < _inputs));
+      int const vc = iter->second.first.second;
+      assert((vc >= 0) && (vc < _vcs));
+      
+      Buffer const * const cur_buf = _buf[input];
+      assert(!cur_buf->Empty(vc));
+      assert(cur_buf->GetState(vc) == VC::vc_alloc);
+      
+      Flit const * const f = cur_buf->FrontFlit(vc);
+      assert(f);
+      assert(f->head);
+      
       if(!dest_buf->IsAvailableFor(match_vc)) {
-	
-	int const input = iter->second.first.first;
-	assert((input >= 0) && (input < _inputs));
-	int const vc = iter->second.first.second;
-	assert((vc >= 0) && (vc < _vcs));
-	
-	Buffer const * const cur_buf = _buf[input];
-	assert(!cur_buf->Empty(vc));
-	assert(cur_buf->GetState(vc) == VC::vc_alloc);
-	
-	Flit const * const f = cur_buf->FrontFlit(vc);
-	assert(f);
-	assert(f->head);
-	
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  Discarding previously generated grant for VC " << vc
@@ -730,8 +747,17 @@ void IQRouter::_VCAllocEvaluate( )
 		     << " at output " << match_output
 		     << " is no longer available." << endl;
 	}
-
 	iter->second.second = STALL_BUFFER_BUSY;
+      } else if(_vc_busy_when_full && dest_buf->IsFullFor(match_vc)) {
+	if(f->watch) {
+	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		     << "  Discarding previously generated grant for VC " << vc
+		     << " at input " << input
+		     << ": VC " << match_vc
+		     << " at output " << match_output
+		     << " has become full." << endl;
+	}
+	iter->second.second = dest_buf->IsFull() ? STALL_BUFFER_FULL : STALL_BUFFER_RESERVED;
       }
     }
   }
@@ -1254,39 +1280,46 @@ void IQRouter::_SWAllocEvaluate( )
       // for lower levels of speculation, ignore credit availability and always 
       // issue requests for all output ports in route set
       
-      bool do_request;
-      
-      if(_spec_check_elig) {
+      BufferState const * const dest_buf = _next_buf[dest_output];
 	
-	do_request = false;
+      bool elig = false;
+      bool cred = false;
+
+      if(_spec_check_elig) {
 	
 	// for higher levels of speculation, check if at least one suitable VC 
 	// is available at the current output
-	
-	BufferState const * const dest_buf = _next_buf[dest_output];
 	
 	for(int dest_vc = iset->vc_start; dest_vc <= iset->vc_end; ++dest_vc) {
 	  assert((dest_vc >= 0) && (dest_vc < _vcs));
 	  
 	  if(dest_buf->IsAvailableFor(dest_vc)) {
-	    do_request = true;
-	    break;
+	    elig = true;
+	    if(!_spec_check_cred || !dest_buf->IsFullFor(dest_vc)) {
+	      cred = true;
+	      break;
+	    }
 	  }
 	}
-      } else {
-	do_request = true;
       }
       
-      if(do_request) { 
-	bool const requested = _SWAllocAddReq(input, vc, dest_output);
-	watched |= requested && f->watch;
-      } else {
+      if(_spec_check_elig && !elig) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  Output " << dest_output 
 		     << " has no suitable VCs available." << endl;
 	}
 	iter->second.second = STALL_BUFFER_BUSY;
+      } else if(_spec_check_cred && !cred) {
+	if(f->watch) {
+	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		     << "  All suitable VCs at output " << dest_output 
+		     << " are full." << endl;
+	}
+	iter->second.second = dest_buf->IsFull() ? STALL_BUFFER_FULL : STALL_BUFFER_RESERVED;
+      } else {
+	bool const requested = _SWAllocAddReq(input, vc, dest_output);
+	watched |= requested && f->watch;
       }
     }
   }
@@ -1562,6 +1595,7 @@ void IQRouter::_SWAllocEvaluate( )
 
 	  bool busy = true;
 	  bool full = true;
+	  bool reserved = false;
 
 	  for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
 	      iset != setlist.end();
@@ -1576,6 +1610,8 @@ void IQRouter::_SWAllocEvaluate( )
 		  if(!dest_buf->IsFullFor(out_vc)) {
 		    full = false;
 		    break;
+		  } else if(!dest_buf->IsFull()) {
+		    reserved = true;
 		  }
 		}
 	      }
@@ -1604,7 +1640,7 @@ void IQRouter::_SWAllocEvaluate( )
 			 << "." << (expanded_output % _output_speedup)
 			 << " because all suitable output VCs for piggyback allocation are full." << endl;
 	    }
-	    iter->second.second = STALL_BUFFER_FULL;
+	    iter->second.second = reserved ? STALL_BUFFER_RESERVED : STALL_BUFFER_FULL;
 	  }
 
 	}

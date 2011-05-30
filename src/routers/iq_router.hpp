@@ -55,8 +55,11 @@ class IQRouter : public Router {
 
   int _vcs;
 
+  bool _vc_busy_when_full;
+
   bool _speculative;
   bool _spec_check_elig;
+  bool _spec_check_cred;
   bool _spec_mask_by_reqs;
   
   bool _active;

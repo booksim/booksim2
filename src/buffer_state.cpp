@@ -402,7 +402,6 @@ BufferState::BufferState( const Configuration& config, Module *parent, const str
   _buffer_policy = BufferPolicy::NewBufferPolicy(config, this, "policy");
 
   _wait_for_tail_credit = config.GetInt( "wait_for_tail_credit" );
-  _vc_busy_when_full = config.GetInt( "vc_busy_when_full" );
 
   _in_use.resize(_vcs, false);
   _tail_sent.resize(_vcs, false);
