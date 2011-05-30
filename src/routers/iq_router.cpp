@@ -165,9 +165,8 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _switch_hold_out.resize(_outputs*_output_speedup, -1);
   _switch_hold_vc.resize(_inputs*_input_speedup, -1);
 
-  int classes = config.GetInt("classes");
-  _bufferMonitor = new BufferMonitor(inputs, classes);
-  _switchMonitor = new SwitchMonitor(inputs, outputs, classes);
+  _bufferMonitor = new BufferMonitor(inputs, _classes);
+  _switchMonitor = new SwitchMonitor(inputs, outputs, _classes);
 
 #ifdef TRACK_FLOWS
   for(int c = 0; c < _classes; ++c) {
