@@ -41,6 +41,7 @@ protected:
   double _rate;
   InjectionProcess(int nodes, double rate);
 public:
+  virtual ~InjectionProcess() {}
   virtual bool test(int source) = 0;
   virtual void reset();
   static InjectionProcess * New(string const & inject, int nodes, double load);
