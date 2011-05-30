@@ -47,11 +47,12 @@ class Router : public TimedModule {
 
 protected:
 
-  static int const STALL_BUFFER_BUSY = -2;
-  static int const STALL_BUFFER_CONFLICT = -3;
-  static int const STALL_BUFFER_FULL = -4;
-  static int const STALL_BUFFER_RESERVED = -5;
-  static int const STALL_CROSSBAR_CONFLICT = -6;
+  static int const STALL_BUFFER_BUSY;
+  static int const STALL_BUFFER_CONFLICT;
+  static int const STALL_BUFFER_FULL;
+  static int const STALL_BUFFER_RESERVED;
+  static int const STALL_CROSSBAR_CONFLICT;
+
   int _id;
   
   int _inputs;
