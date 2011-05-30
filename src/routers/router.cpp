@@ -52,6 +52,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "chaos_router.hpp"
 ///////////////////////////////////////////////////////
 
+int const Router::STALL_BUFFER_BUSY = -2;
+int const Router::STALL_BUFFER_CONFLICT = -3;
+int const Router::STALL_BUFFER_FULL = -4;
+int const Router::STALL_BUFFER_RESERVED = -5;
+int const Router::STALL_CROSSBAR_CONFLICT = -6;
+
 Router::Router( const Configuration& config,
 		Module *parent, const string & name, int id,
 		int inputs, int outputs ) :
