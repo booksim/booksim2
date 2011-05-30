@@ -1560,7 +1560,8 @@ void IQRouter::_SWAllocEvaluate( )
 
 	  set<OutputSet::sSetElement> const setlist = route_set ->GetSet();
 
-	  bool found_vc = false;
+	  bool busy = true;
+	  bool full = true;
 
 	  for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
 	      iset != setlist.end();
@@ -1570,19 +1571,21 @@ void IQRouter::_SWAllocEvaluate( )
 		  out_vc <= iset->vc_end; 
 		  ++out_vc) {
 		assert((out_vc >= 0) && (out_vc < _vcs));
-		if(dest_buf->IsAvailableFor(out_vc) && 
-		   !dest_buf->IsFullFor(out_vc)) {
-		  found_vc = true;
-		  break;
+		if(dest_buf->IsAvailableFor(out_vc)) {
+		  busy = false;
+		  if(!dest_buf->IsFullFor(out_vc)) {
+		    full = false;
+		    break;
+		  }
 		}
 	      }
-	      if(found_vc) {
+	      if(!full) {
 		break;
 	      }
 	    }
 	  }
 
-	  if(!found_vc) {
+	  if(busy) {
 	    if(f->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 			 << "Discarding grant from input " << input
@@ -1592,6 +1595,16 @@ void IQRouter::_SWAllocEvaluate( )
 			 << " because no suitable output VC for piggyback allocation is available." << endl;
 	    }
 	    iter->second.second = STALL_BUFFER_BUSY;
+	  } else if(full) {
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Discarding grant from input " << input
+			 << "." << (vc % _input_speedup)
+			 << " to output " << output
+			 << "." << (expanded_output % _output_speedup)
+			 << " because all suitable output VCs for piggyback allocation are full." << endl;
+	    }
+	    iter->second.second = STALL_BUFFER_FULL;
 	  }
 
 	}
