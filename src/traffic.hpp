@@ -42,6 +42,7 @@ protected:
   int _nodes;
   TrafficPattern(int nodes);
 public:
+  virtual ~TrafficPattern() {}
   virtual void reset();
   virtual int dest(int source) = 0;
   static TrafficPattern * New(string const & pattern, int nodes);
