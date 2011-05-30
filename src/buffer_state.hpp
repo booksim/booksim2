@@ -145,7 +145,6 @@ class BufferState : public Module {
   };
   
   bool _wait_for_tail_credit;
-  bool _vc_busy_when_full;
   int  _size;
   int  _occupancy;
   int  _vcs;
@@ -180,7 +179,7 @@ public:
   }
   inline bool IsAvailableFor( int vc = 0 ) const {
     assert( ( vc >= 0 ) && ( vc < _vcs ) );
-    return !_in_use[vc] && (!_vc_busy_when_full || !IsFullFor(vc));
+    return !_in_use[vc];
   }
   
   inline int Occupancy(int vc = 0) const {
