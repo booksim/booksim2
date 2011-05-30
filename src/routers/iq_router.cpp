@@ -1348,7 +1348,8 @@ void IQRouter::_SWAllocEvaluate( )
 
     if(expanded_output >= 0) {
       assert((expanded_output % _output_speedup) == (input % _output_speedup));
-      if(_sw_allocator->ReadRequest(expanded_input, expanded_output) == vc) {
+      int const granted_vc = _sw_allocator->ReadRequest(expanded_input, expanded_output);
+      if(granted_vc == vc) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "Assigning output " << (expanded_output / _output_speedup)
@@ -1365,7 +1366,7 @@ void IQRouter::_SWAllocEvaluate( )
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "Switch allocation failed for VC " << vc
 		     << " at input " << input
-		     << "." << endl;
+		     << ": Granted to VC " << granted_vc << "." << endl;
 	}
 	iter->second.second = STALL_CROSSBAR_CONFLICT;
       }
@@ -1397,27 +1398,30 @@ void IQRouter::_SWAllocEvaluate( )
 		       << " has a non-speculative grant." << endl;
 	  }
 	  iter->second.second = STALL_CROSSBAR_CONFLICT;
-	} else if(_spec_sw_allocator->ReadRequest(expanded_input, 
-						  expanded_output) == vc) {
-	  if(f->watch) {
-	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		       << "Assigning output " << (expanded_output / _output_speedup)
-		       << "." << (expanded_output % _output_speedup)
-		       << " to VC " << vc
-		       << " at input " << input
-		       << "." << (vc % _input_speedup)
-		       << "." << endl;
-	  }
-	  _sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
-	  iter->second.second = expanded_output;
 	} else {
-	  if(f->watch) {
-	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		       << "Switch allocation failed for VC " << vc
-		       << " at input " << input
-		       << "." << endl;
+	  int const granted_vc = _spec_sw_allocator->ReadRequest(expanded_input, 
+								 expanded_output);
+	  if(granted_vc == vc) {
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Assigning output " << (expanded_output / _output_speedup)
+			 << "." << (expanded_output % _output_speedup)
+			 << " to VC " << vc
+			 << " at input " << input
+			 << "." << (vc % _input_speedup)
+			 << "." << endl;
+	    }
+	    _sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
+	    iter->second.second = expanded_output;
+	  } else {
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Switch allocation failed for VC " << vc
+			 << " at input " << input
+			 << ": Granted to VC " << granted_vc << "." << endl;
+	    }
+	    iter->second.second = STALL_CROSSBAR_CONFLICT;
 	  }
-	  iter->second.second = STALL_CROSSBAR_CONFLICT;
 	}
       } else {
 
@@ -1425,7 +1429,7 @@ void IQRouter::_SWAllocEvaluate( )
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "Switch allocation failed for VC " << vc
 		     << " at input " << input
-		     << "." << endl;
+		     << ": No output granted." << endl;
 	}
 	
 	iter->second.second = STALL_CROSSBAR_CONFLICT;
@@ -1437,7 +1441,7 @@ void IQRouter::_SWAllocEvaluate( )
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "Switch allocation failed for VC " << vc
 		   << " at input " << input
-		   << "." << endl;
+		   << ": No output granted." << endl;
       }
       
       iter->second.second = STALL_CROSSBAR_CONFLICT;
@@ -1571,9 +1575,9 @@ void IQRouter::_SWAllocEvaluate( )
 		  found_vc = true;
 		  break;
 		}
-		if(found_vc) {
-		  break;
-		}
+	      }
+	      if(found_vc) {
+		break;
 	      }
 	    }
 	  }
