@@ -255,10 +255,11 @@ bool SteadyStateTrafficManager::_SingleSim( )
   if ( _sim_state == running ) {
     ++converged;
     
+    _sim_state  = draining;
+    _drain_time = _time;
+
     if ( _measure_latency ) {
       cout << "Draining all recorded packets ..." << endl;
-      _sim_state  = draining;
-      _drain_time = _time;
       int empty_steps = 0;
       while( _PacketsOutstanding( ) ) { 
 	_Step( ); 
