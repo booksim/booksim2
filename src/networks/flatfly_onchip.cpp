@@ -228,7 +228,7 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 
       //for every other router in the dimension
       for ( int cnt = 0; cnt < (_k ); ++cnt ) {	
-	int other; //the other router that we are trying to connect
+	int other=0; //the other router that we are trying to connect
 	int offset = 0; //silly ness when node< other or when node>other
 	//if xdimension
 	if(dim == 0){
@@ -322,6 +322,7 @@ void FlatFlyOnChip::RegisterRoutingFunctions(){
 
   
   gRoutingFunctionMap["ran_min_flatfly"] = &min_flatfly;
+  gRoutingFunctionMap["adaptive_xyyx_flatfly"] = &adaptive_xyyx_flatfly;
   gRoutingFunctionMap["xyyx_flatfly"] = &xyyx_flatfly;
   gRoutingFunctionMap["valiant_flatfly"] = &valiant_flatfly;
   gRoutingFunctionMap["ugal_flatfly"] = &ugal_flatfly_onchip;
@@ -329,7 +330,80 @@ void FlatFlyOnChip::RegisterRoutingFunctions(){
 
 }
 
+//The initial XY or YX minimal routing direction is chosen adaptively
+void adaptive_xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
+		  OutputSet *outputs, bool inject )
+{ 
+  // ( Traffic Class , Routing Order ) -> Virtual Channel Range
+  int vcBegin = 0, vcEnd = gNumVCs-1;
+  if ( f->type == Flit::READ_REQUEST ) {
+    vcBegin = gReadReqBeginVC;
+    vcEnd = gReadReqEndVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    vcBegin = gWriteReqBeginVC;
+    vcEnd = gWriteReqEndVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    vcBegin = gReadReplyBeginVC;
+    vcEnd = gReadReplyEndVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    vcBegin = gWriteReplyBeginVC;
+    vcEnd = gWriteReplyEndVC;
+  }
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
+
+    int dest = flatfly_transformation(f->dest);
+    int targetr = (int)(dest/gC);
+
+    if(targetr==r->GetID()){ //if we are at the final router, yay, output to client
+      out_port = dest  - targetr*gC;
+
+    } else {
+   
+      //each class must have at least 2 vcs assigned or else xy_yx will deadlock
+      int const available_vcs = (vcEnd - vcBegin + 1) / 2;
+      assert(available_vcs > 0);
+
+
+      // Route order (XY or YX) determined when packet is injected
+      //  into the network, adaptively
+      bool x_then_y;
+      if(in_channel < gC){
+	int out_port_xy =  flatfly_outport(dest, r->GetID());
+	int out_port_yx =  flatfly_outport_yx(dest, r->GetID());
+	if(r->GetCredit(out_port_xy, vcBegin, vcEnd) > r->GetCredit(out_port_yx, vcBegin, vcEnd)){
+	  x_then_y = false;
+	} else {
+	  x_then_y = true;
+	}
+      } else {
+	x_then_y =  (f->vc < (vcBegin + available_vcs));
+      }
+      
+      if(x_then_y) {
+	out_port = flatfly_outport(dest, r->GetID());
+	vcEnd -= available_vcs;
+      } else {
+	out_port = flatfly_outport_yx(dest, r->GetID());
+	vcBegin += available_vcs;
+      }
+    }
+
+  }
+
+  outputs->Clear( );
+
+  outputs->AddRange( out_port , vcBegin, vcEnd );
+}
+
+//The initial XY or YX minimal routing direction is chosen randomly
 void xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
 		  OutputSet *outputs, bool inject )
 { 
