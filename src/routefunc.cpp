@@ -287,58 +287,34 @@ void fattree_nca( const Router *r, const Flit *f,
   } else {
     
     int dest = f->dest;
-    int router_id = r->GetID();
-    int router_depth, router_port;
-
-    int routers_so_far = 0, routers;
-    for (int depth = gN - 1; depth >= 0; --depth) // We want to find out where the router is. At which level.
-      {
-	routers = powi(gK, depth);
-	if (router_id - routers_so_far < routers) {
-	  router_depth = depth;
-	  router_port = router_id - routers_so_far;
-	  break;
-	}
-	routers_so_far += routers;
-      }
+    int router_id = r->GetID(); //routers are numbered with smallest at the top level
+    int routers_per_level = powi(gK, gN-1);
+    int pos = router_id%routers_per_level;
+    int router_depth  = router_id/ routers_per_level; //which level
+    int routers_per_neighborhood = powi(gK,gN-router_depth-1);
+    int router_neighborhood = pos/routers_per_neighborhood; //coverage of this tree
+    int router_coverage = powi(gK, gN-router_depth);  //span of the tree from this router
     
-    int fatness_factor = powi(gK, gN - router_depth ); // This is the fatness factor for when going upwards.
-    int destinations = powi(gK, gN); // According to the depth and port of the current router, we know which destinations are reachable by it by going down.
-    int temp = powi(gK, router_depth); // (destinations / (powi(gK, router_depth) ) are the number of destinations below the current router.
-    if ((destinations / (temp) ) * router_port <= dest && (destinations / (temp) ) * (router_port + 1) > dest)
-      {
-	out_port = (dest - (destinations / (temp) ) * router_port) / (fatness_factor / gK); // This is the direction to go. We multiply this by the fatness factor of that link.
-	out_port *= fatness_factor / gK; // Because we are going downwards. Now we point to the first link that is going downwards, among all the same.
-        if (router_depth != gN - 1 )
-	  out_port += RandomInt(fatness_factor / gK - 1); // Choose at random from the possible choices.
-        else
-          out_port = dest % gK; // If we are going to a final destination, only one link to choose.
-      }
-    else // We need to go up. Choose one of the links at random.
-      {
-	out_port = fatness_factor /*upwards ports are the last indexed */ + RandomInt(fatness_factor - 1); // Chose one of the going upwards at random.
-      }
-    
-    /*if (rH == 0) {
-      out_port = dest / (gK*gK);
-      }
-      if (rH == 1) {
-      if ( dest / (gK*gK)  == rP / gK )
-      out_port = (dest/gK) % gK;
-      else
-      out_port = gK + RandomInt(gK-1);
-      }
-      if (rH == 2) {
-      if ( dest / gK == rP )
-      out_port = dest % gK;
-      else
-      out_port =  gK + RandomInt(gK-1);
-      }*/
-    //  cout << "Router("<<rH<<","<<rP<<"): id= " << f->id << " dest= " << f->dest << " out_port = "
-    //       << out_port << endl;
 
-  }
-  
+    //NCA reached going down
+    if(dest <(router_neighborhood+1)* router_coverage && 
+       dest >=router_neighborhood* router_coverage){
+      //down ports are numbered first
+
+      //ejection
+      if(router_depth == gN-1){
+	out_port = dest%gK;
+      } else {	
+	//find the down port for the destination
+	int router_branch_coverage = powi(gK, gN-(router_depth+1)); 
+	out_port = (dest-router_neighborhood* router_coverage)/router_branch_coverage;
+      }
+    } else {
+      //up ports are numbered last
+      assert(in_channel<gK);//came from a up channel
+      out_port = gK+RandomInt(gK-1);
+    }
+  }  
   outputs->Clear( );
 
   outputs->AddRange( out_port, vcBegin, vcEnd );
