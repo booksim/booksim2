@@ -44,7 +44,7 @@
 
 /*transient shit*/
 bool TRANSIENT_BURST = true;
-bool TRANSIENT_ENABLE = true;
+bool TRANSIENT_ENABLE = false;
 tTrafficFunction pre_transient_function;
 bool transient_started = false;
 double** transient_stat;
@@ -880,7 +880,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     return;
     break;
   case RES_TYPE_RES:
-    assert(f->vc==0);
+    assert(f->vc==RES_PACKET_VC);
     gStatResLatency->AddSample(_time-f->time);
     gStatReservationReceived[dest]++;
     //find or create a reorder buffer
@@ -908,7 +908,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     _reservation_schedule[dest] =_reservation_schedule[dest]+int((float)f->payload*1.02);//ff->payload+f->payload ;//
     ff->res_type = RES_TYPE_GRANT;
     ff->pri = FLIT_PRI_GRANT;
-    ff->vc = 1;
+    ff->vc = GRANT_PACKET_VC;
     _response_packets[dest].push_back(ff);
     break;
 
@@ -936,7 +936,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       receive_rob = _rob[dest][f->flid];
       f = receive_rob->insert(f);
       if(f==NULL){
-	if(f->head)
 	  gStatSpecDuplicate[dest]++;
       } else {
 	if(f->tail){
@@ -961,7 +960,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     if(gReservation){
       //find or create a reorder buffer
       if(_rob[dest].count(f->flid)==0){
-	if(f->head)
 	  gStatNormDuplicate[dest]++;
 	f->Free();
 	return;
@@ -975,7 +973,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       }
       f = receive_rob->insert(f);
       if(f==NULL){
-	if(f->head)
 	  gStatNormDuplicate[dest]++;
       } else {
 	if(f->tail){
@@ -1616,7 +1613,7 @@ void TrafficManager::_Step( )
 	Flit* f = _response_packets[source].front();
 	assert(f);
 	assert(f->head);//only heads
-	assert(f->vc==1 || f->vc == RES_RESERVED_VCS-1);
+	assert(f->vc==GRANT_PACKET_VC || f->vc == RES_RESERVED_VCS-1);
 
 	if(dest_buf->IsAvailableFor(f->vc) &&
 	   dest_buf->HasCreditFor(f->vc)){

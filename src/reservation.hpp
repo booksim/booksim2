@@ -30,6 +30,9 @@
 
 #define RES_RESERVED_VCS 3
 
+#define RES_PACKET_VC 0
+#define GRANT_PACKET_VC 1
+
 #define FLIT_NACKED 2
 #define FLIT_NORMAL 1
 #define FLIT_SPEC 0

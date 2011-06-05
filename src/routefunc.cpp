@@ -250,7 +250,6 @@ void tree4_nca( const Router *r, const Flit *f,
     vcBegin = gWriteReplyBeginVC;
     vcEnd = gWriteReplyEndVC;
   }
-  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
   int out_port;
 
@@ -293,6 +292,8 @@ void tree4_nca( const Router *r, const Flit *f,
   outputs->AddRange( out_port, vcBegin, vcEnd );
 }
 
+
+
 // ============================================================
 //  FATTREE: Nearest Common Ancestor w/ Random  Routing Up
 // ===
@@ -300,20 +301,47 @@ void fattree_nca( const Router *r, const Flit *f,
                int in_channel, OutputSet* outputs, bool inject)
 {
   int vcBegin = 0, vcEnd = gNumVCs-1;
-  if ( f->type == Flit::READ_REQUEST ) {
-    vcBegin = gReadReqBeginVC;
-    vcEnd = gReadReqEndVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-    vcBegin = gWriteReqBeginVC;
-    vcEnd = gWriteReqEndVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-    vcBegin = gReadReplyBeginVC;
-    vcEnd = gReadReplyEndVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-    vcBegin = gWriteReplyBeginVC;
-    vcEnd = gWriteReplyEndVC;
+  if(!gReservation){
+    if ( f->type == Flit::READ_REQUEST ) {
+      vcBegin = gReadReqBeginVC;
+      vcEnd = gReadReqEndVC;
+    } else if ( f->type == Flit::WRITE_REQUEST ) {
+      vcBegin = gWriteReqBeginVC;
+      vcEnd = gWriteReqEndVC;
+    } else if ( f->type ==  Flit::READ_REPLY ) {
+      vcBegin = gReadReplyBeginVC;
+      vcEnd = gReadReplyEndVC;
+    } else if ( f->type ==  Flit::WRITE_REPLY ) {
+      vcBegin = gWriteReplyBeginVC;
+      vcEnd = gWriteReplyEndVC;
+    }
+  } else {
+    if(f->res_type == RES_TYPE_RES){//special packets
+      //even though res type res always go on vc 0, it is the first flit
+      //popped from the flow buffer and handles the vc assignment for the whole buffer
+      //
+      if(inject){ 
+	vcBegin = RES_RESERVED_VCS;
+	vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
+      } else {
+	vcBegin = RES_PACKET_VC;
+	vcEnd = RES_PACKET_VC;
+      }
+    } else if(f->res_type == RES_TYPE_GRANT){
+      vcBegin = GRANT_PACKET_VC;
+      vcEnd = GRANT_PACKET_VC;
+    } else if(f->res_type == RES_TYPE_NORM){ //normal packets
+      vcBegin = (RES_RESERVED_VCS+gResVCs);
+      vcEnd = (gNumVCs-1);
+    } else if(f->res_type == RES_TYPE_SPEC){
+      vcBegin = RES_RESERVED_VCS;
+      vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
+    } else { //ack, nack, grant
+      vcBegin = RES_RESERVED_VCS-1;
+      vcEnd = RES_RESERVED_VCS-1;
+    }
+
   }
-  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
   int out_port;
 
@@ -324,58 +352,35 @@ void fattree_nca( const Router *r, const Flit *f,
   } else {
     
     int dest = f->dest;
-    int router_id = r->GetID();
-    int router_depth, router_port;
-
-    int routers_so_far = 0, routers;
-    for (int depth = gN - 1; depth >= 0; --depth) // We want to find out where the router is. At which level.
-      {
-	routers = powi(gK, depth);
-	if (router_id - routers_so_far < routers) {
-	  router_depth = depth;
-	  router_port = router_id - routers_so_far;
-	  break;
-	}
-	routers_so_far += routers;
-      }
+    int router_id = r->GetID(); //routers are numbered with smallest at the top level
+    int routers_per_level = powi(gK, gN-1);
+    int pos = router_id%routers_per_level;
+    int router_depth  = router_id/ routers_per_level; //which level
+    int routers_per_neighborhood = powi(gK,gN-router_depth-1);
+    int router_neighborhood = pos/routers_per_neighborhood; //coverage of this tree
+    int router_coverage = powi(gK, gN-router_depth);  //span of the tree from this router
     
-    int fatness_factor = powi(gK, gN - router_depth ); // This is the fatness factor for when going upwards.
-    int destinations = powi(gK, gN); // According to the depth and port of the current router, we know which destinations are reachable by it by going down.
-    int temp = powi(gK, router_depth); // (destinations / (powi(gK, router_depth) ) are the number of destinations below the current router.
-    if ((destinations / (temp) ) * router_port <= dest && (destinations / (temp) ) * (router_port + 1) > dest)
-      {
-	out_port = (dest - (destinations / (temp) ) * router_port) / (fatness_factor / gK); // This is the direction to go. We multiply this by the fatness factor of that link.
-	out_port *= fatness_factor / gK; // Because we are going downwards. Now we point to the first link that is going downwards, among all the same.
-        if (router_depth != gN - 1 )
-	  out_port += RandomInt(fatness_factor / gK - 1); // Choose at random from the possible choices.
-        else
-          out_port = dest % gK; // If we are going to a final destination, only one link to choose.
-      }
-    else // We need to go up. Choose one of the links at random.
-      {
-	out_port = fatness_factor /*upwards ports are the last indexed */ + RandomInt(fatness_factor - 1); // Chose one of the going upwards at random.
-      }
-    
-    /*if (rH == 0) {
-      out_port = dest / (gK*gK);
-      }
-      if (rH == 1) {
-      if ( dest / (gK*gK)  == rP / gK )
-      out_port = (dest/gK) % gK;
-      else
-      out_port = gK + RandomInt(gK-1);
-      }
-      if (rH == 2) {
-      if ( dest / gK == rP )
-      out_port = dest % gK;
-      else
-      out_port =  gK + RandomInt(gK-1);
-      }*/
-    //  cout << "Router("<<rH<<","<<rP<<"): id= " << f->id << " dest= " << f->dest << " out_port = "
-    //       << out_port << endl;
 
-  }
-  
+    //NCA reached going down
+    if(dest <(router_neighborhood+1)* router_coverage && 
+       dest >=router_neighborhood* router_coverage){
+      //down ports are numbered first
+
+      //ejection
+      if(router_depth == gN-1){
+	out_port = dest%gK;
+      } else {	
+	//find the down port for the destination
+	int router_branch_coverage = powi(gK, gN-(router_depth+1)); 
+	out_port = (dest-router_neighborhood* router_coverage)/router_branch_coverage;
+      }
+    } else {
+      //uturns are allowed due to inflight nacks
+      //assert(in_channel<gK);//came from a up channel
+      
+      out_port = gK+RandomInt(gK-1);
+    }
+  }  
   outputs->Clear( );
 
   outputs->AddRange( out_port, vcBegin, vcEnd );
@@ -389,22 +394,51 @@ void fattree_anca( const Router *r, const Flit *f,
 {
 
   int vcBegin = 0, vcEnd = gNumVCs-1;
-  if ( f->type == Flit::READ_REQUEST ) {
-    vcBegin = gReadReqBeginVC;
-    vcEnd = gReadReqEndVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-    vcBegin = gWriteReqBeginVC;
-    vcEnd = gWriteReqEndVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-    vcBegin = gReadReplyBeginVC;
-    vcEnd = gReadReplyEndVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-    vcBegin = gWriteReplyBeginVC;
-    vcEnd = gWriteReplyEndVC;
+  if(!gReservation){
+    if ( f->type == Flit::READ_REQUEST ) {
+      vcBegin = gReadReqBeginVC;
+      vcEnd = gReadReqEndVC;
+    } else if ( f->type == Flit::WRITE_REQUEST ) {
+      vcBegin = gWriteReqBeginVC;
+      vcEnd = gWriteReqEndVC;
+    } else if ( f->type ==  Flit::READ_REPLY ) {
+      vcBegin = gReadReplyBeginVC;
+      vcEnd = gReadReplyEndVC;
+    } else if ( f->type ==  Flit::WRITE_REPLY ) {
+      vcBegin = gWriteReplyBeginVC;
+      vcEnd = gWriteReplyEndVC;
+    }
+  }else {
+    if(f->res_type == RES_TYPE_RES){//special packets
+      //even though res type res always go on vc 0, it is the first flit
+      //popped from the flow buffer and handles the vc assignment for the whole buffer
+      //
+      if(inject){ 
+	vcBegin = RES_RESERVED_VCS;
+	vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
+      } else {
+	vcBegin = RES_PACKET_VC;
+	vcEnd = RES_PACKET_VC;
+      }
+    } else if(f->res_type == RES_TYPE_GRANT){
+      vcBegin = GRANT_PACKET_VC;
+      vcEnd = GRANT_PACKET_VC;
+    } else if(f->res_type == RES_TYPE_NORM){ //normal packets
+      vcBegin = (RES_RESERVED_VCS+gResVCs);
+      vcEnd = (gNumVCs-1);
+    } else if(f->res_type == RES_TYPE_SPEC){
+      vcBegin = RES_RESERVED_VCS;
+      vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
+    } else { //ack, nack, grant
+      vcBegin = RES_RESERVED_VCS-1;
+      vcEnd = RES_RESERVED_VCS-1;
+    }
+
   }
+
+
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
-  int range = 1;
 
   int out_port;
 
@@ -414,91 +448,49 @@ void fattree_anca( const Router *r, const Flit *f,
 
   } else {
 
-    int dest     = f->dest;
-    int router_id = r->GetID();
-    int router_depth, router_port;
+
+    int dest = f->dest;
+    int router_id = r->GetID(); //routers are numbered with smallest at the top level
+    int routers_per_level = powi(gK, gN-1);
+    int pos = router_id%routers_per_level;
+    int router_depth  = router_id/ routers_per_level; //which level
+    int routers_per_neighborhood = powi(gK,gN-router_depth-1);
+    int router_neighborhood = pos/routers_per_neighborhood; //coverage of this tree
+    int router_coverage = powi(gK, gN-router_depth);  //span of the tree from this router
     
-    int routers_so_far = 0, routers;
-    for (int depth = gN - 1; depth >= 0; --depth) // We want to find out where the router is. At which level.
-      {
-	routers = powi(gK, depth);
-	if (router_id - routers_so_far < routers) {
-	  router_depth = depth;
-	  router_port = router_id - routers_so_far;
-	  break;
-	}
-	routers_so_far += routers;
+
+    //NCA reached going down
+    if(dest <(router_neighborhood+1)* router_coverage && 
+       dest >=router_neighborhood* router_coverage){
+      //down ports are numbered first
+
+      //ejection
+      if(router_depth == gN-1){
+	out_port = dest%gK;
+      } else {	
+	//find the down port for the destination
+	int router_branch_coverage = powi(gK, gN-(router_depth+1)); 
+	out_port = (dest-router_neighborhood* router_coverage)/router_branch_coverage;
       }
-    
-    int fatness_factor = powi(gK, gN - router_depth ); // This is the fatness factor for when going upwards.
-    int destinations = powi(gK, gN); // According to the depth and port of the current router, we know which destinations are reachable by it by going down.
-    int temp = powi(gK, router_depth);
-    if ((destinations / (temp) ) * router_port <= dest && (destinations / (temp) ) * (router_port + 1) > dest) // (destinations / (powi(gK, router_depth) ) are the number of destinations below the current router.
-      {
-	out_port = (dest - (destinations / (temp)) * router_port) / (fatness_factor / gK); // This is the direction to go. We multiply this by the fatness factor of that link.
-	out_port *= fatness_factor / gK; // Because we are going downwards. Now we point to the first link that is going downwards, among all the same.
-        if (router_depth != gN - 1 )
-	  {
-	    range = fatness_factor / gK;
-	  }
-        else
-	  {
-	    out_port = dest % gK; // If we are going to a final destination, only one link to choose.
-	    range = 1;
-	  }
+    } else {
+      //up ports are numbered last
+
+    //uturns are allowed due to inflight nacks
+      //assert(in_channel<gK);//came from a up channel
+      out_port = gK;
+      int random1 = RandomInt(gK-1); // Chose two ports out of the possible at random, compare loads, choose one.
+      int random2 = RandomInt(gK-1);
+      if (r->GetCredit(out_port + random1, vcBegin, vcEnd) > r->GetCredit(out_port + random2, vcBegin, vcEnd)){
+	out_port = out_port + random2;
+      }else{
+	out_port =  out_port + random1;
       }
-    else // We need to go up. Choose one of the links at random.
-      {
-	range = fatness_factor;
-	out_port = fatness_factor /*upwards ports are the last indexed */ ;
-      }
-    
-    // r->GetCredit(tmp_out_port, vcBegin, vcEnd);
-    
-    /*if (rH == 0) {
-      out_port = dest / (gK*gK);
     }
-    if (rH == 1) {
-      if ( dest / (gK*gK)  == rP / gK )
-	out_port = (dest/gK) % gK;
-      else {
-	out_port = gK;
-	range    = gK;
-      }
-      
-    }
-    if (rH == 2) {
-      if ( dest / gK == rP )
-	out_port = dest % gK;
-      else {
-	out_port = gK;
-	range    = gK;
-      }
-    }*/
-
-//  cout << "Router("<<rH<<","<<rP<<"): id= "
-//       << f->id << " dest= " << f->dest << " out_port = "
-//       << out_port << endl;
-
-  }
-
+  }  
   outputs->Clear( );
-
-  if (range > 1) {
-    /*for (int i = 0; i < range; ++i)
-      outputs->AddRange( out_port + i, vcBegin, vcEnd );*/
-    int random1 = RandomInt(range-1); // Chose two ports out of the possible at random, compare loads, choose one.
-    int random2 = RandomInt(range-1);
-    if (r->GetCredit(out_port + random1, vcBegin, vcEnd) > r->GetCredit(out_port + random2, vcBegin, vcEnd))
-      outputs->AddRange( out_port + random2, vcBegin, vcEnd );
-    else
-      outputs->AddRange( out_port + random1, vcBegin, vcEnd );
-  }
-  else
-    outputs->AddRange( out_port , vcBegin, vcEnd );
+  
+  outputs->AddRange( out_port, vcBegin, vcEnd );
 }
-
-
 
 
 // ============================================================

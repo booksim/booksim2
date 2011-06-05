@@ -335,7 +335,7 @@ Flit* FlowBuffer::send(){
   case FLOW_STATUS_SPEC:
     //first send the spec packet
     if(!_spec_sent){
-      _reservation_flit->vc=0;
+      _reservation_flit->vc=RES_PACKET_VC;
       _reservation_flit->time = GetSimTime();
       f = _reservation_flit;
       f->src = _src;

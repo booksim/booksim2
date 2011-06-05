@@ -523,12 +523,12 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
 	vcBegin = RES_RESERVED_VCS;
 	vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
       } else {
-	vcBegin = 0;
-	vcEnd = 0;
+	vcBegin = RES_PACKET_VC;
+	vcEnd = RES_PACKET_VC;
       }
     } else if(f->res_type == RES_TYPE_GRANT){
-      vcBegin = 1;
-      vcEnd = 1;
+      vcBegin = GRANT_PACKET_VC;
+      vcEnd = GRANT_PACKET_VC;
     } else if(f->res_type == RES_TYPE_NORM){ //normal packets
       vcBegin = (RES_RESERVED_VCS+gResVCs);
       vcEnd = (gNumVCs-1);
