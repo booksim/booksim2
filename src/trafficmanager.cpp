@@ -960,7 +960,7 @@ void TrafficManager::_Step( )
 	
 	// Pass VC "back"
 	if(!_partial_packets[source][c].empty() && !f->tail) {
-	  Flit * nf = _partial_packets[source][c].front();
+	  Flit * const nf = _partial_packets[source][c].front();
 	  nf->vc = f->vc;
 	}
 	
