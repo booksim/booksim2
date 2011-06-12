@@ -919,7 +919,7 @@ void TrafficManager::_Step( )
 	  int const & vc_end = se.vc_end;
 	  int const vc_count = vc_end - vc_start + 1;
 	  for(int i = 1; i <= vc_count; ++i) {
-	    int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
+	    int const vc = vc_start + (_last_vc[source][subnet][c] + (vc_count - vc_start) + i) % vc_count;
 	    assert((vc >= vc_start) && (vc <= vc_end));
 	    if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
 	      f->vc = vc;
@@ -931,7 +931,7 @@ void TrafficManager::_Step( )
 	  }
 
 	  dest_buf->TakeBuffer(f->vc);
-	  _last_vc[source][subnet][c] = f->vc - vc_start;
+	  _last_vc[source][subnet][c] = f->vc;
 	}
 	
 	assert(f->vc != -1);
