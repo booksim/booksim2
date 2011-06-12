@@ -440,26 +440,31 @@ void adaptive_xy_yx_mesh( const Router *r, const Flit *f,
     int const available_vcs = (vcEnd - vcBegin + 1) / 2;
     assert(available_vcs > 0);
     
+    int out_port_xy = dor_next_mesh( r->GetID(), f->dest, false );
+    int out_port_yx = dor_next_mesh( r->GetID(), f->dest, true );
+
     // Route order (XY or YX) determined when packet is injected
     //  into the network, adaptively
     bool x_then_y;
     if(in_channel < 2*gN){
       x_then_y =  (f->vc < (vcBegin + available_vcs));
     } else {
-      int out_port_xy = dor_next_mesh( r->GetID(), f->dest, false );
-      int out_port_yx = dor_next_mesh( r->GetID(), f->dest, true );
-      if(r->GetCredit(out_port_xy, vcBegin, vcEnd) > r->GetCredit(out_port_yx, vcBegin, vcEnd)){
+      int credit_xy = r->GetCredit(out_port_xy, -1, -1);
+      int credit_yx = r->GetCredit(out_port_yx, -1, -1);
+      if(credit_xy > credit_yx) {
 	x_then_y = false;
-      } else {
+      } else if(credit_xy < credit_yx) {
 	x_then_y = true;
+      } else {
+	x_then_y = (RandomInt(1) > 0);
       }
     }
     
     if(x_then_y) {
-      out_port = dor_next_mesh( r->GetID(), f->dest, false );
+      out_port = out_port_xy;
       vcEnd -= available_vcs;
     } else {
-      out_port = dor_next_mesh( r->GetID(), f->dest, true );
+      out_port = out_port_yx;
       vcBegin += available_vcs;
     }
 
