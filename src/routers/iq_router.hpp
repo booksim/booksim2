@@ -152,7 +152,7 @@ public:
   
   void Display( ostream & os = cout ) const;
 
-  virtual int GetCredit(int out, int vc_begin, int vc_end ) const;
+  virtual int GetUsedCredit(int out, int vc_begin = -1, int vc_end = -1 ) const;
   virtual int GetBuffer(int i = -1) const;
   virtual vector<int> GetBuffers(int i = -1) const;
 

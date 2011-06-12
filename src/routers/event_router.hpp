@@ -172,7 +172,7 @@ public:
   virtual void ReadInputs( );
   virtual void WriteOutputs( );
 
-  virtual int GetCredit(int out, int vc_begin, int vc_end ) const {return 0;}
+  virtual int GetUsedCredit(int out, int vc_begin = -1, int vc_end = -1 ) const {return 0;}
   virtual int GetBuffer(int i = -1) const {return 0;}
 
   void Display( ostream & os = cout ) const;

@@ -382,7 +382,7 @@ void fattree_anca( const Router *r, const Flit *f,
       out_port = gK;
       int random1 = RandomInt(gK-1); // Chose two ports out of the possible at random, compare loads, choose one.
       int random2 = RandomInt(gK-1);
-      if (r->GetCredit(out_port + random1, -1, -1) > r->GetCredit(out_port + random2, -1, -1)){
+      if (r->GetUsedCredit(out_port + random1) > r->GetUsedCredit(out_port + random2)){
 	out_port = out_port + random2;
       }else{
 	out_port =  out_port + random1;
@@ -449,8 +449,8 @@ void adaptive_xy_yx_mesh( const Router *r, const Flit *f,
     if(in_channel < 2*gN){
       x_then_y =  (f->vc < (vcBegin + available_vcs));
     } else {
-      int credit_xy = r->GetCredit(out_port_xy, -1, -1);
-      int credit_yx = r->GetCredit(out_port_yx, -1, -1);
+      int credit_xy = r->GetUsedCredit(out_port_xy);
+      int credit_yx = r->GetUsedCredit(out_port_yx);
       if(credit_xy > credit_yx) {
 	x_then_y = false;
       } else if(credit_xy < credit_yx) {

@@ -2047,7 +2047,7 @@ void IQRouter::Display( ostream & os ) const
   }
 }
 
-int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
+int IQRouter::GetUsedCredit(int out, int vc_begin, int vc_end ) const
 {
   assert((out >= 0) && (out < _outputs));
   assert(vc_begin < _vcs);
