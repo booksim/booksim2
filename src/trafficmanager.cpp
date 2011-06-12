@@ -893,86 +893,90 @@ void TrafficManager::_Step( )
 	int const offset = (base + j) % count;
 	int const c = classes[offset];
 	
-	if(!_partial_packets[source][c].empty()) {
-	  Flit * f = _partial_packets[source][c].front();
-	  assert(f);
+	if(_partial_packets[source][c].empty()) {
+	  continue;
+	}
 
-	  int const subnet = f->subnetwork;
-	  if(flits_sent_by_subnet[subnet] > 0) {
+	Flit * f = _partial_packets[source][c].front();
+	assert(f);
+
+	int const subnet = f->subnetwork;
+	if(flits_sent_by_subnet[subnet] > 0) {
+	  continue;
+	}
+
+	BufferState * const dest_buf = _buf_states[source][subnet];
+
+	if(f->head && f->vc == -1) { // Find first available VC
+	    
+	  OutputSet route_set;
+	  _rf(NULL, f, 0, &route_set, true);
+	  set<OutputSet::sSetElement> const & os = route_set.GetSet();
+	  assert(os.size() == 1);
+	  OutputSet::sSetElement const & se = *os.begin();
+	  assert(se.output_port == 0);
+	  int const & vc_start = se.vc_start;
+	  int const & vc_end = se.vc_end;
+	  int const vc_count = vc_end - vc_start + 1;
+	  for(int i = 1; i <= vc_count; ++i) {
+	    int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
+	    assert((vc >= vc_start) && (vc <= vc_end));
+	    if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
+	      f->vc = vc;
+	      break;
+	    }
+	  }
+	  if(f->vc == -1) {
 	    continue;
 	  }
 
-	  BufferState * const dest_buf = _buf_states[source][subnet];
-
-	  if(f->head && f->vc == -1) { // Find first available VC
-	    
-	    OutputSet route_set;
-	    _rf(NULL, f, 0, &route_set, true);
-	    set<OutputSet::sSetElement> const & os = route_set.GetSet();
-	    assert(os.size() == 1);
-	    OutputSet::sSetElement const & se = *os.begin();
-	    assert(se.output_port == 0);
-	    int const & vc_start = se.vc_start;
-	    int const & vc_end = se.vc_end;
-	    int const vc_count = vc_end - vc_start + 1;
-	    for(int i = 1; i <= vc_count; ++i) {
-	      int const vc = vc_start + (_last_vc[source][subnet][c] + i) % vc_count;
-	      assert((vc >= vc_start) && (vc <= vc_end));
-	      if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
-		f->vc = vc;
-		break;
-	      }
-	    }
-	    if(f->vc == -1)
-	      continue;
-
-	    dest_buf->TakeBuffer(f->vc);
-	    _last_vc[source][subnet][c] = f->vc - vc_start;
-	  }
-	  
-	  assert(f->vc != -1);
-
-	  if(!dest_buf->IsFullFor(f->vc)) {
-	    
-	    _partial_packets[source][c].pop_front();
-	    dest_buf->SendingFlit(f);
-	    
-	    if(_pri_type == network_age_based) {
-	      f->pri = numeric_limits<int>::max() - _time;
-	      assert(f->pri >= 0);
-	    }
-	    
-	    if(f->watch) {
-	      *gWatchOut << GetSimTime() << " | "
-			 << "node" << source << " | "
-			 << "Injecting flit " << f->id
-			 << " into subnet " << subnet
-			 << " at time " << _time
-			 << " with priority " << f->pri
-			 << "." << endl;
-	    }
-	    
-	    // Pass VC "back"
-	    if(!_partial_packets[source][c].empty() && !f->tail) {
-	      Flit * nf = _partial_packets[source][c].front();
-	      nf->vc = f->vc;
-	    }
-	    
-	    if((_sim_state == warming_up) || (_sim_state == running)) {
-	      ++_sent_flits[c][source];
-	    }
-
-	    ++flits_sent_by_subnet[subnet];
-
-#ifdef TRACK_FLOWS
-	    ++injected_flits[subnet*_nodes+source];
-#endif
-
-	    _net[subnet]->WriteFlit(f, source);
-	    iter->second.first = offset;
-	    
-	  }
+	  dest_buf->TakeBuffer(f->vc);
+	  _last_vc[source][subnet][c] = f->vc - vc_start;
 	}
+	
+	assert(f->vc != -1);
+	
+	if(dest_buf->IsFullFor(f->vc)) {
+	  continue;
+	}
+	
+	_partial_packets[source][c].pop_front();
+	dest_buf->SendingFlit(f);
+	
+	if(_pri_type == network_age_based) {
+	  f->pri = numeric_limits<int>::max() - _time;
+	  assert(f->pri >= 0);
+	}
+	
+	if(f->watch) {
+	  *gWatchOut << GetSimTime() << " | "
+		     << "node" << source << " | "
+		     << "Injecting flit " << f->id
+		     << " into subnet " << subnet
+		     << " at time " << _time
+		     << " with priority " << f->pri
+		     << "." << endl;
+	}
+	
+	// Pass VC "back"
+	if(!_partial_packets[source][c].empty() && !f->tail) {
+	  Flit * nf = _partial_packets[source][c].front();
+	  nf->vc = f->vc;
+	}
+	
+	if((_sim_state == warming_up) || (_sim_state == running)) {
+	  ++_sent_flits[c][source];
+	}
+	
+	++flits_sent_by_subnet[subnet];
+	
+#ifdef TRACK_FLOWS
+	++injected_flits[subnet*_nodes+source];
+#endif
+	
+	_net[subnet]->WriteFlit(f, source);
+	iter->second.first = offset;
+	
       }
     }
   }
