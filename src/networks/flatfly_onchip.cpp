@@ -378,8 +378,8 @@ void adaptive_xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
       //  into the network, adaptively
       bool x_then_y;
       if(in_channel < gC){
-	int credit_xy = r->GetCredit(out_port_xy, -1, -1);
-	int credit_yx = r->GetCredit(out_port_yx, -1, -1);
+	int credit_xy = r->GetUsedCredit(out_port_xy);
+	int credit_yx = r->GetUsedCredit(out_port_yx);
 	if(credit_xy > credit_yx) {
 	  x_then_y = false;
 	} else if(credit_xy < credit_yx) {
@@ -730,7 +730,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	  cout << " MIN tmp_out_port: " << tmp_out_port;
 	}
 	//sum over all vcs of that port
-	_min_queucnt =   r->GetCredit(tmp_out_port, -1, -1);
+	_min_queucnt =   r->GetUsedCredit(tmp_out_port);
 
 	//find the nonmin router, nonmin port, nonmin count
 	_ran_intm = find_ran_intm(flatfly_transformation(f->src), dest);
@@ -747,7 +747,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	if (_ran_intm >= rID*_concentration && _ran_intm < (rID+1)*_concentration) {
 	  _nonmin_queucnt = numeric_limits<int>::max();
 	} else  {
-	  _nonmin_queucnt =   r->GetCredit(tmp_out_port, -1, -1);
+	  _nonmin_queucnt =   r->GetUsedCredit(tmp_out_port);
 	}
 
 	if (debug){
@@ -920,7 +920,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 		     << " MIN tmp_out_port: " << tmp_out_port;
 	}
 
-	_min_queucnt =   r->GetCredit(tmp_out_port, -1, -1);
+	_min_queucnt =   r->GetUsedCredit(tmp_out_port);
 
 	_nonmin_hop = find_distance(flatfly_transformation(f->src),_ran_intm) +    find_distance(_ran_intm, dest);
 	tmp_out_port =  flatfly_outport(_ran_intm, rID);
@@ -932,7 +932,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	if (_ran_intm >= rID*_concentration && _ran_intm < (rID+1)*_concentration) {
 	  _nonmin_queucnt = numeric_limits<int>::max();
 	} else  {
-	  _nonmin_queucnt =   r->GetCredit(tmp_out_port, -1, -1);
+	  _nonmin_queucnt =   r->GetUsedCredit(tmp_out_port);
 	}
 
 	if (debug){
