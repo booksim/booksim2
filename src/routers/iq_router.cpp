@@ -156,6 +156,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     _sw_rr_offset[i] = i % _input_speedup;
   
   // Output queues
+  _output_buffer_size = config.GetInt("output_buffer_size");
   _output_buffer.resize(_outputs); 
   _credit_buffer.resize(_inputs); 
 
@@ -964,7 +965,7 @@ void IQRouter::_SWHoldUpdate( )
     
     int const expanded_output = item.second.second;
     
-    if(expanded_output >= 0) {
+    if(expanded_output >= 0 && ( _output_buffer_size==-1 || _output_buffer[expanded_output].size()<size_t(_output_buffer_size))) {
       
       assert(_switch_hold_in[expanded_input] == expanded_output);
       assert(_switch_hold_out[expanded_output] == expanded_input);
@@ -1067,9 +1068,9 @@ void IQRouter::_SWHoldUpdate( )
 	}
       }
     } else {
-      
+      //when internal speedup >1.0, the buffer stall stats may not be accruate
       assert((expanded_output == STALL_BUFFER_FULL) ||
-	     (expanded_output == STALL_BUFFER_RESERVED));
+	     (expanded_output == STALL_BUFFER_RESERVED) || !( _output_buffer_size==-1 || _output_buffer[expanded_output].size()<size_t(_output_buffer_size)));
 
       int const held_expanded_output = _switch_hold_in[expanded_input];
       assert(held_expanded_output >= 0);
@@ -1242,7 +1243,7 @@ void IQRouter::_SWAllocEvaluate( )
       
       BufferState const * const dest_buf = _next_buf[dest_output];
       
-      if(dest_buf->IsFullFor(dest_vc)) {
+      if(dest_buf->IsFullFor(dest_vc) || ( _output_buffer_size!=-1  && _output_buffer[dest_output].size()>=(size_t)(_output_buffer_size))) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  VC " << dest_vc 
@@ -1292,7 +1293,7 @@ void IQRouter::_SWAllocEvaluate( )
 	for(int dest_vc = iset->vc_start; dest_vc <= iset->vc_end; ++dest_vc) {
 	  assert((dest_vc >= 0) && (dest_vc < _vcs));
 	  
-	  if(dest_buf->IsAvailableFor(dest_vc)) {
+	  if(dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_buffer[dest_output].size()<(size_t)(_output_buffer_size))) {
 	    elig = true;
 	    if(!_spec_check_cred || !dest_buf->IsFullFor(dest_vc)) {
 	      cred = true;
@@ -1964,7 +1965,9 @@ void IQRouter::_SwitchUpdate( )
 		 << "." << endl;
     }
     _output_buffer[output].push(f);
-
+    //the output buffer size isn't precise due to flits in flight
+    //but there is a maximum bound based on output speed up and ST traversal
+    assert(_output_buffer[output].size()<=(size_t)_output_buffer_size+ _crossbar_delay* _output_speedup+( _output_speedup-1) ||_output_buffer_size==-1);
     _crossbar_flits.pop_front();
   }
 }
@@ -2045,7 +2048,7 @@ void IQRouter::Display( ostream & os ) const
   }
 }
 
-int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
+int IQRouter::GetUsedCredit(int out, int vc_begin, int vc_end ) const
 {
   assert((out >= 0) && (out < _outputs));
   assert(vc_begin < _vcs);

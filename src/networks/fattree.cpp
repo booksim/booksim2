@@ -34,9 +34,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 //       Each level of the hierarchical indirect Network has
 //       k^(n-1) Routers. The Routers are organized such that 
-//       each node has k ( = 4 ) descendents, and each parent is
-//       replicated k ( = 4 ) times.
-//
+//       each node has k descendents, and each parent is
+//       replicated k  times.
+//      most routers has 2K ports, excep the top level has only K
 ////////////////////////////////////////////////////////////////////////
 //
 // RCS Information:
@@ -56,7 +56,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "misc_utils.hpp"
 
 
-
+ //#define FATTREE_DEBUG
 
 FatTree::FatTree( const Configuration& config,const string & name )
   : Network( config ,name)
@@ -74,21 +74,16 @@ void FatTree::_ComputeSize( const Configuration& config )
 
   _k = config.GetInt( "k" );
   _n = config.GetInt( "n" );
-  _yrouter = config.GetInt( "yr" );
-  _xrouter = config.GetInt( "xr" );
-
-  /*in case that we are using fattree other than 64 nodes*/
-  //latency_correction = (double)_k/4;
- 
    
   gK = _k; gN = _n;
-
-  
   
   _nodes = powi( _k, _n );
 
+  //levels * routers_per_level
   _size = _n * powi( _k , _n - 1 );
-  _channels = 2 * 2 * _k * powi( _k , _n-1 ); 
+
+  //(channels per level = k*routers_per_level* up/down) * (levels-1)
+  _channels = (2*_k * powi( _k , _n-1 ))*(_n-1); 
   
 
 }
@@ -100,6 +95,14 @@ void FatTree::RegisterRoutingFunctions() {
 
 void FatTree::_BuildNet( const Configuration& config )
 {
+ cout << "Fat Tree" << endl;
+  cout << " k = " << _k << " levels = " << _n << endl;
+  cout << " each switch - total radix =  "<< 2*_k << endl;
+  cout << " # of switches = "<<  _size << endl;
+  cout << " # of channels = "<<  _channels << endl;
+  cout << " # of nodes ( size of network ) = " << _nodes << endl;
+
+
   // Number of router positions at each depth of the network
   const int nPos = powi( _k, _n-1);
 
@@ -107,22 +110,22 @@ void FatTree::_BuildNet( const Configuration& config )
   // Allocate Routers
   //
   ostringstream name;
-  int d, pos, id, degree, port;
-  for ( d = 0 ; d < _n ; ++d ) {
+  int level, pos, id, degree, port;
+  for ( level = 0 ; level < _n ; ++level ) {
     for ( pos = 0 ; pos < nPos ; ++pos ) {
       
-      if ( d == 0 )
+      if ( level == 0 ) //top routers is zero
 	degree = _k;
       else
 	degree = 2 * _k;
 
-      id = d * nPos + pos;
+      id = level * nPos + pos;
 
       name.str("");
-      name << "router_" << d << "_" << pos;
+      name << "router_level" << level << "_" << pos;
       Router * r = Router::NewRouter( config, this, name.str( ), id,
 				      degree, degree );
-      _Router( d, pos ) = r;
+      _Router( level, pos ) = r;
       _timed_modules.push_back(r);
     }
   }
@@ -130,101 +133,137 @@ void FatTree::_BuildNet( const Configuration& config )
   //
   // Connect Channels to Routers
   //
-  _AllocateChannelMap( );
 
   //
-  // Connection Rule: Output Ports 0:3 Move DOWN Network
-  //                  Output Ports 4:7 Move UP Network
-  //
-  
-  // Injection & Ejection Channels
-  //  Half of these channels pass over a tile ... the latency
-  //  needs to be accounted for to correctly estimate buffer
-  //  placement and power consumption
-  //
-  
-  int _cY =  _yrouter;
-  int _cX =  _xrouter;
+  // Router Connection Rule: Output Ports <gK Move DOWN Network
+  //                         Output Ports >=gK Move UP Network
+  //                         Input Ports <gK from DOWN Network
+  //                         Input Ports >=gK  from up Network
 
+  // Connecting  Injection & Ejection Channels  
   for ( pos = 0 ; pos < nPos ; ++pos ) {
+    for(int index = 0; index<_k; index++){
+      int link = pos*_k + index;
+      _Router( _n-1, pos)->AddInputChannel( _inject[link],
+					    _inject_cred[link]);
+      _Router( _n-1, pos)->AddOutputChannel( _eject[link],
+					     _eject_cred[link]);
+      _inject[link]->SetLatency( 1 );
+      _inject_cred[link]->SetLatency( 1 );
+      _eject[link]->SetLatency( 1 );
+      _eject_cred[link]->SetLatency( 1 );
+    }
+  }
 
-    //the same as the cmesh networks
-    int y_index = pos/_k;
-    int x_index = pos%_k;
-    for (int y = 0; y < _cY ; y++) {
-      for (int x = 0; x < _cX ; x++) {
-	
-	int link = (_k * _cX) * (_cY * y_index + y) + (_cX * x_index + x) ;
+#ifdef FATTREE_DEBUG
+  cout<<"\nAssigning output\n";
+#endif
 
-	_Router( _n-1, pos)->AddInputChannel( _inject[link],
-					      _inject_cred[link]);
-	if (0 == pos % 2)
-	  _inject[link]->SetLatency( 1 );
-	else
-	  _inject[link]->SetLatency( 1 );
-      
-	_Router( _n-1, pos)->AddOutputChannel( _eject[link],
-					       _eject_cred[link]);
-	if (0 == pos % 2)
-	  _eject[link]->SetLatency( 1 );
-	else 
-	  _eject[link]->SetLatency( 1 );
+  //channels are numbered sequentially from an output channel perspective
+  int chan_per_direction = (_k * powi( _k , _n-1 )); //up or down
+  int chan_per_level = 2*(_k * powi( _k , _n-1 )); //up+down
+
+  //connect all down output channels
+  //level n-1's down channel are injection channels
+  for (level = 0; level<_n-1; level++){
+    for ( pos = 0; pos < nPos; ++pos ) {
+      for ( port = 0; port < _k; ++port ) {
+	int link = (level*chan_per_level) + pos*_k + port;
+	_Router(level, pos)->AddOutputChannel( _chan[link],
+						_chan_cred[link] );
+	_chan[link]->SetLatency( 1 );
+	_chan_cred[link]->SetLatency( 1 ); 
+#ifdef FATTREE_DEBUG
+	cout<<_Router(level, pos)->Name()<<" "
+	    <<"down output "<<port<<" "
+	    <<"channel_id "<<link<<endl;
+#endif
+
+      }
+    }
+  }
+  //connect all up output channels
+  //level 0 has no up chnanels
+  for (level = 1; level<_n; level++){
+    for ( pos = 0; pos < nPos; ++pos ) {
+      for ( port = 0; port < _k; ++port ) {
+	int link = (level*chan_per_level - chan_per_direction) + pos*_k + port ;
+	_Router(level, pos)->AddOutputChannel( _chan[link],
+						_chan_cred[link] );
+	_chan[link]->SetLatency( 1 );
+	_chan_cred[link]->SetLatency( 1 ); 
+#ifdef FATTREE_DEBUG
+	cout<<_Router(level, pos)->Name()<<" "
+	    <<"up output "<<port<<" "
+	    <<"channel_id "<<link<<endl;
+#endif
       }
     }
   }
 
-  // Connections between d = 0 and d = 1 Levels
-  int c= 0;
-  
-  for ( pos = 0; pos < nPos; ++pos ) {
-    for ( port = 0; port < _k; ++port ) {
+#ifdef FATTREE_DEBUG
+  cout<<"\nAssigning Input\n";
+#endif
 
-      int parentPos  = pos;
-      int parentPort = port;
-      int childPos   = _k * port + pos % _k;
-      int childPort  = _k + pos / _k;
+  //connect all down input channels
+  for (level = 0; level<_n-1; level++){
+    //input channel are numbered interleavely, the interleaev depends on level
+    int routers_per_neighborhood = powi(_k,_n-1-(level)); 
+    int routers_per_branch = powi(_k,_n-1-(level+1)); 
+    int level_offset = routers_per_neighborhood*_k;
+    for ( pos = 0; pos < nPos; ++pos ) {
+      int neighborhood = pos/routers_per_neighborhood;
+      int neighborhood_pos = pos%routers_per_neighborhood;
+      for ( port = 0; port < _k; ++port ) {
+	int link = 
+	  ((level+1)*chan_per_level - chan_per_direction)  //which levellevel
+	  +neighborhood*level_offset   //region in level
+	  +port*routers_per_branch*gK  //sub region in region
+	  +(neighborhood_pos)%routers_per_branch*gK  //router in subregion
+	  +(neighborhood_pos)/routers_per_branch; //port on router
 
-      int latency = _WireLatency( 0, parentPos, 1, childPos );
-
-      _ConnectRouterOutput( 0, parentPos, parentPort, c, latency );
-      _ConnectRouterInput(  1, childPos,  childPort , c, latency );
-
-      c++;
-
-      _ConnectRouterInput(  0, parentPos, parentPort, c, latency );
-      _ConnectRouterOutput( 1, childPos,  childPort,  c, latency );
-
-      c++;
-
+	_Router(level, pos)->AddInputChannel( _chan[link],
+					      _chan_cred[link] );
+#ifdef FATTREE_DEBUG
+	cout<<_Router(level, pos)->Name()<<" "
+	    <<"down input "<<port<<" "
+	    <<"channel_id "<<link<<endl;
+#endif
+      }
     }
   }
 
-  // Connections between d = 1 and d = 2 Levels
-  for ( pos = 0; pos < nPos ; ++pos ) {
-    for ( port = 0; port < _k ; ++port ) {
-      int parentPos  = pos;
-      int parentPort = port;
-      int childPos   = _k * (pos/_k) + port;
-      int childPort  = _k + pos % _k;
 
-      int latency = _WireLatency( 1, parentPos, 2, childPos );
+ //connect all up input channels
+  for (level = 1; level<_n; level++){
+    //input channel are numbered interleavely, the interleaev depends on level
+    int routers_per_neighborhood = powi(_k,_n-1-(level-1)); 
+    int routers_per_branch = powi(_k,_n-1-(level)); 
+    int level_offset = routers_per_neighborhood*_k;
+    for ( pos = 0; pos < nPos; ++pos ) {
+      int neighborhood = pos/routers_per_neighborhood;
+      int neighborhood_pos = pos%routers_per_neighborhood;
+      for ( port = 0; port < _k; ++port ) {
+	int link = 
+	  ((level-1)*chan_per_level) //which levellevel
+	  +neighborhood*level_offset   //region in level
+	  +port*routers_per_branch*gK  //sub region in region
+	  +(neighborhood_pos)%routers_per_branch*gK //router in subregion
+	  +(neighborhood_pos)/routers_per_branch; //port on router
 
-      _ConnectRouterOutput( 1, parentPos, parentPort, c, latency );
-      _ConnectRouterInput(  2, childPos,  childPort,  c, latency );
-
-      c++;
-
-      _ConnectRouterInput(  1, parentPos, parentPort, c, latency );
-      _ConnectRouterOutput( 2, childPos,  childPort,  c, latency );
-
-      c++;
-      
+	_Router(level, pos)->AddInputChannel( _chan[link],
+					      _chan_cred[link] );
+#ifdef FATTREE_DEBUG
+	cout<<_Router(level, pos)->Name()<<" "
+	    <<"up input "<<port<<" "
+	    <<"channel_id "<<link<<endl;
+#endif
+      }
     }
   }
-
-  _FinalizeConnections( );
-  _ReleaseChannelMap( );
-
+#ifdef FATTREE_DEBUG
+  cout<<"\nChannel assigned\n";
+#endif
 }
 
 Router*& FatTree::_Router( int depth, int pos ) 
@@ -232,193 +271,3 @@ Router*& FatTree::_Router( int depth, int pos )
   assert( depth < _n && pos < powi( _k, _n-1) );
   return _routers[depth * powi( _k, _n-1) + pos];
 }
-
-void FatTree::_AllocateChannelMap( ) 
-{
-  _mapSize =  powi( _k, _n ) * (2 * _k);
-
-  _inputChannelMap  = new int [_mapSize];
-  _outputChannelMap = new int [_mapSize];
-  _latencyMap       = new int [_channels];
-
-  for (int i = 0; i < _mapSize; ++i) {
-    _inputChannelMap[i]  = -1;
-    _outputChannelMap[i] = -1;
-  }
-
-  for (int j = 0; j < _channels; ++j) {
-    _latencyMap[j] = 0 ;
-  }
-
-}
-
-void FatTree::_ReleaseChannelMap( )
-{
-  delete[] _inputChannelMap;
-  delete[] _outputChannelMap;
-  delete[] _latencyMap;
-}
-
-int FatTree::_PortIndex( int depth, int pos, int port )
-{
-  return ( depth * powi( _k, _n-1) + pos) * (2*_k) + port;
-}
-
-void FatTree::_ConnectRouterInput( int depth, int pos, int port, 
-				   int channel, int latency )
-{
-  int pi = _PortIndex( depth, pos, port);
-  assert( pi < _mapSize );
-  assert( _inputChannelMap[pi] == -1 );
-  _inputChannelMap[ pi ] = channel;
-
-  assert( (_latencyMap[channel] < 0) || (_latencyMap[channel] - latency < 0.1) );
-  _latencyMap[channel] = latency;
-}
-
-void FatTree::_ConnectRouterOutput( int depth, int pos, int port, 
-				    int channel, int latency )
-{
-  int pi = _PortIndex( depth, pos, port );
-  assert( pi < _mapSize );
-  assert( _outputChannelMap[pi] == -1 );
-  _outputChannelMap[ pi ] = channel;
-
-  assert( (_latencyMap[channel] < 0) || (_latencyMap[channel] - latency < 0.1) );
-  _latencyMap[channel] = latency;
-}
-
-void FatTree::_FinalizeConnections( ) 
-{
-
-  //handle up to 1000
-  int _parentDistance[3][100][10];
-  int _portPreference[3][100][10];  
-  for (int d = 0; d < _n; d++) {
-    for (int p = 0; p < _k*_k; p++) {
-      for (int c = 0; c < _k; c++ ) {
-	_parentDistance[d][p][c] = 0;
-	_portPreference[d][p][c] = 0;
-      }
-    }
-  }
-  for ( int c = 0; c < _channels; ++c ) {
-    assert( _latencyMap[c] >= 0.0 );
-    _chan[c]->SetLatency( _latencyMap[c] );
-    _chan_cred[c]->SetLatency( _latencyMap[c] );
-  }
-
-  for ( int depth = 0; depth < _n; ++depth ) {
-    for ( int pos = 0; pos < powi( _k, _n-1); ++pos ) {
-      for ( int port = 0; port < (2*_k) ; ++port ) {
-	
-	int ic = _inputChannelMap[ _PortIndex( depth, pos, port ) ];
-
-	if ( ic != -1 )
-	  _Router( depth, pos)->AddInputChannel( _chan[ic],
-						 _chan_cred[ic] );
-
-	int oc = _outputChannelMap[ _PortIndex( depth, pos, port ) ];
-
-	if ( oc != -1 )
-	  _Router( depth, pos)->AddOutputChannel( _chan[oc],
-						  _chan_cred[oc] );
-
-	if ( port > _k ) {
-	  _parentDistance[depth][pos][port-_k] = int( _chan[ic]->GetLatency() );
-	}
-      }
-      
-      
-      // Sort the path latencys to the parent nodes
-      for ( int i = 0; i < _k; i++ ) {
-	int minp = 0;
-	int mind = 100;
-	for ( int p = 0; p < _k; p++ ) {
-	  if ( _parentDistance[depth][pos][p] < mind ) {
-	    minp = p;
-	    mind = _parentDistance[depth][pos][p];
-	  }
-	}
-	_portPreference[depth][pos][i] = minp;
-	_parentDistance[depth][pos][minp] += 1000;
-      }
-    }
-  }
-}
-
-int FatTree::_WireLatency( int depth1, int pos1, int depth2, int pos2 )
-{
-  int depthChild, depthParent, posChild, posParent;
-
-  if (depth1 < depth2) {
-    depthChild  = depth2;
-    posChild    = pos2;
-    depthParent = depth1;
-    posParent   = pos1;
-  } else {
-    depthChild  = depth1;
-    posChild    = pos1;
-    depthParent = depth2;
-    posParent   = pos2;
-  }
-  float  latency_correction = 1;
-  // Distances between the Depth = 2 (Leaf) and Depth = 1 (Interior)
-  // routers in the network based on the checkerboard floorplan.
-  int _latency_d2_d1_0  = (int)(2 * latency_correction);
-  int _latency_d2_d1_1  = (int)(2 * latency_correction);
-  int _latency_d2_d1_2  = (int)(4 * latency_correction);
-  int _latency_d2_d1_3  = (int)(4 * latency_correction);
-  /*
-  int _latency_d2_d1_0  = (int)(1 * latency_correction);
-  int _latency_d2_d1_1  = (int)(1 * latency_correction);
-  int _latency_d2_d1_2  = (int)(3 * latency_correction);
-  int _latency_d2_d1_3  = (int)(3 * latency_correction);
-  */
-
-  // Distances between the Depth = 1 (Interior) and Depth = 0 (Root)
-  // routers in the network based on the checkerboard floorplan.
-    int _latency_d1_d0_0  = (int)(4 * latency_correction);
-  int _latency_d1_d0_1  = (int)(4 * latency_correction);
-  int _latency_d1_d0_2  = (int)(6 * latency_correction);
-  int _latency_d1_d0_3  = (int)(6 * latency_correction);
-  /*
-
-  int _latency_d1_d0_0  = (int)(3 * latency_correction);
-  int _latency_d1_d0_1  = (int)(3 * latency_correction);
-  int _latency_d1_d0_2  = (int)(4 * latency_correction);
-  int _latency_d1_d0_3  = (int)(4 * latency_correction);
-  */
-  assert( depthChild == depthParent+1 );
-  assert( depthChild != 3 );
-     
-  if (depthChild == 2) {
-    // The latency is determined by the relative position of
-    //  the Parent and Child nodes within their rows. The latency
-    //  component contributed by this distance is the same at both
-    //  stages of the networks
-    if ( posParent % 4 == posChild % 4 )
-      return _latency_d2_d1_0;
-    else if ( posParent % 4 == (posChild+1) % 4)
-      return _latency_d2_d1_1;
-    else if ( posParent % 4 == (posChild+2) % 4)
-      return _latency_d2_d1_2;
-    else
-      return _latency_d2_d1_3;
-  }
-  
-  if (depthChild == 1) {
-
-    if ( posParent / 4 == posChild / 4 )
-      return _latency_d1_d0_0;
-    else if ( posParent / 4 == (posChild+1) / 4)
-      return _latency_d1_d0_1;
-    else if ( posParent / 4 == (posChild+2) / 4)
-      return _latency_d1_d0_2;
-    else
-      return _latency_d1_d0_3;
-  }
-
-  return 0 ;
-}
-

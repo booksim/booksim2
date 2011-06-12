@@ -67,7 +67,8 @@ public:
   double Capacity( ) const;
   void InsertRandomFaults( const Configuration &config );
 };
-
+void adaptive_xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
+		  OutputSet *outputs, bool inject );
 void xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
 		  OutputSet *outputs, bool inject );
 void min_flatfly( const Router *r, const Flit *f, int in_channel, 

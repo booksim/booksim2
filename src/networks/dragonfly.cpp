@@ -37,9 +37,6 @@
 
 #define DRAGON_LATENCY
 
-
-#define MAX(X,Y) (((X)>(Y))?(X):(Y))
-
 int gP, gA, gG;
 
 //calculate the hop count between src and estination
@@ -527,16 +524,16 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	f->ph = 1;
 	f->minimal = 1;
       } else {
-	//congestion metrics using queue length, obtained by GetCredit()
+	//congestion metrics using queue length, obtained by GetUsedCredit()
 	min_hopcnt = dragonflynew_hopcnt(f->src, f->dest);
 	min_router_output = dragonfly_port(rID, f->src, f->dest); 
-      	min_queue_size = MAX(r->GetCredit(min_router_output, 0, gNumVCs-1),0) ; 
+      	min_queue_size = max(r->GetUsedCredit(min_router_output), 0) ; 
 
       
 	nonmin_hopcnt = dragonflynew_hopcnt(f->src, f->intm) +
 	  dragonflynew_hopcnt(f->intm,f->dest);
 	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
-	nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output, 0, gNumVCs-1),0);
+	nonmin_queue_size = max(r->GetUsedCredit(nonmin_router_output), 0);
 
 	//congestion comparison, could use hopcnt instead of 1 and 2
 	if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {	  

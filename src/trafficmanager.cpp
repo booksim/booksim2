@@ -621,7 +621,7 @@ void TrafficManager::_Step( )
 
 	int const subnet = cf->subnetwork;
 	
-	Flit * & f = flits_sent_by_subnet[subnet];
+	Flit * const f = flits_sent_by_subnet[subnet];
 
 	if(f && (f->pri >= cf->pri)) {
 	  continue;
@@ -637,8 +637,8 @@ void TrafficManager::_Step( )
 	  assert(os.size() == 1);
 	  OutputSet::sSetElement const & se = *os.begin();
 	  assert(se.output_port == 0);
-	  int const & vc_start = se.vc_start;
-	  int const & vc_end = se.vc_end;
+	  int const vc_start = se.vc_start;
+	  int const vc_end = se.vc_end;
 	  int const vc_count = vc_end - vc_start + 1;
 	  for(int i = 1; i <= vc_count; ++i) {
 	    int const vc = vc_start + (_last_vc[source][subnet][c] - vc_start + i) % vc_count;
@@ -651,7 +651,7 @@ void TrafficManager::_Step( )
 	}
 	  
 	if((cf->vc != -1) && (!dest_buf->IsFullFor(cf->vc))) {
-	  f = cf;
+	  flits_sent_by_subnet[subnet] = cf;
 	  _last_class[source] = cf->cl;
 	}
       }
@@ -659,12 +659,12 @@ void TrafficManager::_Step( )
 
     for(int subnet = 0; subnet < _subnets; ++subnet) {
       
-      Flit * & f = flits_sent_by_subnet[subnet];
+      Flit * const f = flits_sent_by_subnet[subnet];
       
       if(f) {
 	
-	int const & subnet = f->subnetwork;
-	int const & c = f->cl;
+	int const subnet = f->subnetwork;
+	int const c = f->cl;
 	
 	if(f->head) {
 	  _buf_states[source][subnet]->TakeBuffer(f->vc);
@@ -716,7 +716,7 @@ void TrafficManager::_Step( )
     for(int dest = 0; dest < _nodes; ++dest) {
       map<int, Flit *>::const_iterator iter = flits[subnet].find(dest);
       if(iter != flits[subnet].end()) {
-	Flit * const & f = iter->second;
+	Flit * const f = iter->second;
 	f->atime = _time;
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "

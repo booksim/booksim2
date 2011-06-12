@@ -124,7 +124,7 @@ public:
   inline int GetID( ) const {return _id;}
 
 
-  virtual int GetCredit(int out, int vc_begin, int vc_end ) const = 0;
+  virtual int GetUsedCredit(int out, int vc_begin = -1, int vc_end = -1 ) const = 0;
   virtual int GetBuffer(int i = -1) const = 0;
 
 #ifdef TRACK_FLOWS

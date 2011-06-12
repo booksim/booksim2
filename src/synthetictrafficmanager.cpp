@@ -60,7 +60,7 @@ SyntheticTrafficManager::SyntheticTrafficManager( const Configuration &config, c
 
   _request_class.resize(_classes, -1);
   for(int c = 0; c < _classes; ++c) {
-    int const & reply_class = _reply_class[c];
+    int const reply_class = _reply_class[c];
     if(reply_class >= 0) {
       assert(_request_class[reply_class] < 0);
       _request_class[reply_class] = c;
@@ -121,7 +121,7 @@ SyntheticTrafficManager::~SyntheticTrafficManager( )
 
 void SyntheticTrafficManager::_RetirePacket(Flit * head, Flit * tail, int dest)
 {
-  int const & reply_class = _reply_class[tail->cl];
+  int const reply_class = _reply_class[tail->cl];
   assert(reply_class < _classes);
   
   if (reply_class < 0) {
@@ -134,7 +134,7 @@ void SyntheticTrafficManager::_RetirePacket(Flit * head, Flit * tail, int dest)
 		 << ", dest = " << head->dest
 		 << ")." << endl;
     }
-    int const & request_class = _request_class[tail->cl];
+    int const request_class = _request_class[tail->cl];
     assert(request_class < _classes);
     if(request_class < 0) {
       // single-packet transactions "magically" notify source of completion 

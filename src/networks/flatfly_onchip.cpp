@@ -228,7 +228,7 @@ void FlatFlyOnChip::_BuildNet( const Configuration &config )
 
       //for every other router in the dimension
       for ( int cnt = 0; cnt < (_k ); ++cnt ) {	
-	int other; //the other router that we are trying to connect
+	int other=0; //the other router that we are trying to connect
 	int offset = 0; //silly ness when node< other or when node>other
 	//if xdimension
 	if(dim == 0){
@@ -322,6 +322,7 @@ void FlatFlyOnChip::RegisterRoutingFunctions(){
 
   
   gRoutingFunctionMap["ran_min_flatfly"] = &min_flatfly;
+  gRoutingFunctionMap["adaptive_xyyx_flatfly"] = &adaptive_xyyx_flatfly;
   gRoutingFunctionMap["xyyx_flatfly"] = &xyyx_flatfly;
   gRoutingFunctionMap["valiant_flatfly"] = &valiant_flatfly;
   gRoutingFunctionMap["ugal_flatfly"] = &ugal_flatfly_onchip;
@@ -329,7 +330,72 @@ void FlatFlyOnChip::RegisterRoutingFunctions(){
 
 }
 
+//The initial XY or YX minimal routing direction is chosen adaptively
+void adaptive_xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
+		  OutputSet *outputs, bool inject )
+{ 
+  // ( Traffic Class , Routing Order ) -> Virtual Channel Range
+  int vcBegin = gBeginVCs[f->cl];
+  int vcEnd = gEndVCs[f->cl];
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
+  int out_port;
+
+  if(inject) {
+
+    out_port = 0;
+
+  } else {
+
+    int dest = flatfly_transformation(f->dest);
+    int targetr = (int)(dest/gC);
+
+    if(targetr==r->GetID()){ //if we are at the final router, yay, output to client
+      out_port = dest  - targetr*gC;
+
+    } else {
+   
+      //each class must have at least 2 vcs assigned or else xy_yx will deadlock
+      int const available_vcs = (vcEnd - vcBegin + 1) / 2;
+      assert(available_vcs > 0);
+
+      int out_port_xy =  flatfly_outport(dest, r->GetID());
+      int out_port_yx =  flatfly_outport_yx(dest, r->GetID());
+
+      // Route order (XY or YX) determined when packet is injected
+      //  into the network, adaptively
+      bool x_then_y;
+      if(in_channel < gC){
+	int credit_xy = r->GetUsedCredit(out_port_xy);
+	int credit_yx = r->GetUsedCredit(out_port_yx);
+	if(credit_xy > credit_yx) {
+	  x_then_y = false;
+	} else if(credit_xy < credit_yx) {
+	  x_then_y = true;
+	} else {
+	  x_then_y = (RandomInt(1) > 0);
+	}
+      } else {
+	x_then_y =  (f->vc < (vcBegin + available_vcs));
+      }
+      
+      if(x_then_y) {
+	out_port = out_port_xy;
+	vcEnd -= available_vcs;
+      } else {
+	out_port = out_port_yx;
+	vcBegin += available_vcs;
+      }
+    }
+
+  }
+
+  outputs->Clear( );
+
+  outputs->AddRange( out_port , vcBegin, vcEnd );
+}
+
+//The initial XY or YX minimal routing direction is chosen randomly
 void xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
 		  OutputSet *outputs, bool inject )
 { 
@@ -604,7 +670,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	  cout << " MIN tmp_out_port: " << tmp_out_port;
 	}
 	//sum over all vcs of that port
-	_min_queucnt =   r->GetCredit(tmp_out_port, -1, -1);
+	_min_queucnt =   r->GetUsedCredit(tmp_out_port);
 
 	//find the nonmin router, nonmin port, nonmin count
 	_ran_intm = find_ran_intm(flatfly_transformation(f->src), dest);
@@ -621,7 +687,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	if (_ran_intm >= rID*_concentration && _ran_intm < (rID+1)*_concentration) {
 	  _nonmin_queucnt = numeric_limits<int>::max();
 	} else  {
-	  _nonmin_queucnt =   r->GetCredit(tmp_out_port, -1, -1);
+	  _nonmin_queucnt =   r->GetUsedCredit(tmp_out_port);
 	}
 
 	if (debug){
@@ -782,7 +848,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 		     << " MIN tmp_out_port: " << tmp_out_port;
 	}
 
-	_min_queucnt =   r->GetCredit(tmp_out_port, -1, -1);
+	_min_queucnt =   r->GetUsedCredit(tmp_out_port);
 
 	_nonmin_hop = find_distance(flatfly_transformation(f->src),_ran_intm) +    find_distance(_ran_intm, dest);
 	tmp_out_port =  flatfly_outport(_ran_intm, rID);
@@ -794,7 +860,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	if (_ran_intm >= rID*_concentration && _ran_intm < (rID+1)*_concentration) {
 	  _nonmin_queucnt = numeric_limits<int>::max();
 	} else  {
-	  _nonmin_queucnt =   r->GetCredit(tmp_out_port, -1, -1);
+	  _nonmin_queucnt =   r->GetUsedCredit(tmp_out_port);
 	}
 
 	if (debug){

@@ -58,7 +58,7 @@ WorkloadTrafficManager::~WorkloadTrafficManager( )
 
 bool WorkloadTrafficManager::_IssuePacket( int source, int cl )
 {
-  Workload * const & wl = _workload[cl];
+  Workload * const wl = _workload[cl];
   int const dest = wl->dest();
   int const size = wl->size();
   int const time = (_include_queuing == 1) ? wl->time() : _time;
@@ -69,7 +69,7 @@ bool WorkloadTrafficManager::_IssuePacket( int source, int cl )
 void WorkloadTrafficManager::_Inject( )
 {
   for(int c = 0; c < _classes; ++c) {
-    Workload * const & wl = _workload[c];
+    Workload * const wl = _workload[c];
     while(!wl->empty()) {
       int const source = wl->source();
       if(_partial_packets[c][source].empty()) {
