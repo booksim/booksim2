@@ -897,7 +897,7 @@ void TrafficManager::_Step( )
 	  continue;
 	}
 
-	Flit * f = _partial_packets[source][c].front();
+	Flit * const f = _partial_packets[source][c].front();
 	assert(f);
 
 	int const subnet = f->subnetwork;
