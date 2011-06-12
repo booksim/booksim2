@@ -183,7 +183,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _traffic_pattern[c] = TrafficPattern::New(_traffic[c], _nodes, config);
     _injection_process[c] = InjectionProcess::New(injection_process[c], _nodes, _load[c]);
 
-    int const & prio = _class_priority[c];
+    int const prio = _class_priority[c];
     if(_class_prio_map.count(prio) > 0) {
       _class_prio_map.find(prio)->second.second.push_back(c);
     } else {
@@ -884,7 +884,7 @@ void TrafficManager::_Step( )
 	iter != _class_prio_map.rend();
 	++iter) {
       
-      int const & base = iter->second.first;
+      int const base = iter->second.first;
       vector<int> const & classes = iter->second.second;
       int const count = classes.size();
       
@@ -915,8 +915,8 @@ void TrafficManager::_Step( )
 	  assert(os.size() == 1);
 	  OutputSet::sSetElement const & se = *os.begin();
 	  assert(se.output_port == 0);
-	  int const & vc_start = se.vc_start;
-	  int const & vc_end = se.vc_end;
+	  int const vc_start = se.vc_start;
+	  int const vc_end = se.vc_end;
 	  int const vc_count = vc_end - vc_start + 1;
 	  for(int i = 1; i <= vc_count; ++i) {
 	    int const vc = vc_start + (_last_vc[source][subnet][c] + (vc_count - vc_start) + i) % vc_count;
@@ -989,7 +989,7 @@ void TrafficManager::_Step( )
     for(int dest = 0; dest < _nodes; ++dest) {
       map<int, Flit *>::const_iterator iter = flits[subnet].find(dest);
       if(iter != flits[subnet].end()) {
-	Flit * const & f = iter->second;
+	Flit * const f = iter->second;
 
 #ifdef TRACK_FLOWS
 	++ejected_flits[subnet*_nodes+dest];
