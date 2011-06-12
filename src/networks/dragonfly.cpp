@@ -530,13 +530,13 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	//congestion metrics using queue length, obtained by GetCredit()
 	min_hopcnt = dragonflynew_hopcnt(f->src, f->dest);
 	min_router_output = dragonfly_port(rID, f->src, f->dest); 
-      	min_queue_size = MAX(r->GetCredit(min_router_output, 0, gNumVCs-1),0) ; 
+      	min_queue_size = MAX(r->GetCredit(min_router_output, -1, -1),0) ; 
 
       
 	nonmin_hopcnt = dragonflynew_hopcnt(f->src, f->intm) +
 	  dragonflynew_hopcnt(f->intm,f->dest);
 	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
-	nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output, 0, gNumVCs-1),0);
+	nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output, -1, -1),0);
 
 	//congestion comparison, could use hopcnt instead of 1 and 2
 	if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {	  
