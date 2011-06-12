@@ -371,27 +371,31 @@ void adaptive_xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
       int const available_vcs = (vcEnd - vcBegin + 1) / 2;
       assert(available_vcs > 0);
 
+      int out_port_xy =  flatfly_outport(dest, r->GetID());
+      int out_port_yx =  flatfly_outport_yx(dest, r->GetID());
 
       // Route order (XY or YX) determined when packet is injected
       //  into the network, adaptively
       bool x_then_y;
       if(in_channel < gC){
-	int out_port_xy =  flatfly_outport(dest, r->GetID());
-	int out_port_yx =  flatfly_outport_yx(dest, r->GetID());
-	if(r->GetCredit(out_port_xy, vcBegin, vcEnd) > r->GetCredit(out_port_yx, vcBegin, vcEnd)){
+	int credit_xy = r->GetCredit(out_port_xy, -1, -1);
+	int credit_yx = r->GetCredit(out_port_yx, -1, -1);
+	if(credit_xy > credit_yx) {
 	  x_then_y = false;
-	} else {
+	} else if(credit_xy < credit_yx) {
 	  x_then_y = true;
+	} else {
+	  x_then_y = (RandomInt(1) > 0);
 	}
       } else {
 	x_then_y =  (f->vc < (vcBegin + available_vcs));
       }
       
       if(x_then_y) {
-	out_port = flatfly_outport(dest, r->GetID());
+	out_port = out_port_xy;
 	vcEnd -= available_vcs;
       } else {
-	out_port = flatfly_outport_yx(dest, r->GetID());
+	out_port = out_port_yx;
 	vcBegin += available_vcs;
       }
     }
