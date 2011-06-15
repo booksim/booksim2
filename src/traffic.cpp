@@ -147,24 +147,24 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
 
 TrafficPattern * TrafficPattern::New(string const & pattern, int nodes, Configuration const & config)
 {
-  TrafficPattern * result = NULL;
-  if((pattern == "tornado") || (pattern == "neighbor") || 
-     (pattern == "bad_dragon") || (pattern == "badperm_yarc")) {
-    int k = config.GetInt("k");
-    int n = config.GetInt("n");
-    int xr = config.GetInt("xr");
-    ostringstream ss;
-    ss << pattern << '(' << '{' << k << ',' << n << ',' << xr << '}' << ')';
-    result = New(ss.str(), nodes);
-  } else if(pattern == "randperm") {
-    ostringstream ss;
-    int perm_seed = config.GetInt("perm_seed");
-    ss << pattern << '(' << perm_seed << ')';
-    result = New(ss.str(), nodes);
-  } else {
-    result = New(pattern, nodes);
+  if(pattern.find_first_of('(') == string::npos) {
+    if((pattern == "tornado") || (pattern == "neighbor") || 
+       (pattern == "bad_dragon") || (pattern == "badperm_yarc")) {
+      int k = config.GetInt("k");
+      int n = config.GetInt("n");
+      int xr = config.GetInt("xr");
+      ostringstream ss;
+      ss << pattern << '(' << '{' << k << ',' << n << ',' << xr << '}' << ')';
+      return New(ss.str(), nodes);
+    }
+    if(pattern == "randperm") {
+      ostringstream ss;
+      int perm_seed = config.GetInt("perm_seed");
+      ss << pattern << '(' << perm_seed << ')';
+      return New(ss.str(), nodes);
+    }
   }
-  return result;
+  return New(pattern, nodes);
 }
 
 PermutationTrafficPattern::PermutationTrafficPattern(int nodes)
