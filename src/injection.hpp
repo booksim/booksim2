@@ -44,7 +44,8 @@ public:
   virtual ~InjectionProcess() {}
   virtual bool test(int source) = 0;
   virtual void reset();
-  static InjectionProcess * New(string const & inject, int nodes, double load);
+  static InjectionProcess * New(string const & inject, int nodes, double load, 
+				Configuration const * const config = NULL);
 };
 
 class BernoulliInjectionProcess : public InjectionProcess {

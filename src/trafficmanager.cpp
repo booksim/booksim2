@@ -180,8 +180,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _injection_process.resize(_classes);
 
   for(int c = 0; c < _classes; ++c) {
-    _traffic_pattern[c] = TrafficPattern::New(_traffic[c], _nodes, config);
-    _injection_process[c] = InjectionProcess::New(injection_process[c], _nodes, _load[c]);
+    _traffic_pattern[c] = TrafficPattern::New(_traffic[c], _nodes, &config);
+    _injection_process[c] = InjectionProcess::New(injection_process[c], _nodes, _load[c], &config);
 
     int const prio = _class_priority[c];
     if(_class_prio_map.count(prio) > 0) {

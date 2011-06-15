@@ -45,8 +45,8 @@ public:
   virtual ~TrafficPattern() {}
   virtual void reset();
   virtual int dest(int source) = 0;
-  static TrafficPattern * New(string const & pattern, int nodes);
-  static TrafficPattern * New(string const & pattern, int nodes, Configuration const & config);
+  static TrafficPattern * New(string const & pattern, int nodes, 
+			      Configuration const * const config = NULL);
 };
 
 class PermutationTrafficPattern : public TrafficPattern {
