@@ -156,6 +156,11 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes, Configur
     ostringstream ss;
     ss << pattern << '(' << '{' << k << ',' << n << ',' << xr << '}' << ')';
     result = New(ss.str(), nodes);
+  } else if(pattern == "randperm") {
+    ostringstream ss;
+    int perm_seed = config.GetInt("perm_seed");
+    ss << pattern << '(' << perm_seed << ')';
+    result = New(ss.str(), nodes);
   } else {
     result = New(pattern, nodes);
   }
