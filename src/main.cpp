@@ -114,7 +114,7 @@ bool Simulate( BookSimConfig const & config )
   for (int i = 0; i < subnets; ++i) {
     ostringstream name;
     name << "network_" << i;
-    net[i] = Network::NewNetwork( config, name.str() );
+    net[i] = Network::New( config, name.str() );
   }
 
   /*tcc and characterize are legacy
@@ -122,7 +122,7 @@ bool Simulate( BookSimConfig const & config )
    */
 
   assert(trafficManager == NULL);
-  trafficManager = TrafficManager::NewTrafficManager( config, net ) ;
+  trafficManager = TrafficManager::New( config, net ) ;
 
   /*Start the simulation run
    */

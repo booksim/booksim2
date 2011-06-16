@@ -259,8 +259,8 @@ protected:
 
 public:
 
-  static TrafficManager * NewTrafficManager(Configuration const & config, 
-					    vector<Network *> const & net);
+  static TrafficManager * New(Configuration const & config, 
+			      vector<Network *> const & net);
 
   TrafficManager( const Configuration &config, const vector<Network *> & net );
   virtual ~TrafficManager( );
