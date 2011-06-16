@@ -664,18 +664,21 @@ void TrafficManager::_Step( )
       
       if(f) {
 	
-	int const subnet = f->subnetwork;
+	assert(f->subnetwork == subnet);
+
+	BufferState * const dest_buf = _buf_states[source][subnet];
+
 	int const c = f->cl;
 	
 	if(f->head) {
-	  _buf_states[source][subnet]->TakeBuffer(f->vc);
+	  dest_buf->TakeBuffer(f->vc);
 	  _last_vc[source][subnet][c] = f->vc;
 	}
 	
 	_last_class[source] = c;
 	
 	_partial_packets[c][source].pop_front();
-	_buf_states[source][subnet]->SendingFlit(f);
+	dest_buf->SendingFlit(f);
 	
 	if(_pri_type == network_age_based) {
 	  f->pri = numeric_limits<int>::max() - _time;
