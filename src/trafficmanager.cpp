@@ -174,6 +174,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _class_priority.resize(_classes, _class_priority.back());
 
+  _last_class.resize(_nodes, -1);
+
   vector<string> injection_process = config.GetStrArray("injection_process");
   injection_process.resize(_classes, injection_process.back());
 
@@ -182,13 +184,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   for(int c = 0; c < _classes; ++c) {
     _traffic_pattern[c] = TrafficPattern::New(_traffic[c], _nodes, &config);
     _injection_process[c] = InjectionProcess::New(injection_process[c], _nodes, _load[c], &config);
-
-    int const prio = _class_priority[c];
-    if(_class_prio_map.count(prio) > 0) {
-      _class_prio_map.find(prio)->second.second.push_back(c);
-    } else {
-      _class_prio_map.insert(make_pair(prio, make_pair(-1, vector<int>(1, c))));
-    }
   }
 
   // ============ Injection VC states  ============ 
@@ -878,68 +873,78 @@ void TrafficManager::_Step( )
 
   for(int source = 0; source < _nodes; ++source) {
     
-    vector<int> flits_sent_by_subnet(_subnets);
+    vector<Flit *> flits_sent_by_subnet(_subnets);
     
-    for(map<int, pair<int, vector<int> > >::reverse_iterator iter = _class_prio_map.rbegin();
-	iter != _class_prio_map.rend();
-	++iter) {
-      
-      int const base = iter->second.first;
-      vector<int> const & classes = iter->second.second;
-      int const count = classes.size();
-      
-      for(int j = 1; j <= count; ++j) {
-	
-	int const offset = (base + j) % count;
-	int const c = classes[offset];
-	
-	if(_partial_packets[source][c].empty()) {
-	  continue;
-	}
+    int const last_class = _last_class[source];
 
-	Flit * const f = _partial_packets[source][c].front();
-	assert(f);
+    for(int i = 1; i <= _classes; ++i) {
 
-	int const subnet = f->subnetwork;
-	if(flits_sent_by_subnet[subnet] > 0) {
-	  continue;
+      int const c = (last_class + i) % _classes;
+
+      if(_partial_packets[source][c].empty()) {
+	continue;
+      }
+
+      Flit * const cf = _partial_packets[source][c].front();
+      assert(cf);
+      assert(cf->cl == c);
+
+      int const subnet = cf->subnetwork;
+
+      Flit const * const f = flits_sent_by_subnet[subnet];
+
+      if(f && (f->pri >= cf->pri)) {
+	continue;
+      }
+
+      BufferState const * const dest_buf = _buf_states[source][subnet];
+
+      if(cf->head && cf->vc == -1) { // Find first available VC
+	    
+	OutputSet route_set;
+	_rf(NULL, cf, 0, &route_set, true);
+	set<OutputSet::sSetElement> const & os = route_set.GetSet();
+	assert(os.size() == 1);
+	OutputSet::sSetElement const & se = *os.begin();
+	assert(se.output_port == 0);
+	int const vc_start = se.vc_start;
+	int const vc_end = se.vc_end;
+	int const vc_count = vc_end - vc_start + 1;
+	for(int i = 1; i <= vc_count; ++i) {
+	  int const vc = vc_start + (_last_vc[source][subnet][c] + (vc_count - vc_start) + i) % vc_count;
+	  assert((vc >= vc_start) && (vc <= vc_end));
+	  if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
+	    cf->vc = vc;
+	    break;
+	  }
 	}
+      }
+
+      if((cf->vc != -1) && (!dest_buf->IsFullFor(cf->vc))) {
+	flits_sent_by_subnet[subnet] = cf;
+	_last_class[source] = cf->cl;
+      }
+    }
+	
+    for(int subnet = 0; subnet < _subnets; ++subnet) {
+      
+      Flit * const f = flits_sent_by_subnet[subnet];
+
+      if(f) {
+
+	assert(f->subnetwork == subnet);
 
 	BufferState * const dest_buf = _buf_states[source][subnet];
 
-	if(f->head && f->vc == -1) { // Find first available VC
-	    
-	  OutputSet route_set;
-	  _rf(NULL, f, 0, &route_set, true);
-	  set<OutputSet::sSetElement> const & os = route_set.GetSet();
-	  assert(os.size() == 1);
-	  OutputSet::sSetElement const & se = *os.begin();
-	  assert(se.output_port == 0);
-	  int const vc_start = se.vc_start;
-	  int const vc_end = se.vc_end;
-	  int const vc_count = vc_end - vc_start + 1;
-	  for(int i = 1; i <= vc_count; ++i) {
-	    int const vc = vc_start + (_last_vc[source][subnet][c] + (vc_count - vc_start) + i) % vc_count;
-	    assert((vc >= vc_start) && (vc <= vc_end));
-	    if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
-	      f->vc = vc;
-	      break;
-	    }
-	  }
-	  if(f->vc == -1) {
-	    continue;
-	  }
+	int const c = f->cl;
 
+	if(f->head) {
 	  dest_buf->TakeBuffer(f->vc);
 	  _last_vc[source][subnet][c] = f->vc;
 	}
 	
-	assert(f->vc != -1);
-	
-	if(dest_buf->IsFullFor(f->vc)) {
-	  continue;
-	}
-	
+	_last_class[source] = c;
+
 	_partial_packets[source][c].pop_front();
 	dest_buf->SendingFlit(f);
 	
@@ -968,14 +973,11 @@ void TrafficManager::_Step( )
 	  ++_sent_flits[c][source];
 	}
 	
-	++flits_sent_by_subnet[subnet];
-	
 #ifdef TRACK_FLOWS
 	++injected_flits[subnet*_nodes+source];
 #endif
 	
 	_net[subnet]->WriteFlit(f, source);
-	iter->second.first = offset;
 	
       }
     }

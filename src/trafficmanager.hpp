@@ -86,7 +86,7 @@ protected:
 
   vector<int> _class_priority;
 
-  map<int, pair<int, vector<int> > > _class_prio_map;
+  vector<int> _last_class;
 
   vector<TrafficPattern *> _traffic_pattern;
   vector<InjectionProcess *> _injection_process;
