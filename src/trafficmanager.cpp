@@ -623,13 +623,13 @@ void TrafficManager::_Step( )
 
       int const subnet = cf->subnetwork;
 	
-      Flit * const f = flits_sent_by_subnet[subnet];
+      Flit const * const f = flits_sent_by_subnet[subnet];
 
       if(f && (f->pri >= cf->pri)) {
 	continue;
       }
 
-      BufferState * const dest_buf = _buf_states[source][subnet];
+      BufferState const * const dest_buf = _buf_states[source][subnet];
 
       if(cf->head && cf->vc == -1) { // Find first available VC
 
