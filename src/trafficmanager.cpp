@@ -613,47 +613,48 @@ void TrafficManager::_Step( )
 
       int const c = (last_class + i) % _classes;
 
-      if(!_partial_packets[c][source].empty()) {
+      if(_partial_packets[c][source].empty()) {
+	continue;
+      }
 
-	Flit * cf = _partial_packets[c][source].front();
-	assert(cf);
-	assert(cf->cl == c);
+      Flit * cf = _partial_packets[c][source].front();
+      assert(cf);
+      assert(cf->cl == c);
 
-	int const subnet = cf->subnetwork;
+      int const subnet = cf->subnetwork;
 	
-	Flit * const f = flits_sent_by_subnet[subnet];
+      Flit * const f = flits_sent_by_subnet[subnet];
 
-	if(f && (f->pri >= cf->pri)) {
-	  continue;
-	}
+      if(f && (f->pri >= cf->pri)) {
+	continue;
+      }
 
-	BufferState * const dest_buf = _buf_states[source][subnet];
+      BufferState * const dest_buf = _buf_states[source][subnet];
 
-	if(cf->head && cf->vc == -1) { // Find first available VC
+      if(cf->head && cf->vc == -1) { // Find first available VC
 
-	  OutputSet route_set;
-	  _rf(NULL, cf, 0, &route_set, true);
-	  set<OutputSet::sSetElement> const & os = route_set.GetSet();
-	  assert(os.size() == 1);
-	  OutputSet::sSetElement const & se = *os.begin();
-	  assert(se.output_port == 0);
-	  int const vc_start = se.vc_start;
-	  int const vc_end = se.vc_end;
-	  int const vc_count = vc_end - vc_start + 1;
-	  for(int i = 1; i <= vc_count; ++i) {
-	    int const vc = vc_start + (_last_vc[source][subnet][c] - vc_start + i) % vc_count;
-	    assert((vc >= vc_start) && (vc <= vc_end));
-	    if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
-	      cf->vc = vc;
-	      break;
-	    }
+	OutputSet route_set;
+	_rf(NULL, cf, 0, &route_set, true);
+	set<OutputSet::sSetElement> const & os = route_set.GetSet();
+	assert(os.size() == 1);
+	OutputSet::sSetElement const & se = *os.begin();
+	assert(se.output_port == 0);
+	int const vc_start = se.vc_start;
+	int const vc_end = se.vc_end;
+	int const vc_count = vc_end - vc_start + 1;
+	for(int i = 1; i <= vc_count; ++i) {
+	  int const vc = vc_start + (_last_vc[source][subnet][c] - vc_start + i) % vc_count;
+	  assert((vc >= vc_start) && (vc <= vc_end));
+	  if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
+	    cf->vc = vc;
+	    break;
 	  }
 	}
+      }
 	  
-	if((cf->vc != -1) && (!dest_buf->IsFullFor(cf->vc))) {
-	  flits_sent_by_subnet[subnet] = cf;
-	  _last_class[source] = cf->cl;
-	}
+      if((cf->vc != -1) && (!dest_buf->IsFullFor(cf->vc))) {
+	flits_sent_by_subnet[subnet] = cf;
+	_last_class[source] = cf->cl;
       }
     }
 
