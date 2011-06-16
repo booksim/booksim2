@@ -710,7 +710,7 @@ void TrafficManager::_Step( )
 	  ++_sent_flits[c][source];
 	}
 
-	_net[f->subnetwork]->WriteFlit(f, source);
+	_net[subnet]->WriteFlit(f, source);
 
       }	
     }
