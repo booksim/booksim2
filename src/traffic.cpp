@@ -47,7 +47,8 @@ void TrafficPattern::reset()
 
 }
 
-TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
+TrafficPattern * TrafficPattern::New(string const & pattern, int nodes, 
+				     Configuration const * const config)
 {
   string pattern_name;
   string param_str;
@@ -75,7 +76,17 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
   } else if(pattern_name == "shuffle") {
     result = new ShuffleTrafficPattern(nodes);
   } else if(pattern_name == "randperm") {
-    int perm_seed = params.empty() ? 0 : atoi(params[0].c_str());
+    int perm_seed = -1;
+    if(params.empty()) {
+      if(config) {
+	perm_seed = config->GetInt("perm_seed");
+      } else {
+	cout << "Error: Missing parameter for random permutation traffic pattern: " << pattern << endl;
+	exit(-1);
+      }
+    } else {
+      perm_seed = atoi(params[0].c_str());
+    }
     result = new RandomPermutationTrafficPattern(nodes, perm_seed);
   } else if(pattern_name == "uniform") {
     result = new UniformRandomTrafficPattern(nodes);
@@ -93,22 +104,69 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
   } else if(pattern_name == "taper64") {
     result = new Taper64TrafficPattern(nodes);
   } else if(pattern_name == "bad_dragon") {
+    bool missing_params = false;
+    int k = -1;
+    if(params.size() < 1) {
+      if(config) {
+	k = config->GetInt("k");
+      } else {
+	missing_params = true;
+      }
+    } else {
+      k = atoi(params[0].c_str());
+    }
+    int n = -1;
     if(params.size() < 2) {
+      if(config) {
+	n = config->GetInt("n");
+      } else {
+	missing_params = true;
+      }
+    } else {
+      n = atoi(params[1].c_str());
+    }
+    if(missing_params) {
       cout << "Error: Missing parameters for dragonfly bad permutation traffic pattern: " << pattern << endl;
       exit(-1);
     }
-    int k = atoi(params[0].c_str());
-    int n = atoi(params[1].c_str());
     result = new BadPermDFlyTrafficPattern(nodes, k, n);
   } else if((pattern_name == "tornado") || (pattern_name == "neighbor") ||
 	    (pattern_name == "badperm_yarc")) {
+    bool missing_params = false;
+    int k = -1;
+    if(params.size() < 1) {
+      if(config) {
+	k = config->GetInt("k");
+      } else {
+	missing_params = true;
+      }
+    } else {
+      k = atoi(params[0].c_str());
+    }
+    int n = -1;
+    if(params.size() < 2) {
+      if(config) {
+	n = config->GetInt("n");
+      } else {
+	missing_params = true;
+      }
+    } else {
+      n = atoi(params[1].c_str());
+    }
+    int xr = -1;
     if(params.size() < 3) {
+      if(config) {
+	xr = config->GetInt("xr");
+      } else {
+	missing_params = true;
+      }
+    } else {
+      xr = atoi(params[2].c_str());
+    }
+    if(missing_params) {
       cout << "Error: Missing parameters for digit permutation traffic pattern: " << pattern << endl;
       exit(-1);
     }
-    int k = atoi(params[0].c_str());
-    int n = atoi(params[1].c_str());
-    int xr = atoi(params[2].c_str());
     if(pattern_name == "tornado") {
       result = new TornadoTrafficPattern(nodes, k, n, xr);
     } else if(pattern_name == "neighbor") {
@@ -141,23 +199,6 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
   } else {
     cout << "Error: Unknown traffic pattern: " << pattern << endl;
     exit(-1);
-  }
-  return result;
-}
-
-TrafficPattern * TrafficPattern::New(string const & pattern, int nodes, Configuration const & config)
-{
-  TrafficPattern * result = NULL;
-  if((pattern == "tornado") || (pattern == "neighbor") || 
-     (pattern == "bad_dragon") || (pattern == "badperm_yarc")) {
-    int k = config.GetInt("k");
-    int n = config.GetInt("n");
-    int xr = config.GetInt("xr");
-    ostringstream ss;
-    ss << pattern << '(' << '{' << k << ',' << n << ',' << xr << '}' << ')';
-    result = New(ss.str(), nodes);
-  } else {
-    result = New(pattern, nodes);
   }
   return result;
 }

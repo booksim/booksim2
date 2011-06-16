@@ -49,7 +49,8 @@ protected:
   Workload(int nodes);
 public:
   virtual ~Workload();
-  static Workload * New(string const & workload, int nodes);
+  static Workload * New(string const & workload, int nodes, 
+			Configuration const * const config = NULL);
   virtual void reset() = 0;
   virtual void advanceTime();
   virtual bool empty() const = 0;
@@ -73,7 +74,8 @@ protected:
   queue<int> _deferred;
 public:
   SyntheticWorkload(int nodes, double load, int size, string const & injection, 
-		    string const & traffic);
+		    string const & traffic, 
+		    Configuration const * const config = NULL);
   virtual ~SyntheticWorkload();
   virtual void reset();
   virtual void advanceTime();

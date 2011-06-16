@@ -190,6 +190,9 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField( "injection_process", "bernoulli" );
 
+  _float_map["burst_alpha"] = 0.5; // burst interval
+  _float_map["burst_beta"]  = 0.5; // burst length
+
   AddStrField( "priority", "none" );  // message priorities
 
   _int_map["batch_size"] = 1000;

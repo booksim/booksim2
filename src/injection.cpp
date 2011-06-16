@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 #include <vector>
 #include <cassert>
+#include <limits>
 #include "random_utils.hpp"
 #include "injection.hpp"
 
@@ -56,7 +57,8 @@ void InjectionProcess::reset()
 }
 
 InjectionProcess * InjectionProcess::New(string const & inject, int nodes, 
-					 double load)
+					 double load, 
+					 Configuration const * const config)
 {
   string process_name;
   string param_str = "";
@@ -78,12 +80,31 @@ InjectionProcess * InjectionProcess::New(string const & inject, int nodes,
   if(process_name == "bernoulli") {
     result = new BernoulliInjectionProcess(nodes, load);
   } else if(process_name == "on_off") {
+    bool missing_params = false;
+    double alpha = numeric_limits<double>::quiet_NaN();
+    if(params.size() < 1) {
+      if(config) {
+	alpha = config->GetFloat("burst_alpha");
+      } else {
+	missing_params = true;
+      }
+    } else {
+      alpha = atof(params[0].c_str());
+    }
+    double beta = numeric_limits<double>::quiet_NaN();
     if(params.size() < 2) {
+      if(config) {
+	beta = config->GetFloat("burst_beta");
+      } else {
+	missing_params = true;
+      }
+    } else {
+      beta = atof(params[1].c_str());
+    }
+    if(missing_params) {
       cout << "Missing parameters for injection process: " << inject << endl;
       exit(-1);
     }
-    double alpha = atof(params[0].c_str());
-    double beta = atof(params[1].c_str());
     vector<int> initial(nodes);
     if(params.size() > 2) {
       vector<string> initial_str = tokenize(params[2]);

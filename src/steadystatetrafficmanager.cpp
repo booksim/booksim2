@@ -52,7 +52,7 @@ SteadyStateTrafficManager::SteadyStateTrafficManager( const Configuration &confi
 
   _injection_process.resize(_classes);
   for(int c = 0; c < _classes; ++c) {
-    _injection_process[c] = InjectionProcess::New(_injection[c], _nodes, _load[c]);
+    _injection_process[c] = InjectionProcess::New(_injection[c], _nodes, _load[c], &config);
   }
 
   _measure_latency = (config.GetStr("sim_type") == "latency");

@@ -45,7 +45,7 @@ WorkloadTrafficManager::WorkloadTrafficManager( const Configuration &config,
 
   _workload.resize(_classes);
   for(int c = 0; c < _classes; ++c) {
-    _workload[c] = Workload::New(workload[c], _nodes);
+    _workload[c] = Workload::New(workload[c], _nodes, &config);
   }
 }
 

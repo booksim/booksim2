@@ -43,7 +43,7 @@ SyntheticTrafficManager::SyntheticTrafficManager( const Configuration &config, c
 
   _traffic_pattern.resize(_classes);
   for(int c = 0; c < _classes; ++c) {
-    _traffic_pattern[c] = TrafficPattern::New(_traffic[c], _nodes, config);
+    _traffic_pattern[c] = TrafficPattern::New(_traffic[c], _nodes, &config);
   }
 
   _packet_size = config.GetIntArray( "packet_size" );

@@ -43,7 +43,8 @@ Workload::~Workload()
   
 }
 
-Workload * Workload::New(string const & workload, int nodes)
+Workload * Workload::New(string const & workload, int nodes,
+			 Configuration const * const config)
 {
   string workload_name;
   string param_str;
@@ -73,7 +74,8 @@ Workload * Workload::New(string const & workload, int nodes)
     int const size = atoi(params[1].c_str());
     string const & injection = params[2];
     string const & traffic = params[3];
-    result = new SyntheticWorkload(nodes, load, size, injection, traffic);
+    result = new SyntheticWorkload(nodes, load, size, injection, traffic, 
+				   config);
   } else if(workload_name == "trace") {
     if(params.size() < 2) {
       cout << "Error: Missing parameter in trace workload definition: "
@@ -124,11 +126,12 @@ void Workload::advanceTime()
 
 SyntheticWorkload::SyntheticWorkload(int nodes, double load, int size, 
 				     string const & injection, 
-				     string const & traffic)
+				     string const & traffic,
+				     Configuration const * const config)
   : Workload(nodes), _size(size)
 {
-  _injection = InjectionProcess::New(injection, nodes, load);
-  _traffic = TrafficPattern::New(traffic, nodes);
+  _injection = InjectionProcess::New(injection, nodes, load, config);
+  _traffic = TrafficPattern::New(traffic, nodes, config);
   _qtime.resize(nodes);
 }
 
