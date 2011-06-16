@@ -87,7 +87,7 @@ void BufferState::BufferPolicy::FreeSlotFor(int vc)
   }
 }
 
-BufferState::BufferPolicy * BufferState::BufferPolicy::NewBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
+BufferState::BufferPolicy * BufferState::BufferPolicy::New(Configuration const & config, BufferState * parent, const string & name)
 {
   BufferPolicy * sp = NULL;
   string buffer_policy = config.GetStr("buffer_policy");
@@ -399,7 +399,7 @@ BufferState::BufferState( const Configuration& config, Module *parent, const str
     _size = _vcs * config.GetInt("vc_buf_size");
   }
 
-  _buffer_policy = BufferPolicy::NewBufferPolicy(config, this, "policy");
+  _buffer_policy = BufferPolicy::New(config, this, "policy");
 
   _wait_for_tail_credit = config.GetInt( "wait_for_tail_credit" );
 

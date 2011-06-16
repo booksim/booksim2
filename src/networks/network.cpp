@@ -80,7 +80,7 @@ Network::~Network( )
   }
 }
 
-Network * Network::NewNetwork(const Configuration & config, const string & name)
+Network * Network::New(const Configuration & config, const string & name)
 {
   const string topo = config.GetStr( "topology" );
   Network * n = NULL;

@@ -42,8 +42,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
-TrafficManager * TrafficManager::NewTrafficManager(Configuration const & config,
-						   vector<Network *> const & net)
+TrafficManager * TrafficManager::New(Configuration const & config,
+				     vector<Network *> const & net)
 {
   TrafficManager * result = NULL;
   string sim_type = config.GetStr("sim_type");
