@@ -221,8 +221,8 @@ public:
 
   virtual ~TrafficManager( );
 
-  static TrafficManager * NewTrafficManager(Configuration const & config, 
-					    vector<Network *> const & net);
+  static TrafficManager * New(Configuration const & config, 
+			      vector<Network *> const & net);
 
   bool Run( );
 

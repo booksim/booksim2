@@ -65,9 +65,8 @@ class BufferState : public Module {
       return _vc_occupancy[vc];
     }
 
-    static BufferPolicy * NewBufferPolicy(Configuration const & config, 
-					  BufferState * parent, 
-					  const string & name);
+    static BufferPolicy * New(Configuration const & config, 
+			      BufferState * parent, const string & name);
   };
   
   class PrivateBufferPolicy : public BufferPolicy {
