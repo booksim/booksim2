@@ -487,8 +487,6 @@ void TrafficManager::_GeneratePacket( int source, int dest, int size,
 	       << "." << endl;
   }
   
-  int subnet = _subnet[cl];
-  
   bool record = (((_sim_state == running) ||
 		  ((_sim_state == draining) && (time < _drain_time))) &&
 		 _measure_stats[cl]);
@@ -504,7 +502,6 @@ void TrafficManager::_GeneratePacket( int source, int dest, int size,
     f->pid = pid;
     f->tid = tid;
     f->watch = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
-    f->subnetwork = subnet;
     f->src = source;
     f->dest = dest;
     f->time = time;
@@ -621,7 +618,7 @@ void TrafficManager::_Step( )
       assert(cf);
       assert(cf->cl == c);
 
-      int const subnet = cf->subnetwork;
+      int const subnet = _subnet[c];
 	
       Flit const * const f = flits_sent_by_subnet[subnet];
 
@@ -664,8 +661,6 @@ void TrafficManager::_Step( )
       
       if(f) {
 	
-	assert(f->subnetwork == subnet);
-
 	BufferState * const dest_buf = _buf_states[source][subnet];
 
 	int const c = f->cl;

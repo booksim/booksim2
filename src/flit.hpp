@@ -68,7 +68,6 @@ public:
 
   int  hops;
   bool watch;
-  int  subnetwork;
 
   // Fields for multi-phase algorithms
   mutable int intm;
