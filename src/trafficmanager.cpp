@@ -174,8 +174,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _class_priority.resize(_classes, _class_priority.back());
 
-  _last_class.resize(_nodes, -1);
-
   vector<string> injection_process = config.GetStrArray("injection_process");
   injection_process.resize(_classes, injection_process.back());
 
@@ -190,9 +188,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _buf_states.resize(_nodes);
   _last_vc.resize(_nodes);
+  _last_class.resize(_nodes);
 
   for ( int source = 0; source < _nodes; ++source ) {
     _buf_states[source].resize(_subnets);
+    _last_class[source].resize(_subnets, 0);
     _last_vc[source].resize(_subnets);
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {
       ostringstream tmp_name;
@@ -221,6 +221,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _sent_packets.resize(_nodes);
   _repliesPending.resize(_nodes);
   _requestsOutstanding.resize(_nodes);
+
+  _hold_switch_for_packet = config.GetInt("hold_switch_for_packet");
 
   // ============ Statistics ============ 
 
@@ -867,81 +869,93 @@ void TrafficManager::_Step( )
   vector<int> injected_flits(_subnets*_nodes);
 #endif
 
-  for(int source = 0; source < _nodes; ++source) {
-    
-    vector<Flit *> flits_sent_by_subnet(_subnets);
-    
-    int const last_class = _last_class[source];
+  for(int subnet = 0; subnet < _subnets; ++subnet) {
 
-    for(int i = 1; i <= _classes; ++i) {
+    for(int n = 0; n < _nodes; ++n) {
 
-      int const c = (last_class + i) % _classes;
+      Flit * f = NULL;
 
-      if(_partial_packets[source][c].empty()) {
-	continue;
-      }
+      BufferState * const dest_buf = _buf_states[n][subnet];
 
-      Flit * const cf = _partial_packets[source][c].front();
-      assert(cf);
-      assert(cf->cl == c);
+      int const last_class = _last_class[n][subnet];
 
-      int const subnet = cf->subnetwork;
+      int class_limit = _classes;
 
-      Flit const * const f = flits_sent_by_subnet[subnet];
+      if(_hold_switch_for_packet) {
+	list<Flit *> const & pp = _partial_packets[n][last_class];
+	if(!pp.empty() && !pp.front()->head && 
+	   !dest_buf->IsFullFor(pp.front()->vc)) {
+	  f = pp.front();
+	  assert(f->vc == _last_vc[n][subnet][last_class]);
 
-      if(f && (f->pri >= cf->pri)) {
-	continue;
-      }
-
-      BufferState const * const dest_buf = _buf_states[source][subnet];
-
-      if(cf->head && cf->vc == -1) { // Find first available VC
-	    
-	OutputSet route_set;
-	_rf(NULL, cf, 0, &route_set, true);
-	set<OutputSet::sSetElement> const & os = route_set.GetSet();
-	assert(os.size() == 1);
-	OutputSet::sSetElement const & se = *os.begin();
-	assert(se.output_port == 0);
-	int const vc_start = se.vc_start;
-	int const vc_end = se.vc_end;
-	int const vc_count = vc_end - vc_start + 1;
-	for(int i = 1; i <= vc_count; ++i) {
-	  int const vc = vc_start + (_last_vc[source][subnet][c] + (vc_count - vc_start) + i) % vc_count;
-	  assert((vc >= vc_start) && (vc <= vc_end));
-	  if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
-	    cf->vc = vc;
-	    break;
-	  }
+	  // if we're holding the connection, we don't need to check that class 
+	  // again in the for loop
+	  --class_limit;
 	}
       }
 
-      if((cf->vc != -1) && (!dest_buf->IsFullFor(cf->vc))) {
-	flits_sent_by_subnet[subnet] = cf;
-	_last_class[source] = cf->cl;
-      }
-    }
+      for(int i = 1; i <= class_limit; ++i) {
+
+	int const c = (last_class + i) % _classes;
+
+	list<Flit *> const & pp = _partial_packets[n][c];
+
+	if(pp.empty()) {
+	  continue;
+	}
+
+	Flit * const cf = pp.front();
+	assert(cf);
+	assert(cf->cl == c);
 	
-    for(int subnet = 0; subnet < _subnets; ++subnet) {
-      
-      Flit * const f = flits_sent_by_subnet[subnet];
+	if(cf->subnetwork != subnet) {
+	  continue;
+	}
+
+	if(f && (f->pri >= cf->pri)) {
+	  continue;
+	}
+
+	if(cf->head && cf->vc == -1) { // Find first available VC
+	  
+	  OutputSet route_set;
+	  _rf(NULL, cf, 0, &route_set, true);
+	  set<OutputSet::sSetElement> const & os = route_set.GetSet();
+	  assert(os.size() == 1);
+	  OutputSet::sSetElement const & se = *os.begin();
+	  assert(se.output_port == 0);
+	  int const vc_start = se.vc_start;
+	  int const vc_end = se.vc_end;
+	  int const vc_count = vc_end - vc_start + 1;
+	  for(int i = 1; i <= vc_count; ++i) {
+	    int const vc = vc_start + (_last_vc[n][subnet][c] + (vc_count - vc_start) + i) % vc_count;
+	    assert((vc >= vc_start) && (vc <= vc_end));
+	    if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
+	      cf->vc = vc;
+	      break;
+	    }
+	  }
+	}
+
+	if((cf->vc != -1) && (!dest_buf->IsFullFor(cf->vc))) {
+	  f = cf;
+	}
+      }
 
       if(f) {
 
 	assert(f->subnetwork == subnet);
 
-	BufferState * const dest_buf = _buf_states[source][subnet];
-
 	int const c = f->cl;
 
 	if(f->head) {
 	  dest_buf->TakeBuffer(f->vc);
-	  _last_vc[source][subnet][c] = f->vc;
+	  _last_vc[n][subnet][c] = f->vc;
 	}
 	
-	_last_class[source] = c;
+	_last_class[n][subnet] = c;
 
-	_partial_packets[source][c].pop_front();
+	_partial_packets[n][c].pop_front();
 	dest_buf->SendingFlit(f);
 	
 	if(_pri_type == network_age_based) {
@@ -951,7 +965,7 @@ void TrafficManager::_Step( )
 	
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
-		     << "node" << source << " | "
+		     << "node" << n << " | "
 		     << "Injecting flit " << f->id
 		     << " into subnet " << subnet
 		     << " at time " << _time
@@ -960,20 +974,20 @@ void TrafficManager::_Step( )
 	}
 	
 	// Pass VC "back"
-	if(!_partial_packets[source][c].empty() && !f->tail) {
-	  Flit * const nf = _partial_packets[source][c].front();
+	if(!_partial_packets[n][c].empty() && !f->tail) {
+	  Flit * const nf = _partial_packets[n][c].front();
 	  nf->vc = f->vc;
 	}
 	
 	if((_sim_state == warming_up) || (_sim_state == running)) {
-	  ++_sent_flits[c][source];
+	  ++_sent_flits[c][n];
 	}
 	
 #ifdef TRACK_FLOWS
-	++injected_flits[subnet*_nodes+source];
+	++injected_flits[subnet*_nodes+n];
 #endif
 	
-	_net[subnet]->WriteFlit(f, source);
+	_net[subnet]->WriteFlit(f, n);
 	
       }
     }
