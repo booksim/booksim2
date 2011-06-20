@@ -853,9 +853,7 @@ void IQRouter::_VCAllocUpdate( )
 
 void IQRouter::_SWHoldEvaluate( )
 {
-  if(!_hold_switch_for_packet) {
-    return;
-  }
+  assert(_hold_switch_for_packet);
 
   for(deque<pair<int, pair<pair<int, int>, int> > >::iterator iter = _sw_hold_vcs.begin();
       iter != _sw_hold_vcs.end();
@@ -928,6 +926,8 @@ void IQRouter::_SWHoldEvaluate( )
 
 void IQRouter::_SWHoldUpdate( )
 {
+  assert(_hold_switch_for_packet);
+
   while(!_sw_hold_vcs.empty()) {
     
     pair<int, pair<pair<int, int>, int> > const & item = _sw_hold_vcs.front();
