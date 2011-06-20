@@ -118,15 +118,15 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _class_priority.resize(_classes, _class_priority.back());
 
-  _last_class.resize(_nodes, -1);
-
   // ============ Injection VC states  ============ 
 
   _buf_states.resize(_nodes);
   _last_vc.resize(_nodes);
+  _last_class.resize(_nodes);
 
   for ( int source = 0; source < _nodes; ++source ) {
     _buf_states[source].resize(_subnets);
+    _last_class[source].resize(_subnets, 0);
     _last_vc[source].resize(_subnets);
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {
       ostringstream tmp_name;
@@ -151,6 +151,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _total_in_flight_flits.resize(_classes);
   _measured_in_flight_flits.resize(_classes);
   _retired_packets.resize(_classes);
+
+  _hold_switch_for_packet = config.GetInt("hold_switch_for_packet");
 
   // ============ Statistics ============ 
 
@@ -563,116 +565,124 @@ void TrafficManager::_Step( )
     cout << "WARNING: Possible network deadlock." << endl;
   }
 
-  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
-    for ( int source = 0; source < _nodes; ++source ) {
-      Credit * const c = _net[subnet]->ReadCredit( source );
-      if ( c ) {
-	_buf_states[source][subnet]->ProcessCredit(c);
-	c->Free();
-      }
-    }
-    _net[subnet]->ReadInputs( );
-  }
-
   vector<map<int, Flit *> > flits(_subnets);
 
-  for ( int dest = 0; dest < _nodes; ++dest ) {
-    for ( int subnet = 0; subnet < _subnets; ++subnet ) {
-      Flit * const f = _net[subnet]->ReadFlit( dest );
+  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
+    for ( int n = 0; n < _nodes; ++n ) {
+      Flit * const f = _net[subnet]->ReadFlit( n );
       if ( f ) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
-		     << "node" << dest << " | "
+		     << "node" << n << " | "
 		     << "Ejecting flit " << f->id
 		     << " (packet " << f->pid << ")"
 		     << " from VC " << f->vc
 		     << "." << endl;
 	}
-	flits[subnet].insert(make_pair(dest, f));
+	flits[subnet].insert(make_pair(n, f));
 	if((_sim_state == warming_up) || (_sim_state == running)) {
-	  ++_accepted_flits[f->cl][dest];
+	  ++_accepted_flits[f->cl][n];
 	}
       }
+
+      Credit * const c = _net[subnet]->ReadCredit( n );
+      if ( c ) {
+	_buf_states[n][subnet]->ProcessCredit(c);
+	c->Free();
+      }
     }
+    _net[subnet]->ReadInputs( );
   }
   
   if ( !_empty_network ) {
     _Inject();
   }
 
-  for(int source = 0; source < _nodes; ++source) {
-    
-    vector<Flit *> flits_sent_by_subnet(_subnets);
-    
-    int const last_class = _last_class[source];
+  for(int subnet = 0; subnet < _subnets; ++subnet) {
 
-    for(int i = 1; i <= _classes; ++i) {
+    for(int n = 0; n < _nodes; ++n) {
 
-      int const c = (last_class + i) % _classes;
+      Flit * f = NULL;
 
-      if(_partial_packets[c][source].empty()) {
-	continue;
-      }
+      BufferState * const dest_buf = _buf_states[n][subnet];
 
-      Flit * cf = _partial_packets[c][source].front();
-      assert(cf);
-      assert(cf->cl == c);
+      int const last_class = _last_class[n][subnet];
 
-      int const subnet = _subnet[c];
-	
-      Flit const * const f = flits_sent_by_subnet[subnet];
+      int class_limit = _classes;
 
-      if(f && (f->pri >= cf->pri)) {
-	continue;
-      }
+      if(_hold_switch_for_packet) {
+	list<Flit *> const & pp = _partial_packets[last_class][n];
+	if(!pp.empty() && !pp.front()->head && 
+	   !dest_buf->IsFullFor(pp.front()->vc)) {
+	  f = pp.front();
+	  assert(f->vc == _last_vc[n][subnet][last_class]);
 
-      BufferState const * const dest_buf = _buf_states[source][subnet];
-
-      if(cf->head && cf->vc == -1) { // Find first available VC
-
-	OutputSet route_set;
-	_rf(NULL, cf, 0, &route_set, true);
-	set<OutputSet::sSetElement> const & os = route_set.GetSet();
-	assert(os.size() == 1);
-	OutputSet::sSetElement const & se = *os.begin();
-	assert(se.output_port == 0);
-	int const vc_start = se.vc_start;
-	int const vc_end = se.vc_end;
-	int const vc_count = vc_end - vc_start + 1;
-	for(int i = 1; i <= vc_count; ++i) {
-	  int const vc = vc_start + (_last_vc[source][subnet][c] - vc_start + i) % vc_count;
-	  assert((vc >= vc_start) && (vc <= vc_end));
-	  if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
-	    cf->vc = vc;
-	    break;
-	  }
+	  // if we're holding the connection, we don't need to check that class 
+	  // again in the for loop
+	  --class_limit;
 	}
       }
-	  
-      if((cf->vc != -1) && (!dest_buf->IsFullFor(cf->vc))) {
-	flits_sent_by_subnet[subnet] = cf;
-	_last_class[source] = cf->cl;
-      }
-    }
 
-    for(int subnet = 0; subnet < _subnets; ++subnet) {
-      
-      Flit * const f = flits_sent_by_subnet[subnet];
+      for(int i = 1; i <= class_limit; ++i) {
+
+	int const c = (last_class + i) % _classes;
+
+	if(_subnet[c] != subnet) {
+	  continue;
+	}
+
+	list<Flit *> const & pp = _partial_packets[c][n];
+
+	if(pp.empty()) {
+	  continue;
+	}
+
+	Flit * const cf = pp.front();
+	assert(cf);
+	assert(cf->cl == c);
+	
+	if(f && (f->pri >= cf->pri)) {
+	  continue;
+	}
+
+	if(cf->head && cf->vc == -1) { // Find first available VC
+	  
+	  OutputSet route_set;
+	  _rf(NULL, cf, 0, &route_set, true);
+	  set<OutputSet::sSetElement> const & os = route_set.GetSet();
+	  assert(os.size() == 1);
+	  OutputSet::sSetElement const & se = *os.begin();
+	  assert(se.output_port == 0);
+	  int const vc_start = se.vc_start;
+	  int const vc_end = se.vc_end;
+	  int const vc_count = vc_end - vc_start + 1;
+	  for(int i = 1; i <= vc_count; ++i) {
+	    int const vc = vc_start + (_last_vc[n][subnet][c] - vc_start + i) % vc_count;
+	    assert((vc >= vc_start) && (vc <= vc_end));
+	    if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
+	      cf->vc = vc;
+	      break;
+	    }
+	  }
+	}
+	  
+	if((cf->vc != -1) && (!dest_buf->IsFullFor(cf->vc))) {
+	  f = cf;
+	}
+      }
       
       if(f) {
 	
-	BufferState * const dest_buf = _buf_states[source][subnet];
-
 	int const c = f->cl;
 	
 	if(f->head) {
 	  dest_buf->TakeBuffer(f->vc);
-	  _last_vc[source][subnet][c] = f->vc;
+	  _last_vc[n][subnet][c] = f->vc;
 	}
 	
-	_last_class[source] = c;
-	
-	_partial_packets[c][source].pop_front();
+	_last_class[n][subnet] = c;
+
+	_partial_packets[c][n].pop_front();
 	dest_buf->SendingFlit(f);
 	
 	if(_pri_type == network_age_based) {
@@ -682,7 +692,7 @@ void TrafficManager::_Step( )
 	
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
-		     << "node" << source << " | "
+		     << "node" << n << " | "
 		     << "Injecting flit " << f->id
 		     << " into subnet " << subnet
 		     << " at time " << _time
@@ -696,52 +706,52 @@ void TrafficManager::_Step( )
 	}
 	
 	// Pass VC "back"
-	if(!_partial_packets[c][source].empty() && !f->tail) {
-	  Flit * nf = _partial_packets[c][source].front();
+	if(!_partial_packets[c][n].empty() && !f->tail) {
+	  Flit * const nf = _partial_packets[c][n].front();
 	  nf->vc = f->vc;
 	}
 	
 	if((_sim_state == warming_up) || (_sim_state == running)) {
-	  ++_sent_flits[c][source];
+	  ++_sent_flits[c][n];
 	}
 
-	_net[subnet]->WriteFlit(f, source);
+	_net[subnet]->WriteFlit(f, n);
 
       }	
     }
   }
 
+#ifdef TRACK_FLOWS
+  vector<vector<int> > received_flits(_subnets*_routers, 0);
+  vector<vector<int> > sent_flits(_subnets*_routers, 0);
+  vector<vector<int> > stored_flits(_subnets*_routers, 0);
+  vector<vector<int> > active_packets(_subnets*_routers, 0);
+#endif
+
   for(int subnet = 0; subnet < _subnets; ++subnet) {
-    for(int dest = 0; dest < _nodes; ++dest) {
-      map<int, Flit *>::const_iterator iter = flits[subnet].find(dest);
+    for(int n = 0; n < _nodes; ++n) {
+      map<int, Flit *>::const_iterator iter = flits[subnet].find(n);
       if(iter != flits[subnet].end()) {
 	Flit * const f = iter->second;
 	f->atime = _time;
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
-		     << "node" << dest << " | "
+		     << "node" << n << " | "
 		     << "Injecting credit for VC " << f->vc 
 		     << " into subnet " << subnet 
 		     << "." << endl;
 	}
 	Credit * const c = Credit::New();
 	c->vc.insert(f->vc);
-	_net[subnet]->WriteCredit(c, dest);
-	_RetireFlit(f, dest);
+	_net[subnet]->WriteCredit(c, n);
+	_RetireFlit(f, n);
       }
     }
     flits[subnet].clear();
     _net[subnet]->Evaluate( );
     _net[subnet]->WriteOutputs( );
-  }
-  
+
 #ifdef TRACK_FLOWS
-  vector<vector<int> > received_flits(_classes*_subnets*_routers);
-  vector<vector<int> > sent_flits(_classes*_subnets*_routers);
-  vector<vector<int> > stored_flits(_classes*_subnets*_routers);
-  vector<vector<int> > active_packets(_classes*_subnets*_routers);
-  
-  for (int subnet = 0; subnet < _subnets; ++subnet) {
     for(int router = 0; router < _routers; ++router) {
       Router * const r = _router[subnet][router];
       for(int c = 0; c < _classes; ++c) {
@@ -752,7 +762,10 @@ void TrafficManager::_Step( )
 	r->ResetFlowStats(c);
       }
     }
+#endif
   }
+  
+#ifdef TRACK_FLOWS
   if(_received_flits_out) *_received_flits_out << received_flits << endl;
   if(_stored_flits_out) *_stored_flits_out << stored_flits << endl;
   if(_sent_flits_out) *_sent_flits_out << sent_flits << endl;

@@ -63,7 +63,7 @@ protected:
 
   vector<int> _class_priority;
 
-  vector<int> _last_class;
+  vector<vector<int> > _last_class;
 
   // ============ Message priorities ============ 
 
@@ -89,6 +89,8 @@ protected:
   vector<map<int, Flit *> > _retired_packets;
 
   bool _empty_network;
+
+  bool _hold_switch_for_packet;
 
   // ============ deadlock ==========
 
