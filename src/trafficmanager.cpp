@@ -830,37 +830,33 @@ void TrafficManager::_Step( )
     cout << "WARNING: Possible network deadlock.\n";
   }
 
-  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
-    for ( int source = 0; source < _nodes; ++source ) {
-      Credit * const c = _net[subnet]->ReadCredit( source );
-      if ( c ) {
-	_buf_states[source][subnet]->ProcessCredit(c);
-	c->Free();
-      }
-    }
-    _net[subnet]->ReadInputs( );
-  }
-
   vector<map<int, Flit *> > flits(_subnets);
   
-  for ( int dest = 0; dest < _nodes; ++dest ) {
-    for ( int subnet = 0; subnet < _subnets; ++subnet ) {
-      Flit * const f = _net[subnet]->ReadFlit( dest );
+  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
+    for ( int n = 0; n < _nodes; ++n ) {
+      Flit * const f = _net[subnet]->ReadFlit( n );
       if ( f ) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
-		     << "node" << dest << " | "
+		     << "node" << n << " | "
 		     << "Ejecting flit " << f->id
 		     << " (packet " << f->pid << ")"
 		     << " from VC " << f->vc
 		     << "." << endl;
 	}
-	flits[subnet].insert(make_pair(dest, f));
+	flits[subnet].insert(make_pair(n, f));
 	if((_sim_state == warming_up) || (_sim_state == running)) {
-	  ++_accepted_flits[f->cl][dest];
+	  ++_accepted_flits[f->cl][n];
 	}
       }
+
+      Credit * const c = _net[subnet]->ReadCredit( n );
+      if ( c ) {
+	_buf_states[n][subnet]->ProcessCredit(c);
+	c->Free();
+      }
     }
+    _net[subnet]->ReadInputs( );
   }
   
   if ( !_empty_network ) {
@@ -984,45 +980,42 @@ void TrafficManager::_Step( )
   }
 
 #ifdef TRACK_FLOWS
-  vector<int> ejected_flits(_subnets*_nodes);
+  vector<int> ejected_flits(_subnets*_nodes, 0);
+  vector<vector<int> > received_flits(_subnets*_routers, 0);
+  vector<vector<int> > sent_flits(_subnets*_routers, 0);
+  vector<vector<int> > stored_flits(_subnets*_routers, 0);
+  vector<vector<int> > active_packets(_subnets*_routers, 0);
 #endif
 
   for(int subnet = 0; subnet < _subnets; ++subnet) {
-    for(int dest = 0; dest < _nodes; ++dest) {
-      map<int, Flit *>::const_iterator iter = flits[subnet].find(dest);
+    for(int n = 0; n < _nodes; ++n) {
+      map<int, Flit *>::const_iterator iter = flits[subnet].find(n);
       if(iter != flits[subnet].end()) {
 	Flit * const f = iter->second;
 
 #ifdef TRACK_FLOWS
-	++ejected_flits[subnet*_nodes+dest];
+	++ejected_flits[subnet*_nodes+n];
 #endif
 
 	f->atime = _time;
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
-		     << "node" << dest << " | "
+		     << "node" << n << " | "
 		     << "Injecting credit for VC " << f->vc 
 		     << " into subnet " << subnet 
 		     << "." << endl;
 	}
 	Credit * const c = Credit::New();
 	c->vc.insert(f->vc);
-	_net[subnet]->WriteCredit(c, dest);
-	_RetireFlit(f, dest);
+	_net[subnet]->WriteCredit(c, n);
+	_RetireFlit(f, n);
       }
     }
     flits[subnet].clear();
     _net[subnet]->Evaluate( );
     _net[subnet]->WriteOutputs( );
-  }
-  
-#ifdef TRACK_FLOWS
-  vector<vector<int> > received_flits(_subnets*_routers, 0);
-  vector<vector<int> > sent_flits(_subnets*_routers, 0);
-  vector<vector<int> > stored_flits(_subnets*_routers, 0);
-  vector<vector<int> > active_packets(_subnets*_routers, 0);
 
-  for (int subnet = 0; subnet < _subnets; ++subnet) {
+#ifdef TRACK_FLOWS
     for(int router = 0; router < _routers; ++router) {
       Router * const r = _router[subnet][router];
       received_flits[subnet*_routers+router] = r->GetReceivedFlits();
@@ -1031,8 +1024,10 @@ void TrafficManager::_Step( )
       active_packets[subnet*_routers+router] = r->GetActivePackets();
       r->ResetFlowStats();
     }
+#endif
   }
-
+  
+#ifdef TRACK_FLOWS
   if(_sent_packets_out) *_sent_packets_out << sent_packets << endl;
   if(_injected_flits_out) *_injected_flits_out << injected_flits << endl;
   if(_ejected_flits_out) *_ejected_flits_out << ejected_flits << endl;
