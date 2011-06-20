@@ -86,7 +86,7 @@ protected:
 
   vector<int> _class_priority;
 
-  vector<int> _last_class;
+  vector<vector<int> > _last_class;
 
   vector<TrafficPattern *> _traffic_pattern;
   vector<InjectionProcess *> _injection_process;
@@ -116,6 +116,8 @@ protected:
   vector<map<int, Flit *> > _measured_in_flight_flits;
   vector<map<int, Flit *> > _retired_packets;
   bool _empty_network;
+
+  bool _hold_switch_for_packet;
 
   // ============ physical sub-networks ==========
 
