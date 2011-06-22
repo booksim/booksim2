@@ -72,6 +72,7 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
     result = new ShuffleTrafficPattern(nodes);
   } else if(pattern_name == "randperm") {
     int perm_seed = params.empty() ? 0 : atoi(params[0].c_str());
+    cout<<"Perm Seed "<<perm_seed<<endl;
     result = new RandomPermutationTrafficPattern(nodes, perm_seed);
   } else if(pattern_name == "uniform") {
     result = new UniformRandomTrafficPattern(nodes);
