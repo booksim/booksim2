@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 BookSimConfig::BookSimConfig( )
 { 
-
+  _int_map["notification_time_threshold"] = 10;
   _int_map["queuing_age"] = 1;
   _int_map["hop_offset"]= 4;
   _int_map["age_granularity"] = 0;

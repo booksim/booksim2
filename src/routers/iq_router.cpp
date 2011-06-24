@@ -50,10 +50,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "switch_monitor.hpp"
 #include "buffer_monitor.hpp"
 
+
+ //forward notification
+bool ENABLE_NOTE = false;
+
+
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
 : Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
+  ENABLE_NOTE = (config.GetStr("priority")=="notification");
+  if(ENABLE_NOTE){
+    _output_notifications.clear();
+    _output_notifications.resize(inputs*outputs, 0);
+  }
+
   _vcs         = config.GetInt( "num_vcs" );
   _classes     = config.GetInt( "classes" );
   _speculative = (config.GetInt("speculative") > 0);
@@ -211,6 +222,11 @@ void IQRouter::_InternalStep( )
     return;
   }
 
+  if(ENABLE_NOTE){
+    _output_notifications.clear();
+    _output_notifications.resize(_inputs* _outputs, 0);
+  }
+
   _InputQueuing( );
   bool activity = !_proc_credits.empty();
 
@@ -281,6 +297,9 @@ bool IQRouter::_ReceiveFlits( )
   for(int input = 0; input < _inputs; ++input) { 
     Flit * const f = _input_channels[input]->Receive();
     if(f) {
+      if(ENABLE_NOTE){
+	f->notification = f->next_notification;
+      }
       ++_received_flits[input];
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -555,7 +574,10 @@ void IQRouter::_VCAllocEvaluate( )
       for(int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc) {
 	assert((out_vc >= 0) && (out_vc < _vcs));
 
-	int const & in_priority = iset->pri;
+	//original booksim
+	//	int const & in_priority = iset->pri;
+	//new
+	int const & in_priority = out_priority;
 
 	// On the input input side, a VC might request several output VCs. 
 	// These VCs can be prioritized by the routing function, and this is 
@@ -572,6 +594,12 @@ void IQRouter::_VCAllocEvaluate( )
 		       << ", out_pri: " << out_priority
 		       << ")." << endl;
 	    watched = true;
+	  }
+	  if(ENABLE_NOTE){
+	    _output_notifications[input*_outputs+out_port]=
+	      _output_notifications[input*_outputs+out_port]>cur_buf->GetNotification(vc)?
+	      _output_notifications[input*_outputs+out_port]:
+	      cur_buf->GetNotification(vc);
 	  }
 	  _vc_allocator->AddRequest(input*_vcs + vc, out_port*_vcs + out_vc, 0, 
 				    in_priority, out_priority);
@@ -630,6 +658,16 @@ void IQRouter::_VCAllocEvaluate( )
       Flit const * const f = cur_buf->FrontFlit(vc);
       assert(f);
       assert(f->head);
+
+
+      if(ENABLE_NOTE && f->head){
+	int sum=0;
+	for(int i = 0; i<_inputs; i++){
+	  sum += _output_notifications[i*_outputs+match_output];
+	}
+	assert(f->notification<= sum);
+	cur_buf->FrontFlit(vc)->next_notification = sum;
+      }
 
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -1056,8 +1094,10 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 		     << ", pri: " << prio
 		     << ")." << endl;
 	}
+
 	allocator->RemoveRequest(expanded_input, expanded_output, req.label);
-	allocator->AddRequest(expanded_input, expanded_output, vc, prio, prio);
+	allocator->AddRequest(expanded_input, expanded_output, vc, 
+			      prio, prio);
 	return true;
       }
       if(f->watch) {
@@ -1081,7 +1121,15 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 		 << ", pri: " << prio
 		 << ")." << endl;
     }
-    allocator->AddRequest(expanded_input, expanded_output, vc, prio, prio);
+	if(GetID()==-1){
+	  if(expanded_input == 4){
+	    cout<<prio<<endl;
+	  } else {
+	    cout<<"\t"<<prio<<endl;
+	  }
+}	
+    allocator->AddRequest(expanded_input, expanded_output, vc, 
+			  prio, prio);
     return true;
   }
   if(f->watch) {

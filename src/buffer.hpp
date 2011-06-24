@@ -109,7 +109,11 @@ public:
   {
     return _vc[vc]->GetPriority( );
   }
-
+  inline int GetNotification(int vc) const
+  {
+    return _vc[vc]->GetNotification();
+  }
+  
   inline void Route( int vc, tRoutingFunction rf, const Router* router, const Flit* f, int in_channel )
   {
     _vc[vc]->Route(rf, router, f, in_channel);

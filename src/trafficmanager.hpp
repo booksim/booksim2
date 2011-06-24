@@ -93,7 +93,7 @@ protected:
 
   // ============ Message priorities ============ 
 
-  enum ePriority { class_based, age_based, network_age_based, local_age_based, queue_length_based, hop_count_based, sequence_based, none };
+  enum ePriority { class_based, age_based, network_age_based, local_age_based, queue_length_based, hop_count_based, sequence_based, forward_note, none };
 
   ePriority _pri_type;
 
@@ -138,7 +138,9 @@ protected:
   bool _replies_inherit_priority;
 
   // ============ Statistics ============
-
+  vector<Stats *> _forward_note_source_stats;
+  vector<Stats *> _forward_note_dest_stats;
+  
   vector<Stats *> _plat_stats;     
   vector<Stats *> _overall_min_plat;  
   vector<Stats *> _overall_avg_plat;  

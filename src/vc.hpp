@@ -56,11 +56,12 @@ private:
   OutputSet *_route_set;
   int _out_port, _out_vc;
 
-  enum ePrioType { local_age_based, queue_length_based, hop_count_based, none, other };
+  enum ePrioType { local_age_based, queue_length_based, hop_count_based, none, other, forward_note };
 
   ePrioType _pri_type;
 
   int _pri;
+  int _note;
 
   int _priority_donation;
 
@@ -124,6 +125,10 @@ public:
   inline int GetPriority( ) const
   {
     return _pri;
+  }
+  inline int GetNotification( ) const
+  {
+    return _note;
   }
   void Route( tRoutingFunction rf, const Router* router, const Flit* f, int in_channel );
 

@@ -51,7 +51,7 @@ const char * const VC::VCSTATE[] = {"idle",
 VC::VC( const Configuration& config, int outputs, 
 	Module *parent, const string& name )
   : Module( parent, name ), 
-    _state(idle), _out_port(-1), _out_vc(-1), _pri(0), _watched(false), 
+    _state(idle), _out_port(-1), _out_vc(-1), _pri(0),_note(0), _watched(false), 
     _expected_pid(-1), _last_id(-1), _last_pid(-1)
 {
   _route_set = new OutputSet( );
@@ -65,6 +65,8 @@ VC::VC( const Configuration& config, int outputs,
     _pri_type = hop_count_based;
   } else if ( priority == "none" ) {
     _pri_type = none;
+  } else if ( priority == "notification" ) {
+    _pri_type = forward_note;
   } else {
     _pri_type = other;
   }
@@ -156,7 +158,22 @@ void VC::UpdatePriority()
   if(_buffer.empty()) return;
   if(_pri_type == queue_length_based) {
     _pri = _buffer.size();
-  } else if(_pri_type != none) {
+  } else if(_pri_type == forward_note){
+    //forward notifcation
+    Flit * f = _buffer.front();
+    if(f->head){
+     
+       _pri= (f->notification == 0)?1:f->notification;
+      //_pri= f->notification+1;
+      _note = f->notification;
+      if(f->watch)
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		   << "Flit " << f->id
+		   << " sets priority to " << _pri
+		   << " sets notification to "<<_note
+		   << "." << endl;
+    }
+  }else if(_pri_type != none) {
     Flit * f = _buffer.front();
     if((_pri_type != local_age_based) && _priority_donation) {
       Flit * df = f;

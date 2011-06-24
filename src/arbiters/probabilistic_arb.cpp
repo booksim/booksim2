@@ -1,4 +1,4 @@
-// $Id$
+// $Id: roundrobin_arb.cpp 3510 2011-05-09 22:07:44Z qtedq $
 
 /*
 Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
@@ -28,88 +28,71 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _FLIT_HPP_
-#define _FLIT_HPP_
+// ----------------------------------------------------------------------
+//
+//  Probabilistic: Probabilistic Arbiter
+//
+// ----------------------------------------------------------------------
 
+#include "probabilistic_arb.hpp"
 #include <iostream>
-#include <stack>
+#include <limits>
 
-#include "booksim.hpp"
+using namespace std ;
 
-class Flit {
+ProbabilisticArbiter::ProbabilisticArbiter( Module *parent, const string &name,
+				      int size ) 
+  : Arbiter( parent, name, size ),_range(0) {
+}
 
-public:
+void ProbabilisticArbiter::PrintState() const  {
+  cout << "Probabilistic arbiter has no pointers " << endl ;
+}
 
-  const static int NUM_FLIT_TYPES = 5;
-  enum FlitType { READ_REQUEST  = 0, 
-		  READ_REPLY    = 1,
-		  WRITE_REQUEST = 2,
-		  WRITE_REPLY   = 3,
-                  ANY_TYPE      = 4 };
-  FlitType type;
+void ProbabilisticArbiter::UpdateState() {
+  //no state
+}
 
-  int notification;
-  int next_notification;
+void ProbabilisticArbiter::AddRequest( int input, int id, int pri )
+{
+  //requires non-zeo probability
+  assert(pri>0);
+  if(!_request[input].valid || (_request[input].pri < pri)) {
+    _range+=pri;
+    //subtract out previous pri
+    if(_request[input].valid ){
+      _range-=_request[input].pri;
+    }
 
-  int vc;
-
-  int cl;
-
-  bool head;
-  bool tail;
-  bool true_tail;
+  } 
   
-  int  time;
-  int  ttime;
-  int  atime;
+  Arbiter::AddRequest(input, id, pri);
+}
 
-  int  sn;
-  int  rob_time;
+int ProbabilisticArbiter::Arbitrate( int* id, int* pri ) {
+ 
 
-  int  id;
-  int  pid;
-  int  tid;
+  if(_range!=0){
+    //overflow detect
+    assert(_range>0);
+    int choice = RandomInt(_range-1);
+    int sum = 0;
+    do{
+      _best_input++;
+      if(_request[_best_input].valid){
+	sum+=_request[_best_input].pri;
+      }
+    }while(sum<=choice);
+    assert(_best_input<_size);
+  }
+  _selected =  _best_input;
+  return Arbiter::Arbitrate(id, pri);
+}
 
-  bool record;
-
-  int  src;
-  int  dest;
-
-  int  pri;
-
-  int  hops;
-  bool watch;
-  int  subnetwork;
-
-  // Fields for multi-phase algorithms
-  mutable int intm;
-  mutable int ph;
-
-  mutable int dr;
-  mutable int minimal; // == 1 minimal routing, == 0, nonminimal routing
-
-  // Which VC parition to use for deadlock avoidance in a ring
-  mutable int ring_par;
-
-  // Fields for arbitrary data
-  void* data ;
-
-  void Reset();
-
-  static Flit * New();
-  void Free();
-  static void FreeAll();
-
-private:
-
-  Flit();
-  ~Flit() {}
-
-  static stack<Flit *> _all;
-  static stack<Flit *> _free;
-
-};
-
-ostream& operator<<( ostream& os, const Flit& f );
-
-#endif
+void ProbabilisticArbiter::Clear()
+{
+  _range = 0;
+  _highest_pri = numeric_limits<int>::min();
+  _best_input = -1;
+  Arbiter::Clear();
+}

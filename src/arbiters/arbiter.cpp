@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "arbiter.hpp"
 #include "roundrobin_arb.hpp"
 #include "matrix_arb.hpp"
+#include "probabilistic_arb.hpp"
 
 #include <limits>
 #include <cassert>
@@ -83,8 +84,9 @@ void Arbiter::Clear()
   if(_num_reqs > 0) {
     
     // clear the request vector
-    for ( int i = 0; i < _size ; i++ )
+    for ( int i = 0; i < _size ; i++ ){
       _request[i].valid = false ;
+    }
     _num_reqs = 0 ;
     _selected = -1;
   }
@@ -98,6 +100,8 @@ Arbiter *Arbiter::NewArbiter( Module *parent, const string& name,
     a = new RoundRobinArbiter( parent, name, size );
   } else if(arb_type == "matrix") {
     a = new MatrixArbiter( parent, name, size );
+  } else if(arb_type == "prob"){
+    a = new ProbabilisticArbiter( parent, name, size );
   } else assert(false);
   return a;
 }

@@ -42,6 +42,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
+
+int NOTIFICATION_TIME_THRESHOLD=0;
+
+int watch_100= 0;
+
 TrafficManager * TrafficManager::NewTrafficManager(Configuration const & config,
 						   vector<Network *> const & net)
 {
@@ -61,6 +66,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
 
+  NOTIFICATION_TIME_THRESHOLD = config.GetInt("notification_time_threshold");
   _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
 
@@ -90,6 +96,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _pri_type = hop_count_based;
   } else if ( priority == "sequence" ) {
     _pri_type = sequence_based;
+  } else if ( priority == "notification"){
+    _pri_type = forward_note;
   } else if ( priority == "none" ) {
     _pri_type = none;
   } else {
@@ -231,6 +239,17 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _maxOutstanding = config.GetInt ("max_outstanding_requests");  
 
   // ============ Statistics ============ 
+
+  if(_pri_type == forward_note){
+    _forward_note_source_stats.resize(_nodes);
+    _forward_note_dest_stats.resize(_nodes);
+    for(int i = 0; i<_nodes; i++){
+      _forward_note_source_stats[i] = new Stats(this, "lol", 
+					  1.0, 16);
+      _forward_note_dest_stats[i] = new Stats(this, "lol", 
+					  1.0, 16);
+    }
+  }
 
   _plat_stats.resize(_classes);
   _overall_min_plat.resize(_classes);
@@ -654,6 +673,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       if((_slowest_flit[f->cl] < 0) ||
 	 (_plat_stats[f->cl]->Max() < (f->atime - f->time)))
 	_slowest_flit[f->cl] = f->id;
+      
+      if(_pri_type == forward_note){
+	_forward_note_source_stats[f->src]->AddSample(head->next_notification);
+	_forward_note_dest_stats[f->dest]->AddSample(head->next_notification);
+      }
+
       _plat_stats[f->cl]->AddSample( f->atime - f->time);
       _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
@@ -821,6 +846,11 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     f->ttime  = ttime;
     f->record = record;
     f->cl     = cl;
+
+    //watchwatch
+    if(f->id == -1){
+      f->watch = true;
+    }
 
     _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
     if(record) {
@@ -1015,6 +1045,16 @@ void TrafficManager::_Step( )
 	      continue;
 
 	    dest_buf->TakeBuffer(f->vc);
+	    //retarded congestion inidcator
+	    if(_pri_type == forward_note  && _qtime[source][c]<_time-NOTIFICATION_TIME_THRESHOLD){
+	      if(source==-1 ){
+		if(watch_100==100){
+		  f->watch = true;
+		}
+		watch_100++;
+	      }
+	      f->next_notification = 1;
+	    }
 	    _last_vc[source][subnet][c] = f->vc - vc_start;
 	  }
 	  
@@ -1599,6 +1639,18 @@ void TrafficManager::DisplayStats(ostream & os) const {
       }
       *_stats_out << "];" << endl;
       *_stats_out << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
+      if(_pri_type == forward_note){
+	*_stats_out<<"forward_note_source ="<<"[";
+	for(int i = 0; i<_nodes; i++){
+	  *_stats_out<<_forward_note_source_stats[i]->Average()<<" ";
+	}
+	*_stats_out<<"];\n";
+	*_stats_out<<"forward_note_dest ="<<"[";
+	for(int i = 0; i<_nodes; i++){
+	  *_stats_out<<_forward_note_dest_stats[i]->Average()<<" ";
+	}
+	*_stats_out<<"];\n";
+      }
     }
   }    
 }

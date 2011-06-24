@@ -64,7 +64,9 @@ Flit::Flit()
 
 void Flit::Reset() 
 {  
-  type      = ANY_TYPE ;
+  type      = ANY_TYPE ;		       
+  notification=0;
+  next_notification= 0;
   vc        = -1 ;
   cl        = -1 ;
   head      = false ;

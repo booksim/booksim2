@@ -1,4 +1,4 @@
-// $Id$
+// $Id: roundrobin_arb.hpp 3510 2011-05-09 22:07:44Z qtedq $
 
 /*
 Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
@@ -28,42 +28,42 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _RANDOM_UTILS_HPP_
-#define _RANDOM_UTILS_HPP_
+// ----------------------------------------------------------------------
+//
+//  Probabilistic: 
+//
+// ----------------------------------------------------------------------
 
- // interface to Knuth's RANARRAY RNG
-void   ran_start(long seed);
-long   ran_next( );
-void   ranf_start(long seed);
-double ranf_next( );
+#ifndef _PROBABILISTIC_HPP_
+#define _PROBABILISTIC_HPP_
 
-inline void RandomSeed( long seed ) {
-  ran_start( seed );
-  ranf_start( seed );
-}
+#include "arbiter.hpp"
+#include "random_utils.hpp"
 
-inline unsigned long RandomIntLong(long max ) {
-  return (ran_next( )%(max+1));
-}
+class ProbabilisticArbiter : public Arbiter {
 
+  //sum of all priorities
+  int _range;
 
-inline unsigned long RandomIntLong( ) {
-  return ran_next( );
-}
+public:
 
-// Returns a random integer in the range [0,max]
-inline int RandomInt( int max ) {
-  return ( ran_next( ) % (max+1) );
-}
+  // Constructors
+  ProbabilisticArbiter( Module *parent, const string &name, int size ) ;
 
-// Returns a random floating-point value in the rage [0,1]
-inline double RandomFloat(  ) {
-  return ranf_next( );
-}
+  // Print priority matrix to standard output
+  virtual void PrintState() const ;
+  
+  // Update priority matrix based on last aribtration result
+  virtual void UpdateState() ; 
 
-// Returns a random floating-point value in the rage [0,max]
-inline double RandomFloat( double max ) {
-  return ( ranf_next( ) * max );
-}
+  // Arbitrate amongst requests. Returns winning input and 
+  // updates pointers to metadata when valid pointers are passed
+  virtual int Arbitrate( int* id = 0, int* pri = 0) ;
+
+  virtual void AddRequest( int input, int id, int pri ) ;
+
+  virtual void Clear();
+  
+} ;
 
 #endif
