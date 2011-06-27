@@ -1639,17 +1639,50 @@ void TrafficManager::DisplayStats(ostream & os) const {
       }
       *_stats_out << "];" << endl;
       *_stats_out << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
+
+      //statstat
+      vector<Router *> rrr = _net[0]->GetRouters();
+
+      for(int i = 0; i<rrr.size(); i++){
+	*_stats_out<<"input_grant(:,"<<i+1<<")=[";
+	*_stats_out<<rrr[i]->_input_grant_stat;
+	*_stats_out<<"];\n";
+      }
+      for(int i = 0; i<rrr.size(); i++){
+	*_stats_out<<"input_request(:,"<<i+1<<")=[";
+	*_stats_out<<rrr[i]->_input_request_stat;
+	*_stats_out<<"];\n";
+      }
+      for(int i = 0; i<rrr.size(); i++){
+	*_stats_out<<"input_vc_grant(:,"<<i+1<<")=[";
+	*_stats_out<<rrr[i]->_input_vc_grant_stat;
+	*_stats_out<<"];\n";
+      }
+      for(int i = 0; i<rrr.size(); i++){
+	*_stats_out<<"input_vc_request(:,"<<i+1<<")=[";
+	*_stats_out<<rrr[i]->_input_vc_request_stat;
+	*_stats_out<<"];\n";
+      }
+      for(int i = 0; i<rrr.size(); i++){
+	*_stats_out<<"output_grant(:,"<<i+1<<")=[";
+	*_stats_out<<rrr[i]->_output_grant_stat;
+	*_stats_out<<"];\n";
+      }
+
       if(_pri_type == forward_note){
-	*_stats_out<<"forward_note_source ="<<"[";
 	for(int i = 0; i<_nodes; i++){
+	  *_stats_out<<"forward_note_source (:,"<<i+1<<")=[";
 	  *_stats_out<<_forward_note_source_stats[i]->Average()<<" ";
+	  *_stats_out<<*_forward_note_source_stats[i];
+	  *_stats_out<<"];\n";
 	}
-	*_stats_out<<"];\n";
-	*_stats_out<<"forward_note_dest ="<<"[";
 	for(int i = 0; i<_nodes; i++){
+	  *_stats_out<<"forward_note_dest (:,"<<i+1<<")=[";
 	  *_stats_out<<_forward_note_dest_stats[i]->Average()<<" ";
+	  *_stats_out<<*_forward_note_dest_stats[i];
+	  *_stats_out<<"];\n";
 	}
-	*_stats_out<<"];\n";
+
       }
     }
   }    
@@ -1694,6 +1727,7 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
        << " (" << _hop_stats[c]->NumSamples( ) << " samples)" << endl;
 
     os << "Slowest flit = " << _slowest_flit[c] << endl;
+  
     
   }
   

@@ -64,7 +64,11 @@ VC::VC( const Configuration& config, int outputs,
   } else if ( priority == "hop_count" ) {
     _pri_type = hop_count_based;
   } else if ( priority == "none" ) {
-    _pri_type = none;
+    if(config.GetStr("vc_alloc_arb_type")=="prob" || config.GetStr("sw_alloc_arb_type")=="prob"){
+      _pri_type = none_prob;
+    } else  {
+      _pri_type = none;
+    }
   } else if ( priority == "notification" ) {
     _pri_type = forward_note;
   } else {
@@ -158,13 +162,14 @@ void VC::UpdatePriority()
   if(_buffer.empty()) return;
   if(_pri_type == queue_length_based) {
     _pri = _buffer.size();
+  } else if(_pri_type == none_prob){
+    _pri = 1;
   } else if(_pri_type == forward_note){
     //forward notifcation
     Flit * f = _buffer.front();
     if(f->head){
      
        _pri= (f->notification == 0)?1:f->notification;
-      //_pri= f->notification+1;
       _note = f->notification;
       if(f->watch)
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "

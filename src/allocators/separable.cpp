@@ -52,6 +52,7 @@ SeparableAllocator::SeparableAllocator( Module* parent, const string& name,
     ostringstream arb_name("arb_i");
     arb_name << i;
     _input_arb[i] = Arbiter::NewArbiter(this, arb_name.str(), arb_type, outputs);
+    
   }
 
   _output_arb.resize(outputs);
