@@ -335,18 +335,46 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
 { 
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = 0, vcEnd = gNumVCs-1;
-  if ( f->type == Flit::READ_REQUEST ) {
-    vcBegin = gReadReqBeginVC;
-    vcEnd = gReadReqEndVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-    vcBegin = gWriteReqBeginVC;
-    vcEnd = gWriteReqEndVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-    vcBegin = gReadReplyBeginVC;
-    vcEnd = gReadReplyEndVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-    vcBegin = gWriteReplyBeginVC;
-    vcEnd = gWriteReplyEndVC;
+  if(!gReservation){
+    if ( f->type == Flit::READ_REQUEST ) {
+      vcBegin = gReadReqBeginVC;
+      vcEnd = gReadReqEndVC;
+    } else if ( f->type == Flit::WRITE_REQUEST ) {
+      vcBegin = gWriteReqBeginVC;
+      vcEnd = gWriteReqEndVC;
+    } else if ( f->type ==  Flit::READ_REPLY ) {
+      vcBegin = gReadReplyBeginVC;
+      vcEnd = gReadReplyEndVC;
+    } else if ( f->type ==  Flit::WRITE_REPLY ) {
+      vcBegin = gWriteReplyBeginVC;
+      vcEnd = gWriteReplyEndVC;
+    }
+  } else {
+    if(f->res_type == RES_TYPE_RES){//special packets
+      //even though res type res always go on vc 0, it is the first flit
+      //popped from the flow buffer and handles the vc assignment for the whole buffer
+      //
+      if(inject){ 
+	vcBegin = RES_RESERVED_VCS;
+	vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
+      } else {
+	vcBegin = RES_PACKET_VC;
+	vcEnd = RES_PACKET_VC;
+      }
+    } else if(f->res_type == RES_TYPE_GRANT){
+      vcBegin = GRANT_PACKET_VC;
+      vcEnd = GRANT_PACKET_VC;
+    } else if(f->res_type == RES_TYPE_NORM){ //normal packets
+      vcBegin = (RES_RESERVED_VCS+gResVCs);
+      vcEnd = (gNumVCs-1);
+    } else if(f->res_type == RES_TYPE_SPEC){
+      vcBegin = RES_RESERVED_VCS;
+      vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
+    } else { //ack, nack, grant
+      vcBegin = RES_RESERVED_VCS-1;
+      vcEnd = RES_RESERVED_VCS-1;
+    }
+
   }
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
