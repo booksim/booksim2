@@ -142,6 +142,11 @@ BookSimConfig::BookSimConfig( )
   
   AddStrField( "vc_alloc_arb_type", "round_robin" );
   AddStrField( "sw_alloc_arb_type", "round_robin" );
+
+  AddStrField( "vc_alloc_input_arb_type", "" );
+  AddStrField( "vc_alloc_output_arb_type", "" );
+  AddStrField( "sw_alloc_input_arb_type", "" );
+  AddStrField( "sw_alloc_output_arb_type","" );
   
   _int_map["alloc_iters"] = 1;
   

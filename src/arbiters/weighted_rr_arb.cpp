@@ -1,4 +1,4 @@
-// $Id$
+// $Id: roundrobin_arb.cpp 3510 2011-05-09 22:07:44Z qtedq $
 
 /*
 Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
@@ -30,25 +30,76 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // ----------------------------------------------------------------------
 //
-//  SeparableOutputFirstAllocator: Separable Output-First Allocator
+//  RoundRobin: RoundRobin Arbiter
 //
 // ----------------------------------------------------------------------
 
-#ifndef _SEPARABLE_OUTPUT_FIRST_HPP_
-#define _SEPARABLE_OUTPUT_FIRST_HPP_
+#include "roundrobin_arb.hpp"
+#include "weighted_rr_arb.hpp"
+#include "stats.hpp"
+#include <iostream>
+#include <limits>
 
-#include "separable.hpp"
+using namespace std ;
 
-class SeparableOutputFirstAllocator : public SeparableAllocator {
+WeightedRRArbiter::WeightedRRArbiter( Module *parent, const string &name,
+				      int size ) 
+  : Arbiter( parent, name, size ), _pointer( 0 ) {
+  _share.resize(size,0);
+}
 
-public:
+void WeightedRRArbiter::PrintState() const  {
+  cout << "Weighted RR Priority Pointer: " << endl ;
+  cout << "  _pointer = " << _pointer << endl ;
+}
+
+void WeightedRRArbiter::UpdateState() {
+
+  //only move pointer when share is depleted
+  if ( _selected > -1 ) {
+    _share[_selected]--;
+    assert(_share[_selected]>=0);
+    if(_share[_selected]==0){
+      _pointer = ( _selected + 1 ) % _size ;
+    } else {
+      _pointer =  _selected;
+    }
+  }
+}
+
+void WeightedRRArbiter::AddRequest( int input, int id, int pri )
+{
+
+  assert(pri>0);
+  //update weight
+  if(_share[input] == 0){
+    _share[input] = pri;
+  }
   
-  SeparableOutputFirstAllocator( Module* parent, const string& name, int inputs,
-				 int outputs, const string& input_arb_type 
-				 , const string& output_arb_type) ;
+  if(!_request[input].valid || (_request[input].pri < pri)) {
+    if(_num_reqs == 0) {
+      _highest_pri = pri;
+      _best_input = input;
+      //round robin the pointers, but check for _share
+    } else if(RoundRobinArbiter::Supersedes(input,1,_best_input, 1, _pointer,_size)){
+      assert(_share[input]!=0);
+      _highest_pri = pri;
+      _best_input = input;   
+    }
+  }
+  Arbiter::AddRequest(input, id, pri);
+}
+
+int WeightedRRArbiter::Arbitrate( int* id, int* pri ) {
   
-  virtual void Allocate() ;
+  _selected = _best_input;
+  
+  return Arbiter::Arbitrate(id, pri);
+}
 
-} ;
-
-#endif
+void WeightedRRArbiter::Clear()
+{
+  _highest_pri = numeric_limits<int>::min();
+  _best_input = -1;
+  Arbiter::Clear();
+}

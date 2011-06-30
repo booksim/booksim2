@@ -42,7 +42,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 SeparableAllocator::SeparableAllocator( Module* parent, const string& name,
 					int inputs, int outputs,
-					const string& arb_type )
+					const string& input_arb_type,
+					const string& output_arb_type )
   : SparseAllocator( parent, name, inputs, outputs )
 {
   
@@ -51,7 +52,7 @@ SeparableAllocator::SeparableAllocator( Module* parent, const string& name,
   for (int i = 0; i < inputs; ++i) {
     ostringstream arb_name("arb_i");
     arb_name << i;
-    _input_arb[i] = Arbiter::NewArbiter(this, arb_name.str(), arb_type, outputs);
+    _input_arb[i] = Arbiter::NewArbiter(this, arb_name.str(), input_arb_type, outputs);
     
   }
 
@@ -60,7 +61,7 @@ SeparableAllocator::SeparableAllocator( Module* parent, const string& name,
   for (int i = 0; i < outputs; ++i) {
     ostringstream arb_name("arb_o");
     arb_name << i;
-    _output_arb[i] = Arbiter::NewArbiter(this, arb_name.str( ), arb_type, inputs);
+    _output_arb[i] = Arbiter::NewArbiter(this, arb_name.str( ), output_arb_type, inputs);
   }
 
 }

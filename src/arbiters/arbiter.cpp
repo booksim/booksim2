@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "roundrobin_arb.hpp"
 #include "matrix_arb.hpp"
 #include "probabilistic_arb.hpp"
+#include "weighted_rr_arb.hpp"
 
 #include <limits>
 #include <cassert>
@@ -102,6 +103,8 @@ Arbiter *Arbiter::NewArbiter( Module *parent, const string& name,
     a = new MatrixArbiter( parent, name, size );
   } else if(arb_type == "prob"){
     a = new ProbabilisticArbiter( parent, name, size );
-  } else assert(false);
+  } else if(arb_type == "weighted"){
+    a = new WeightedRRArbiter(parent, name,size);
+  }else assert(false);
   return a;
 }

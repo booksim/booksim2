@@ -45,7 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 int NOTIFICATION_TIME_THRESHOLD=0;
 
-int watch_100= 0;
+
 
 TrafficManager * TrafficManager::NewTrafficManager(Configuration const & config,
 						   vector<Network *> const & net)
@@ -675,8 +675,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	_slowest_flit[f->cl] = f->id;
       
       if(_pri_type == forward_note){
-	_forward_note_source_stats[f->src]->AddSample(head->next_notification);
-	_forward_note_dest_stats[f->dest]->AddSample(head->next_notification);
+	_forward_note_source_stats[head->src]->AddSample(head->next_notification);
+	_forward_note_dest_stats[head->dest]->AddSample(head->next_notification);
       }
 
       _plat_stats[f->cl]->AddSample( f->atime - f->time);
@@ -1047,14 +1047,8 @@ void TrafficManager::_Step( )
 	    dest_buf->TakeBuffer(f->vc);
 	    //retarded congestion inidcator
 	    if(_pri_type == forward_note  && _qtime[source][c]<_time-NOTIFICATION_TIME_THRESHOLD){
-	      if(source==-1 ){
-		if(watch_100==100){
-		  f->watch = true;
-		}
-		watch_100++;
-	      }
 	      f->next_notification = 1;
-	    }
+	    }	     
 	    _last_vc[source][subnet][c] = f->vc - vc_start;
 	  }
 	  
@@ -1161,7 +1155,6 @@ void TrafficManager::_Step( )
   if(gTrace){
     cout<<"TIME "<<_time<<endl;
   }
-
 }
   
 bool TrafficManager::_PacketsOutstanding( ) const

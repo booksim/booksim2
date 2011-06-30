@@ -1,4 +1,4 @@
-// $Id$
+// $Id: roundrobin_arb.hpp 3510 2011-05-09 22:07:44Z qtedq $
 
 /*
 Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
@@ -30,24 +30,40 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // ----------------------------------------------------------------------
 //
-//  SeparableOutputFirstAllocator: Separable Output-First Allocator
+//  RoundRobin: Round Robin Arbiter
 //
 // ----------------------------------------------------------------------
 
-#ifndef _SEPARABLE_OUTPUT_FIRST_HPP_
-#define _SEPARABLE_OUTPUT_FIRST_HPP_
+#ifndef _WEIGHTEDRR_HPP_
+#define _WEIGHTEDRR_HPP_
 
-#include "separable.hpp"
+#include "arbiter.hpp"
 
-class SeparableOutputFirstAllocator : public SeparableAllocator {
+class WeightedRRArbiter : public Arbiter {
+
+  // Priority pointer
+  int  _pointer ;
+
+  vector<int> _share;
 
 public:
+
+  // Constructors
+  WeightedRRArbiter( Module *parent, const string &name, int size ) ;
+
+  // Print priority matrix to standard output
+  virtual void PrintState() const ;
   
-  SeparableOutputFirstAllocator( Module* parent, const string& name, int inputs,
-				 int outputs, const string& input_arb_type 
-				 , const string& output_arb_type) ;
-  
-  virtual void Allocate() ;
+  // Update priority matrix based on last aribtration result
+  virtual void UpdateState() ; 
+
+  // Arbitrate amongst requests. Returns winning input and 
+  // updates pointers to metadata when valid pointers are passed
+  virtual int Arbitrate( int* id = 0, int* pri = 0) ;
+
+  virtual void AddRequest( int input, int id, int pri ) ;
+
+  virtual void Clear();
 
 } ;
 

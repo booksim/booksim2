@@ -45,8 +45,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 SeparableInputFirstAllocator::
 SeparableInputFirstAllocator( Module* parent, const string& name, int inputs,
-			      int outputs, const string& arb_type )
-  : SeparableAllocator( parent, name, inputs, outputs, arb_type )
+			      int outputs, const string& input_arb_type
+			      , const string& output_arb_type)
+: SeparableAllocator( parent, name, inputs, outputs, input_arb_type, output_arb_type )
 {}
 
 void SeparableInputFirstAllocator::Allocate() {

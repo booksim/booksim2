@@ -129,11 +129,24 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     arb_type = config.GetStr( "vc_alloc_arb_type" );
     iters = config.GetInt( "vc_alloc_iters" );
     if(iters == 0) iters = config.GetInt("alloc_iters");
-    _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
-					     alloc_type,
-					     _vcs*_inputs, 
-					     _vcs*_outputs,
-					     iters, arb_type );
+    if(config.GetStr( "vc_alloc_input_arb_type" )=="" ||
+       config.GetStr( "vc_alloc_output_arb_type" )==""){
+       
+      _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
+					       alloc_type,
+					       _vcs*_inputs, 
+					       _vcs*_outputs,
+					       iters, arb_type, arb_type );
+    } else {
+      cout<<"_";
+      _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
+					       alloc_type,
+					       _vcs*_inputs, 
+					       _vcs*_outputs,
+					       iters, 
+					       config.GetStr( "vc_alloc_input_arb_type" ), 
+					       config.GetStr( "vc_alloc_output_arb_type" ) );
+    }
 
     if ( !_vc_allocator ) {
       Error("Unknown vc_allocator type: " + alloc_type);
@@ -144,22 +157,47 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   arb_type = config.GetStr( "sw_alloc_arb_type" );
   iters = config.GetInt("sw_alloc_iters");
   if(iters == 0) iters = config.GetInt("alloc_iters");
-  _sw_allocator = Allocator::NewAllocator( this, "sw_allocator",
-					   alloc_type,
-					   _inputs*_input_speedup, 
-					   _outputs*_output_speedup,
-					   iters, arb_type );
+  if(config.GetStr( "sw_alloc_input_arb_type" )=="" ||
+     config.GetStr( "sw_alloc_output_arb_type" )==""){
+    _sw_allocator = Allocator::NewAllocator( this, "sw_allocator",
+					     alloc_type,
+					     _inputs*_input_speedup, 
+					     _outputs*_output_speedup,
+					     iters, arb_type , arb_type);
+  } else {
+    cout<<"*";
+    _sw_allocator = Allocator::NewAllocator( this, "sw_allocator",
+					     alloc_type,
+					     _inputs*_input_speedup, 
+					     _outputs*_output_speedup,
+					     iters, 
+					     config.GetStr( "sw_alloc_input_arb_type" ), 
+					     config.GetStr( "sw_alloc_output_arb_type" ));
+  }
 
   if ( !_sw_allocator ) {
     Error("Unknown sw_allocator type: " + alloc_type);
   }
   
   if ( _speculative && ( config.GetInt("spec_use_prio") == 0 ) ) {    
-    _spec_sw_allocator = Allocator::NewAllocator( this, "spec_sw_allocator",
-						  alloc_type,
-						  _inputs*_input_speedup, 
-						  _outputs*_output_speedup,
-						  iters, arb_type );
+    if(config.GetStr( "sw_alloc_input_arb_type" )=="" ||
+       config.GetStr( "sw_alloc_output_arb_type" )==""){
+      _spec_sw_allocator = Allocator::NewAllocator( this, "spec_sw_allocator",
+						    alloc_type,
+						    _inputs*_input_speedup, 
+						    _outputs*_output_speedup,
+						    iters, arb_type, arb_type );
+    } else {
+      cout<<"=";
+      _spec_sw_allocator = Allocator::NewAllocator( this, "spec_sw_allocator",
+						    alloc_type,
+						    _inputs*_input_speedup, 
+						    _outputs*_output_speedup,
+						    iters, 
+						    config.GetStr( "sw_alloc_input_arb_type" ), 
+						    config.GetStr( "sw_alloc_output_arb_type" ));
+						    
+    }
     if ( !_spec_sw_allocator ) {
       Error("Unknown spec_sw_allocator type: " + alloc_type);
     }
@@ -1088,10 +1126,12 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
     Allocator * allocator = _sw_allocator;
     int prio = cur_buf->GetPriority(vc);
     
+    
     if(_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)) {
       if(_spec_sw_allocator) {
 	allocator = _spec_sw_allocator;
       } else {
+	assert(false);
 	prio += numeric_limits<int>::min();
       }
     }
@@ -1117,10 +1157,12 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 	allocator->RemoveRequest(expanded_input, expanded_output, req.label);
 
 	if(ENABLE_NOTE && _vc_allocator==NULL){
-	  _output_notifications[input*_outputs+expanded_output]=
+	  _output_notifications[expanded_input*_outputs+expanded_output]=
 	    cur_buf->GetNotification(vc);
 	}
-
+     // if(GetID() == 6 && expanded_output==1 && f->head){
+     //   cout<<"rr\t"<<allocator<<"\t"<<f->src<<"\t"<<expanded_output<<endl;
+     //  }
 	_input_request_stat[input]++;
 	allocator->AddRequest(expanded_input, expanded_output, vc, 
 			      prio, prio);
@@ -1150,10 +1192,12 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
     }
 
     if(ENABLE_NOTE && _vc_allocator==NULL){
-      _output_notifications[input*_outputs+expanded_output]=
+      _output_notifications[expanded_input*_outputs+expanded_output]=
 	cur_buf->GetNotification(vc);
     }
-
+  // if(GetID() == 6 && expanded_output==1 && f->head){
+  //   cout<<"r\t"<<allocator<<"\t"<<f->src<<"\t"<<expanded_output<<endl;
+  //     }
     _input_request_stat[input]++;	  
     allocator->AddRequest(expanded_input, expanded_output, vc, 
 			  prio, prio);
@@ -1276,7 +1320,7 @@ void IQRouter::_SWAllocEvaluate( )
 	for(int dest_vc = iset->vc_start; dest_vc <= iset->vc_end; ++dest_vc) {
 	  assert((dest_vc >= 0) && (dest_vc < _vcs));
 	  
-	  if(dest_buf->IsAvailableFor(dest_vc)) {
+	  if(dest_buf->IsAvailableFor(dest_vc) && !dest_buf->IsFullFor(dest_vc)) {
 	    do_request = true;
 	    break;
 	  }
@@ -1321,6 +1365,9 @@ void IQRouter::_SWAllocEvaluate( )
     }
   }
   
+
+  bool matched= false;
+
   for(deque<pair<int, pair<pair<int, int>, int> > >::iterator iter = _sw_alloc_vcs.begin();
       iter != _sw_alloc_vcs.end();
       ++iter) {
@@ -1350,6 +1397,7 @@ void IQRouter::_SWAllocEvaluate( )
     expanded_output = _sw_allocator->OutputAssigned(expanded_input);
 
     if(expanded_output >= 0) {
+
       assert((expanded_output % _output_speedup) == (input % _output_speedup));
       if(_sw_allocator->ReadRequest(expanded_input, expanded_output) == vc) {
 	if(f->watch) {
@@ -1366,9 +1414,11 @@ void IQRouter::_SWAllocEvaluate( )
 	expanded_output = -1;
       }
     } else if(_spec_sw_allocator) {
+      matched= true;
       expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
       if(expanded_output >= 0) {
 	assert((expanded_output % _output_speedup) == (input % _output_speedup));
+
 	if(_spec_mask_by_reqs && 
 	   _sw_allocator->OutputHasRequests(expanded_output)) {
 	  if(f->watch) {
@@ -1408,6 +1458,7 @@ void IQRouter::_SWAllocEvaluate( )
 	} else {
 	  expanded_output = -1;
 	}
+
       }
     }
   }
@@ -1416,6 +1467,8 @@ void IQRouter::_SWAllocEvaluate( )
     return;
   }
 
+
+  bool matched_again = false;
   for(deque<pair<int, pair<pair<int, int>, int> > >::iterator iter = _sw_alloc_vcs.begin();
       iter != _sw_alloc_vcs.end();
       ++iter) {
@@ -1717,7 +1770,15 @@ void IQRouter::_SWAllocUpdate( )
       f->hops++;
       f->vc = match_vc;
       
- 
+      // if(GetID() == 6 && expanded_output==1){
+      // 	if(ENABLE_NOTE){
+      // 	  cout<<"notes ";
+      // 	  for(int i = 0; i<_inputs; i++){
+      // 	    cout<<_output_notifications[i*_outputs+expanded_output]<<"\t";
+      // 	  }
+      // 	}
+      // 	cout<<endl<<"g\t"<<f->src<<"\t"<<f->next_notification<<endl;
+      // }
       dest_buf->SendingFlit(f);
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
 

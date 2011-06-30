@@ -53,7 +53,8 @@ protected:
 public:
   
   SeparableAllocator( Module* parent, const string& name, int inputs,
-		      int outputs, const string& arb_type ) ;
+		      int outputs, const string& input_arb_type,
+		       const string& output_arb_type) ;
   
   virtual ~SeparableAllocator() ;
 

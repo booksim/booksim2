@@ -120,9 +120,9 @@ void Channel<T>::WriteOutputs() {
     return;
   }
   assert(GetSimTime() == time);
-  _wait_queue.pop();
   _output = item.second;
   assert(_output);
+  _wait_queue.pop();
 }
 
 #endif

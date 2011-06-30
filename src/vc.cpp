@@ -65,7 +65,7 @@ VC::VC( const Configuration& config, int outputs,
     _pri_type = hop_count_based;
   } else if ( priority == "none" ) {
     if(config.GetStr("vc_alloc_arb_type")=="prob" || config.GetStr("sw_alloc_arb_type")=="prob"){
-      _pri_type = none_prob;
+      _pri_type= none_prob;
     } else  {
       _pri_type = none;
     }
@@ -170,6 +170,8 @@ void VC::UpdatePriority()
     if(f->head){
      
        _pri= (f->notification == 0)?1:f->notification;
+       _pri= (_pri>_pri_cap && _pri_cap!=-1)?_pri_cap:_pri;
+       
       _note = f->notification;
       if(f->watch)
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
