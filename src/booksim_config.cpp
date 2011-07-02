@@ -69,8 +69,6 @@ BookSimConfig::BookSimConfig( )
   _int_map["link_failures"] = 0; //legacy
   _int_map["fail_seed"]     = 0; //legacy
 
-  //==== Cmesh topology options =======================
-  _int_map["express_channels"] = 0; //for Cmesh only, 0=no express channels
   //==== Single-node options ===============================
 
   _int_map["in_ports"]  = 5;
