@@ -75,19 +75,19 @@ void CMesh::_ComputeSize( const Configuration &config ) {
 
   int k = config.GetInt( "k" );
   int n = config.GetInt( "n" );
+  assert(n <= 2); // broken for n > 2
   int c = config.GetInt( "c" );
-  
+  assert(c == 4); // broken for c != 4
+
   ostringstream router_name;
   //how many routers in the x or y direction
   _xcount = config.GetInt("x");
   _ycount = config.GetInt("y");
-  assert(_xcount == _ycount);
+  assert(_xcount == _ycount); // broken for asymmetric topologies
   //configuration of hohw many clients in X and Y per router
   _xrouter = config.GetInt("xr");
   _yrouter = config.GetInt("yr");
-  assert(_xrouter == _yrouter);
-
-  _express_channels = (config.GetInt("express_channels") == 1);
+  assert(_xrouter == _yrouter); // broken for asymmetric concentration
 
   gK = _k = k ;
   gN = _n = n ;
@@ -232,85 +232,48 @@ void CMesh::_BuildNet( const Configuration& config ) {
 	py_in = _k * y + (x - _k/2) + 2 * offset ;
     }
 
-    // Short channels traverse two tiles 
-    int shortLatency = 2 ;
-
-    // Long express channels traverse k/2 tiles
-    //const int longLatency  = _k/2*2 ;
-    int longLatency  = 0 ;
-    if(_express_channels){
-      longLatency = 4;
-    }
- 
     /*set latency and add the channels*/
 
     // Port 0: +x channel
-    if (x == _k-1) {
-      if(use_noc_latency){
-	_chan[px_out]->SetLatency( longLatency  );
-	_chan_cred[px_out]->SetLatency( longLatency  );
-      } else {
-	_chan[px_out]->SetLatency( 1 );
-	_chan_cred[px_out]->SetLatency( 1 );
-      }
-    }
-    else {
-      if(use_noc_latency){
-	_chan[px_out]->SetLatency( shortLatency  );
-	_chan_cred[px_out]->SetLatency( shortLatency  );
-      } else {
-	_chan[px_out]->SetLatency( 1 );
-	_chan_cred[px_out]->SetLatency( 1);
-      }
+    if(use_noc_latency) {
+      int const px_latency = (x == _k-1) ? (_cY*_k/2) : _cX;
+      _chan[px_out]->SetLatency( px_latency );
+      _chan_cred[px_out]->SetLatency( px_latency );
+    } else {
+      _chan[px_out]->SetLatency( 1 );
+      _chan_cred[px_out]->SetLatency( 1 );
     }
     _routers[node]->AddOutputChannel( _chan[px_out], _chan_cred[px_out] );
     _routers[node]->AddInputChannel( _chan[px_in], _chan_cred[px_in] );
     
-    if(gTrace){
+    if(gTrace) {
       cout<<"Link "<<" "<<px_out<<" "<<px_in<<" "<<node<<" "<<_chan[px_out]->GetLatency()<<endl;
     }
+
     // Port 1: -x channel
-    if (x == 0) {
-      if(use_noc_latency){
-	_chan[nx_out]->SetLatency( longLatency  );
-	_chan_cred[nx_out]->SetLatency( longLatency  );
-      } else {
-	_chan[nx_out]->SetLatency( 1  );
-	_chan_cred[nx_out]->SetLatency( 1  );
-      }
-    }
-    else {
-      if(use_noc_latency){
-	_chan[nx_out]->SetLatency( shortLatency  );
-	_chan_cred[nx_out]->SetLatency( shortLatency  );
-      } else {
-	_chan[nx_out]->SetLatency( 0  );
-	_chan_cred[nx_out]->SetLatency( 0  );
-      }
+    if(use_noc_latency) {
+      int const nx_latency = (x == 0) ? (_cY*_k/2) : _cX;
+      _chan[nx_out]->SetLatency( nx_latency );
+      _chan_cred[nx_out]->SetLatency( nx_latency );
+    } else {
+      _chan[nx_out]->SetLatency( 1 );
+      _chan_cred[nx_out]->SetLatency( 1 );
     }
     _routers[node]->AddOutputChannel( _chan[nx_out], _chan_cred[nx_out] );
     _routers[node]->AddInputChannel( _chan[nx_in], _chan_cred[nx_in] );
+
     if(gTrace){
       cout<<"Link "<<" "<<nx_out<<" "<<nx_in<<" "<<node<<" "<<_chan[nx_out]->GetLatency()<<endl;
     }
+
     // Port 2: +y channel
-    if (y == _k-1) {
-      if(use_noc_latency){
-	_chan[py_out]->SetLatency( longLatency  );
-	_chan_cred[py_out]->SetLatency( longLatency  );
-      } else {
-	_chan[py_out]->SetLatency( 1);
-	_chan_cred[py_out]->SetLatency(1);
-      }
-    }
-    else {
-      if(use_noc_latency){
-	_chan[py_out]->SetLatency( shortLatency  );
-	_chan_cred[py_out]->SetLatency( shortLatency  );
-      } else {
-	_chan[py_out]->SetLatency( 1);
-	_chan_cred[py_out]->SetLatency(1);
-      }
+    if(use_noc_latency) {
+      int const py_latency = (y == _k-1) ? (_cX*_k/2) : _cY;
+      _chan[py_out]->SetLatency( py_latency );
+      _chan_cred[py_out]->SetLatency( py_latency );
+    } else {
+      _chan[py_out]->SetLatency( 1 );
+      _chan_cred[py_out]->SetLatency( 1 );
     }
     _routers[node]->AddOutputChannel( _chan[py_out], _chan_cred[py_out] );
     _routers[node]->AddInputChannel( _chan[py_in], _chan_cred[py_in] );
@@ -318,24 +281,15 @@ void CMesh::_BuildNet( const Configuration& config ) {
     if(gTrace){
       cout<<"Link "<<" "<<py_out<<" "<<py_in<<" "<<node<<" "<<_chan[py_out]->GetLatency()<<endl;
     }
+
     // Port 3: -y channel
-    if (y == 0) {
-      if(use_noc_latency){
-	_chan[ny_out]->SetLatency( longLatency  );
-	_chan_cred[ny_out]->SetLatency( longLatency  );
-      } else {
-	_chan[ny_out]->SetLatency(1);
-	_chan_cred[ny_out]->SetLatency(1);
-      }
-    }
-    else {
-      if(use_noc_latency){
-      _chan[ny_out]->SetLatency(shortLatency  );
-      _chan_cred[ny_out]->SetLatency(shortLatency  );
-      } else {
-	_chan[ny_out]->SetLatency(1  );
-	_chan_cred[ny_out]->SetLatency(1  );
-      }
+    if(use_noc_latency){
+      int const ny_latency = (y == 0) ? (_cX*_k/2) : _cY;
+      _chan[ny_out]->SetLatency( ny_latency );
+      _chan_cred[ny_out]->SetLatency( ny_latency );
+    } else {
+      _chan[ny_out]->SetLatency( 1 );
+      _chan_cred[ny_out]->SetLatency( 1 );
     }
     _routers[node]->AddOutputChannel( _chan[ny_out], _chan_cred[ny_out] );
     _routers[node]->AddInputChannel( _chan[ny_in], _chan_cred[ny_in] );    
