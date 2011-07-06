@@ -1,15 +1,24 @@
 #include "flowbuffer.hpp"
 
-extern bool  FAST_RETRANSMIT_ENABLE;
+extern bool FAST_RETRANSMIT_ENABLE;
+extern int IRD_RESET_TIMER;
+extern bool ECN_TIMER_ONLY;
+extern int IRD_SCALING_FACTOR;
 
-
-FlowBuffer::FlowBuffer(int src, int id, int size, bool res, flow* f){
+FlowBuffer::FlowBuffer(int src, int id, int size, int mode, flow* f){
   _src = src;
   _id = id;
   _capacity = size;
-  _use_reservation = res;
+  _mode = mode;
 
+  //ECN stuff need to be initilized once not every time or else benefits are lost
+  if(_mode == ECN_MODE){
+    _IRD = 0; 
+    _IRD_timer = 0;
+    _IRD_wait = 0;
+  }
   Init(f);
+  
 }
 
 void FlowBuffer::Init( flow* f){
@@ -22,7 +31,7 @@ void FlowBuffer::Init( flow* f){
   _guarantee_sent = 0;
   _received = 0;
   _ready = 0;
-  if(_use_reservation){
+  if(_mode == RES_MODE){
     _reservation_flit  = Flit::New();
     _reservation_flit->flid = fl->flid;
     _reservation_flit->flbid = _id;
@@ -52,6 +61,8 @@ void FlowBuffer::Init( flow* f){
   _watch = false;
 
   //stats variables
+
+  _max_ird = 0;
   _fast_retransmit = 0;
   _no_retransmit_loss = 0;
   _spec_outstanding = 0;
@@ -100,7 +111,10 @@ void FlowBuffer::update_stats(){
 
 }
 
+
+//also update ECN
 void FlowBuffer::update_transition(){
+  
   switch(_status){
   case FLOW_STATUS_NACK_TRANSITION:
     if(_tail_sent){
@@ -122,11 +136,27 @@ void FlowBuffer::update_transition(){
   default: 
     break;
   }
+  
+  //update ECN fields
+  //_IRD_wait inc whenever _tail_sent is asserted
+  //_IRD_wait reset when _tail_sent is reasserted
+  if(_tail_sent){
+    _IRD_wait++;
+  }
+  if(_mode == ECN_MODE && _IRD >0){
+    _IRD_timer++;
+    if(_IRD_timer==IRD_RESET_TIMER){
+      _IRD--;
+      _IRD_timer = 0;
+    }
+  }
 }
 
-//when ack return
+//when ack return res mode
 //1. packet could have already been sent normaly
 //2. ack goes through
+
+//when ack return ecn mode, "int sn" respreent the becn value
 
 //no status change
 bool FlowBuffer::ack(int sn){
@@ -135,19 +165,36 @@ bool FlowBuffer::ack(int sn){
     cout<<"flow "<<fl->flid
 	<<" received ack "<<sn<<endl;
   }
-  for(int i = sn; _flit_buffer.count(i)!=0; ++i){
-    if(_watch){
-      cout<<"\tfree flit "<<i<<endl;
+  if(_mode == RES_MODE){
+    for(int i = sn; _flit_buffer.count(i)!=0; ++i){
+      if(_watch){
+	cout<<"\tfree flit "<<i<<endl;
+      }
+      effective = true;
+      bool tail = _flit_buffer[i]->tail;
+      _guarantee_sent++;
+      _spec_outstanding--;
+      _flit_buffer[i]->Free();
+      _flit_buffer.erase(i);
+      _flit_status.erase(i);
+      if(tail)
+	break;
     }
-    effective = true;
-    bool tail = _flit_buffer[i]->tail;
-    _guarantee_sent++;
-    _spec_outstanding--;
-    _flit_buffer[i]->Free();
-    _flit_buffer.erase(i);
-    _flit_status.erase(i);
-    if(tail)
-      break;
+  } else if(_mode == ECN_MODE){
+    //if BECN is off
+    if(sn ==0){
+      if(!ECN_TIMER_ONLY){
+	_IRD = _IRD>0?_IRD-1:0;
+	_IRD_timer = 0;
+      }
+    }else {
+      //IRD increase ECN on
+      _IRD++;
+      if(_IRD>_max_ird)
+	_max_ird = _IRD;
+    }
+  } else {
+    assert(false);
   }
   return effective;
 }
@@ -158,6 +205,7 @@ bool FlowBuffer::ack(int sn){
 
 //flow buffer status only change when in spec mode
 bool FlowBuffer::nack(int sn){
+  assert(_mode == RES_MODE);
   bool effective = false;
   if(_watch){
     cout<<"flow "<<fl->flid
@@ -196,6 +244,7 @@ bool FlowBuffer::nack(int sn){
 
 //only one grant can return
 void FlowBuffer::grant(int time){
+  assert(_mode == RES_MODE);
   if(_watch){
     cout<<"flow "<<fl->flid
 	<<" received grant at time "<<time<<endl;
@@ -326,6 +375,10 @@ Flit* FlowBuffer::send(){
       _guarantee_sent++;
       _last_sn = f->sn;
       _tail_sent = f->tail;
+      //enable ECN waiting time
+      if(_mode==ECN_MODE && _tail_sent){
+	_IRD_wait = 0;
+      }
     }
     break;
 
@@ -414,12 +467,26 @@ bool FlowBuffer::send_norm_ready(){
   case FLOW_STATUS_NORM:
     if(!_tail_sent){
       return true;
-    } else if(_received == fl->flow_size && _ready==0){ //there maybe outstanding speculative packet for retransmit
-      assert(_guarantee_sent!=fl->flow_size);//otherwise this flow buffer shoudl be been freed
-      return FAST_RETRANSMIT_ENABLE;
-      
-    } else{
-      return (_ready>0);
+    } else if(_mode==ECN_MODE){
+      //flit not ready unless IRD_wait is 0
+      if(_IRD_wait >_IRD*IRD_SCALING_FACTOR){
+	if(_received == fl->flow_size && _ready==0){
+	  assert(_guarantee_sent!=fl->flow_size);
+	  return FAST_RETRANSMIT_ENABLE;
+	} else{
+	  return (_ready>0);
+	}      
+      } else {
+	return false;
+      }
+    } else {
+      if(_received == fl->flow_size && _ready==0){ //there maybe outstanding speculative packet for retransmit
+	assert(_guarantee_sent!=fl->flow_size);//otherwise this flow buffer shoudl be been freed
+	return FAST_RETRANSMIT_ENABLE;
+	
+      } else{
+	return (_ready>0);
+      }
     }
   default:
     break;

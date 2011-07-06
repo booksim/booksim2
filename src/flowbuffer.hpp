@@ -33,7 +33,7 @@ struct flow{
 
 class FlowBuffer{
 public:
-  FlowBuffer(int src, int id, int size, bool reservation_enabled, flow* fl);
+  FlowBuffer(int src, int id, int size, int mode, flow* fl);
   ~FlowBuffer();
   void Init( flow* fl);
   void Reset();
@@ -64,8 +64,9 @@ public:
   int _capacity;			       
   int _src;
   int _id;
-  bool _use_reservation;
+  int _mode;
 
+  //spec mode
   int _status;
   bool _tail_sent; //if the last flit sent was a tail
   bool _tail_received; //tail received from the node
@@ -77,14 +78,20 @@ public:
   int _vc;
 
 
-
-  bool _watch;
+  //ECN mode
+  int _IRD;
+  int _IRD_timer; 
+  int _IRD_wait;
 
   //these variables for stat collection
   int _spec_outstanding;
   vector<int> _stats;
   int _no_retransmit_loss;
   int _fast_retransmit;
+  bool _watch;
+  int _max_ird;
+ 
+
 };
 
 #endif

@@ -72,8 +72,17 @@ protected:
 
   vector<int> _active_packets;
 
+ 
   virtual void _InternalStep() = 0;
 
+public:
+
+  map<int, bool> _port_congest_check;
+  vector<double> _port_congestness;
+  vector<int> _ECN_activated;
+  vector<int> _input_request;
+  vector<int> _input_grant;
+  vector<int> _no_credit;
 public:
   Router( const Configuration& config,
 	  Module *parent, const string & name, int id,

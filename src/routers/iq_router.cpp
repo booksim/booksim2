@@ -57,17 +57,28 @@ extern TrafficManager * trafficManager;
 extern map<int, vector<int> > gDropStats;
 
 extern bool  VC_ALLOC_DROP;
+extern int ECN_BUFFER_THRESHOLD;
+extern double ECN_CONGEST_THRESHOLD;
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
 : Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
+
+
   gDropStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
   gDropStats[id].resize(inputs,0);
 
   _vcs         = config.GetInt( "num_vcs" );
   _classes     = config.GetInt( "classes" );
   _speculative = (config.GetInt("speculative") > 0);
+
+  _no_credit.resize(_vcs*outputs,0);
+  _port_congestness.resize(_vcs*outputs,0.0);
+  _ECN_activated.resize(_vcs*outputs,0);
+  _input_request.resize(inputs,0);
+  _input_grant.resize(outputs, 0);
+
   //converting flits to nacks does nto support speculation yet
   //need to modifity the sw_alloc_vcs queue
   assert((!gReservation && _speculative)||(!_speculative));
@@ -83,7 +94,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   if(!_sw_alloc_delay) {
     Error("Switch allocator cannot have zero delay.");
   }
-
+  
   // Routing
   string const rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
   map<string, tRoutingFunction>::const_iterator rf_iter = gRoutingFunctionMap.find(rf);
@@ -276,6 +287,19 @@ void IQRouter::_InternalStep( )
     _SwitchUpdate( );
     activity = activity || !_crossbar_flits.empty();
   }
+
+  if(gECN){
+    //    cout<<_port_congest_check.size()<<endl;
+    for(map<int, bool>::iterator i = _port_congest_check.begin(); 
+	i!=_port_congest_check.end(); 
+	i++){
+      _port_congestness[i->first]=
+	0.99*_port_congestness[i->first]+
+	0.01*(i->second?1:0);
+    }
+    _port_congest_check.clear();
+  }
+
 
   _active = activity;
 
@@ -959,7 +983,19 @@ void IQRouter::_SWHoldEvaluate( )
     
     BufferState const * const dest_buf = _next_buf[match_port];
     
+    if(gECN){
+      if(_port_congest_check.count(expanded_output*_vcs+match_vc)==0){
+	if(dest_buf->HasCreditFor(match_vc)){
+	  _port_congest_check.insert(pair<int, bool>(expanded_output*_vcs+match_vc, false));
+	}else {
+	  _port_congest_check.insert(pair<int, bool>(expanded_output*_vcs+match_vc, true));
+	}
+      }
+    }
+    _input_request[expanded_input]++;
+
     if(!dest_buf->HasCreditFor(match_vc)) {
+      _no_credit[expanded_output*_vcs+match_vc]++;
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "  Unable to reuse held connection from input " << input
@@ -1053,7 +1089,8 @@ void IQRouter::_SWHoldUpdate( )
       f->vc = match_vc;
       
       dest_buf->SendingFlit(f);
-      
+      _input_grant[expanded_input]++;
+
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
       
       if(_out_queue_credits.count(input) == 0) {
@@ -1282,6 +1319,7 @@ void IQRouter::_SWAllocEvaluate( )
     }
     
     if(cur_buf->GetState(vc) == VC::active) {
+      _input_request[input]++;
       
       int const dest_output = cur_buf->GetOutputPort(vc);
       assert((dest_output >= 0) && (dest_output < _outputs));
@@ -1289,8 +1327,17 @@ void IQRouter::_SWAllocEvaluate( )
       assert((dest_vc >= 0) && (dest_vc < _vcs));
       
       BufferState const * const dest_buf = _next_buf[dest_output];
-      
+      if(gECN){
+	if(_port_congest_check.count(dest_output*_vcs+dest_vc)==0){
+	  if(dest_buf->HasCreditFor(dest_vc)){
+	    _port_congest_check.insert(pair<int, bool>(dest_output*_vcs+dest_vc, false));
+	  }else {
+	    _port_congest_check.insert(pair<int, bool>(dest_output*_vcs+dest_vc, true));
+	  }
+	}
+      }
       if(!dest_buf->HasCreditFor(dest_vc)) {
+	_no_credit[dest_output*_vcs+dest_vc]++;
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  VC " << dest_vc 
@@ -1771,6 +1818,15 @@ void IQRouter::_SWAllocUpdate( )
       f->vc = match_vc;
 
       dest_buf->SendingFlit(f);
+      //ECN
+      if(gECN && f->head){
+	if(cur_buf->GetSize(vc) > ECN_BUFFER_THRESHOLD &&
+	   _port_congestness[expanded_output*_vcs+vc]<ECN_CONGEST_THRESHOLD){
+	  _ECN_activated[expanded_output*_vcs+vc]++;
+	   f->fecn = true;
+	}
+      }
+      _input_grant[expanded_input]++;
 
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
 

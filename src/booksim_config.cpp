@@ -41,13 +41,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 BookSimConfig::BookSimConfig( )
 { 
   _int_map["flow_merge"] = 1;
-  _int_map["fast_retransmit"] = 1;
   _int_map["flow_buffer_capacity"] = 128;
-  _int_map["res_vcs"] = 1;
-  _int_map["hotspot_reservation"] = 0;
-  _int_map["expiration_time"] = 10;
   _int_map["flow_buffers"] = 8;
   _int_map["flow_size"] = 1;
+
+
+  _int_map["fast_retransmit"] = 1;
+  _int_map["res_vcs"] = 1;
+  _int_map["hotspot_reservation"] = 0;
+  _int_map["expiration_time"] = 200;
+
+  _int_map["ECN"] = 0;
+  _int_map["ird_reset_timer"] = 10;
+  _int_map["ecn_timer_only"] = 1;
+  _int_map["ecn_buffer_threshold"] = 4;
+  _float_map["ecn_congestion_threshold"] = 0.4;
+  _int_map["ird_scaling_factor"] = 1;
 
   //========================================================
   // Network options

@@ -59,6 +59,9 @@ public:
 
   int flbid;
 
+  bool fecn;
+  bool becn;
+
   int vc;
   int cl;
 

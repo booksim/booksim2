@@ -60,7 +60,12 @@ float pre_transient_rate = 0.00078;
 
 bool FLOW_DEST_MERGE = true;
 bool  VC_ALLOC_DROP = true;
-bool  FAST_RETRANSMIT_ENABLE = false;;
+bool  FAST_RETRANSMIT_ENABLE = false;
+int IRD_RESET_TIMER=2;
+bool ECN_TIMER_ONLY = false;
+int ECN_BUFFER_THRESHOLD = 10;
+double ECN_CONGEST_THRESHOLD=0.5;
+int IRD_SCALING_FACTOR = 1;
 
 #define WATCH_FLID -1
 #define MAX(X,Y) (X>Y?(X):(Y))
@@ -125,7 +130,8 @@ vector<long> gStatFlowStats;
 
 Stats* gStatNackArrival;
 
-
+Stats* gStatIRD;
+Stats* gStatECN;
 
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
   : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
@@ -187,6 +193,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   FLOW_DEST_MERGE= (config.GetInt("flow_merge")==1);
   FAST_RETRANSMIT_ENABLE = (config.GetInt("fast_retransmit")==1);
+  IRD_RESET_TIMER = (config.GetInt("ird_reset_timer"));
+  ECN_TIMER_ONLY = (config.GetInt("ecn_timer_only")==1);
+  ECN_BUFFER_THRESHOLD = config.GetInt("ecn_buffer_threshold");
+  ECN_CONGEST_THRESHOLD = config.GetFloat("ecn_congestion_threshold");
+  IRD_SCALING_FACTOR = config.GetInt("ird_scaling_factor");
 
 
   gStatAckReceived.resize(_nodes,0);
@@ -259,7 +270,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   gStatSourceLatency=  new Stats( this, "source_queue_hist" , 1.0, 5000 );
   gStatSourceTrueLatency=  new Stats( this, "source_truequeue_hist" , 1.0, 5000 );
 
-
+  gStatIRD = new Stats(this, "ird", 1.0, 100);
+  gStatECN = new Stats(this, "ecn", 1.0, 3);
   gStatNackByPacket = new Stats(this, "nack_by_sn", 1.0, 1000);
 
   gStatFastRetransmit=  new Stats( this, "fast_retransmit" , 1.0,  _flow_size);
@@ -825,29 +837,43 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
   switch(f->res_type){
   case RES_TYPE_ACK:
-    gStatAckLatency->AddSample(_time-f->time);
-    gStatAckReceived[dest]++;
-    receive_flow_buffer = _flow_buffer[dest][f->flbid];
-    if( receive_flow_buffer!=NULL &&
-	receive_flow_buffer->fl->flid == f->flid){
-      gStatAckEffective[dest]+= receive_flow_buffer->ack(f->sn)?1:0;
-      int flow_done_status = receive_flow_buffer->done();
-      if(flow_done_status!=FLOW_DONE_NOT){
-	for(size_t i = 0; i<gStatFlowStats.size()-1; i++){
-	  gStatFlowStats[i]+=receive_flow_buffer->_stats[i];
-	}
-	gStatFlowStats[gStatFlowStats.size()-1]++;
-	gStatFlowSenderLatency->AddSample(_time-receive_flow_buffer->fl->create_time);
-	gStatFastRetransmit->AddSample(receive_flow_buffer->_fast_retransmit);
-	if(flow_done_status==FLOW_DONE_DONE){
-	  delete _flow_buffer[dest][f->flbid];
-	  _flow_buffer[dest][f->flbid]=NULL;
-	} else {
-	  receive_flow_buffer->Reset();
+    if(gReservation){
+      gStatAckLatency->AddSample(_time-f->time);
+      gStatAckReceived[dest]++;
+      receive_flow_buffer = _flow_buffer[dest][f->flbid];
+      if( receive_flow_buffer!=NULL &&
+	  receive_flow_buffer->fl->flid == f->flid){
+	gStatAckEffective[dest]+= receive_flow_buffer->ack(f->sn)?1:0;
+	int flow_done_status = receive_flow_buffer->done();
+	if(flow_done_status!=FLOW_DONE_NOT){
+	  for(size_t i = 0; i<gStatFlowStats.size()-1; i++){
+	    gStatFlowStats[i]+=receive_flow_buffer->_stats[i];
+	  }
+	  gStatFlowStats[gStatFlowStats.size()-1]++;
+	  gStatFlowSenderLatency->AddSample(_time-receive_flow_buffer->fl->create_time);
+	  gStatFastRetransmit->AddSample(receive_flow_buffer->_fast_retransmit);
+	  if(flow_done_status==FLOW_DONE_DONE){
+	    gStatIRD->AddSample(_flow_buffer[dest][f->flbid]->_max_ird);
+	    delete _flow_buffer[dest][f->flbid];
+	    _flow_buffer[dest][f->flbid]=NULL;
+	    
+	  } else {
+	    gStatIRD->AddSample(_flow_buffer[dest][f->flbid]->_max_ird);
+	    receive_flow_buffer->Reset();
+	  }
 	}
       }
+      f->Free();
+    } else if(gECN){
+      gStatAckLatency->AddSample(_time-f->time);
+      gStatAckReceived[dest]++;
+      receive_flow_buffer = _flow_buffer[dest][f->flbid];
+      if( receive_flow_buffer!=NULL &&
+	  receive_flow_buffer->fl->flid == f->flid){
+	gStatAckEffective[dest]+= receive_flow_buffer->ack(f->becn)?1:0;
+      }
+      f->Free();
     }
-    f->Free();
     return;
     break;
   case RES_TYPE_NACK:
@@ -979,7 +1005,20 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	  gStatNormLatency->AddSample(_time-f->time);
 	}
       }
-    }    
+    }  
+    if(gECN){
+      if(f->head){
+	gStatAckSent[dest]++;
+	ff = IssueSpecial(dest,f);
+	ff->sn = f->head_sn;
+	ff->res_type = RES_TYPE_ACK;
+	ff->pri  = FLIT_PRI_ACK;
+	ff->vc =  ECN_RESERVED_VCS-1;
+	ff->becn = f->fecn;
+	_response_packets[dest].push_back(ff);
+	gStatECN->AddSample(ff->becn);
+      }
+    }
     break;
   default:
     assert(false);
@@ -1495,8 +1534,14 @@ void TrafficManager::_Inject(){
 	    }
 	  }
 	  assert(empty_flow!=_max_flow_buffers);
+	  int mode = NORMAL_MODE; 
+	  if(gReservation)
+	    mode = RES_MODE;
+	  else if(gECN)
+	    mode = ECN_MODE;
+	  
 	  _flow_buffer[input][empty_flow] = 
-	    new FlowBuffer(input, empty_flow, _flow_buffer_capacity, gReservation, _pending_flow[input]);
+	    new FlowBuffer(input, empty_flow, _flow_buffer_capacity, mode, _pending_flow[input]);
 	  if(_pending_flow[input]->flid == WATCH_FLID){
 	    _flow_buffer[input][empty_flow]->_watch = true;
 	  }
@@ -1607,14 +1652,12 @@ void TrafficManager::_Step( )
     FlowBuffer* ready_flow_buffer = NULL;
 
     //ack nack grant
-    if(gReservation){
+    if(gReservation || gECN){
       gStatResponseBuffer->AddSample((int)_response_packets[source].size());
       if( !_response_packets[source].empty() ){
 	Flit* f = _response_packets[source].front();
 	assert(f);
 	assert(f->head);//only heads
-	assert(f->vc==GRANT_PACKET_VC || f->vc == RES_RESERVED_VCS-1);
-
 	if(dest_buf->IsAvailableFor(f->vc) &&
 	   dest_buf->HasCreditFor(f->vc)){
 	  dest_buf->TakeBuffer(f->vc); 
@@ -1790,9 +1833,11 @@ void TrafficManager::_Step( )
 	  gStatFastRetransmit->AddSample(ready_flow_buffer->_fast_retransmit);
 	  _last_send_flow_buffer[source] =-1;
 	  if(flow_done_status==FLOW_DONE_DONE){
+	    gStatIRD->AddSample(_flow_buffer[source][f->flbid]->_max_ird);
 	    delete _flow_buffer[source][f->flbid];
 	    _flow_buffer[source][f->flbid]=NULL;
 	  } else {
+	    gStatIRD->AddSample(_flow_buffer[source][f->flbid]->_max_ird);
 	    ready_flow_buffer->Reset();
 	  }
 	}
@@ -2780,7 +2825,10 @@ void TrafficManager::_DisplayTedsShit(){
 	       <<gStatFlowStats[FLOW_STAT_LIFETIME]<<";\n";
     *_stats_out<< "flow_count =" 
 	       <<gStatFlowStats[FLOW_STAT_LIFETIME+1]<<";\n";
-
+    *_stats_out<< "ird_stat =" 
+	       <<*gStatIRD<<";\n";
+    *_stats_out<< "ecn_stat =" 
+	       <<*gStatECN<<";\n";
     if(TRANSIENT_ENABLE){
          for(int i = 0; i<transient_record_duration; i++){
            *_stats_out<<"transient_stat("<<i+1<<",:)= [";
@@ -2788,6 +2836,32 @@ void TrafficManager::_DisplayTedsShit(){
            *_stats_out<<transient_stat[1][i]<<" "<<transient_count[1][i]<<" "<<transient_stat[1][i]/transient_count[1][i]<<" ";
              *_stats_out<<" ];"<<endl;
          }
+    }
+    vector<Router *> rrr = _net[0]->GetRouters();
+    for(size_t i = 0; i<rrr.size(); i++){
+      *_stats_out<<"ecn_on(:,"<<i+1<<")=[";
+      *_stats_out<<rrr[i]->_ECN_activated;
+      *_stats_out<<"];\n";
+    }
+    for(size_t i = 0; i<rrr.size(); i++){
+      *_stats_out<<"congestness(:,"<<i+1<<")=[";
+      *_stats_out<<rrr[i]->_port_congestness;
+      *_stats_out<<"];\n";
+    }
+    for(size_t i = 0; i<rrr.size(); i++){
+      *_stats_out<<"input_request(:,"<<i+1<<")=[";
+      *_stats_out<<rrr[i]->_input_request;
+      *_stats_out<<"];\n";
+    }
+        for(size_t i = 0; i<rrr.size(); i++){
+      *_stats_out<<"input_grant(:,"<<i+1<<")=[";
+      *_stats_out<<rrr[i]->_input_grant;
+      *_stats_out<<"];\n";
+    }
+	for(size_t i = 0; i<rrr.size(); i++){
+	  *_stats_out<<"no_credit(:,"<<i+1<<")=[";
+      *_stats_out<<rrr[i]->_no_credit;
+      *_stats_out<<"];\n";
     }
 
   }

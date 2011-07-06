@@ -97,6 +97,7 @@ bool gTrace;
 ostream * gWatchOut;
 
 bool gReservation = false;
+bool gECN = false;
 
 #ifdef USE_GUI
 bool gGUIMode = false;
@@ -212,6 +213,11 @@ int main( int argc, char **argv )
   }
   
   gReservation = (config.GetInt("hotspot_reservation")==1);
+  gECN = (config.GetInt("ECN")==1);
+  if((gReservation && gECN)){
+    cout<<"can't turn on ECN and reservation at the same time\n";
+    exit(0);
+  }
 
   /*configure and run the simulator
    */

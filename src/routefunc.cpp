@@ -1879,6 +1879,9 @@ void InitializeRoutingMap( const Configuration & config )
   if(config.GetInt("hotspot_reservation")==1){
     assert(gResVCs+RES_RESERVED_VCS<gNumVCs); //+ is for the special vc used when gReservation==true
   }
+  if(config.GetInt("ECN")==1){
+    assert(gNumVCs>ECN_RESERVED_VCS);
+  }
   //
   // traffic class partitions
   //

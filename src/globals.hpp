@@ -53,5 +53,6 @@ extern bool gTrace;
 extern std::ostream * gWatchOut;
 
 extern bool gReservation;
+extern bool gECN;
 
 #endif

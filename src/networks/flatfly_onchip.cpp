@@ -528,21 +528,15 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   
   int vcBegin = 0, vcEnd = gNumVCs-1;
-  if(!gReservation){
-    if ( f->type == Flit::READ_REQUEST ) {
-      vcBegin = gReadReqBeginVC;
-      vcEnd = gReadReqEndVC;
-    } else if ( f->type == Flit::WRITE_REQUEST ) {
-      vcBegin = gWriteReqBeginVC;
-      vcEnd = gWriteReqEndVC;
-    } else if ( f->type ==  Flit::READ_REPLY ) {
-      vcBegin = gReadReplyBeginVC;
-      vcEnd = gReadReplyEndVC;
-    } else if ( f->type ==  Flit::WRITE_REPLY ) {
-      vcBegin = gWriteReplyBeginVC;
-      vcEnd = gWriteReplyEndVC;
+  if(gECN){
+    if(f->type == RES_TYPE_ACK){
+      vcBegin = 0;
+      vcEnd = ECN_RESERVED_VCS-1;
+    } else {
+      vcBegin = (ECN_RESERVED_VCS);
+      vcEnd = (gNumVCs-1);
     }
-  } else {
+  }else if(gReservation){
     if(f->res_type == RES_TYPE_RES){//special packets
       //even though res type res always go on vc 0, it is the first flit
       //popped from the flow buffer and handles the vc assignment for the whole buffer
@@ -568,6 +562,20 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
       vcEnd = RES_RESERVED_VCS-1;
     }
 
+  }else{
+    if ( f->type == Flit::READ_REQUEST ) {
+      vcBegin = gReadReqBeginVC;
+      vcEnd = gReadReqEndVC;
+    } else if ( f->type == Flit::WRITE_REQUEST ) {
+      vcBegin = gWriteReqBeginVC;
+      vcEnd = gWriteReqEndVC;
+    } else if ( f->type ==  Flit::READ_REPLY ) {
+      vcBegin = gReadReplyBeginVC;
+      vcEnd = gReadReplyEndVC;
+    } else if ( f->type ==  Flit::WRITE_REPLY ) {
+      vcBegin = gWriteReplyBeginVC;
+      vcEnd = gWriteReplyEndVC;
+    }
   }
   //this assertion is not used, packets are allowed to jump class
   //  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
