@@ -73,11 +73,15 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _classes     = config.GetInt( "classes" );
   _speculative = (config.GetInt("speculative") > 0);
 
-  _no_credit.resize(_vcs*outputs,0);
   _port_congestness.resize(_vcs*outputs,0.0);
+  _vc_request_congestness.resize(_vcs*outputs,0);
+  _vc_ecn.resize(_vcs*outputs,false);
+
+  _vc_congested.resize(_vcs*outputs,0);
   _ECN_activated.resize(_vcs*outputs,0);
   _input_request.resize(inputs,0);
   _input_grant.resize(outputs, 0);
+  _vc_congested_sum.resize(_vcs*outputs,0);
 
   //converting flits to nacks does nto support speculation yet
   //need to modifity the sw_alloc_vcs queue
@@ -298,6 +302,10 @@ void IQRouter::_InternalStep( )
 	0.01*(i->second?1:0);
     }
     _port_congest_check.clear();
+
+    _vc_request_congestness.clear();
+    _vc_request_congestness.resize(_vcs*_outputs,0);
+
   }
 
 
@@ -678,6 +686,9 @@ void IQRouter::_VCAllocEvaluate( )
 	// requesting the same output VC, the priority of VCs is based on the 
 	// actual packet priorities, which is reflected in "out_priority".
 	
+	if(gECN){
+	  _vc_request_congestness[ out_port*_vcs + out_vc]+=  cur_buf->GetSize(vc);
+	}
 	if(dest_buf->IsAvailableFor(out_vc)) {
 	  if(f->watch){
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -731,8 +742,11 @@ void IQRouter::_VCAllocEvaluate( )
     int & output_and_vc = iter->second.second;
     output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
 
+
+ 
     if(output_and_vc >= 0) {
 
+   
       int const match_output = output_and_vc / _vcs;
       assert((match_output >= 0) && (match_output < _outputs));
       int const match_vc = output_and_vc % _vcs;
@@ -745,6 +759,17 @@ void IQRouter::_VCAllocEvaluate( )
       Flit const * const f = cur_buf->FrontFlit(vc);
       assert(f);
       assert(f->head);
+      if(gECN){
+	if(_vc_request_congestness[output_and_vc]>ECN_BUFFER_THRESHOLD){
+	  _vc_ecn[output_and_vc] = true;
+	  _vc_congested[output_and_vc]++;
+	  _vc_congested_sum[output_and_vc]+=_vc_request_congestness[output_and_vc];
+	} else {
+	  _vc_ecn[output_and_vc] = false;
+	}
+	_vc_request_congestness[output_and_vc] = 0;
+      }
+
 
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -995,7 +1020,6 @@ void IQRouter::_SWHoldEvaluate( )
     _input_request[expanded_input]++;
 
     if(!dest_buf->HasCreditFor(match_vc)) {
-      _no_credit[expanded_output*_vcs+match_vc]++;
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "  Unable to reuse held connection from input " << input
@@ -1337,7 +1361,6 @@ void IQRouter::_SWAllocEvaluate( )
 	}
       }
       if(!dest_buf->HasCreditFor(dest_vc)) {
-	_no_credit[dest_output*_vcs+dest_vc]++;
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  VC " << dest_vc 
@@ -1820,9 +1843,9 @@ void IQRouter::_SWAllocUpdate( )
       dest_buf->SendingFlit(f);
       //ECN
       if(gECN && f->head){
-	if(cur_buf->GetSize(vc) > ECN_BUFFER_THRESHOLD &&
-	   _port_congestness[expanded_output*_vcs+vc]<ECN_CONGEST_THRESHOLD){
-	  _ECN_activated[expanded_output*_vcs+vc]++;
+	if(_vc_ecn[expanded_output*_vcs+match_vc]&&
+	   _port_congestness[expanded_output*_vcs+match_vc]<ECN_CONGEST_THRESHOLD){
+	  _ECN_activated[expanded_output*_vcs+match_vc]++;
 	   f->fecn = true;
 	}
       }

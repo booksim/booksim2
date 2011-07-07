@@ -58,6 +58,7 @@ BookSimConfig::BookSimConfig( )
   _float_map["ecn_congestion_threshold"] = 0.4;
   _int_map["ird_scaling_factor"] = 1;
 
+
   //========================================================
   // Network options
   //========================================================
@@ -164,6 +165,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["class_priority"] = 0;
   AddStrField("class_priority", ""); // workaraound to allow for vector specification
 
+  AddStrField( "hotspot_senders","");
   AddStrField( "hotspot_nodes", "" );
   AddStrField( "hotspot_rates", "" );
 

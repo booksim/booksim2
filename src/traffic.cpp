@@ -334,21 +334,12 @@ int badperm_yarc(int source, int total_nodes){
 //=============================================================
 
 static int _hs_max_val;
+
 static vector<pair<int, int> > _hs_elems;
 set<int> hs_lookup;
-int hotspot(int source, int total_nodes){
-  int pct = RandomInt(_hs_max_val);
-  for(size_t i = 0; i < (_hs_elems.size()-1); ++i) {
-    int limit = _hs_elems[i].first;
-    if(limit > pct) {
-      return _hs_elems[i].second;
-    } else {
-      pct -= limit;
-    }
-  }
-  assert(_hs_elems.back().first > pct);
-  return _hs_elems.back().second;
-}
+bool hs_send_all = false;
+set<int> hs_senders;
+
 
 int background_uniform(int source, int total_nodes){
   int e = RandomInt(total_nodes-1);
@@ -357,6 +348,34 @@ int background_uniform(int source, int total_nodes){
   }
   return e;
 }
+
+int hotspot(int source, int total_nodes){
+  if(!hs_send_all && hs_senders.count(source) == 0){
+    return background_uniform( source,  total_nodes);
+  } else {
+    int pct = RandomInt(_hs_max_val);
+    for(size_t i = 0; i < (_hs_elems.size()-1); ++i) {
+      int limit = _hs_elems[i].first;
+      if(limit > pct) {
+	return _hs_elems[i].second;
+      } else {
+	pct -= limit;
+      }
+    }
+    assert(_hs_elems.back().first > pct);
+    return _hs_elems.back().second;
+  }
+}
+
+
+int noself_hotspot(int source, int total_nodes){
+  if(hs_lookup.count(source)!=0){
+    return background_uniform( source,  total_nodes);
+  } else {
+    return hotspot( source,  total_nodes);
+  }
+}
+
 //=============================================================
 
 static int _cp_max_val;
@@ -415,11 +434,21 @@ void InitializeTrafficMap( const Configuration & config )
   gTrafficFunctionMap["badperm_yarc"] = &badperm_yarc;
 
   gTrafficFunctionMap["hotspot"]  = &hotspot;
+  gTrafficFunctionMap["noself_hotspot"]  = &noself_hotspot;
+
   gTrafficFunctionMap["combined"] = &combined;
   gTrafficFunctionMap["background_uniform"] = &background_uniform;
 
   vector<int> hotspot_nodes = config.GetIntArray("hotspot_nodes");
   vector<int> hotspot_rates = config.GetIntArray("hotspot_rates");
+  vector<int> hotspot_senders = config.GetIntArray("hotspot_senders");
+  if(hotspot_senders.empty()){
+    hs_send_all = true;
+  } else {
+    for(size_t i = 0; i<hotspot_senders.size(); i++){
+      hs_senders.insert(hotspot_senders[i]);
+    }
+  }
   hotspot_rates.resize(hotspot_nodes.size(), hotspot_rates.empty() ? 1 : hotspot_rates.back());
   _hs_max_val = -1;
   for(size_t i = 0; i < hotspot_nodes.size(); ++i) {

@@ -79,10 +79,17 @@ public:
 
   map<int, bool> _port_congest_check;
   vector<double> _port_congestness;
+  vector<int> _vc_request_congestness; 
+  vector<bool>_vc_ecn;
+
+  //stats
+  vector<int> _vc_congested;
   vector<int> _ECN_activated;
   vector<int> _input_request;
   vector<int> _input_grant;
-  vector<int> _no_credit;
+  vector<long> _vc_congested_sum;
+
+
 public:
   Router( const Configuration& config,
 	  Module *parent, const string & name, int id,
