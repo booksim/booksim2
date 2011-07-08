@@ -144,6 +144,10 @@ protected:
   vector<double> _overall_avg_plat;  
   vector<double> _overall_max_plat;  
 
+  Stats * _min_plat_stats;     
+  Stats * _nonmin_plat_stats;     
+  Stats * _prog_plat_stats;   
+
   vector<Stats *> _tlat_stats;     
   vector<double> _overall_min_tlat;  
   vector<double> _overall_avg_tlat;  

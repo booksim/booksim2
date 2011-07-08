@@ -51,6 +51,9 @@ class DragonFlyNew : public Network {
   int _grp_num_nodes;
 
 
+  int _global_channel_latency;
+  int _local_channel_latency;
+
   void _ComputeSize( const Configuration &config );
   void _BuildNet( const Configuration &config );
 
@@ -68,12 +71,17 @@ public:
 
 };
 int dragonfly_port(int rID, int source, int dest);
-
+void ugal_roc_dragonflynew( const Router *r, const Flit *f, int in_channel,
+		       OutputSet *outputs, bool inject );
+void ugalprog_roc_dragonflynew( const Router *r, const Flit *f, int in_channel,
+		       OutputSet *outputs, bool inject );
 void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 		       OutputSet *outputs, bool inject );
 void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 		       OutputSet *outputs, bool inject );
 void min_dragonflynew( const Router *r, const Flit *f, int in_channel, 
+		       OutputSet *outputs, bool inject );
+void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
 		       OutputSet *outputs, bool inject );
 
 
