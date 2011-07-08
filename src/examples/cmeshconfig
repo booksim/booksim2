@@ -45,6 +45,6 @@ routing_function = dor_no_express;
 
 traffic = bitcomp;
 
-use_read_write = 1;
+use_read_write = 0;
 
 batch_size = 2000;

@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -67,7 +67,8 @@ public:
   double Capacity( ) const;
   void InsertRandomFaults( const Configuration &config );
 };
-
+void adaptive_xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
+		  OutputSet *outputs, bool inject );
 void xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
 		  OutputSet *outputs, bool inject );
 void min_flatfly( const Router *r, const Flit *f, int in_channel, 

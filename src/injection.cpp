@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -28,85 +28,156 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/*injection.cpp
- *
- *Class of injection methods, bernouli and on_off
- *
- *The rate is packet rate not flit rate.
- *
- */
-
-#include "booksim.hpp"
-#include <map>
+#include <iostream>
+#include <vector>
 #include <cassert>
-
-#include "injection.hpp"
-#include "network.hpp"
+#include <limits>
 #include "random_utils.hpp"
-#include "misc_utils.hpp"
+#include "injection.hpp"
 
-map<string, tInjectionProcess> gInjectionProcessMap;
+using namespace std;
 
-//=============================================================
+InjectionProcess::InjectionProcess(int nodes, double rate)
+  : _nodes(nodes), _rate(rate)
+{
+  if(nodes <= 0) {
+    cout << "Error: Number of nodes must be greater than zero." << endl;
+    exit(-1);
+  }
+  if((rate < 0.0) || (rate > 1.0)) {
+    cout << "Error: Injection process must have load between 0.0 and 1.0."
+	 << endl;
+    exit(-1);
+  }
+}
 
-bool bernoulli( int source, double rate )
+void InjectionProcess::reset()
 {
 
-  assert( ( source >= 0 ) && ( source < gNodes ) );
-  assert( rate <= 1.0 );
+}
 
-  //this is the packet injection rate, not flit rate
-  return (RandomFloat( ) < rate);
+InjectionProcess * InjectionProcess::New(string const & inject, int nodes, 
+					 double load, 
+					 Configuration const * const config)
+{
+  string process_name;
+  string param_str;
+  size_t left = inject.find_first_of('(');
+  if(left == string::npos) {
+    process_name = inject;
+  } else {
+    process_name = inject.substr(0, left);
+    size_t right = inject.find_last_of(')');
+    if(right == string::npos) {
+      param_str = inject.substr(left+1);
+    } else {
+      param_str = inject.substr(left+1, right-left-1);
+    }
+  }
+  vector<string> params = tokenize(param_str);
+
+  InjectionProcess * result = NULL;
+  if(process_name == "bernoulli") {
+    result = new BernoulliInjectionProcess(nodes, load);
+  } else if(process_name == "on_off") {
+    bool missing_params = false;
+    double alpha = numeric_limits<double>::quiet_NaN();
+    if(params.size() < 1) {
+      if(config) {
+	alpha = config->GetFloat("burst_alpha");
+      } else {
+	missing_params = true;
+      }
+    } else {
+      alpha = atof(params[0].c_str());
+    }
+    double beta = numeric_limits<double>::quiet_NaN();
+    if(params.size() < 2) {
+      if(config) {
+	beta = config->GetFloat("burst_beta");
+      } else {
+	missing_params = true;
+      }
+    } else {
+      beta = atof(params[1].c_str());
+    }
+    if(missing_params) {
+      cout << "Missing parameters for injection process: " << inject << endl;
+      exit(-1);
+    }
+    vector<int> initial(nodes);
+    if(params.size() > 2) {
+      vector<string> initial_str = tokenize(params[2]);
+      initial_str.resize(nodes, initial_str.back());
+      for(int n = 0; n < nodes; ++n) {
+	initial[n] = atoi(initial_str[n].c_str());
+      }
+    } else {
+      for(int n = 0; n < nodes; ++n) {
+	initial[n] = RandomInt(1);
+      }
+    }
+    result = new OnOffInjectionProcess(nodes, load, alpha, beta, initial);
+  } else {
+    cout << "Invalid injection process: " << inject << endl;
+    exit(-1);
+  }
+  return result;
 }
 
 //=============================================================
 
-//burst rates
-static double gBurstAlpha;
-static double gBurstBeta;
-
-static std::vector<int> gNodeStates;
-
-bool on_off( int source, double rate )
+BernoulliInjectionProcess::BernoulliInjectionProcess(int nodes, double rate)
+  : InjectionProcess(nodes, rate)
 {
-  assert( ( source >= 0 ) && ( source < gNodes ) );
-  assert( rate <= 1.0 );
 
-  if ( gNodeStates.size() != (size_t)gNodes ) {
-    gNodeStates.resize(gNodes, 0);
-  }
+}
+
+bool BernoulliInjectionProcess::test(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+  return (RandomFloat() < _rate);
+}
+
+//=============================================================
+
+OnOffInjectionProcess::OnOffInjectionProcess(int nodes, double rate, 
+					     double alpha, double beta, 
+					     vector<int> initial)
+  : InjectionProcess(nodes, rate), _alpha(alpha), _beta(beta), _initial(initial)
+{
+  assert((alpha >= 0.0) && (alpha <= 1.0));
+  assert((beta >= 0.0) && (beta <= 1.0));
+  reset();
+}
+
+void OnOffInjectionProcess::reset()
+{
+  _state = _initial;
+}
+
+bool OnOffInjectionProcess::test(int source)
+{
+  assert((source >= 0) && (source < _nodes));
 
   // advance state
 
-  if ( gNodeStates[source] == 0 ) {
-    if ( RandomFloat( ) < gBurstAlpha ) { // from off to on
-      gNodeStates[source] = 1;
+  if(!_state[source]) {
+    if(RandomFloat() < _alpha) { // from off to on
+      _state[source] = true;
     }
-  } else if ( RandomFloat( ) < gBurstBeta ) { // from on to off
-    gNodeStates[source] = 0;
+  } else {
+    if(RandomFloat() < _beta) { // from on to off
+      _state[source] = false;
+    }
   }
 
   // generate packet
 
-  if ( gNodeStates[source] ) { // on?
-    double r1 = rate * (gBurstAlpha + gBurstBeta) / gBurstAlpha;
-    return (RandomFloat( ) < r1);
+  if(_state[source]) { // on?
+    double r1 = _rate * (_alpha + _beta) / _alpha;
+    return (RandomFloat() < r1);
   }
 
   return false;
-}
-
-//=============================================================
-
-void InitializeInjectionMap( const Configuration & config )
-{
-
-  gBurstAlpha = config.GetFloat( "burst_alpha" );
-  gBurstBeta  = config.GetFloat( "burst_beta" );
-
-  /* Register injection processes functions here */
-
-  gInjectionProcessMap["bernoulli"] = &bernoulli;
-  gInjectionProcessMap["on_off"]    = &on_off;
-
 }

@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -52,12 +52,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "chaos_router.hpp"
 ///////////////////////////////////////////////////////
 
+int const Router::STALL_BUFFER_BUSY = -2;
+int const Router::STALL_BUFFER_CONFLICT = -3;
+int const Router::STALL_BUFFER_FULL = -4;
+int const Router::STALL_BUFFER_RESERVED = -5;
+int const Router::STALL_CROSSBAR_CONFLICT = -6;
+
 Router::Router( const Configuration& config,
 		Module *parent, const string & name, int id,
 		int inputs, int outputs ) :
 TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
-   _partial_internal_cycles(0.0), _received_flits(0), _stored_flits(0), _sent_flits(0),
-   _active_packets(0)
+   _partial_internal_cycles(0.0)
 {
   _crossbar_delay   = ( config.GetInt( "st_prepare_delay" ) + 
 			config.GetInt( "st_final_delay" ) );
@@ -65,6 +70,19 @@ TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
   _input_speedup    = config.GetInt( "input_speedup" );
   _output_speedup   = config.GetInt( "output_speedup" );
   _internal_speedup = config.GetFloat( "internal_speedup" );
+
+#ifdef TRACK_FLOWS
+  _received_flits.resize(inputs, 0);
+  _sent_flits.resize(inputs, 0);
+#endif
+
+#ifdef TRACK_STALLS
+  _buffer_busy_stalls = 0;
+  _buffer_conflict_stalls = 0;
+  _buffer_full_stalls = 0;
+  _crossbar_conflict_stalls = 0;
+#endif
+
 }
 
 void Router::AddInputChannel( FlitChannel *channel, CreditChannel *backchannel )

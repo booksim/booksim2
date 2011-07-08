@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -46,6 +46,13 @@ typedef Channel<Credit> CreditChannel;
 class Router : public TimedModule {
 
 protected:
+
+  static int const STALL_BUFFER_BUSY;
+  static int const STALL_BUFFER_CONFLICT;
+  static int const STALL_BUFFER_FULL;
+  static int const STALL_BUFFER_RESERVED;
+  static int const STALL_CROSSBAR_CONFLICT;
+
   int _id;
   
   int _inputs;
@@ -66,11 +73,20 @@ protected:
   vector<CreditChannel *> _output_credits;
   vector<bool>            _channel_faults;
 
-  int _received_flits;
-  int _stored_flits;
-  int _sent_flits;
+#ifdef TRACK_FLOWS
+  vector<int> _received_flits;
+  vector<int> _stored_flits;
+  vector<int> _sent_flits;
+  vector<int> _active_packets;
+#endif
 
-  int _active_packets;
+#ifdef TRACK_STALLS
+  int _buffer_busy_stalls;
+  int _buffer_conflict_stalls;
+  int _buffer_full_stalls;
+  int _buffer_reserved_stalls;
+  int _crossbar_conflict_stalls;
+#endif
 
   virtual void _InternalStep() = 0;
 
@@ -105,26 +121,55 @@ public:
   inline int GetID( ) const {return _id;}
 
 
-  virtual int GetCredit(int out, int vc_begin, int vc_end ) const = 0;
+  virtual int GetUsedCredit(int out, int vc_begin = -1, int vc_end = -1 ) const = 0;
   virtual int GetBuffer(int i = -1) const = 0;
 
-  inline int GetReceivedFlits() {
-    int const r = _received_flits;
-    _received_flits = 0;
-    return r;
+#ifdef TRACK_FLOWS
+  inline vector<int> const & GetReceivedFlits() const {
+    return _received_flits;
   }
-  inline int GetStoredFlits() const {
+  inline vector<int> const & GetStoredFlits() const {
     return _stored_flits;
   }
-  inline int GetSentFlits() {
-    int const s = _sent_flits;
-    _sent_flits = 0;
-    return s;
+  inline vector<int> const & GetSentFlits() const {
+    return _sent_flits;
   }
   
-  inline int GetActivePackets() const {
+  inline vector<int> const & GetActivePackets() const {
     return _active_packets;
   }
+
+  inline void ResetFlowStats() {
+    _received_flits.assign(_received_flits.size(), 0);
+    _sent_flits.assign(_sent_flits.size(), 0);
+  }
+#endif
+
+#ifdef TRACK_STALLS
+  inline int GetBufferBusyStalls() const {
+    return _buffer_busy_stalls;
+  }
+  inline int GetBufferConflictStalls() const {
+    return _buffer_conflict_stalls;
+  }
+  inline int GetBufferFullStalls() const {
+    return _buffer_full_stalls;
+  }
+  inline int GetBufferReservedStalls() const {
+    return _buffer_reserved_stalls;
+  }
+  inline int GetCrossbarConflictStalls() const {
+    return _crossbar_conflict_stalls;
+  }
+
+  inline void ResetStallStats() {
+    _buffer_busy_stalls = 0;
+    _buffer_conflict_stalls = 0;
+    _buffer_full_stalls = 0;
+    _buffer_reserved_stalls = 0;
+    _crossbar_conflict_stalls = 0;
+  }
+#endif
 
   inline int NumOutputs() const {return _outputs;}
 };

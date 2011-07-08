@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -114,7 +114,7 @@ bool Simulate( BookSimConfig const & config )
   for (int i = 0; i < subnets; ++i) {
     ostringstream name;
     name << "network_" << i;
-    net[i] = Network::NewNetwork( config, name.str() );
+    net[i] = Network::New( config, name.str() );
   }
 
   /*tcc and characterize are legacy
@@ -122,7 +122,7 @@ bool Simulate( BookSimConfig const & config )
    */
 
   assert(trafficManager == NULL);
-  trafficManager = new TrafficManager( config, net ) ;
+  trafficManager = TrafficManager::New( config, net ) ;
 
   /*Start the simulation run
    */
@@ -145,7 +145,7 @@ bool Simulate( BookSimConfig const & config )
 
     ///Power analysis
     if(config.GetInt("sim_power") > 0){
-      Power_Module pnet(net[i], trafficManager, config);
+      Power_Module pnet(net[i], config);
       pnet.run();
     }
 
@@ -193,8 +193,6 @@ int main( int argc, char **argv )
   /*initialize routing, traffic, injection functions
    */
   InitializeRoutingMap( config );
-  InitializeTrafficMap( config );
-  InitializeInjectionMap( config );
 
   gPrintActivity = (config.GetInt("print_activity") > 0);
   gTrace = (config.GetInt("viewer_trace") > 0);

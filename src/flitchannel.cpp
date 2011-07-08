@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -86,10 +86,9 @@ void FlitChannel::ReadInputs() {
 
 void FlitChannel::WriteOutputs() {
   Channel<Flit>::WriteOutputs();
-  Flit const * const & f = _output;
-  if(f && f->watch) {
+  if(_output && _output->watch) {
     *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-	       << "Completed channel traversal for flit " << f->id
+	       << "Completed channel traversal for flit " << _output->id
 	       << "." << endl;
   }
 }

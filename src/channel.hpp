@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -120,9 +120,9 @@ void Channel<T>::WriteOutputs() {
     return;
   }
   assert(GetSimTime() == time);
-  _wait_queue.pop();
   _output = item.second;
   assert(_output);
+  _wait_queue.pop();
 }
 
 #endif

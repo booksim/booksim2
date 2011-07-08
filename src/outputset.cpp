@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -75,11 +75,6 @@ int OutputSet::NumVCs( int output_port ) const
     i++;
   }
   return total;
-}
-
-int OutputSet::Size( ) const
-{
-  assert(false);
 }
 
 bool OutputSet::OutputEmpty( int output_port ) const

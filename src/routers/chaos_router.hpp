@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -117,7 +117,7 @@ public:
   virtual void ReadInputs( );
   virtual void WriteOutputs( );
 
-  virtual int GetCredit(int out, int vc_begin, int vc_end ) const {return 0;}
+  virtual int GetUsedCredit(int out, int vc_begin = -1, int vc_end = -1 ) const {return 0;}
   virtual int GetBuffer(int i = -1) const {return 0;}
 
   void Display( ostream & os = cout ) const;

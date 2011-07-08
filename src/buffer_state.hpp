@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _BUFFER_STATE_HPP_
 
 #include <vector>
-#include <algorithm>
+#include <queue>
 
 #include "module.hpp"
 #include "flit.hpp"
@@ -41,64 +41,117 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class BufferState : public Module {
   
-  friend class SharingPolicy;
-
-  class SharingPolicy {
+  class BufferPolicy : public Module {
   protected:
     BufferState const * const _buffer_state;
-    inline int _GetSharedBufSize() const { return _buffer_state->_shared_buf_size; }
+    int _vcs;
+    int _active_vcs;
+    vector<int> _vc_occupancy;
   public:
-    SharingPolicy(BufferState const * const buffer_state);
-    virtual void ProcessCredit(Credit const * const c) = 0;
-    virtual void SendingFlit(Flit const * const f) = 0;
-    virtual void TakeBuffer(int vc = 0) = 0;
-    virtual int MaxSharedSlots(int vc = 0) const = 0;
-    static SharingPolicy * NewSharingPolicy(Configuration const & config, 
-					    BufferState const * const buffer_state);
-  };
+    BufferPolicy(Configuration const & config, BufferState * parent, 
+		 const string & name);
+    virtual void AllocVC(int vc = 0);
+    virtual void FreeVC(int vc = 0);
+    virtual void AllocSlotFor(int vc = 0);
+    virtual void FreeSlotFor(int vc = 0);
+    virtual bool IsFullFor(int vc = 0) const = 0;
 
-  class UnrestrictedSharingPolicy : public SharingPolicy {
-  public:
-    UnrestrictedSharingPolicy(BufferState const * const buffer_state);
-    virtual void ProcessCredit(Credit const * const c) {}
-    virtual void SendingFlit(Flit const * const f) {}
-    virtual void TakeBuffer(int vc = 0) {}
-    virtual int MaxSharedSlots(int vc = 0) const { 
-      return _GetSharedBufSize();
+    inline bool IsEmptyFor(int vc = 0) const {
+      assert((vc >= 0) && (vc < _vcs));
+      return (_vc_occupancy[vc] == 0);
     }
+    inline int Occupancy(int vc = 0) const {
+      assert((vc >= 0) && (vc < _vcs));
+      return _vc_occupancy[vc];
+    }
+
+    static BufferPolicy * New(Configuration const & config, 
+			      BufferState * parent, const string & name);
   };
-
-  friend class VariableSharingPolicy;
-
-  class VariableSharingPolicy : public SharingPolicy {
-  private:
-    int _max_slots;
+  
+  class PrivateBufferPolicy : public BufferPolicy {
   protected:
-    inline int _GetActiveVCs() const { return _buffer_state->_active_vcs; }
-    inline void _UpdateMaxSlots() { 
-      _max_slots = _GetSharedBufSize() / max(_GetActiveVCs(), 1);
-    }
+    int _vc_buf_size;
   public:
-    VariableSharingPolicy(BufferState const * const buffer_state);
-    virtual void ProcessCredit(Credit const * const c) {_UpdateMaxSlots(); }
-    virtual void SendingFlit(Flit const * const f) { _UpdateMaxSlots(); }
-    virtual void TakeBuffer(int vc = 0) { _UpdateMaxSlots(); }
-    virtual int MaxSharedSlots(int vc = 0) const { return _max_slots; }
+    PrivateBufferPolicy(Configuration const & config, BufferState * parent, 
+			const string & name);
+    virtual void AllocSlotFor(int vc = 0);
+    virtual bool IsFullFor(int vc = 0) const;
+  };
+  
+  class SharedBufferPolicy : public BufferPolicy {
+  protected:
+    int _buf_size;
+    vector<int> _private_buf_vc_map;
+    vector<int> _private_buf_size;
+    vector<int> _private_buf_occupancy;
+    int _shared_buf_size;
+    int _shared_buf_occupancy;
+    vector<int> _reserved_slots;
+    void ProcessFreeSlot(int vc = 0);
+  public:
+    SharedBufferPolicy(Configuration const & config, BufferState * parent, 
+		       const string & name);
+    virtual void FreeVC(int vc = 0);
+    virtual void AllocSlotFor(int vc = 0);
+    virtual void FreeSlotFor(int vc = 0);
+    virtual bool IsFullFor(int vc = 0) const;
+  };
+
+  class LimitedSharedBufferPolicy : public SharedBufferPolicy {
+  protected:
+    int _max_held_slots;
+  public:
+    LimitedSharedBufferPolicy(Configuration const & config, 
+			      BufferState * parent,
+			      const string & name);
+    virtual bool IsFullFor(int vc = 0) const;
   };
     
-  int  _wait_for_tail_credit;
-  int  _vc_busy_when_full;
-  int  _vc_buf_size;
-  int  _shared_buf_size;
-  int  _shared_occupied;
-  int  _vcs;
-  int  _active_vcs;
+  class DynamicLimitedSharedBufferPolicy : public LimitedSharedBufferPolicy {
+  public:
+    DynamicLimitedSharedBufferPolicy(Configuration const & config, 
+				     BufferState * parent,
+				     const string & name);
+    virtual void AllocVC(int vc = 0);
+    virtual void FreeVC(int vc = 0);
+  };
   
-  SharingPolicy * _sharing_policy;
+  class ShiftingDynamicLimitedSharedBufferPolicy : public DynamicLimitedSharedBufferPolicy {
+  public:
+    ShiftingDynamicLimitedSharedBufferPolicy(Configuration const & config, 
+					     BufferState * parent,
+					     const string & name);
+    virtual void AllocVC(int vc = 0);
+    virtual void FreeVC(int vc = 0);
+  };
+  
+  class FeedbackSharedBufferPolicy : public SharedBufferPolicy {
+  protected:
+    vector<int> _occupancy_limit;
+    vector<int> _round_trip_time;
+    queue<int> _flit_sent_time;
+    int _min_round_trip_time;
+    int _total_mapped_size;
+    int _aging_scale;
+    int _offset;
+  public:
+    FeedbackSharedBufferPolicy(Configuration const & config, 
+			       BufferState * parent, const string & name);
+    virtual void AllocSlotFor(int vc = 0);
+    virtual void FreeSlotFor(int vc = 0);
+    virtual bool IsFullFor(int vc = 0) const;
+  };
+  
+  bool _wait_for_tail_credit;
+  int  _size;
+  int  _occupancy;
+  int  _vcs;
+  
+  BufferPolicy * _buffer_policy;
   
   vector<bool> _in_use;
   vector<bool> _tail_sent;
-  vector<int> _cur_occupied;
   vector<int> _last_id;
   vector<int> _last_pid;
 
@@ -114,14 +167,22 @@ public:
 
   void TakeBuffer( int vc = 0 );
 
-  bool IsFullFor( int vc = 0 ) const;
-  bool IsEmptyFor( int vc = 0 ) const;
-  bool IsAvailableFor( int vc = 0 ) const;
-  bool HasCreditFor( int vc = 0 ) const;
+  inline bool IsFull() const {
+    return (_occupancy < _size);
+  }
+  inline bool IsFullFor( int vc = 0 ) const {
+    return _buffer_policy->IsFullFor(vc);
+  }
+  inline bool IsEmptyFor( int vc = 0 ) const {
+    return _buffer_policy->IsEmptyFor(vc);
+  }
+  inline bool IsAvailableFor( int vc = 0 ) const {
+    assert( ( vc >= 0 ) && ( vc < _vcs ) );
+    return !_in_use[vc];
+  }
   
-  inline int Size (int vc = 0) const {
-    assert((vc >= 0) && (vc < _vcs));
-    return  _cur_occupied[vc];
+  inline int Occupancy(int vc = 0) const {
+    return  _buffer_policy->Occupancy(vc);
   }
   
   void Display( ostream & os = cout ) const;

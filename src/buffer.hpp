@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -41,9 +41,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class Buffer : public Module {
   
-  int _vc_size;
-  int _shared_count;
-  int _shared_size;
+  int _occupancy;
+  int _size;
 
   vector<VC*> _vc;
 
@@ -53,9 +52,13 @@ public:
 	  Module *parent, const string& name );
   ~Buffer();
 
-  bool AddFlit( int vc, Flit *f );
+  void AddFlit( int vc, Flit *f );
 
-  Flit *RemoveFlit( int vc );
+  inline Flit *RemoveFlit( int vc )
+  {
+    --_occupancy;
+    return _vc[vc]->RemoveFlit( );
+  }
   
   inline Flit *FrontFlit( int vc ) const
   {
@@ -67,18 +70,15 @@ public:
     return _vc[vc]->Empty( );
   }
 
-  bool Full( int vc ) const;
+  inline bool Full( ) const
+  {
+    return _occupancy >= _size;
+  }
 
   inline VC::eVCState GetState( int vc ) const
   {
     return _vc[vc]->GetState( );
   }
-
-  inline int GetStateTime( int vc ) const
-  {
-    return _vc[vc]->GetStateTime( );
-  }
-
 
   inline void SetState( int vc, VC::eVCState s )
   {
@@ -115,13 +115,6 @@ public:
     _vc[vc]->Route(rf, router, f, in_channel);
   }
 
-  inline void AdvanceTime( )
-  {
-    for(vector<VC*>::iterator i = _vc.begin(); i != _vc.end(); ++i) {
-      (*i)->AdvanceTime();
-    }
-  }
-
   // ==== Debug functions ====
 
   inline void SetWatch( int vc, bool watch = true )
@@ -134,9 +127,14 @@ public:
     return _vc[vc]->IsWatched( );
   }
 
-  inline int GetSize( int vc ) const
+  inline int GetOccupancy( ) const
   {
-    return _vc[vc]->GetSize( );
+    return _occupancy;
+  }
+
+  inline int GetOccupancy( int vc ) const
+  {
+    return _vc[vc]->GetOccupancy( );
   }
 
   void Display( ostream & os = cout ) const;

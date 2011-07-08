@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -64,14 +64,11 @@ BookSimConfig::BookSimConfig( )
   _int_map["y"] = 8; //number of routers in Y
   _int_map["xr"] = 1; //number of nodes per router in X only if c>1
   _int_map["yr"] = 1; //number of nodes per router in Y only if c>1
-  _int_map["limit"] = 0; //how many of the nodes are actually used
 
 
   _int_map["link_failures"] = 0; //legacy
   _int_map["fail_seed"]     = 0; //legacy
 
-  //==== Cmesh topology options =======================
-  _int_map["express_channels"] = 0; //for Cmesh only, 0=no express channels
   //==== Single-node options ===============================
 
   _int_map["in_ports"]  = 5;
@@ -88,19 +85,37 @@ BookSimConfig::BookSimConfig( )
   _int_map["output_delay"] = 0;
   _int_map["credit_delay"] = 0;
   _float_map["internal_speedup"] = 1.0;
+  //with switch speedup flits requires otuput buffering
+  //full output buffer will cancel switch allocation requests
+  //default setting is unlimited
+  _int_map["output_buffer_size"] = -1;
 
   //==== Input-queued ======================================
 
   // Control of virtual channel speculation
   _int_map["speculative"] = 0 ;
   _int_map["spec_use_prio"] = 1 ;
-  _int_map["spec_check_elig"] = 0 ;
+  _int_map["spec_check_elig"] = 1 ;
+  _int_map["spec_check_cred"] = 1 ;
   _int_map["spec_mask_by_reqs"] = 0 ;
 
   _int_map["num_vcs"]         = 16;  
   _int_map["vc_buf_size"]     = 8;  
-  _int_map["shared_buf_size"] = 0;
-  AddStrField("sharing_policy", "unrestricted");
+  _int_map["buf_size"]        = -1;
+  AddStrField("buffer_policy", "private");
+
+  _int_map["private_bufs"] = -1;
+  _int_map["private_buf_size"] = 1;
+  AddStrField("private_buf_size", "");
+  _int_map["private_buf_start_vc"] = -1;
+  AddStrField("private_buf_start_vc", "");
+  _int_map["private_buf_end_vc"] = -1;
+  AddStrField("private_buf_end_vc", "");
+
+  _int_map["max_held_slots"] = -1;
+
+  _int_map["feedback_aging_scale"] = 1;
+  _int_map["feedback_offset"] = 0;
 
   _int_map["wait_for_tail_credit"] = 0; // reallocate a VC before a tail credit?
   _int_map["vc_busy_when_full"] = 0; // mark VCs as in use when they have no credit available
@@ -146,12 +161,6 @@ BookSimConfig::BookSimConfig( )
   _int_map["class_priority"] = 0;
   AddStrField("class_priority", ""); // workaraound to allow for vector specification
 
-  AddStrField( "hotspot_nodes", "" );
-  AddStrField( "hotspot_rates", "" );
-
-  AddStrField( "combined_patterns", "" );
-  AddStrField( "combined_rates", "" );
-
   _int_map["perm_seed"] = 0;         // seed value for random permuation trafficpattern generator
 
   _float_map["injection_rate"]       = 0.1; //if 0.0 assumes it is batch mode
@@ -171,7 +180,7 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["batch_size"] = 1000;
   _int_map["batch_count"] = 1;
-  _int_map["max_outstanding_requests"] = 4;
+  _int_map["max_outstanding_requests"] = 0; // 0 = unlimited
 
   // Use read/write request reply scheme
   _int_map["use_read_write"] = 0;
@@ -251,7 +260,6 @@ BookSimConfig::BookSimConfig( )
   _int_map["print_activity"] = 0;
 
   _int_map["print_csv_results"] = 0;
-  _int_map["print_vc_stats"] = 0;
 
   _int_map["deadlock_warn_timeout"] = 256;
 
@@ -268,7 +276,15 @@ BookSimConfig::BookSimConfig( )
   AddStrField("watch_out", "");
 
   AddStrField("stats_out", "");
-  AddStrField("flow_out", "");
+
+  _int_map["flow_out"] = 0;
+  AddStrField("sent_packets_out", "");
+  AddStrField("active_packets_out", "");
+  AddStrField("injected_flits_out", "");
+  AddStrField("ejected_flits_out", "");
+  AddStrField("received_flits_out", "");
+  AddStrField("sent_flits_out", "");
+  AddStrField("stored_flits_out", "");
   
   //==================Power model params=====================
   _int_map["sim_power"] = 0;

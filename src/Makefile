@@ -1,6 +1,6 @@
 # $Id $
 
-# Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+# Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without 
@@ -36,7 +36,7 @@ YACC   = /usr/bin/bison -d
 LEX    = /usr/bin/flex
 PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
-DEFINE =
+DEFINE = 
 DEFINE_TEST = -DUSE_GUI
 INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
 CPPFLAGS = -Wall -O3  -ggdb $(INCPATH) $(DEFINE) 
@@ -57,6 +57,7 @@ CPP_SRCS = main.cpp \
    traffic.cpp \
    flitchannel.cpp \
    trafficmanager.cpp \
+   batchtrafficmanager.cpp \
    packet_reply_info.cpp \
    buffer_state.cpp \
    stats.cpp \

@@ -1,7 +1,7 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2010, Trustees of The Leland Stanford Junior University
+Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -78,7 +78,7 @@ public:
   Network( const Configuration &config, const string & name );
   virtual ~Network( );
 
-  static Network *NewNetwork( const Configuration &config, const string & name );
+  static Network *New( const Configuration &config, const string & name );
 
   virtual void WriteFlit( Flit *f, int source );
   virtual Flit *ReadFlit( int dest );
