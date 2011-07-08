@@ -40,14 +40,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 BookSimConfig::BookSimConfig( )
 { 
-
-  //changes to be commited
-  _int_map["output_buffer_size"] = -1;//this is only relevent for internal speedup of greater than 1
-  _int_map["dragonfly_global_latency"] = 100;
-  _int_map["dragonfly_local_latency"] = 10;
-  _int_map["remove_credit_rtt"] = 0;
-  _int_map["track_routing_commitment"] = 0;
-
   //========================================================
   // Network options
   //========================================================

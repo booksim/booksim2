@@ -674,7 +674,7 @@ void EventRouter::_TransportArb( int input )
     }
 
     c = Credit::New( );
-    c->vc.push_back(f->vc);
+    c->vc.insert(f->vc);
     c->head          = f->head;
     c->tail          = f->tail;
     c->id            = f->id;

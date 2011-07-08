@@ -35,10 +35,9 @@
 #include "misc_utils.hpp"
 #include "globals.hpp"
 
+#define DRAGON_LATENCY
 
 int gP, gA, gG;
-
-double roc_threshold = 0.003;
 
 //calculate the hop count between src and estination
 int dragonflynew_hopcnt(int src, int dest) 
@@ -170,12 +169,7 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
   // intra-group ports : 2*_p - 1
   _p = config.GetInt( "k" );	// # of ports in each switch
   _n = config.GetInt( "n" );
-  
-  _global_channel_latency=config.GetInt("dragonfly_global_latency");
-  _local_channel_latency=config.GetInt("dragonfly_local_latency");
-  assert(_global_channel_latency>0 &&
-	 _local_channel_latency>0);
-  
+
 
   assert(_n==1);
   // dimension
@@ -289,10 +283,10 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
 
 	_routers[node]->AddOutputChannel( _chan[_output], _chan_cred[_output] );
 
-
-	_chan[_output]->SetLatency(_local_channel_latency);
-	_chan_cred[_output]->SetLatency(_local_channel_latency);
-
+#ifdef DRAGON_LATENCY
+	_chan[_output]->SetLatency(10);
+	_chan_cred[_output]->SetLatency(10);
+#endif
       }
     }
 
@@ -303,10 +297,10 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
 
       //      _chan[_output].global = true;
       _routers[node]->AddOutputChannel( _chan[_output], _chan_cred[_output] );
-
-      _chan[_output]->SetLatency(_global_channel_latency);
-      _chan_cred[_output]->SetLatency(_global_channel_latency);
-
+#ifdef DRAGON_LATENCY
+      _chan[_output]->SetLatency(100);
+      _chan_cred[_output]->SetLatency(100);
+#endif
     }
 
 
@@ -419,11 +413,7 @@ double DragonFlyNew::Capacity( ) const
 void DragonFlyNew::RegisterRoutingFunctions(){
 
   gRoutingFunctionMap["min_dragonflynew"] = &min_dragonflynew;
-  gRoutingFunctionMap["val_dragonflynew"] = &val_dragonflynew;
   gRoutingFunctionMap["ugal_dragonflynew"] = &ugal_dragonflynew;
-  gRoutingFunctionMap["ugalprog_dragonflynew"] = &ugalprog_dragonflynew;
-  gRoutingFunctionMap["ugal_roc_dragonflynew"] = &ugal_roc_dragonflynew;
-  gRoutingFunctionMap["ugalprog_roc_dragonflynew"] = &ugalprog_roc_dragonflynew;
 }
 
 
@@ -470,92 +460,6 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
     *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 	       << "	through output port : " << out_port 
 	       << " out vc: " << out_vc << endl;
-  outputs->AddRange( out_port, out_vc, out_vc );
-}
-
-
-
-void val_dragonflynew( const Router *r, const Flit *f, int in_channel, 
-			OutputSet *outputs, bool inject )
-{
-  outputs->Clear( );
-  if(inject) {
-    int inject_vc= RandomInt(gNumVCs-1);
-    outputs->AddRange(0,inject_vc, inject_vc);
-    return;
-  }
-
-  int _grp_num_routers= gA;
-  int _grp_num_nodes =_grp_num_routers*gP;
-  int _network_size =  gA * gP * gG;
-
- 
-  int dest  = f->dest;
-  int rID =  r->GetID(); 
-  int grp_ID = (int) (rID / _grp_num_routers);
-  int dest_grp_ID = int(dest/_grp_num_nodes);
-
-  int debug = f->watch;
-  int out_port = -1;
-  int out_vc = 0;
-  int intm_grp_ID;
-  int intm_rID;
-
-  if(debug){
-    cout<<"At router "<<rID<<endl;
-  }
-  int min_router_output, nonmin_router_output;
-  
-  if ( in_channel < gP )   {
-    //dest are in the same group
-    if (dest_grp_ID == grp_ID) {
-      f->ph = 2;
-      f->minimal = 1;
-    } else {
-      //select a random node
-      f->intm =RandomInt(_network_size - 1);
-      intm_grp_ID = (int)(f->intm/_grp_num_nodes);
-      if (debug){
-	cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
-      }
-      //intermediate are in the same group
-      if(grp_ID == intm_grp_ID){
-	f->ph = 1;
-	f->minimal = 1;
-      } else { 
-	//use valiant
-	f->ph = 0;
-	f->minimal = 0;
-	
-      }
-    }
-  }
-
-  //transition from nonminimal phase to minimal
-  if(f->ph==0){
-    intm_rID= (int)(f->intm/gP);
-    if( rID == intm_rID){
-      f->ph = 1;
-    }
-  }
-  //port assignement based on the phase
-  if(f->ph == 0){
-    assert(f->minimal!=1);
-    out_port = dragonfly_port(rID, f->src, f->intm);
-  } else if(f->ph == 1){
-    out_port = dragonfly_port(rID, f->src, f->dest);
-  } else if(f->ph == 2){
-    out_port = dragonfly_port(rID, f->src, f->dest);
-  } else {
-    assert(false);
-  }
-
-  //optical dateline
-  if (f->ph == 1 && out_port >=gP + (gA-1)) {
-    f->ph = 2;
-  }  
- 
-  out_vc = f->ph;
   outputs->AddRange( out_port, out_vc, out_vc );
 }
 
@@ -672,380 +576,5 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
   //vc assignemnt based on phase
   out_vc = f->ph;
 
-  outputs->AddRange( out_port, out_vc, out_vc );
-}
-
-
-
-void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel, 
-			OutputSet *outputs, bool inject )
-{
-  outputs->Clear( );
-  if(inject) {
-    int inject_vc= RandomInt(gNumVCs-1);
-    outputs->AddRange(0,inject_vc, inject_vc);
-    return;
-  }
-
-  int adaptive_threshold = 3;
-  int _grp_num_routers= gA;
-  int _grp_num_nodes =_grp_num_routers*gP;
-  int _network_size =  gA * gP * gG;
-
- 
-  int dest  = f->dest;
-  int rID =  r->GetID(); 
-  int grp_ID = (int) (rID / _grp_num_routers);
-  int dest_grp_ID = int(dest/_grp_num_nodes);
-
-  int debug = f->watch;
-  int out_port = -1;
-  int out_vc = 0;
-  int min_queue_size, min_hopcnt;
-  int nonmin_queue_size, nonmin_hopcnt;
-  int intm_grp_ID;
-  int intm_rID;
-
-  if(debug){
-    cout<<"At router "<<rID<<endl;
-  }
-  int min_router_output, nonmin_router_output;
-  
-  if ( in_channel < gP )   {
-    //dest are in the same group
-    if (dest_grp_ID == grp_ID) {
-      f->ph = 2;
-      f->minimal = 1;
-    } else {
-      //select a random node
-      f->intm =RandomInt(_network_size - 1);
-      intm_grp_ID = (int)(f->intm/_grp_num_nodes);
-      if (debug){
-	cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
-      }
-      //intermediate are in the same group
-      if(grp_ID == intm_grp_ID){
-	f->ph = 1;
-	f->minimal = 1;
-      } else {
-	//congestion metric using queue length
-	min_hopcnt = dragonflynew_hopcnt(f->src, f->dest);
-	min_router_output = dragonfly_port(rID, f->src, f->dest); 
-      	min_queue_size = MAX(r->GetCredit(min_router_output, 0, gNumVCs-1),0) ; 
-
-      
-	nonmin_hopcnt = dragonflynew_hopcnt(f->src, f->intm) +
-	  dragonflynew_hopcnt(f->intm,f->dest);
-	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
-	nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output, 0, gNumVCs-1),0);
-
-	//congestion comparison
-	if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {	  
-	  if (debug)  cout << " MINIMAL routing " << endl;
-	  f->ph = 1;
-	  f->minimal = 1;
-	} else {
-	  f->ph = 0;
-	  f->minimal = 0;
-	}
-      }
-    }
-  } else if(f->ph == 1 && f->minimal==1){ //progressive
-    assert(in_channel<gP + gA-1);
-    //select a random node
-    f->intm =RandomInt(_network_size - 1);
-    intm_grp_ID = (int)(f->intm/_grp_num_nodes);
-    if (debug){
-      cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
-    }
-    //intermediate are in the same group
-    if(grp_ID == intm_grp_ID){
-    } else {
-      //congestion metric using queue length
-      min_hopcnt = dragonflynew_hopcnt(f->src, f->dest);
-      min_router_output = dragonfly_port(rID, f->src, f->dest); 
-      min_queue_size = MAX(r->GetCredit(min_router_output, 0, gNumVCs-1) ,0); 
-
-      
-      nonmin_hopcnt = dragonflynew_hopcnt(f->src, f->intm) +
-	dragonflynew_hopcnt(f->intm,f->dest);
-      nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
-      nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output, 0, gNumVCs-1),0);
-
-      //congestion comparison
-      if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold) {
-      } else {
-	f->ph = 3;
-	f->minimal = 2;
-      }
-    }    
-  }
-
-  //transition from nonminimal phase to minimal
-  if(f->ph==0 || f->ph == 3){
-    intm_rID= (int)(f->intm/gP);
-    if( rID == intm_rID){
-      f->ph = 1;
-    }
-  }
-
-
-  //port assignement based on the phase
-  if(f->ph == 0 || f->ph == 3){
-    assert(f->minimal!=1);
-    out_port = dragonfly_port(rID, f->src, f->intm);
-  } else if(f->ph == 1){
-    out_port = dragonfly_port(rID, f->src, f->dest);
-  } else if(f->ph == 2){
-    out_port = dragonfly_port(rID, f->src, f->dest);
-  } else {
-    assert(false);
-  }
-
-  //optical dateline
-  if (f->ph == 1 && out_port >=gP + gA-1) {
-    f->ph = 2;
-  }  
- 
-  out_vc = f->ph;
-  outputs->AddRange( out_port, out_vc, out_vc );
-}
-
-
-
-//Basic adaptive routign algorithm for the dragonfly
-void ugal_roc_dragonflynew( const Router *r, const Flit *f, int in_channel, 
-			OutputSet *outputs, bool inject )
-{
-  //need 3 VCs for deadlock freedom
-
-  assert(gNumVCs==3);
-  outputs->Clear( );
-  if(inject) {
-    int inject_vc= RandomInt(gNumVCs-1);
-    outputs->AddRange(0,inject_vc, inject_vc);
-    return;
-  }
-  
-  int _grp_num_routers= gA;
-  int _grp_num_nodes =_grp_num_routers*gP;
-  int _network_size =  gA * gP * gG;
-
- 
-  int dest  = f->dest;
-  int rID =  r->GetID(); 
-  int grp_ID = (int) (rID / _grp_num_routers);
-  int dest_grp_ID = int(dest/_grp_num_nodes);
-
-  int debug = f->watch;
-  int out_port = -1;
-  int out_vc = 0;
-  double min_roc;
-  double nonmin_roc;
-  int intm_grp_ID;
-  int intm_rID;
-
-  if(debug){
-    cout<<"At router "<<rID<<endl;
-  }
-  int min_router_output, nonmin_router_output;
-  
-  //at the source router, make the adaptive routing decision
-  if ( in_channel < gP )   {
-    //dest are in the same group, only use minimum routing
-    if (dest_grp_ID == grp_ID) {
-      f->ph = 2;
-      f->minimal = 1;
-    } else {
-      //select a random node
-      f->intm =RandomInt(_network_size - 1);
-      intm_grp_ID = (int)(f->intm/_grp_num_nodes);
-      if (debug){
-	cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
-      }
-      
-      //random intermediate are in the same group, use minimum routing
-      if(grp_ID == intm_grp_ID){
-	f->ph = 1;
-	f->minimal = 1;
-      } else {
-	//congestion metrics using queue length, obtained by GetCredit()
-	min_router_output = dragonfly_port(rID, f->src, f->dest); 
-      	min_roc = r->GetROC(min_router_output);
-
-      
-	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
-	nonmin_roc = r->GetROC(nonmin_router_output);
-
-	//congestion comparison, could use hopcnt instead of 1 and 2
-	//	if (((1 * min_roc ) <= (2.0* nonmin_roc))||min_roc<0.0) {	  
-	if (min_roc<0.0 || (min_roc < nonmin_roc+roc_threshold )) {	  
-	  if (debug)  cout << " MINIMAL routing " << endl;
-	  f->ph = 1;
-	  f->minimal = 1;
-	} else {
-	  f->ph = 0;
-	  f->minimal = 0;
-	}
-      }
-    }
-  }
-
-  //transition from nonminimal phase to minimal
-  if(f->ph==0){
-    intm_rID= (int)(f->intm/gP);
-    if( rID == intm_rID){
-      f->ph = 1;
-    }
-  }
-
-  //port assignement based on the phase
-  if(f->ph == 0){
-    assert(f->minimal!=1);
-    out_port = dragonfly_port(rID, f->src, f->intm);
-  } else if(f->ph == 1){
-    out_port = dragonfly_port(rID, f->src, f->dest);
-  } else if(f->ph == 2){
-    out_port = dragonfly_port(rID, f->src, f->dest);
-  } else {
-    assert(false);
-  }
-
-  //optical dateline
-  if (f->ph == 1 && out_port >=gP + (gA-1)) {
-    f->ph = 2;
-  }  
-
-  //vc assignemnt based on phase
-  out_vc = f->ph;
-
-  outputs->AddRange( out_port, out_vc, out_vc );
-}
-
-
-
-void ugalprog_roc_dragonflynew( const Router *r, const Flit *f, int in_channel, 
-			OutputSet *outputs, bool inject )
-{
-  outputs->Clear( );
-  if(inject) {
-    int inject_vc= RandomInt(gNumVCs-1);
-    outputs->AddRange(0,inject_vc, inject_vc);
-    return;
-  }
-
-  int _grp_num_routers= gA;
-  int _grp_num_nodes =_grp_num_routers*gP;
-  int _network_size =  gA * gP * gG;
-
- 
-  int dest  = f->dest;
-  int rID =  r->GetID(); 
-  int grp_ID = (int) (rID / _grp_num_routers);
-  int dest_grp_ID = int(dest/_grp_num_nodes);
-
-  int debug = f->watch;
-  int out_port = -1;
-  int out_vc = 0;
-  double min_roc;
-  double nonmin_roc;
-  int intm_grp_ID;
-  int intm_rID;
-
-  if(debug){
-    cout<<"At router "<<rID<<endl;
-  }
-  int min_router_output, nonmin_router_output;
-  
-  if ( in_channel < gP )   {
-    //dest are in the same group
-    if (dest_grp_ID == grp_ID) {
-      f->ph = 2;
-      f->minimal = 1;
-    } else {
-      //select a random node
-      f->intm =RandomInt(_network_size - 1);
-      intm_grp_ID = (int)(f->intm/_grp_num_nodes);
-      if (debug){
-	cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
-      }
-      //intermediate are in the same group
-      if(grp_ID == intm_grp_ID){
-	f->ph = 1;
-	f->minimal = 1;
-      } else {
-	min_router_output = dragonfly_port(rID, f->src, f->dest); 
-      	min_roc = r->GetROC(min_router_output);
-
-      
-	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
-	nonmin_roc = r->GetROC(nonmin_router_output);
-
-	//congestion comparison
-	if (min_roc<0.0 || (min_roc < nonmin_roc+roc_threshold )) {
-	  if (debug)  cout << " MINIMAL routing " << endl;
-	  f->ph = 1;
-	  f->minimal = 1;
-	} else {
-	  f->ph = 0;
-	  f->minimal = 0;
-	}
-      }
-    }
-  } else if(f->ph == 1 && f->minimal==1){ //progressive
-    assert(in_channel<gP + gA-1);
-    //select a random node
-    f->intm =RandomInt(_network_size - 1);
-    intm_grp_ID = (int)(f->intm/_grp_num_nodes);
-    if (debug){
-      cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
-    }
-    //intermediate are in the same group
-    if(grp_ID == intm_grp_ID){
-    } else {
-      min_router_output = dragonfly_port(rID, f->src, f->dest); 
-      min_roc = r->GetROC(min_router_output);
-      
-      
-      nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
-      nonmin_roc = r->GetROC(nonmin_router_output);
-      
-
-      //congestion comparison
-      if (min_roc<0.0 || (min_roc < nonmin_roc+roc_threshold )) {
-      } else {
-	f->ph = 3;
-	f->minimal = 2;
-      }
-    }    
-  }
-
-  //transition from nonminimal phase to minimal
-  if(f->ph==0 || f->ph == 3){
-    intm_rID= (int)(f->intm/gP);
-    if( rID == intm_rID){
-      f->ph = 1;
-    }
-  }
-
-
-  //port assignement based on the phase
-  if(f->ph == 0 || f->ph == 3){
-    assert(f->minimal!=1);
-    out_port = dragonfly_port(rID, f->src, f->intm);
-  } else if(f->ph == 1){
-    out_port = dragonfly_port(rID, f->src, f->dest);
-  } else if(f->ph == 2){
-    out_port = dragonfly_port(rID, f->src, f->dest);
-  } else {
-    assert(false);
-  }
-
-  //optical dateline
-  if (f->ph == 1 && out_port >=gP + gA-1) {
-    f->ph = 2;
-  }  
- 
-  out_vc = f->ph;
   outputs->AddRange( out_port, out_vc, out_vc );
 }

@@ -42,14 +42,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
-int roc_time_range=10000;
-int router_roc_range = 3;
-vector< vector< list<double> > > router_roc;
-
-
 TrafficManager * TrafficManager::New(Configuration const & config,
 				     vector<Network *> const & net)
-
 {
   TrafficManager * result = NULL;
   string sim_type = config.GetStr("sim_type");
@@ -67,16 +61,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _reset_time(0), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
 
-
-
   _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
 
-  router_roc.resize(router_roc_range );
-  cout<<"router radix "<<gK+2*gK-1+gK<<endl;
-  for(int i = 0; i<router_roc_range ; i++){//magic
-    router_roc[i].resize(gK+2*gK-1+gK);
-  }
   _subnets = config.GetInt("subnets");
  
   _subnet.resize(Flit::NUM_FLIT_TYPES);
@@ -239,10 +226,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   // ============ Statistics ============ 
 
-  _min_plat_stats = new Stats( this, "min_packet_latency", 1.0, 1000 );
-  _nonmin_plat_stats = new Stats( this, "nonmin_packet_latency", 1.0, 1000 );
-  _prog_plat_stats = new Stats( this, "prog_packet_latency", 1.0, 1000 );
-
   _plat_stats.resize(_classes);
   _overall_min_plat.resize(_classes, 0.0);
   _overall_avg_plat.resize(_classes, 0.0);
@@ -258,8 +241,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_avg_frag.resize(_classes, 0.0);
   _overall_max_frag.resize(_classes, 0.0);
 
-  //  _pair_plat.resize(_classes);
-  //_pair_tlat.resize(_classes);
+  _pair_plat.resize(_classes);
+  _pair_tlat.resize(_classes);
   
   _hop_stats.resize(_classes);
   _overall_hop_stats.resize(_classes, 0.0);
@@ -305,19 +288,16 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _stats[tmp_name.str()] = _hop_stats[c];
     tmp_name.str("");
 
-    //    _pair_plat[c].resize(_nodes*_nodes);
-    // _pair_tlat[c].resize(_nodes*_nodes);
+    _pair_plat[c].resize(_nodes*_nodes);
+    _pair_tlat[c].resize(_nodes*_nodes);
 
     _sent_flits[c].resize(_nodes, 0);
     _accepted_flits[c].resize(_nodes, 0);
     
     for ( int i = 0; i < _nodes; ++i ) {
-
-      /*
-
       for ( int j = 0; j < _nodes; ++j ) {
 	tmp_name << "pair_plat_stat_" << c << "_" << i << "_" << j;
-       	_pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+	_pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
 	_stats[tmp_name.str()] = _pair_plat[c][i*_nodes+j];
 	tmp_name.str("");
 	
@@ -326,7 +306,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 	_stats[tmp_name.str()] = _pair_tlat[c][i*_nodes+j];
 	tmp_name.str("");
       }
-      */
     }
   }
 
@@ -483,8 +462,8 @@ TrafficManager::~TrafficManager( )
 
     for ( int i = 0; i < _nodes; ++i ) {
       for ( int j = 0; j < _nodes; ++j ) {
-	//	delete _pair_plat[c][i*_nodes+j];
-	//delete _pair_tlat[c][i*_nodes+j];
+	delete _pair_plat[c][i*_nodes+j];
+	delete _pair_tlat[c][i*_nodes+j];
       }
     }
   }
@@ -597,24 +576,15 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	 (_plat_stats[f->cl]->Max() < (f->atime - f->time)))
 	_slowest_flit[f->cl] = f->id;
       _plat_stats[f->cl]->AddSample( f->atime - f->time);
-      if(head->minimal == 1){
-	_min_plat_stats->AddSample( f->atime - f->time);
-      } else if (head->minimal ==0){
-	_nonmin_plat_stats->AddSample( f->atime - f->time);
-      } else if(head->minimal == 2){
-	_prog_plat_stats->AddSample( f->atime - f->time);
-      }
-      
       _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
 	_tlat_stats[f->cl]->AddSample( f->atime - f->ttime );
    
-      //      _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->time );
-      if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY){
-	//	_pair_tlat[f->cl][dest*_nodes+f->src]->AddSample( f->atime - f->ttime );
-      }else if(f->type == Flit::ANY_TYPE){
-	//_pair_tlat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->ttime );
-      }
+      _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->time );
+      if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY)
+	_pair_tlat[f->cl][dest*_nodes+f->src]->AddSample( f->atime - f->ttime );
+      else if(f->type == Flit::ANY_TYPE)
+	_pair_tlat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->ttime );
       
     }
     
@@ -1050,7 +1020,7 @@ void TrafficManager::_Step( )
 		     << "." << endl;
 	}
 	Credit * const c = Credit::New();
-	c->vc.push_back(f->vc);
+	c->vc.insert(f->vc);
 	_net[subnet]->WriteCredit(c, n);
 	_RetireFlit(f, n);
       }
@@ -1118,9 +1088,7 @@ bool TrafficManager::_PacketsOutstanding( ) const
 void TrafficManager::_ClearStats( )
 {
   _slowest_flit.assign(_classes, -1);
-  _min_plat_stats->Clear( );
-  _nonmin_plat_stats->Clear( );
-  _prog_plat_stats->Clear( );
+
   for ( int c = 0; c < _classes; ++c ) {
 
     _plat_stats[c]->Clear( );
@@ -1132,8 +1100,8 @@ void TrafficManager::_ClearStats( )
 
     for ( int i = 0; i < _nodes; ++i ) {
       for ( int j = 0; j < _nodes; ++j ) {
-	//	_pair_plat[c][i*_nodes+j]->Clear( );
-	//_pair_tlat[c][i*_nodes+j]->Clear( );
+	_pair_plat[c][i*_nodes+j]->Clear( );
+	_pair_tlat[c][i*_nodes+j]->Clear( );
       }
     }
 
@@ -1448,9 +1416,6 @@ bool TrafficManager::Run( )
 
     if ( !_SingleSim( ) ) {
       cout << "Simulation unstable, ending ..." << endl;
-    if(_stats_out) {
-      WriteStats(*_stats_out);
-    }
       return false;
     }
 
@@ -1579,37 +1544,33 @@ void TrafficManager::WriteStats(ostream & os) const {
     //c+1 due to matlab array starting at 1
     os << "lat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
        << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
-       << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl;
-    /*
-      << "hops(" << c+1 << ",:) = " << *_hop_stats[c] << ";" << endl
-      << "pair_sent(" << c+1 << ",:) = [ ";
-      for(int i = 0; i < _nodes; ++i) {
+       << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
+       << "hops(" << c+1 << ",:) = " << *_hop_stats[c] << ";" << endl
+       << "pair_sent(" << c+1 << ",:) = [ ";
+    for(int i = 0; i < _nodes; ++i) {
       for(int j = 0; j < _nodes; ++j) {
-      os << _pair_plat[c][i*_nodes+j]->NumSamples() << " ";
+	os << _pair_plat[c][i*_nodes+j]->NumSamples() << " ";
       }
-      }
-      
-      os << "];" << endl
-      << "pair_plat(" << c+1 << ",:) = [ ";
-      for(int i = 0; i < _nodes; ++i) {
+    }
+    os << "];" << endl
+       << "pair_plat(" << c+1 << ",:) = [ ";
+    for(int i = 0; i < _nodes; ++i) {
       for(int j = 0; j < _nodes; ++j) {
 	os << _pair_plat[c][i*_nodes+j]->Average( ) << " ";
-	}
-	}
-	os << "];" << endl
-	<< "pair_tlat(" << c+1 << ",:) = [ ";
-	for(int i = 0; i < _nodes; ++i) {
-	for(int j = 0; j < _nodes; ++j) {
+      }
+    }
+    os << "];" << endl
+       << "pair_tlat(" << c+1 << ",:) = [ ";
+    for(int i = 0; i < _nodes; ++i) {
+      for(int j = 0; j < _nodes; ++j) {
 	os << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";
-	}
-	}
-	
-	
-	os << "];" << endl
-    */
+      }
+    }
 
     double time_delta = (double)(_time - _reset_time);
-    os << "sent(" << c+1 << ",:) = [ ";
+
+    os << "];" << endl
+       << "sent(" << c+1 << ",:) = [ ";
     for ( int d = 0; d < _nodes; ++d ) {
       os << (double)_sent_flits[c][d] / time_delta << " ";
     }
@@ -1620,20 +1581,6 @@ void TrafficManager::WriteStats(ostream & os) const {
     }
     os << "];" << endl;
   }
-
-  for(int i = 0; i<router_roc_range ; i++){
-    for(int j = 0; j<gK+gK*2-1+gK; j++){
-      cout<< router_roc[i][j].size()<<endl;
-      os<<"router_"<<i<<"_roc("<<j+1<<",:)=[";
-      for(list<double>::iterator k = router_roc[i][j].begin(); 
-	  k!=router_roc[i][j].end();
-	  k++){
-	os<<*k<<" ";
-      }
-      os<<"];\n";
-    }
-  }
-
 }
 
 void TrafficManager::DisplayStats(ostream & os) const {
@@ -1648,17 +1595,15 @@ void TrafficManager::DisplayStats(ostream & os) const {
     
     cout << "Minimum latency = " << _plat_stats[c]->Min() << endl
 	 << "Average latency = " << _plat_stats[c]->Average() << endl
-	 << "Maximum latency = " << _plat_stats[c]->Max() << endl;
-      cout<<"\tMinimal Packet latency = "<<_min_plat_stats->Average()<<endl;
-    cout<<"\tNonminimal Packet latency  = "<<_nonmin_plat_stats->Average()<<" ("<<double(_nonmin_plat_stats->NumSamples())/double(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples()+_prog_plat_stats->NumSamples() )<<") "<<endl;
-    cout<<"\tProg packet latency = "<<_prog_plat_stats->Average()<<" ("<<double(_prog_plat_stats->NumSamples())/double(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples()+_prog_plat_stats->NumSamples() )<<") "<<endl;
-
-
+	 << "Maximum latency = " << _plat_stats[c]->Max() << endl
+	 << "Minimum fragmentation = " << _frag_stats[c]->Min() << endl
+	 << "Average fragmentation = " << _frag_stats[c]->Average() << endl
+	 << "Maximum fragmentation = " << _frag_stats[c]->Max() << endl;
+    
     int count_sum, count_min, count_max;
     double rate_sum, rate_min, rate_max;
     double rate_avg;
     int min_pos, max_pos;
-
     double time_delta = (double)(_time - _reset_time);
     _ComputeStats(_sent_flits[c], &count_sum, &count_min, &count_max, &min_pos, &max_pos);
     rate_sum = (double)count_sum / time_delta;
@@ -1667,11 +1612,9 @@ void TrafficManager::DisplayStats(ostream & os) const {
     rate_avg = rate_sum / (double)_nodes;
     cout << "Minimum injected flit rate = " << rate_min 
 	 << " (at node " << min_pos << ")" << endl
-
 	 << "Average injected flit rate = " << rate_avg << endl
 	 << "Maximum injected flit rate = " << rate_max
 	 << " (at node " << max_pos << ")" << endl;
-
     _ComputeStats(_accepted_flits[c], &count_sum, &count_min, &count_max, &min_pos, &max_pos);
     rate_sum = (double)count_sum / time_delta;
     rate_min = (double)count_min / time_delta;
@@ -1679,7 +1622,6 @@ void TrafficManager::DisplayStats(ostream & os) const {
     rate_avg = rate_sum / (double)_nodes;
     cout << "Minimum accepted flit rate = " << rate_min 
 	 << " (at node " << min_pos << ")" << endl
-
 	 << "Average accepted flit rate = " << rate_avg << endl
 	 << "Maximum accepted flit rate = " << rate_max
 	 << " (at node " << max_pos << ")" << endl;
