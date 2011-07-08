@@ -31,14 +31,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _CREDIT_HPP_
 #define _CREDIT_HPP_
 
-#include <vector>
+#include <set>
 #include <stack>
 
 class Credit {
 
 public:
 
-  vector<int> vc;
+  set<int> vc;
 
   // these are only used by the event router
   bool head, tail;

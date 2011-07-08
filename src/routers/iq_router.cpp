@@ -37,7 +37,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdlib>
 #include <cassert>
 #include <limits>
-#include <list>
 
 #include "globals.hpp"
 #include "random_utils.hpp"
@@ -51,28 +50,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "switch_monitor.hpp"
 #include "buffer_monitor.hpp"
 
-#define FALLOFF 0.9999
-extern int roc_time_range;
-extern int router_roc_range;
-extern vector< vector <list <double> > > router_roc;
-
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
 : Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
-
-  //this is relevent only when internal speedup is greater than 1
-  _output_buffer_size = config.GetInt("output_buffer_size");
-  _remove_credit_rtt = (config.GetInt("remove_credit_rtt")==1);
-  _track_routing_commitment = (config.GetInt("track_routing_commitment")==1);
-
-  _cycle_ROC.resize(outputs,0);
-  _ROC.resize(outputs,0.0);
-  _bandwidth_commitment.resize(outputs,0);
-
-
-
-
   _vcs         = config.GetInt( "num_vcs" );
   _classes     = config.GetInt( "classes" );
 
@@ -285,24 +266,12 @@ void IQRouter::_InternalStep( )
 
   _OutputQueuing( );
 
-
   _bufferMonitor->cycle( );
   _switchMonitor->cycle( );
-
 }
 
 void IQRouter::WriteOutputs( )
 {
-
-
-  for(int i = 0; i<_outputs; i++){
-    //assert(_cycle_ROC[i]>=-2 && _cycle_ROC[i]<=2);
-    _ROC[i] = _ROC[i]*FALLOFF + (1-FALLOFF)*_cycle_ROC[i];
-    _cycle_ROC[i]= 0;
-    if((GetID()<router_roc_range) && (GetSimTime()>=roc_time_range)){
-      router_roc[GetID()][i].push_back( _ROC[i]);
-    }
-  }
   _SendFlits( );
   _SendCredits( );
 }
@@ -411,7 +380,6 @@ void IQRouter::_InputQueuing( )
 		     << ")." << endl;
 	}
 	cur_buf->Route(vc, _rf, this, f, input);
-	_UpdateCommitment(vc, f, cur_buf);
 	cur_buf->SetState(vc, VC::vc_alloc);
 	if(_speculative) {
 	  _sw_alloc_vcs.push_back(make_pair(-1, make_pair(make_pair(input, vc),
@@ -452,7 +420,6 @@ void IQRouter::_InputQueuing( )
     
     BufferState * const dest_buf = _next_buf[output];
     
-    _cycle_ROC[output]-=c->vc.size();
     dest_buf->ProcessCredit(c);
     c->Free();
     _proc_credits.pop_front();
@@ -533,7 +500,6 @@ void IQRouter::_RouteUpdate( )
     }
 
     cur_buf->Route(vc, _rf, this, f, input);
-	_UpdateCommitment(vc, f, cur_buf);
     cur_buf->SetState(vc, VC::vc_alloc);
     if(_speculative) {
       _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second, -1)));
@@ -1032,16 +998,15 @@ void IQRouter::_SWHoldUpdate( )
       
       f->hops++;
       f->vc = match_vc;
-      _cycle_ROC[output]++;
-      assert( _bandwidth_commitment[output]>0);
-      _bandwidth_commitment[output]--;
+      
       dest_buf->SendingFlit(f);
+      
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
       
       if(_out_queue_credits.count(input) == 0) {
 	_out_queue_credits.insert(make_pair(input, Credit::New()));
       }
-      _out_queue_credits.find(input)->second->vc.push_back(vc);
+      _out_queue_credits.find(input)->second->vc.insert(vc);
       
       if(cur_buf->Empty(vc)) {
 	if(f->watch) {
@@ -1086,7 +1051,6 @@ void IQRouter::_SWHoldUpdate( )
 			 << ")." << endl;
 	    }
 	    cur_buf->Route(vc, _rf, this, nf, input);
-	_UpdateCommitment(vc, nf, cur_buf);
 	    cur_buf->SetState(vc, VC::vc_alloc);
 	    if(_speculative) {
 	      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
@@ -1135,6 +1099,7 @@ void IQRouter::_SWHoldUpdate( )
 
 bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 {
+
   // When input_speedup > 1, the virtual channel buffers are interleaved to 
   // create multiple input ports to the switch. Similarily, the output ports 
   // are interleaved based on their originating input when output_speedup > 1.
@@ -1327,7 +1292,6 @@ void IQRouter::_SWAllocEvaluate( )
 	for(int dest_vc = iset->vc_start; dest_vc <= iset->vc_end; ++dest_vc) {
 	  assert((dest_vc >= 0) && (dest_vc < _vcs));
 	  
-
 	  if(dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_buffer[dest_output].size()<(size_t)(_output_buffer_size))) {
 	    elig = true;
 	    if(!_spec_check_cred || !dest_buf->IsFullFor(dest_vc)) {
@@ -1832,16 +1796,15 @@ void IQRouter::_SWAllocUpdate( )
 
       f->hops++;
       f->vc = match_vc;
-      _cycle_ROC[output]++;
-      assert( _bandwidth_commitment[output]>0);
-      _bandwidth_commitment[output]--;
+
       dest_buf->SendingFlit(f);
+
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
 
       if(_out_queue_credits.count(input) == 0) {
 	_out_queue_credits.insert(make_pair(input, Credit::New()));
       }
-      _out_queue_credits.find(input)->second->vc.push_back(vc);
+      _out_queue_credits.find(input)->second->vc.insert(vc);
 
       if(cur_buf->Empty(vc)) {
 	if(f->tail) {
@@ -1864,7 +1827,6 @@ void IQRouter::_SWAllocUpdate( )
 			 << ")." << endl;
 	    }
 	    cur_buf->Route(vc, _rf, this, nf, input);
-	_UpdateCommitment(vc, nf, cur_buf);
 	    cur_buf->SetState(vc, VC::vc_alloc);
 	    if(_speculative) {
 	      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
@@ -2002,11 +1964,9 @@ void IQRouter::_SwitchUpdate( )
 		 << "." << endl;
     }
     _output_buffer[output].push(f);
-
     //the output buffer size isn't precise due to flits in flight
     //but there is a maximum bound based on output speed up and ST traversal
     assert(_output_buffer[output].size()<=(size_t)_output_buffer_size+ _crossbar_delay* _output_speedup+( _output_speedup-1) ||_output_buffer_size==-1);
-
     _crossbar_flits.pop_front();
   }
 }
@@ -2018,7 +1978,20 @@ void IQRouter::_SwitchUpdate( )
 
 void IQRouter::_OutputQueuing( )
 {
+  for(map<int, Credit *>::const_iterator iter = _out_queue_credits.begin();
+      iter != _out_queue_credits.end();
+      ++iter) {
 
+    int const input = iter->first;
+    assert((input >= 0) && (input < _inputs));
+
+    Credit * const c = iter->second;
+    assert(c);
+    assert(!c->vc.empty());
+
+    _credit_buffer[input].push(c);
+  }
+  _out_queue_credits.clear();
 }
 
 //------------------------------------------------------------------------------
@@ -2052,22 +2025,6 @@ void IQRouter::_SendFlits( )
 
 void IQRouter::_SendCredits( )
 {
-  for(map<int, Credit *>::const_iterator iter = _out_queue_credits.begin();
-      iter != _out_queue_credits.end();
-      ++iter) {
-
-    int const input = iter->first;
-    assert((input >= 0) && (input < _inputs));
-
-    Credit * const c = iter->second;
-    assert(c);
-    assert(!c->vc.empty());
-
-    _credit_buffer[input].push(c);
-  }
-  _out_queue_credits.clear();
-
-
   for ( int input = 0; input < _inputs; ++input ) {
     if ( !_credit_buffer[input].empty( ) ) {
       Credit * const c = _credit_buffer[input].front( );
@@ -2090,10 +2047,6 @@ void IQRouter::Display( ostream & os ) const
   }
 }
 
-double IQRouter::GetROC(int out) const{
-  return _ROC[out];
-}
-
 int IQRouter::GetUsedCredit(int out, int vc_begin, int vc_end ) const
 {
   assert((out >= 0) && (out < _outputs));
@@ -2109,13 +2062,6 @@ int IQRouter::GetUsedCredit(int out, int vc_begin, int vc_end ) const
   int size = 0;
   for (int v = start; v <= end; v++)  {
     size+= dest_buf->Occupancy(v);
-  }
-  if(_remove_credit_rtt){
-    size-=_output_channels[out]->GetLatency()*2;
-    size = size<0?0:size;
-  }
-  if(_track_routing_commitment){
-    size+=_bandwidth_commitment[out];
   }
   return size;
 }
@@ -2146,10 +2092,4 @@ vector<int> IQRouter::GetBuffers(int i) const {
     }
   }
   return sizes;
-}
-void IQRouter::_UpdateCommitment(int vc, const Flit* f, Buffer* cur_buf){
-
-  assert(!cur_buf->GetRouteSet(vc)->GetSet().empty());
-  _bandwidth_commitment[ (cur_buf->GetRouteSet(vc)->GetSet().begin()->output_port)]+=10;
-
 }
