@@ -53,6 +53,14 @@ class BufferMonitor;
 
 class IQRouter : public Router {
 
+  //to be commited
+  vector<int> _bandwidth_commitment;
+  bool _remove_credit_rtt;
+  bool _track_routing_commitment;
+  vector<int> _cycle_ROC;
+  vector<double> _ROC;
+  
+
   int _vcs;
   int _classes;
 
@@ -69,6 +77,7 @@ class IQRouter : public Router {
   int _vc_alloc_delay;
   int _sw_alloc_delay;
   
+
   map<int, Flit *> _in_queue_flits;
 
   deque<pair<int, pair<Credit *, int> > > _proc_credits;
@@ -130,6 +139,9 @@ class IQRouter : public Router {
   void _SendFlits( );
   void _SendCredits( );
   
+
+
+  void _UpdateCommitment(int vc, const Flit* f, Buffer* cur_buf);
   // ----------------------------------------
   //
   //   Router Power Modellingyes
@@ -154,6 +166,7 @@ public:
 
   virtual int GetUsedCredit(int out, int vc_begin = -1, int vc_end = -1 ) const;
   virtual int GetBuffer(int i = -1) const;
+  virtual double GetROC(int out) const;
   virtual vector<int> GetBuffers(int i = -1) const;
 
   SwitchMonitor const * const GetSwitchMonitor() const {return _switchMonitor;}

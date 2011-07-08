@@ -31,7 +31,7 @@
 //
 
 
-
+hold_switch_for_packet=1;
 
 vc_buf_size = 256;
 
@@ -69,7 +69,7 @@ num_vcs     = 2;
 priority = none;
 traffic       = uniform; 
 
-injection_rate = 0.8;
+injection_rate = 1.0;
 const_flits_per_packet = 10;
 injection_rate_uses_flits=1;
 
