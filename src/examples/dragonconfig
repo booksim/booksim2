@@ -1,4 +1,4 @@
-// $Id$
+// $Id: dragonflyconfig 3811 2011-07-08 17:58:53Z qtedq $
 
 // Copyright (c) 2007-2009, Trustees of The Leland Stanford Junior University
 // All rights reserved.
@@ -63,13 +63,13 @@ sample_period  = 10000;
 
 
 
-routing_function = min;
-num_vcs     = 2;
+routing_function = ugalprog;
+num_vcs     = 4;
 
 priority = none;
-traffic       = uniform; 
+traffic       = bad_dragon; 
 
-injection_rate = 1.0;
+injection_rate = 0.4;
 const_flits_per_packet = 10;
 injection_rate_uses_flits=1;
 

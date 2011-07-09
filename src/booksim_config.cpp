@@ -42,6 +42,8 @@ BookSimConfig::BookSimConfig( )
 { 
 
   //changes to be commited
+  _int_map["ugal_version"] = 0;
+  _float_map["ROC_ratio"]= 0.99;
   _int_map["output_buffer_size"] = -1;//this is only relevent for internal speedup of greater than 1
   _int_map["dragonfly_global_latency"] = 100;
   _int_map["dragonfly_local_latency"] = 10;

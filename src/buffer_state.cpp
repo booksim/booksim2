@@ -39,16 +39,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdlib>
 #include <cassert>
 
-#include "booksim.hpp"
 #include "buffer_state.hpp"
 #include "random_utils.hpp"
-#include "globals.hpp"
 
 BufferState::BufferPolicy::BufferPolicy(Configuration const & config, BufferState * parent, const string & name)
 : Module(parent, name), _buffer_state(parent), _active_vcs(0)
 {
   _vcs = config.GetInt("num_vcs");
   _vc_occupancy.resize(_vcs, 0);
+
+  _vc_rate_of_arrival.resize(_vcs, 0);
+  _vc_arrival_last_update.resize(_vcs, 0);
+  _vc_rate_of_drain.resize(_vcs, 0);
+  _vc_drain_last_update.resize(_vcs, 0);
+
+  _ewma_ratio = config.GetFloat("ROC_ratio");
 }
 
 void BufferState::BufferPolicy::AllocVC(int vc)
@@ -73,6 +78,30 @@ void BufferState::BufferPolicy::AllocSlotFor(int vc)
 {
   assert((vc >= 0) && (vc < _vcs));
   ++_vc_occupancy[vc];
+  
+
+  int cur_time = GetSimTime();
+  
+
+  
+
+  assert(cur_time>= _vc_arrival_last_update[vc] );
+  //updated twice in the same cycle, could happen is switch speed up >1, don't mult by ewma_ratio again
+  if(cur_time== _vc_arrival_last_update[vc]){
+     _vc_rate_of_arrival[vc] +=(1.0-_ewma_ratio);
+  } else { //decay the past rate values for the amount of time lapsed
+    _vc_rate_of_arrival[vc] = pow(_ewma_ratio, cur_time-_vc_arrival_last_update[vc] )*_vc_rate_of_arrival[vc]  + (1.0-_ewma_ratio);
+  }
+  
+  _vc_arrival_last_update[vc] = cur_time;
+  
+  //updat ethe draintime, because there is now soemthing in the buffer
+  //shoudl it be set to cur_time + channel latency?
+  if(   _vc_drain_last_update[vc] ==-1){
+    _vc_drain_last_update[vc] = cur_time;
+  }
+
+
 }
 
 void BufferState::BufferPolicy::FreeSlotFor(int vc)
@@ -85,6 +114,29 @@ void BufferState::BufferPolicy::FreeSlotFor(int vc)
     err << "Buffer occupancy fell below zero for VC " << vc;
     Error(err.str());
   }
+
+
+  int cur_time = GetSimTime();
+
+  assert(  _vc_drain_last_update[vc] >=0);  
+  assert(cur_time>= _vc_drain_last_update[vc] );
+
+  //updated twice in the same cycle, could happen is switch speed up >1, don't mult by ewma_ratio again
+  if(cur_time== _vc_drain_last_update[vc]){
+     _vc_rate_of_drain[vc] +=(1.0-_ewma_ratio);
+  } else { //decay the past rate values for the amount of time lapsed
+    _vc_rate_of_drain[vc] = pow(_ewma_ratio, cur_time-_vc_drain_last_update[vc] )*_vc_rate_of_drain[vc]  + (1.0-_ewma_ratio);
+  }
+
+  _vc_drain_last_update[vc] = cur_time;
+
+
+  //if theres nothing in the vc buffer, then stop calculating draintime
+  //special -1 flag
+  if(_vc_occupancy[vc]==0){
+    _vc_drain_last_update[vc] = -1;
+  }
+
 }
 
 BufferState::BufferPolicy * BufferState::BufferPolicy::New(Configuration const & config, BufferState * parent, const string & name)

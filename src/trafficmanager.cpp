@@ -43,9 +43,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "packet_reply_info.hpp"
 
 int roc_time_range=10000;
-int router_roc_range = 3;
-vector< vector< list<double> > > router_roc;
-
+vector< vector<double > > router_roc_drain;
+vector< vector<double > > router_roc_arrival;
+const Router* r;
+int monitor_router = 0;
 
 TrafficManager * TrafficManager::New(Configuration const & config,
 				     vector<Network *> const & net)
@@ -67,15 +68,20 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _reset_time(0), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
 
-
+  r =(_net[0]->GetRouters())[monitor_router];
 
   _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
 
-  router_roc.resize(router_roc_range );
+  router_roc_drain.resize(gK+2*gK-1+gK );
   cout<<"router radix "<<gK+2*gK-1+gK<<endl;
-  for(int i = 0; i<router_roc_range ; i++){//magic
-    router_roc[i].resize(gK+2*gK-1+gK);
+  for(int i = 0; i<gK+2*gK-1+gK  ; i++){//magic
+    router_roc_drain[i].resize(roc_time_range,0.0);
+  }
+ router_roc_arrival.resize(gK+2*gK-1+gK );
+  cout<<"router radix "<<gK+2*gK-1+gK<<endl;
+  for(int i = 0; i<gK+2*gK-1+gK  ; i++){//magic
+    router_roc_arrival[i].resize(roc_time_range,0.0);
   }
   _subnets = config.GetInt("subnets");
  
@@ -1081,6 +1087,13 @@ void TrafficManager::_Step( )
   if(_active_packets_out) *_active_packets_out << active_packets << endl;
 #endif
 
+
+  if(_time<roc_time_range){
+    for(int i = 0; i<gK+2*gK-1+gK; i++){
+      router_roc_drain[i][_time] = r->GetDrain(i);
+      router_roc_arrival[i][_time] = r->GetArrival(i);
+    }
+  }
   ++_time;
   assert(_time);
   if(gTrace){
@@ -1621,17 +1634,16 @@ void TrafficManager::WriteStats(ostream & os) const {
     os << "];" << endl;
   }
 
-  for(int i = 0; i<router_roc_range ; i++){
-    for(int j = 0; j<gK+gK*2-1+gK; j++){
-      cout<< router_roc[i][j].size()<<endl;
-      os<<"router_"<<i<<"_roc("<<j+1<<",:)=[";
-      for(list<double>::iterator k = router_roc[i][j].begin(); 
-	  k!=router_roc[i][j].end();
-	  k++){
-	os<<*k<<" ";
-      }
-      os<<"];\n";
-    }
+  
+  for(int j = 0; j<gK+gK*2-1+gK; j++){
+    os<<"roc_arrival("<<j+1<<",:)=[";
+    os<<router_roc_arrival[j]<<" ";
+    os<<"];\n";
+  }
+for(int j = 0; j<gK+gK*2-1+gK; j++){
+    os<<"roc_drain("<<j+1<<",:)=[";
+    os<<router_roc_drain[j]<<" ";
+    os<<"];\n";
   }
 
 }

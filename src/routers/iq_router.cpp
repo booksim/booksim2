@@ -51,10 +51,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "switch_monitor.hpp"
 #include "buffer_monitor.hpp"
 
-#define FALLOFF 0.9999
-extern int roc_time_range;
-extern int router_roc_range;
-extern vector< vector <list <double> > > router_roc;
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
@@ -66,8 +62,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _remove_credit_rtt = (config.GetInt("remove_credit_rtt")==1);
   _track_routing_commitment = (config.GetInt("track_routing_commitment")==1);
 
-  _cycle_ROC.resize(outputs,0);
-  _ROC.resize(outputs,0.0);
   _bandwidth_commitment.resize(outputs,0);
 
 
@@ -294,15 +288,6 @@ void IQRouter::_InternalStep( )
 void IQRouter::WriteOutputs( )
 {
 
-
-  for(int i = 0; i<_outputs; i++){
-    //assert(_cycle_ROC[i]>=-2 && _cycle_ROC[i]<=2);
-    _ROC[i] = _ROC[i]*FALLOFF + (1-FALLOFF)*_cycle_ROC[i];
-    _cycle_ROC[i]= 0;
-    if((GetID()<router_roc_range) && (GetSimTime()>=roc_time_range)){
-      router_roc[GetID()][i].push_back( _ROC[i]);
-    }
-  }
   _SendFlits( );
   _SendCredits( );
 }
@@ -452,7 +437,6 @@ void IQRouter::_InputQueuing( )
     
     BufferState * const dest_buf = _next_buf[output];
     
-    _cycle_ROC[output]-=c->vc.size();
     dest_buf->ProcessCredit(c);
     c->Free();
     _proc_credits.pop_front();
@@ -1032,7 +1016,6 @@ void IQRouter::_SWHoldUpdate( )
       
       f->hops++;
       f->vc = match_vc;
-      _cycle_ROC[output]++;
       assert( _bandwidth_commitment[output]>0);
       _bandwidth_commitment[output]--;
       dest_buf->SendingFlit(f);
@@ -1832,7 +1815,6 @@ void IQRouter::_SWAllocUpdate( )
 
       f->hops++;
       f->vc = match_vc;
-      _cycle_ROC[output]++;
       assert( _bandwidth_commitment[output]>0);
       _bandwidth_commitment[output]--;
       dest_buf->SendingFlit(f);
@@ -2090,8 +2072,35 @@ void IQRouter::Display( ostream & os ) const
   }
 }
 
+double IQRouter::GetDrain(int out) const{
+
+  double rate=0.0;
+  BufferState *dest_buf = _next_buf[out];
+  for (int v = 0; v < _vcs; v++)  {
+    rate += dest_buf->DrainRate(v);
+  }
+  return rate;
+}
+
+double IQRouter::GetArrival(int out) const{
+
+  double rate=0.0;
+  BufferState *dest_buf = _next_buf[out];
+  for (int v = 0; v < _vcs; v++)  {
+    rate += dest_buf->ArrivalRate(v);
+  }
+  return rate;
+}
+
 double IQRouter::GetROC(int out) const{
-  return _ROC[out];
+
+  double rate=0.0;
+  BufferState *dest_buf = _next_buf[out];
+  for (int v = 0; v < _vcs; v++)  {
+    rate += dest_buf->ArrivalRate(v);
+    rate -= dest_buf->DrainRate(v);
+  }
+  return rate;
 }
 
 int IQRouter::GetUsedCredit(int out, int vc_begin, int vc_end ) const

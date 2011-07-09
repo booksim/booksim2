@@ -38,7 +38,10 @@
 
 int gP, gA, gG;
 
-double roc_threshold = 0.003;
+double roc_threshold = 0.000;
+int gVersion_of_ugal;
+
+#define MAX(X,Y) ((X>Y)?(X):(Y))
 
 //calculate the hop count between src and estination
 int dragonflynew_hopcnt(int src, int dest) 
@@ -176,6 +179,8 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
   assert(_global_channel_latency>0 &&
 	 _local_channel_latency>0);
   
+  gVersion_of_ugal = config.GetInt( "ugal_version" );
+ 
 
   assert(_n==1);
   // dimension
@@ -422,8 +427,6 @@ void DragonFlyNew::RegisterRoutingFunctions(){
   gRoutingFunctionMap["val_dragonflynew"] = &val_dragonflynew;
   gRoutingFunctionMap["ugal_dragonflynew"] = &ugal_dragonflynew;
   gRoutingFunctionMap["ugalprog_dragonflynew"] = &ugalprog_dragonflynew;
-  gRoutingFunctionMap["ugal_roc_dragonflynew"] = &ugal_roc_dragonflynew;
-  gRoutingFunctionMap["ugalprog_roc_dragonflynew"] = &ugalprog_roc_dragonflynew;
 }
 
 
@@ -504,8 +507,6 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
   if(debug){
     cout<<"At router "<<rID<<endl;
   }
-  int min_router_output, nonmin_router_output;
-  
   if ( in_channel < gP )   {
     //dest are in the same group
     if (dest_grp_ID == grp_ID) {
@@ -593,6 +594,8 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
   int out_vc = 0;
   int min_queue_size, min_hopcnt;
   int nonmin_queue_size, nonmin_hopcnt;
+  double min_roc;
+  double nonmin_roc;
   int intm_grp_ID;
   int intm_rID;
 
@@ -624,26 +627,56 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	min_hopcnt = dragonflynew_hopcnt(f->src, f->dest);
 	min_router_output = dragonfly_port(rID, f->src, f->dest); 
       	min_queue_size = max(r->GetUsedCredit(min_router_output), 0) ; 
-
+	min_roc = r->GetROC(min_router_output);
       
 	nonmin_hopcnt = dragonflynew_hopcnt(f->src, f->intm) +
 	  dragonflynew_hopcnt(f->intm,f->dest);
 	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
 	nonmin_queue_size = max(r->GetUsedCredit(nonmin_router_output), 0);
-
+	nonmin_roc = r->GetROC(nonmin_router_output);
 	//congestion comparison, could use hopcnt instead of 1 and 2
-	if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {	  
-	  if (debug)  cout << " MINIMAL routing " << endl;
-	  f->ph = 1;
-	  f->minimal = 1;
-	} else {
-	  f->ph = 0;
-	  f->minimal = 0;
+
+	switch(gVersion_of_ugal){
+	case 0:
+
+	  if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {	  
+	    if (debug)  cout << " MINIMAL routing " << endl;
+	    f->ph = 1;
+	    f->minimal = 1;
+	  } else {
+	    f->ph = 0;
+	    f->minimal = 0;
+	  }
+	  break;
+	case 1:
+	  
+	  if (min_roc<= 0 || min_roc <= 2*nonmin_roc) {	  
+	    if (debug)  cout << " MINIMAL routing " << endl;
+	    f->ph = 1;
+	    f->minimal = 1;
+	  } else {
+	    f->ph = 0;
+	    f->minimal = 0;
+	  }
+	  break;
+	case 2:
+	  if (min_roc<= 0 || ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold )) {	  
+	    if (debug)  cout << " MINIMAL routing " << endl;
+	    f->ph = 1;
+	    f->minimal = 1;
+	  } else {
+	    f->ph = 0;
+	    f->minimal = 0;
+	  }
+	  break;
+	default:
+	assert(false);
+	break;
 	}
       }
     }
   }
-
+  
   //transition from nonminimal phase to minimal
   if(f->ph==0){
     intm_rID= (int)(f->intm/gP);
@@ -731,13 +764,13 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	//congestion metric using queue length
 	min_hopcnt = dragonflynew_hopcnt(f->src, f->dest);
 	min_router_output = dragonfly_port(rID, f->src, f->dest); 
-      	min_queue_size = MAX(r->GetCredit(min_router_output, 0, gNumVCs-1),0) ; 
+      	min_queue_size = MAX(r->GetUsedCredit(min_router_output),0) ; 
 
       
 	nonmin_hopcnt = dragonflynew_hopcnt(f->src, f->intm) +
 	  dragonflynew_hopcnt(f->intm,f->dest);
 	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
-	nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output, 0, gNumVCs-1),0);
+	nonmin_queue_size = MAX(r->GetUsedCredit(nonmin_router_output),0);
 
 	//congestion comparison
 	if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {	  
@@ -764,13 +797,13 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
       //congestion metric using queue length
       min_hopcnt = dragonflynew_hopcnt(f->src, f->dest);
       min_router_output = dragonfly_port(rID, f->src, f->dest); 
-      min_queue_size = MAX(r->GetCredit(min_router_output, 0, gNumVCs-1) ,0); 
+      min_queue_size = MAX(r->GetUsedCredit(min_router_output) ,0); 
 
       
       nonmin_hopcnt = dragonflynew_hopcnt(f->src, f->intm) +
 	dragonflynew_hopcnt(f->intm,f->dest);
       nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
-      nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output, 0, gNumVCs-1),0);
+      nonmin_queue_size = MAX(r->GetUsedCredit(nonmin_router_output),0);
 
       //congestion comparison
       if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold) {
@@ -879,7 +912,7 @@ void ugal_roc_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
 	//congestion comparison, could use hopcnt instead of 1 and 2
 	//	if (((1 * min_roc ) <= (2.0* nonmin_roc))||min_roc<0.0) {	  
-	if (min_roc<0.0 || (min_roc < nonmin_roc+roc_threshold )) {	  
+	if (min_roc<0.0 || (min_roc < 2.0*nonmin_roc+roc_threshold )) {	  
 	  if (debug)  cout << " MINIMAL routing " << endl;
 	  f->ph = 1;
 	  f->minimal = 1;

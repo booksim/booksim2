@@ -30,10 +30,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef _BUFFER_STATE_HPP_
 #define _BUFFER_STATE_HPP_
-
+#include <math.h>
 #include <vector>
 #include <queue>
 
+
+#include "globals.hpp"
+#include "booksim.hpp"
 #include "module.hpp"
 #include "flit.hpp"
 #include "credit.hpp"
@@ -47,6 +50,11 @@ class BufferState : public Module {
     int _vcs;
     int _active_vcs;
     vector<int> _vc_occupancy;
+    vector<double> _vc_rate_of_arrival;
+    vector<int> _vc_arrival_last_update;
+    vector<double> _vc_rate_of_drain;
+    vector<int> _vc_drain_last_update;
+    double _ewma_ratio;
   public:
     BufferPolicy(Configuration const & config, BufferState * parent, 
 		 const string & name);
@@ -63,6 +71,27 @@ class BufferState : public Module {
     inline int Occupancy(int vc = 0) const {
       assert((vc >= 0) && (vc < _vcs));
       return _vc_occupancy[vc];
+    }
+    inline double ArrivalRate(int vc = 0)  {
+      assert((vc >= 0 ) && (vc < _vcs));
+      //call to get rate triggers decay update
+      int cur_time = GetSimTime();
+      if(cur_time!= _vc_arrival_last_update[vc]){
+	_vc_rate_of_arrival[vc] = pow(_ewma_ratio, cur_time-_vc_arrival_last_update[vc] )*_vc_rate_of_arrival[vc] ;
+      }
+      _vc_arrival_last_update[vc] = cur_time;
+      return _vc_rate_of_arrival[vc];
+    }
+    inline double DrainRate(int vc = 0)  {
+      assert((vc >= 0 ) && (vc < _vcs));
+      //call to get rate triggers decay update
+      int cur_time = GetSimTime();
+
+      if(cur_time!= _vc_drain_last_update[vc] && _vc_drain_last_update[vc]!=-1){
+	_vc_rate_of_drain[vc] = pow(_ewma_ratio, cur_time-_vc_drain_last_update[vc] )*_vc_rate_of_drain[vc] ;
+      }
+      _vc_drain_last_update[vc] = cur_time;
+      return _vc_rate_of_drain[vc];
     }
 
     static BufferPolicy * New(Configuration const & config, 
@@ -185,6 +214,12 @@ public:
     return  _buffer_policy->Occupancy(vc);
   }
   
+  inline double ArrivalRate(int vc = 0) const {
+    return _buffer_policy->ArrivalRate(vc);
+  }
+  inline double DrainRate(int vc = 0) const {
+    return _buffer_policy->DrainRate(vc);
+  }
   void Display( ostream & os = cout ) const;
 };
 

@@ -57,9 +57,6 @@ class IQRouter : public Router {
   vector<int> _bandwidth_commitment;
   bool _remove_credit_rtt;
   bool _track_routing_commitment;
-  vector<int> _cycle_ROC;
-  vector<double> _ROC;
-  
 
   int _vcs;
   int _classes;
@@ -92,7 +89,6 @@ class IQRouter : public Router {
   map<int, Credit *> _out_queue_credits;
 
   vector<Buffer *> _buf;
-  vector<BufferState *> _next_buf;
 
   Allocator *_vc_allocator;
   Allocator *_sw_allocator;
@@ -153,6 +149,8 @@ class IQRouter : public Router {
   
 public:
 
+  vector<BufferState *> _next_buf;
+
   IQRouter( Configuration const & config,
 	    Module *parent, string const & name, int id,
 	    int inputs, int outputs );
@@ -167,6 +165,8 @@ public:
   virtual int GetUsedCredit(int out, int vc_begin = -1, int vc_end = -1 ) const;
   virtual int GetBuffer(int i = -1) const;
   virtual double GetROC(int out) const;
+  virtual double GetDrain(int out) const;
+  virtual double GetArrival(int out) const;
   virtual vector<int> GetBuffers(int i = -1) const;
 
   SwitchMonitor const * const GetSwitchMonitor() const {return _switchMonitor;}
