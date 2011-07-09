@@ -63,13 +63,15 @@ sample_period  = 10000;
 
 
 
-routing_function = ugalprog;
-num_vcs     = 4;
+routing_function = ugal_roc;
+ugal_version = 1;
+
+num_vcs     = 3;
 
 priority = none;
-traffic       = bad_dragon; 
+traffic       = uniform; 
 
-injection_rate = 0.4;
+injection_rate = 1.0;
 const_flits_per_packet = 10;
 injection_rate_uses_flits=1;
 
