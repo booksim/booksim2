@@ -54,7 +54,9 @@ class BufferMonitor;
 class IQRouter : public Router {
 
   //to be commited
-  vector<int> _bandwidth_commitment;
+  int _packet_size;
+  vector<int> _current_bandwidth_commitment;
+  vector<int> _next_bandwidth_commitment;
   bool _remove_credit_rtt;
   bool _track_routing_commitment;
 

@@ -62,9 +62,10 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _remove_credit_rtt = (config.GetInt("remove_credit_rtt")==1);
   _track_routing_commitment = (config.GetInt("track_routing_commitment")==1);
 
-  _bandwidth_commitment.resize(outputs,0);
+  _current_bandwidth_commitment.resize(outputs,0);
+  _next_bandwidth_commitment.resize(outputs,0);
 
-
+  _packet_size = config.GetInt("const_flits_per_packet");
 
 
   _vcs         = config.GetInt( "num_vcs" );
@@ -219,6 +220,12 @@ IQRouter::~IQRouter( )
   
 void IQRouter::ReadInputs( )
 {
+ for(int i =0; i<_outputs; ++i){
+   _current_bandwidth_commitment[i] = 
+     _next_bandwidth_commitment[i];
+ }
+ 
+
   bool have_flits = _ReceiveFlits( );
   bool have_credits = _ReceiveCredits( );
   _active = _active || have_flits || have_credits;
@@ -1016,8 +1023,8 @@ void IQRouter::_SWHoldUpdate( )
       
       f->hops++;
       f->vc = match_vc;
-      assert( _bandwidth_commitment[output]>0);
-      _bandwidth_commitment[output]--;
+      assert( _next_bandwidth_commitment[output]>0);
+      _next_bandwidth_commitment[output]--;
       dest_buf->SendingFlit(f);
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
       
@@ -1815,8 +1822,8 @@ void IQRouter::_SWAllocUpdate( )
 
       f->hops++;
       f->vc = match_vc;
-      assert( _bandwidth_commitment[output]>0);
-      _bandwidth_commitment[output]--;
+      assert( _next_bandwidth_commitment[output]>0);
+      _next_bandwidth_commitment[output]--;
       dest_buf->SendingFlit(f);
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
 
@@ -2124,7 +2131,7 @@ int IQRouter::GetUsedCredit(int out, int vc_begin, int vc_end ) const
     size = size<0?0:size;
   }
   if(_track_routing_commitment){
-    size+=_bandwidth_commitment[out];
+    size+=_current_bandwidth_commitment[out];
   }
   return size;
 }
@@ -2159,6 +2166,6 @@ vector<int> IQRouter::GetBuffers(int i) const {
 void IQRouter::_UpdateCommitment(int vc, const Flit* f, Buffer* cur_buf){
 
   assert(!cur_buf->GetRouteSet(vc)->GetSet().empty());
-  _bandwidth_commitment[ (cur_buf->GetRouteSet(vc)->GetSet().begin()->output_port)]+=10;
+  _next_bandwidth_commitment[ (cur_buf->GetRouteSet(vc)->GetSet().begin()->output_port)]+=_packet_size;
 
 }
