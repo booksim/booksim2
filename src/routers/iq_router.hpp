@@ -166,9 +166,9 @@ public:
 
   virtual int GetUsedCredit(int out, int vc_begin = -1, int vc_end = -1 ) const;
   virtual int GetBuffer(int i = -1) const;
-  virtual double GetROC(int out) const;
-  virtual double GetDrain(int out) const;
-  virtual double GetArrival(int out) const;
+  virtual double GetROC(int out, int vc_begin = -1, int vc_end = -1) const;
+  virtual double GetDrain(int out, int vc_begin = -1, int vc_end = -1) const;
+  virtual double GetArrival(int out, int vc_begin = -1, int vc_end = -1) const;
   virtual vector<int> GetBuffers(int i = -1) const;
 
   SwitchMonitor const * const GetSwitchMonitor() const {return _switchMonitor;}

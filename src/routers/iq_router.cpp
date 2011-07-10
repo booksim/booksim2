@@ -2079,31 +2079,57 @@ void IQRouter::Display( ostream & os ) const
   }
 }
 
-double IQRouter::GetDrain(int out) const{
+double IQRouter::GetDrain(int out, int vc_begin, int vc_end) const{
+assert((out >= 0) && (out < _outputs));
+  assert(vc_begin < _vcs);
+  assert(vc_end < _vcs);
+  assert(vc_end >= vc_begin);
+
+  BufferState const * const dest_buf = _next_buf[out];
+  
+  int const start = (vc_begin >= 0) ? vc_begin : 0;
+  int const end = (vc_begin >= 0) ? vc_end : (_vcs - 1);
 
   double rate=0.0;
-  BufferState *dest_buf = _next_buf[out];
-  for (int v = 0; v < _vcs; v++)  {
+  for (int v = start; v < end; v++)  {
     rate += dest_buf->DrainRate(v);
   }
   return rate;
 }
 
-double IQRouter::GetArrival(int out) const{
+double IQRouter::GetArrival(int out,  int vc_begin, int vc_end) const{
+  assert((out >= 0) && (out < _outputs));
+  assert(vc_begin < _vcs);
+  assert(vc_end < _vcs);
+  assert(vc_end >= vc_begin);
+
+  BufferState const * const dest_buf = _next_buf[out];
+  
+  int const start = (vc_begin >= 0) ? vc_begin : 0;
+  int const end = (vc_begin >= 0) ? vc_end : (_vcs - 1);
 
   double rate=0.0;
-  BufferState *dest_buf = _next_buf[out];
-  for (int v = 0; v < _vcs; v++)  {
+  for (int v = start; v < end; v++)  {
     rate += dest_buf->ArrivalRate(v);
   }
   return rate;
 }
 
-double IQRouter::GetROC(int out) const{
+double IQRouter::GetROC(int out, int vc_begin, int vc_end) const{
+
+assert((out >= 0) && (out < _outputs));
+  assert(vc_begin < _vcs);
+  assert(vc_end < _vcs);
+  assert(vc_end >= vc_begin);
+
+  BufferState const * const dest_buf = _next_buf[out];
+  
+  int const start = (vc_begin >= 0) ? vc_begin : 0;
+  int const end = (vc_begin >= 0) ? vc_end : (_vcs - 1);
 
   double rate=0.0;
-  BufferState *dest_buf = _next_buf[out];
-  for (int v = 0; v < _vcs; v++)  {
+
+  for (int v = start; v < end; v++)  {
     rate += dest_buf->ArrivalRate(v);
     rate -= dest_buf->DrainRate(v);
   }
@@ -2126,11 +2152,14 @@ int IQRouter::GetUsedCredit(int out, int vc_begin, int vc_end ) const
   for (int v = start; v <= end; v++)  {
     size+= dest_buf->Occupancy(v);
   }
-  if(_remove_credit_rtt){
+  
+  //these two special features can only be activated when you are requesting
+  //credits for the entire port not for specific virtual channel
+  if(_remove_credit_rtt && vc_begin== -1 && vc_end==-1){
     size-=_output_channels[out]->GetLatency()*2;
     size = size<0?0:size;
   }
-  if(_track_routing_commitment){
+  if(_track_routing_commitment && vc_begin== -1 && vc_end==-1){
     size+=_current_bandwidth_commitment[out];
   }
   return size;

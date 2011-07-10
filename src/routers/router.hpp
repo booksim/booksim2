@@ -123,9 +123,9 @@ public:
 
   virtual int GetUsedCredit(int out, int vc_begin = -1, int vc_end = -1 ) const = 0;
   virtual int GetBuffer(int i = -1) const = 0;
-  virtual double GetROC(int out) const {return 0.0;}
-  virtual double GetDrain(int out) const {return 0.0;}
-  virtual double GetArrival(int out) const {return 0.0;}
+  virtual double GetROC(int out, int vc_begin = -1, int vc_end = -1) const {return 0.0;}
+  virtual double GetDrain(int out, int vc_begin = -1, int vc_end = -1) const {return 0.0;}
+  virtual double GetArrival(int out, int vc_begin = -1, int vc_end = -1) const {return 0.0;}
 
 
 

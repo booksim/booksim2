@@ -623,18 +623,26 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	f->ph = 1;
 	f->minimal = 1;
       } else {
-	//congestion metrics using queue length, obtained by GetUsedCredit()
+
 	min_hopcnt = dragonflynew_hopcnt(f->src, f->dest);
 	min_router_output = dragonfly_port(rID, f->src, f->dest); 
-      	min_queue_size = max(r->GetUsedCredit(min_router_output), 0) ; 
-	min_roc = r->GetROC(min_router_output);
-      
 	nonmin_hopcnt = dragonflynew_hopcnt(f->src, f->intm) +
 	  dragonflynew_hopcnt(f->intm,f->dest);
 	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
-	nonmin_queue_size = max(r->GetUsedCredit(nonmin_router_output), 0);
-	nonmin_roc = r->GetROC(nonmin_router_output);
-	//congestion comparison, could use hopcnt instead of 1 and 2
+
+	//min and non-min output port could be identical, need to distinquish them
+	if(nonmin_router_output == min_router_output){
+	  min_queue_size = MAX(r->GetUsedCredit(min_router_output,1,1),0) ; 
+	  min_roc = r->GetROC(min_router_output,1,1);
+	  nonmin_queue_size = MAX(r->GetUsedCredit(nonmin_router_output,0,0),0);
+	  nonmin_roc = r->GetROC(nonmin_router_output,0,0);	  
+	} else {	  
+	  min_queue_size = MAX(r->GetUsedCredit(min_router_output),0) ; 
+	  min_roc = r->GetROC(min_router_output);
+	  nonmin_queue_size = MAX(r->GetUsedCredit(nonmin_router_output),0);
+	  nonmin_roc = r->GetROC(nonmin_router_output);
+	}
+
 
 	switch(gVersion_of_ugal){
 	case 0:
@@ -763,17 +771,26 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	f->ph = 1;
 	f->minimal = 1;
       } else {
-	//congestion metric using queue length
+
 	min_hopcnt = dragonflynew_hopcnt(f->src, f->dest);
 	min_router_output = dragonfly_port(rID, f->src, f->dest); 
-      	min_queue_size = MAX(r->GetUsedCredit(min_router_output),0) ; 
-	min_roc = r->GetROC(min_router_output);
-      
 	nonmin_hopcnt = dragonflynew_hopcnt(f->src, f->intm) +
 	  dragonflynew_hopcnt(f->intm,f->dest);
 	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
-	nonmin_queue_size = MAX(r->GetUsedCredit(nonmin_router_output),0);
-	nonmin_roc = r->GetROC(nonmin_router_output);
+
+	//min and non-min output port could be identical, need to distinquish them
+	if(nonmin_router_output == min_router_output){
+	  min_queue_size = MAX(r->GetUsedCredit(min_router_output,1,1),0) ; 
+	  min_roc = r->GetROC(min_router_output,1,1);
+	  nonmin_queue_size = MAX(r->GetUsedCredit(nonmin_router_output,0,0),0);
+	  nonmin_roc = r->GetROC(nonmin_router_output,0,0);	  
+	} else {	  
+	  min_queue_size = MAX(r->GetUsedCredit(min_router_output),0) ; 
+	  min_roc = r->GetROC(min_router_output);
+	  nonmin_queue_size = MAX(r->GetUsedCredit(nonmin_router_output),0);
+	  nonmin_roc = r->GetROC(nonmin_router_output);
+	}
+
 
 	switch(gVersion_of_ugal){
 	case 0:
