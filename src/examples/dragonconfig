@@ -63,7 +63,7 @@ sample_period  = 10000;
 
 
 
-routing_function = ugal_roc;
+routing_function = ugal;
 ugal_version = 1;
 
 num_vcs     = 3;

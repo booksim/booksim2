@@ -2088,10 +2088,10 @@ assert((out >= 0) && (out < _outputs));
   BufferState const * const dest_buf = _next_buf[out];
   
   int const start = (vc_begin >= 0) ? vc_begin : 0;
-  int const end = (vc_begin >= 0) ? vc_end : (_vcs - 1);
+  int const end = (vc_begin >= 0) ? vc_end : (_vcs-1);
 
   double rate=0.0;
-  for (int v = start; v < end; v++)  {
+  for (int v = start; v <= end; v++)  {
     rate += dest_buf->DrainRate(v);
   }
   return rate;
@@ -2106,10 +2106,10 @@ double IQRouter::GetArrival(int out,  int vc_begin, int vc_end) const{
   BufferState const * const dest_buf = _next_buf[out];
   
   int const start = (vc_begin >= 0) ? vc_begin : 0;
-  int const end = (vc_begin >= 0) ? vc_end : (_vcs - 1);
+  int const end = (vc_begin >= 0) ? vc_end : (_vcs-1);
 
   double rate=0.0;
-  for (int v = start; v < end; v++)  {
+  for (int v = start; v <= end; v++)  {
     rate += dest_buf->ArrivalRate(v);
   }
   return rate;
@@ -2125,11 +2125,11 @@ assert((out >= 0) && (out < _outputs));
   BufferState const * const dest_buf = _next_buf[out];
   
   int const start = (vc_begin >= 0) ? vc_begin : 0;
-  int const end = (vc_begin >= 0) ? vc_end : (_vcs - 1);
+  int const end = (vc_begin >= 0) ? vc_end : (_vcs-1 );
 
   double rate=0.0;
 
-  for (int v = start; v < end; v++)  {
+  for (int v = start; v <= end; v++)  {
     rate += dest_buf->ArrivalRate(v);
     rate -= dest_buf->DrainRate(v);
   }

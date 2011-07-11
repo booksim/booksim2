@@ -46,7 +46,7 @@ int roc_time_range=10000;
 vector< vector<double > > router_roc_drain;
 vector< vector<double > > router_roc_arrival;
 const Router* r;
-int monitor_router = 0;
+int monitor_router = 1;
 
 TrafficManager * TrafficManager::New(Configuration const & config,
 				     vector<Network *> const & net)
