@@ -339,7 +339,8 @@ static vector<pair<int, int> > _hs_elems;
 set<int> hs_lookup;
 bool hs_send_all = false;
 set<int> hs_senders;
-
+int bystander_sender;
+int bystander_receiver;
 
 int background_uniform(int source, int total_nodes){
   int e = RandomInt(total_nodes-1);
@@ -373,6 +374,17 @@ int noself_hotspot(int source, int total_nodes){
     return background_uniform( source,  total_nodes);
   } else {
     return hotspot( source,  total_nodes);
+  }
+}
+
+//this is a specialized traffic for congestion. A few hotspot sends
+//and a bystander flow tries to utilize the same congested channel
+int traffic_congestion_test(int source, int total_nodes){
+  assert(source== bystander_sender || hs_senders.count(source)!=0);
+  if(source == bystander_sender){
+    return bystander_receiver;
+  }else {
+    return *hs_lookup.begin();
   }
 }
 
@@ -438,6 +450,14 @@ void InitializeTrafficMap( const Configuration & config )
 
   gTrafficFunctionMap["combined"] = &combined;
   gTrafficFunctionMap["background_uniform"] = &background_uniform;
+
+
+  gTrafficFunctionMap["congestion_test"] = &traffic_congestion_test;
+
+ 
+  bystander_sender = config.GetInt("bystander_sender");
+  bystander_receiver = config.GetInt("bystander_receiver");
+  
 
   vector<int> hotspot_nodes = config.GetIntArray("hotspot_nodes");
   vector<int> hotspot_rates = config.GetIntArray("hotspot_rates");

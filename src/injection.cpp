@@ -96,6 +96,21 @@ bool on_off( int source, double rate )
   return false;
 }
 
+map<int, double> congestion_rate_lookup;
+extern int bystander_sender;
+
+//special injection function fo congestion test, the rate argumetn does nothing
+//rate is overloaded onthe "hotspot"rate option
+bool injection_congestion_test( int source, double rate ){
+  if(congestion_rate_lookup.count(source)!= 0){
+    return bernoulli( source, congestion_rate_lookup[source] );
+  } else if(source == bystander_sender){
+    return bernoulli( source, rate );
+  }else {
+    return false;
+  }
+}
+
 //=============================================================
 
 void InitializeInjectionMap( const Configuration & config )
@@ -108,5 +123,22 @@ void InitializeInjectionMap( const Configuration & config )
 
   gInjectionProcessMap["bernoulli"] = &bernoulli;
   gInjectionProcessMap["on_off"]    = &on_off;
+  gInjectionProcessMap["congestion_test"]    = &injection_congestion_test;
 
+  vector<int> hotspot_senders = config.GetIntArray("hotspot_senders");
+  vector<double> hotspot_rates = config.GetFloatArray("hotspot_rates");
+
+  if(config.GetStr("injection_process") == "congestion_test"){
+    assert(hotspot_senders.size() == hotspot_rates.size());
+  
+    congestion_rate_lookup.clear();
+    int _flow_size = config.GetInt("flow_size");
+    int  _packet_size = config.GetInt("const_flits_per_packet");
+    for(size_t i = 0; i<hotspot_rates.size(); i++){
+      double rate =  hotspot_rates[i];
+      rate /= (double)_packet_size;
+      rate /=_flow_size;
+      congestion_rate_lookup.insert(pair<int, double>(hotspot_senders[i],rate));
+    }
+  }
 }

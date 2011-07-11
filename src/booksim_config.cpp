@@ -40,6 +40,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 BookSimConfig::BookSimConfig( )
 { 
+  _int_map["bystander_sender"] = 0;
+  _int_map["bystander_receiver"] = 0;
+  
+
   _int_map["flow_merge"] = 1;
   _int_map["flow_buffer_capacity"] = 128;
   _int_map["flow_buffers"] = 8;
