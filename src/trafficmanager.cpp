@@ -166,6 +166,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _flow_buffer_capacity = config.GetInt("flow_buffer_capacity");
   _max_flow_buffers = config.GetInt("flow_buffers");
   _last_receive_flow_buffer.resize(_nodes,0);
+  _last_vcalloc_flow_buffer.resize(_nodes,-1);
   _last_send_flow_buffer.resize(_nodes,-1);
   _last_normal_vc.resize(_nodes,0);
   _last_spec_vc.resize(_nodes,0);
@@ -1293,6 +1294,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 
   
   flow* fl = new flow;
+  fl->cl = cl;
   fl->flid = _cur_flid++;
 
   int sequence_number =0;
@@ -1472,19 +1474,16 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 void TrafficManager::_Inject(){
 
   for ( int input = 0; input < _nodes; ++input ) {
-    for ( int c = 0; c < _classes; ++c ) {
-
-
-      //if no currently active flow is ready to receive and there is flow buffer available
+    for ( int c = 0; c < _classes; ++c ) {      
       if (_pending_flow[input]==NULL){
 	bool generated = false;
 	if ( !_empty_network ) {
 	  while( !generated && ( _qtime[input][c] <= _time ) ) {
 	    int stype = _IssuePacket( input, c );
 	    if ( stype != 0 ) { //generate a packet
-		_GeneratePacket( input, stype, c, 
-				 _include_queuing==1 ? 
-				 _qtime[input][c] : _time );	   
+	      _GeneratePacket( input, stype, c, 
+			       _include_queuing==1 ? 
+			       _qtime[input][c] : _time );	   
 	      generated = true;
 	    }
 	    //this is not a request packet
@@ -1501,17 +1500,12 @@ void TrafficManager::_Inject(){
 	}
       }
 
-      //
-      /*
-	
-       */
+ 
       if(_pending_flow[input]!=NULL){
 	int flow_buffer_taken = 0;
-	int flow_buffer_ready = 0;
 	for(int i = 0; i<_max_flow_buffers; i++){
 	  if(_flow_buffer[input][i] != NULL){
 	    flow_buffer_taken++;
-	    flow_buffer_ready+= (_flow_buffer[input][i] ->receive_ready())?1:0;
 	    //insert the flow into a flowbuffer with the same destination
 	    if(FLOW_DEST_MERGE && _flow_buffer[input][i]->fl->dest == _pending_flow[input]->dest){
 	      gStatFlowMerged[input]++;
@@ -1521,14 +1515,11 @@ void TrafficManager::_Inject(){
 	    }
 	  }
 	}
-	gStatReadyFlowBuffers->AddSample(flow_buffer_ready);
 	gStatActiveFlowBuffers->AddSample(flow_buffer_taken);
-	
 	//flow could have been taken care of above
 	//otherwise find an opportutnity to insert
 	if(_pending_flow[input]!=NULL &&
-	   (flow_buffer_ready==0 && flow_buffer_taken<_max_flow_buffers)) {
-	  
+	   (flow_buffer_taken<_max_flow_buffers)) {	  
 	  int empty_flow = 0;
 	  for(empty_flow= 0; empty_flow<_max_flow_buffers; empty_flow++){
 	    if(_flow_buffer[input][empty_flow] == NULL){
@@ -1553,6 +1544,8 @@ void TrafficManager::_Inject(){
     }
   }
 }
+
+
 
 void TrafficManager::_Step( )
 {
@@ -1616,7 +1609,7 @@ void TrafficManager::_Step( )
   vector<int> injected_flits(_subnets*_nodes);
 
 
-  //from node to flow buffer, 1 flit per cycle
+  //from node to flow buffer, 1 flit per flow per cycle, this should not be a problem since you can inject a maximum of 1 flit percycle total
   for(int source = 0; source < _nodes; ++source) {
     for(map<int, pair<int, vector<int> > >::reverse_iterator iter = _class_prio_map.rbegin();
 	iter != _class_prio_map.rend();
@@ -1640,7 +1633,7 @@ void TrafficManager::_Step( )
 	    ++injected_flits[0*_nodes+source]; 
 	    iter->second.first = offset;	  
 	    _last_receive_flow_buffer[source] = flb_index;
-	    break;//this break nearly no effect on performance
+	    //break;//this break nearly no effect on performance
 	  }
 	}
       }
@@ -1653,7 +1646,8 @@ void TrafficManager::_Step( )
     BufferState * const dest_buf = _buf_states[source][0];
     FlowBuffer* ready_flow_buffer = NULL;
 
-    //ack nack grant
+    //ack nack grant these gets inserted into the router in parallel with any data packets
+    //each cycle a special packet and a data packet can be insertedf
     if(gReservation || gECN){
       gStatResponseBuffer->AddSample((int)_response_packets[source].size());
       if( !_response_packets[source].empty() ){
@@ -1676,7 +1670,9 @@ void TrafficManager::_Step( )
 
 
     //asssgin vc to flow buffers that are ready but no vc assignemnt
-    for(int fb = 0; fb<_max_flow_buffers; fb++){
+    int fb;
+    for(int fb_index = 0; fb_index<_max_flow_buffers; fb_index++){
+      fb = (_last_vcalloc_flow_buffer[source]+fb_index+1)%_max_flow_buffers;
       if(_flow_buffer[source][fb]!=NULL &&   
 	 _flow_buffer[source][fb]->_vc==-1){
 	//For flowbuffer in normal mode
@@ -1731,6 +1727,7 @@ void TrafficManager::_Step( )
 	}
       }
     }
+    _last_vcalloc_flow_buffer[source]=fb;
 
     //TODO reservatin packet use vc0, and can be sent even if flow buffer vc =-1
     //first check the last flow buffer served

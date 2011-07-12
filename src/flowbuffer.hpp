@@ -29,6 +29,7 @@ struct flow{
   int create_time;
   queue<Flit*> data;
   int dest;
+  int cl;
 };
 
 class FlowBuffer{
