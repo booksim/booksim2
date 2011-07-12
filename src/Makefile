@@ -39,7 +39,7 @@ QUANT  = /usr/bin/quantify
 DEFINE =
 DEFINE_TEST = -DUSE_GUI
 INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
-CPPFLAGS = -Wall -O3  -ggdb $(INCPATH) $(DEFINE) 
+CPPFLAGS = -Wall -03  -ggdb $(INCPATH) $(DEFINE) 
 LFLAGS =  
 
 

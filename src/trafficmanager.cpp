@@ -165,7 +165,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _flow_buffer_capacity = config.GetInt("flow_buffer_capacity");
   _max_flow_buffers = config.GetInt("flow_buffers");
-  _last_receive_flow_buffer.resize(_nodes,0);
   _last_vcalloc_flow_buffer.resize(_nodes,-1);
   _last_send_flow_buffer.resize(_nodes,-1);
   _last_normal_vc.resize(_nodes,0);
@@ -849,10 +848,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	gStatAckEffective[dest]+= receive_flow_buffer->ack(f->sn)?1:0;
 	int flow_done_status = receive_flow_buffer->done();
 	if(flow_done_status!=FLOW_DONE_NOT){
-	  for(size_t i = 0; i<gStatFlowStats.size()-1; i++){
-	    gStatFlowStats[i]+=receive_flow_buffer->_stats[i];
+	  if(receive_flow_buffer->fl->cl==0){
+	    for(size_t i = 0; i<gStatFlowStats.size()-1; i++){
+	      gStatFlowStats[i]+=receive_flow_buffer->_stats[i];
+	    }
+	    gStatFlowStats[gStatFlowStats.size()-1]++;
 	  }
-	  gStatFlowStats[gStatFlowStats.size()-1]++;
 	  gStatFlowSenderLatency->AddSample(_time-receive_flow_buffer->fl->create_time);
 	  gStatFastRetransmit->AddSample(receive_flow_buffer->_fast_retransmit);
 	  if(flow_done_status==FLOW_DONE_DONE){
@@ -1623,16 +1624,14 @@ void TrafficManager::_Step( )
 	//find a flow buffer thats ready to go
 	FlowBuffer* ready_flow_buffer=NULL;
 	for(int i = 0; i<_max_flow_buffers; i++){
-	  int flb_index = (_last_receive_flow_buffer[source]+i)%_max_flow_buffers;
+	  int flb_index = i;
 	  if(_flow_buffer[source][flb_index]!=NULL &&
 	     _flow_buffer[source][flb_index]->receive_ready()){
 	    ready_flow_buffer = _flow_buffer[source][flb_index];
-
 	    //tranfer from flow to flow buffer is happening internally
 	    ready_flow_buffer->receive();
 	    ++injected_flits[0*_nodes+source]; 
 	    iter->second.first = offset;	  
-	    _last_receive_flow_buffer[source] = flb_index;
 	    //break;//this break nearly no effect on performance
 	  }
 	}
@@ -1825,11 +1824,13 @@ void TrafficManager::_Step( )
 	_sent_flits[0][source]->AddSample(1);
 	int flow_done_status = ready_flow_buffer->done();
 	if(flow_done_status !=FLOW_DONE_NOT){
-	  for(size_t i = 0; i<gStatFlowStats.size()-1; i++){
-	    gStatFlowStats[i]+=ready_flow_buffer->_stats[i];
+	  if(ready_flow_buffer->fl->cl==0){
+	    for(size_t i = 0; i<gStatFlowStats.size()-1; i++){
+	      gStatFlowStats[i]+=ready_flow_buffer->_stats[i];
+	    }
+	    
+	    gStatFlowStats[gStatFlowStats.size()-1]++;
 	  }
-	 
-	  gStatFlowStats[gStatFlowStats.size()-1]++;
 	  gStatFlowSenderLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
 	  gStatFastRetransmit->AddSample(ready_flow_buffer->_fast_retransmit);
 	  _last_send_flow_buffer[source] =-1;

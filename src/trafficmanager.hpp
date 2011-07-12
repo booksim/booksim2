@@ -112,7 +112,6 @@ protected:
   vector<vector<vector<int> > > _last_interm;
 
   vector<int> _last_vcalloc_flow_buffer;
-  vector<int> _last_receive_flow_buffer;
   vector<int> _last_send_flow_buffer;
   vector<int> _last_normal_vc;
   vector<int> _last_spec_vc;
