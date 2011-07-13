@@ -134,14 +134,14 @@ void Tree4::_BuildNet( const Configuration& config )
 					    _inject_cred[_k*pos+port]);
       
 
-      _inject[_k*pos+port]->SetLatency( 0 );
-      _inject_cred[_k*pos+port]->SetLatency( 0 );
+      _inject[_k*pos+port]->SetLatency( 1 );
+      _inject_cred[_k*pos+port]->SetLatency( 1 );
 
       _Router( _n-1, pos)->AddOutputChannel( _eject[_k*pos+port],
 					     _eject_cred[_k*pos+port]);
 
-      _eject[_k*pos+port]->SetLatency( 0 );
-      _eject_cred[_k*pos+port]->SetLatency( 0 );
+      _eject[_k*pos+port]->SetLatency( 1 );
+      _eject_cred[_k*pos+port]->SetLatency( 1 );
 
     }
   }
@@ -163,8 +163,8 @@ void Tree4::_BuildNet( const Configuration& config )
       //_chan[c]->SetLatency( L );
       //_chan_cred[c]->SetLatency( L );
 
-      _chan[c]->SetLatency( 0 );
-      _chan_cred[c]->SetLatency( 0 );
+      _chan[c]->SetLatency( 1 );
+      _chan_cred[c]->SetLatency( 1 );
 
       c++;
 
@@ -173,8 +173,8 @@ void Tree4::_BuildNet( const Configuration& config )
       
       //_chan[c]->SetLatency( L );
       //_chan_cred[c]->SetLatency( L );
-      _chan[c]->SetLatency( 0 );
-      _chan_cred[c]->SetLatency( 0 );
+      _chan[c]->SetLatency( 1 );
+      _chan_cred[c]->SetLatency( 1 );
 
       c++;
     }
@@ -194,8 +194,8 @@ void Tree4::_BuildNet( const Configuration& config )
 
       //      _chan[c]->SetLatency( L );
       //_chan_cred[c]->SetLatency( L );
-      _chan[c]->SetLatency( 0 );
-      _chan_cred[c]->SetLatency( 0 );
+      _chan[c]->SetLatency( 1 );
+      _chan_cred[c]->SetLatency( 1 );
 
       c++;
 
@@ -204,8 +204,8 @@ void Tree4::_BuildNet( const Configuration& config )
 
       //  _chan[c]->SetLatency( L );
       // _chan_cred[c]->SetLatency( L );
-      _chan[c]->SetLatency( 0 );
-      _chan_cred[c]->SetLatency( 0 );
+      _chan[c]->SetLatency( 1 );
+      _chan_cred[c]->SetLatency( 1 );
       c++;
     }
   }
