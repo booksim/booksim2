@@ -136,7 +136,7 @@ void KNCube::_BuildNet( const Configuration &config )
       } else {
 	_chan[left_input]->SetLatency( 1 );
 	_chan_cred[right_input]->SetLatency( 1 );
-	_chan_cred[left_input]->SetLatency( 1);
+	_chan_cred[left_input]->SetLatency( 1 );
 	_chan[right_input]->SetLatency( 1 );
       }
       //get the output channel number
@@ -154,10 +154,10 @@ void KNCube::_BuildNet( const Configuration &config )
 	_chan_cred[right_output]->SetLatency( latency );
 	_chan_cred[left_output]->SetLatency( latency );
       } else {
-	_chan[right_output]->SetLatency(1);
-	_chan[left_output]->SetLatency(1 );
-	_chan_cred[right_output]->SetLatency(1 );
-	_chan_cred[left_output]->SetLatency( 1);
+	_chan[right_output]->SetLatency( 1 );
+	_chan[left_output]->SetLatency( 1 );
+	_chan_cred[right_output]->SetLatency( 1 );
+	_chan_cred[left_output]->SetLatency( 1 );
 
       }
     }
