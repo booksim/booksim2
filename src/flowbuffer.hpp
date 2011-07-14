@@ -23,6 +23,7 @@
 struct flow{
   int flid;
   int vc;
+  //reserved time
   int rtime;
   int flow_size;
   bool collect;
@@ -36,6 +37,10 @@ class FlowBuffer{
 public:
   FlowBuffer(int src, int id, int size, int mode, flow* fl);
   ~FlowBuffer();
+  //activate directly behaves as the constructor
+  void Activate(int src, int id, int size, int mode, flow* fl);
+  void Deactivate();
+  //init is called by activate and reset and only modifed some state for a new flow
   void Init( flow* fl);
   void Reset();
 
@@ -56,6 +61,14 @@ public:
 
   void update_transition();
   void update_stats();
+  void update_ird();
+
+  bool active(){
+    return _active;
+  }
+
+
+  bool _active;
 
   map<int, int> _flit_status;
   map<int, Flit*> _flit_buffer;
@@ -64,6 +77,7 @@ public:
   Flit* _reservation_flit;
   int _capacity;			       
   int _src;
+  int _dest;
   int _id;
   int _mode;
 

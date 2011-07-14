@@ -880,8 +880,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	  gStatFastRetransmit->AddSample(receive_flow_buffer->_fast_retransmit);
 	  if(flow_done_status==FLOW_DONE_DONE){
 	    gStatIRD[dest]->AddSample(_flow_buffer[dest][f->flbid]->_max_ird);
-	    delete _flow_buffer[dest][f->flbid];
-	    _flow_buffer[dest][f->flbid]=NULL;
+	    _flow_buffer[dest][f->flbid]->Deactivate();
 	    
 	  } else {
 	    gStatIRD[dest]->AddSample(_flow_buffer[dest][f->flbid]->_max_ird);
@@ -896,7 +895,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       receive_flow_buffer = _flow_buffer[dest][f->flbid];
       gStatECN[dest]->AddSample(f->becn);
       if( receive_flow_buffer!=NULL &&
-	  receive_flow_buffer->fl->dest == f->src){
+	  receive_flow_buffer->_dest == f->src){
 	gStatAckEffective[dest]+= (f->becn)?1:0;
 	receive_flow_buffer->ack(f->becn);
       }
@@ -1527,10 +1526,11 @@ void TrafficManager::_Inject(){
       if(_pending_flow[input]!=NULL){
 	int flow_buffer_taken = 0;
 	for(int i = 0; i<_max_flow_buffers; i++){
-	  if(_flow_buffer[input][i] != NULL){
+	  if(_flow_buffer[input][i] != NULL && 
+	     _flow_buffer[input][i]->active()){
 	    flow_buffer_taken++;
 	    //insert the flow into a flowbuffer with the same destination
-	    if(FLOW_DEST_MERGE && _flow_buffer[input][i]->fl->dest == _pending_flow[input]->dest){
+	    if(FLOW_DEST_MERGE && _flow_buffer[input][i]->_dest == _pending_flow[input]->dest){
 		gStatFlowMerged[input]++;
 		_flow_buffer[input][i]->_flow_queue.push(_pending_flow[input]);
 		_pending_flow[input]=NULL;
@@ -1542,24 +1542,32 @@ void TrafficManager::_Inject(){
 	gStatActiveFlowBuffers->AddSample(flow_buffer_taken);
 	//flow could have been taken care of above
 	//otherwise find an opportutnity to insert
-	if(
-	   _pending_flow[input]!=NULL &&
+	if( _pending_flow[input]!=NULL &&
 	   (flow_buffer_taken<_max_flow_buffers)) {	  
 	  int empty_flow = 0;
+	  int null_buffer = -1;
 	  for(empty_flow= 0; empty_flow<_max_flow_buffers; empty_flow++){
-	    if(_flow_buffer[input][empty_flow] == NULL){
+	    if(_flow_buffer[input][empty_flow]==NULL && null_buffer==-1){
+	      null_buffer = empty_flow;
+	    }else if(_flow_buffer[input][empty_flow]!=NULL && !_flow_buffer[input][empty_flow]->active()){
 	      break;
 	    }
 	  }
-	  assert(empty_flow!=_max_flow_buffers);
+	  if(empty_flow==_max_flow_buffers){
+	    assert(null_buffer!=-1);
+	    empty_flow=null_buffer;
+	  }
 	  int mode = NORMAL_MODE; 
 	  if(gReservation)
 	    mode = RES_MODE;
 	  else if(gECN)
 	    mode = ECN_MODE;
-	  
-	  _flow_buffer[input][empty_flow] = 
-	    new FlowBuffer(input, empty_flow, _flow_buffer_capacity, mode, _pending_flow[input]);
+	  if(_flow_buffer[input][empty_flow]!=NULL){
+	    _flow_buffer[input][empty_flow]->Activate(input, empty_flow, _flow_buffer_capacity, mode, _pending_flow[input]);
+	  } else {
+	    _flow_buffer[input][empty_flow] = 
+	      new FlowBuffer(input, empty_flow, _flow_buffer_capacity, mode, _pending_flow[input]);
+	  }
 	  if(_pending_flow[input]->flid == WATCH_FLID){
 	    _flow_buffer[input][empty_flow]->_watch = true;
 	  }
@@ -1578,12 +1586,17 @@ void TrafficManager::_Step( )
   for ( int input = 0; input < _nodes; ++input ) {
     for(int i = 0; i<_max_flow_buffers; i++){
       if(_flow_buffer[input][i] != NULL){
-	_flow_buffer[input][i]->update_transition();
-	_flow_buffer[input][i]->update_stats();
+	if(_flow_buffer[input][i]->active()){
+	  _flow_buffer[input][i]->update_transition();
+	  _flow_buffer[input][i]->update_stats();
+	}
+	if(gECN){
+	  _flow_buffer[input][i]->update_ird();
+	}
       }
     }
   }
-
+  
   bool flits_in_flight = false;
   for(int c = 0; c < _classes; ++c) {
     flits_in_flight |= !_total_in_flight_flits[c].empty();
@@ -1651,6 +1664,7 @@ void TrafficManager::_Step( )
 	for(int i = 0; i<_max_flow_buffers; i++){
 	  int flb_index = i;
 	  if(_flow_buffer[source][flb_index]!=NULL &&
+	     _flow_buffer[source][flb_index]->active() &&
 	     _flow_buffer[source][flb_index]->receive_ready()){
 	    ready_flow_buffer = _flow_buffer[source][flb_index];
 	    //tranfer from flow to flow buffer is happening internally
@@ -1660,6 +1674,7 @@ void TrafficManager::_Step( )
 	    //break;//this break nearly no effect on performance
 	  }
 	  if(_flow_buffer[source][flb_index]!=NULL &&
+	     _flow_buffer[source][flb_index]->active() &&
 	     (_flow_buffer[source][flb_index]->send_norm_ready() ||
 	      _flow_buffer[source][flb_index]->send_spec_ready())){
 	    node_ready = true;
@@ -1703,6 +1718,7 @@ void TrafficManager::_Step( )
       for(int fb_index = 0; fb_index<_max_flow_buffers; fb_index++){
 	fb = (_last_reservation_flow_buffer[source]+fb_index+1)%_max_flow_buffers;
 	if(_flow_buffer[source][fb]!=NULL &&
+	   _flow_buffer[source][fb]->active() && 
 	   _flow_buffer[source][fb]->send_spec_ready()){
 	  Flit* f = _flow_buffer[source][fb]->front();
 	  if(f->res_type== RES_TYPE_RES){
@@ -1733,6 +1749,7 @@ void TrafficManager::_Step( )
     for(int fb_index = 0; fb_index<_max_flow_buffers; fb_index++){
       fb = (_last_vcalloc_flow_buffer[source]+fb_index+1)%_max_flow_buffers;
       if(_flow_buffer[source][fb]!=NULL &&   
+	 _flow_buffer[source][fb]->active() &&   
 	 _flow_buffer[source][fb]->_vc==-1){
 	//For flowbuffer in normal mode
 	//when a flow buffer transition from spec to normal its vc is reset
@@ -1794,6 +1811,7 @@ void TrafficManager::_Step( )
     int flb_index = _last_send_flow_buffer[source];
     if(flb_index!=-1 && //last buffer exists
        _flow_buffer[source][flb_index]!=NULL  && //last buffer wasn't already freed
+       _flow_buffer[source][flb_index]->active()  && //last buffer wasn't already freed
        _flow_buffer[source][flb_index]->eligible()&& //has a vc, ready to send
        dest_buf->HasCreditFor(_flow_buffer[source][flb_index]->_vc) ){ //has credit
       
@@ -1806,6 +1824,7 @@ void TrafficManager::_Step( )
       _last_send_flow_buffer[source]=-1;
       for(int fb = 0; fb<_max_flow_buffers; fb++){
 	if(_flow_buffer[source][fb]!=NULL && 
+	   _flow_buffer[source][fb]->active() && 
 	   _flow_buffer[source][fb]->eligible()){
 	  active++;
 	  if((dest_buf->IsAvailableFor(_flow_buffer[source][fb]->_vc) || //head flit an vc avaialble
@@ -1831,7 +1850,8 @@ void TrafficManager::_Step( )
 
       //found an eligible flow buffer
       if(flb_index!=-1){
-	ready_flow_buffer =  _flow_buffer[source][flb_index]; 
+	ready_flow_buffer =  _flow_buffer[source][flb_index];
+	assert(ready_flow_buffer->active());
       }
     }
    
@@ -1897,8 +1917,8 @@ void TrafficManager::_Step( )
 	  _last_send_flow_buffer[source] =-1;
 	  if(flow_done_status==FLOW_DONE_DONE){
 	    gStatIRD[source]->AddSample(_flow_buffer[source][f->flbid]->_max_ird);
-	    delete _flow_buffer[source][f->flbid];
-	    _flow_buffer[source][f->flbid]=NULL;
+	    
+	    _flow_buffer[source][f->flbid]->Deactivate();
 	  } else {
 	    gStatIRD[source]->AddSample(_flow_buffer[source][f->flbid]->_max_ird);
 	    ready_flow_buffer->Reset();

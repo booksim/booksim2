@@ -6,24 +6,36 @@ extern bool ECN_TIMER_ONLY;
 extern int IRD_SCALING_FACTOR;
 
 FlowBuffer::FlowBuffer(int src, int id, int size, int mode, flow* f){
+  Activate(src,id, size, mode,f);
+}
+
+void FlowBuffer::Activate(int src, int id, int size, int mode, flow* f){
+ //ECN stuff need to be initilized once not every time or else benefits are lost
+  if(_mode == ECN_MODE && _dest!=f->dest){
+    _IRD = 0; 
+    _IRD_timer = 0;
+    _IRD_wait = 0;
+  }
+
+  _active= true;
   _src = src;
   _id = id;
   _capacity = size;
   _mode = mode;
 
-  //ECN stuff need to be initilized once not every time or else benefits are lost
-  if(_mode == ECN_MODE){
-    _IRD = 0; 
-    _IRD_timer = 0;
-    _IRD_wait = 0;
-  }
-  Init(f);
-  
+  Init(f);  
+}
+void FlowBuffer::Deactivate(){
+  _active= false;
+  assert(_flow_queue.empty());
+  _flit_status.clear();
+  _flit_buffer.clear();
 }
 
 void FlowBuffer::Init( flow* f){
   fl = f;
 
+  _dest = f->dest;
   _vc = -1;
   _last_sn = -1;
   _tail_received = true;
@@ -136,6 +148,9 @@ void FlowBuffer::update_transition(){
   default: 
     break;
   }
+}
+
+void FlowBuffer::update_ird(){
   
   //update ECN fields
   //_IRD_wait inc whenever _tail_sent is asserted
@@ -151,6 +166,7 @@ void FlowBuffer::update_transition(){
     }
   }
 }
+
 
 //when ack return res mode
 //1. packet could have already been sent normaly
@@ -184,8 +200,8 @@ bool FlowBuffer::ack(int sn){
     //if BECN is off
     if(sn ==0){
       if(!ECN_TIMER_ONLY){
-	// _IRD = _IRD>0?_IRD-1:0;
-	// _IRD_timer = 0;
+	_IRD = _IRD>0?_IRD-1:0;
+        _IRD_timer = 0;
       }
     }else {
       //IRD increase ECN on

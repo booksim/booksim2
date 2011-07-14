@@ -129,13 +129,19 @@ void InitializeInjectionMap( const Configuration & config )
   vector<double> hotspot_rates = config.GetFloatArray("hotspot_rates");
 
   if(config.GetStr("injection_process") == "congestion_test"){
-    assert(hotspot_senders.size() == hotspot_rates.size());
+    //    assert(hotspot_senders.size() == hotspot_rates.size());
   
     congestion_rate_lookup.clear();
     int _flow_size = config.GetInt("flow_size");
     int  _packet_size = config.GetInt("const_flits_per_packet");
-    for(size_t i = 0; i<hotspot_rates.size(); i++){
-      double rate =  hotspot_rates[i];
+    for(size_t i = 0; i<hotspot_senders.size(); i++){
+      double rate = 0.0;
+      if(i<hotspot_rates.size()){
+	rate =  hotspot_rates[i];
+      } else {
+	rate =  hotspot_rates.back();
+      }
+      
       if(config.GetInt("injection_rate_uses_flits")) {
 	rate /= (double)_packet_size;
 	rate /=_flow_size;
