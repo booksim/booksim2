@@ -40,6 +40,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 BookSimConfig::BookSimConfig( )
 { 
+  _float_map["reservation_overhead_factor"] = 1.05;
+  _int_map["fast_reservation_transmit"] = 0;
+
   _int_map["bystander_sender"] = 0;
   _int_map["bystander_receiver"] = 0;
   
@@ -59,7 +62,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["ird_reset_timer"] = 10;
   _int_map["ecn_timer_only"] = 1;
   _int_map["ecn_buffer_threshold"] = 4;
-  _float_map["ecn_congestion_threshold"] = 0.4;
+  _int_map["ecn_congestion_threshold"] = 0.4;
   _int_map["ird_scaling_factor"] = 1;
 
 
@@ -111,7 +114,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["output_delay"] = 0;
   _int_map["credit_delay"] = 0;
   _float_map["internal_speedup"] = 1.0;
-
+  _int_map["output_buffer_size"] = -1;
   //==== Input-queued ======================================
 
   // Control of virtual channel speculation

@@ -62,7 +62,7 @@ void FlowBuffer::Init( flow* f){
 
   //stats variables
 
-  _max_ird = 0;
+  _max_ird = _IRD;
   _fast_retransmit = 0;
   _no_retransmit_loss = 0;
   _spec_outstanding = 0;
@@ -140,7 +140,7 @@ void FlowBuffer::update_transition(){
   //update ECN fields
   //_IRD_wait inc whenever _tail_sent is asserted
   //_IRD_wait reset when _tail_sent is reasserted
-  if(_tail_sent){
+  if(_tail_sent && _IRD>0){
     _IRD_wait++;
   }
   if(_mode == ECN_MODE && _IRD >0){
@@ -184,12 +184,13 @@ bool FlowBuffer::ack(int sn){
     //if BECN is off
     if(sn ==0){
       if(!ECN_TIMER_ONLY){
-	_IRD = _IRD>0?_IRD-1:0;
-	_IRD_timer = 0;
+	// _IRD = _IRD>0?_IRD-1:0;
+	// _IRD_timer = 0;
       }
     }else {
       //IRD increase ECN on
       _IRD++;
+      _IRD_timer = 0;
       if(_IRD>_max_ird)
 	_max_ird = _IRD;
     }
@@ -414,7 +415,8 @@ Flit* FlowBuffer::send(){
   }
 
   if(f){
-    assert(_vc!=-1);
+    
+    assert(f->res_type == RES_TYPE_RES || _vc!=-1);
     if(_watch){
       cout<<"flow "<<fl->flid
 	  <<" sent flit sn "<<f->sn
@@ -469,7 +471,7 @@ bool FlowBuffer::send_norm_ready(){
       return true;
     } else if(_mode==ECN_MODE){
       //flit not ready unless IRD_wait is 0
-      if(_IRD_wait >_IRD*IRD_SCALING_FACTOR){
+      if(_IRD_wait >=_IRD*IRD_SCALING_FACTOR){
 	if(_received == fl->flow_size && _ready==0){
 	  assert(_guarantee_sent!=fl->flow_size);
 	  return FAST_RETRANSMIT_ENABLE;

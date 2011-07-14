@@ -49,8 +49,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //  $Id$
 // ----------------------------------------------------------------------
 FlitChannel::FlitChannel(Module * parent, string const & name, int classes)
-: Channel<Flit>(parent, name), _routerSource(-1), _routerSourcePort(-1), 
-   _routerSink(-1), _routerSinkPort(-1), _idle(0), _classes(classes) {
+  : Channel<Flit>(parent, name), _routerSource(-1), _routerSourcePort(-1), 
+    _routerSink(-1), _routerSinkPort(-1),_cycles(0) , _active_sum(0), _classes(classes), _last_update(0){
   _active.resize(classes, 0);
 }
 
@@ -68,9 +68,9 @@ void FlitChannel::Send(Flit * f) {
 
   if(f) {
     ++_active[f->cl];
-  } else {
-    ++_idle;
+    ++_active_sum;
   }
+  UpdateUtilization();
   Channel<Flit>::Send(f);
 }
 
@@ -92,4 +92,10 @@ void FlitChannel::WriteOutputs() {
 	       << "Completed channel traversal for flit " << _output->id
 	       << "." << endl;
   }
+}
+
+void  FlitChannel::UpdateUtilization(){
+  int now =  GetSimTime();
+  _cycles+=now-_last_update;
+  _last_update=now;
 }

@@ -56,6 +56,7 @@ class Router ;
 class FlitChannel : public Channel<Flit> {
 public:
   FlitChannel(Module * parent, string const & name, int classes);
+  void UpdateUtilization();
 
   void SetSource(Router const * const router, int port) ;
   inline int const & GetSource() const {
@@ -73,6 +74,13 @@ public:
   }
   inline vector<int> const & GetActivity() const {
     return _active;
+  }
+  inline float GetUtilization() {
+    UpdateUtilization();
+    if(_cycles==0)
+      return 0.0;
+    else 
+      return float(_active_sum)/_cycles;
   }
   // Send flit 
   virtual void Send(Flit * flit);
@@ -95,8 +103,10 @@ private:
 
   // Statistics for Activity Factors
   vector<int> _active;
-  int _idle;
+  int _cycles;
+  int _active_sum;
   int _classes;
+  int _last_update;
 };
 
 #endif

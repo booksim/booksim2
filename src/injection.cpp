@@ -136,8 +136,10 @@ void InitializeInjectionMap( const Configuration & config )
     int  _packet_size = config.GetInt("const_flits_per_packet");
     for(size_t i = 0; i<hotspot_rates.size(); i++){
       double rate =  hotspot_rates[i];
-      rate /= (double)_packet_size;
-      rate /=_flow_size;
+      if(config.GetInt("injection_rate_uses_flits")) {
+	rate /= (double)_packet_size;
+	rate /=_flow_size;
+      }
       congestion_rate_lookup.insert(pair<int, double>(hotspot_senders[i],rate));
     }
   }

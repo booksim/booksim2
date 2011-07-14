@@ -79,7 +79,8 @@ public:
 
   map<int, bool> _port_congest_check;
   vector<double> _port_congestness;
-  vector<int> _vc_request_congestness; 
+  vector<int> _vc_request_buffer_num; 
+  vector<int> _vc_request_buffer_sum; 
   vector<bool>_vc_ecn;
 
   //stats

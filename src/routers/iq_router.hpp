@@ -94,6 +94,7 @@ class IQRouter : public Router {
   tRoutingFunction   _rf;
 
   vector<queue<Flit *> > _output_buffer;
+  int _output_buffer_size;
 
   vector<queue<Credit *> > _credit_buffer;
 

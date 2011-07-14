@@ -111,6 +111,7 @@ protected:
   vector<vector<vector<int> > > _last_vc;
   vector<vector<vector<int> > > _last_interm;
 
+  vector<int> _last_reservation_flow_buffer;
   vector<int> _last_vcalloc_flow_buffer;
   vector<int> _last_send_flow_buffer;
   vector<int> _last_normal_vc;
@@ -165,6 +166,7 @@ protected:
   //receiver
 
   vector<map<int, FlowROB*> > _rob; 
+  vector<list<Flit *> > _reservation_packets;
   vector<list<Flit *> > _response_packets;
   vector<int> _reservation_schedule;
 

@@ -102,6 +102,7 @@ class BufferState : public Module {
   vector<int> _last_id;
   vector<int> _last_pid;
 
+
 public:
 
   BufferState( const Configuration& config, 

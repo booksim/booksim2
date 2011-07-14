@@ -58,7 +58,7 @@ extern map<int, vector<int> > gDropStats;
 
 extern bool  VC_ALLOC_DROP;
 extern int ECN_BUFFER_THRESHOLD;
-extern double ECN_CONGEST_THRESHOLD;
+extern int ECN_CONGEST_THRESHOLD;
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
@@ -74,7 +74,8 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _speculative = (config.GetInt("speculative") > 0);
 
   _port_congestness.resize(_vcs*outputs,0.0);
-  _vc_request_congestness.resize(_vcs*outputs,0);
+  _vc_request_buffer_sum.resize(_vcs*outputs,0);
+  _vc_request_buffer_num.resize(_vcs*outputs,0);
   _vc_ecn.resize(_vcs*outputs,false);
 
   _vc_congested.resize(_vcs*outputs,0);
@@ -182,6 +183,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     _sw_rr_offset[i] = i % _input_speedup;
   
   // Output queues
+  _output_buffer_size = config.GetInt("output_buffer_size");
   _output_buffer.resize(_outputs); 
   _credit_buffer.resize(_inputs); 
 
@@ -290,22 +292,6 @@ void IQRouter::_InternalStep( )
   if(!_crossbar_flits.empty()) {
     _SwitchUpdate( );
     activity = activity || !_crossbar_flits.empty();
-  }
-
-  if(gECN){
-    //    cout<<_port_congest_check.size()<<endl;
-    for(map<int, bool>::iterator i = _port_congest_check.begin(); 
-	i!=_port_congest_check.end(); 
-	i++){
-      _port_congestness[i->first]=
-	0.99*_port_congestness[i->first]+
-	0.01*(i->second?1:0);
-    }
-    _port_congest_check.clear();
-
-    _vc_request_congestness.clear();
-    _vc_request_congestness.resize(_vcs*_outputs,0);
-
   }
 
 
@@ -685,10 +671,7 @@ void IQRouter::_VCAllocEvaluate( )
 	// reflected in "in_priority". On the output side, if multiple VCs are 
 	// requesting the same output VC, the priority of VCs is based on the 
 	// actual packet priorities, which is reflected in "out_priority".
-	
-	if(gECN){
-	  _vc_request_congestness[ out_port*_vcs + out_vc]+=  cur_buf->GetSize(vc);
-	}
+
 	if(dest_buf->IsAvailableFor(out_vc)) {
 	  if(f->watch){
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -759,16 +742,7 @@ void IQRouter::_VCAllocEvaluate( )
       Flit const * const f = cur_buf->FrontFlit(vc);
       assert(f);
       assert(f->head);
-      if(gECN){
-	if(_vc_request_congestness[output_and_vc]>ECN_BUFFER_THRESHOLD){
-	  _vc_ecn[output_and_vc] = true;
-	  _vc_congested[output_and_vc]++;
-	  _vc_congested_sum[output_and_vc]+=_vc_request_congestness[output_and_vc];
-	} else {
-	  _vc_ecn[output_and_vc] = false;
-	}
-	_vc_request_congestness[output_and_vc] = 0;
-      }
+      
 
 
       if(f->watch) {
@@ -821,7 +795,8 @@ void IQRouter::_VCAllocEvaluate( )
 	Flit const * const f = cur_buf->FrontFlit(vc);
 	assert(f);
 	assert(f->head);
-	
+
+
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  Discarding previously generated grant for VC " << vc
@@ -937,7 +912,7 @@ void IQRouter::_VCAllocUpdate( )
       assert(dest_buf->IsAvailableFor(match_vc));
       
       dest_buf->TakeBuffer(match_vc);
-	
+
       cur_buf->SetOutput(vc, match_output, match_vc);
       cur_buf->SetState(vc, VC::active);
       if(!_speculative) {
@@ -1008,15 +983,7 @@ void IQRouter::_SWHoldEvaluate( )
     
     BufferState const * const dest_buf = _next_buf[match_port];
     
-    if(gECN){
-      if(_port_congest_check.count(expanded_output*_vcs+match_vc)==0){
-	if(dest_buf->HasCreditFor(match_vc)){
-	  _port_congest_check.insert(pair<int, bool>(expanded_output*_vcs+match_vc, false));
-	}else {
-	  _port_congest_check.insert(pair<int, bool>(expanded_output*_vcs+match_vc, true));
-	}
-      }
-    }
+
     _input_request[expanded_input]++;
 
     if(!dest_buf->HasCreditFor(match_vc)) {
@@ -1080,7 +1047,7 @@ void IQRouter::_SWHoldUpdate( )
     
     int const & expanded_output = item.second.second;
     
-    if(expanded_output >= 0) {
+    if(expanded_output >= 0  && ( _output_buffer_size==-1 || _output_buffer[expanded_output].size()<size_t(_output_buffer_size))) {
       
       assert(_switch_hold_in[expanded_input] == expanded_output);
       assert(_switch_hold_out[expanded_output] == expanded_input);
@@ -1351,16 +1318,8 @@ void IQRouter::_SWAllocEvaluate( )
       assert((dest_vc >= 0) && (dest_vc < _vcs));
       
       BufferState const * const dest_buf = _next_buf[dest_output];
-      if(gECN){
-	if(_port_congest_check.count(dest_output*_vcs+dest_vc)==0){
-	  if(dest_buf->HasCreditFor(dest_vc)){
-	    _port_congest_check.insert(pair<int, bool>(dest_output*_vcs+dest_vc, false));
-	  }else {
-	    _port_congest_check.insert(pair<int, bool>(dest_output*_vcs+dest_vc, true));
-	  }
-	}
-      }
-      if(!dest_buf->HasCreditFor(dest_vc)) {
+  
+      if(!dest_buf->HasCreditFor(dest_vc) || ( _output_buffer_size!=-1  && _output_buffer[dest_output].size()>=(size_t)(_output_buffer_size))) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  VC " << dest_vc 
@@ -1410,7 +1369,7 @@ void IQRouter::_SWAllocEvaluate( )
 	for(int dest_vc = iset->vc_start; dest_vc <= iset->vc_end; ++dest_vc) {
 	  assert((dest_vc >= 0) && (dest_vc < _vcs));
 	  
-	  if(dest_buf->IsAvailableFor(dest_vc)) {
+	  if(dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_buffer[dest_output].size()<(size_t)(_output_buffer_size))) {
 	    do_request = true;
 	    break;
 	  }
@@ -1832,6 +1791,8 @@ void IQRouter::_SWAllocUpdate( )
 		   << "." << endl;
       }
 
+
+ 
       cur_buf->RemoveFlit(vc);
       --_stored_flits[input];
       if(f->tail) --_active_packets[input];
@@ -1841,15 +1802,9 @@ void IQRouter::_SWAllocUpdate( )
       f->vc = match_vc;
 
       dest_buf->SendingFlit(f);
-      //ECN
-      if(gECN && f->head){
-	if(_vc_ecn[expanded_output*_vcs+match_vc]&&
-	   _port_congestness[expanded_output*_vcs+match_vc]<ECN_CONGEST_THRESHOLD){
-	  _ECN_activated[expanded_output*_vcs+match_vc]++;
-	   f->fecn = true;
-	}
-      }
+ 
       _input_grant[expanded_input]++;
+
 
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
 
@@ -1967,7 +1922,7 @@ void IQRouter::_SwitchUpdate( )
     }
     assert(GetSimTime() == time);
 
-    Flit * const & f = item.second.first;
+    Flit *  f = item.second.first;
     assert(f);
 
     int const & expanded_input = item.second.second.first;
@@ -1995,6 +1950,7 @@ void IQRouter::_SwitchUpdate( )
 		 << "." << endl;
     }
     _output_buffer[output].push(f);
+
 
     _crossbar_flits.pop_front();
   }
@@ -2033,6 +1989,18 @@ void IQRouter::_SendFlits( )
     if ( !_output_buffer[output].empty( ) ) {
       Flit * const f = _output_buffer[output].front( );
       assert(f);
+
+
+    BufferState * const dest_buf = _next_buf[output];
+     if(gECN && f->head && !f->fecn ){	
+       if(_output_buffer[output].size() >=(size_t)ECN_CONGEST_THRESHOLD &&
+	   dest_buf->Size(f->vc) < ECN_BUFFER_THRESHOLD){
+	  _ECN_activated[output*_vcs+f->vc]++;
+	  f->fecn= true; 
+	}
+      }
+
+
       _output_buffer[output].pop( );
       ++_sent_flits[output];
       if(f->watch)
