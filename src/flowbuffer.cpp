@@ -190,7 +190,6 @@ bool FlowBuffer::ack(int sn){
     }else {
       //IRD increase ECN on
       _IRD++;
-      _IRD_timer = 0;
       if(_IRD>_max_ird)
 	_max_ird = _IRD;
     }
