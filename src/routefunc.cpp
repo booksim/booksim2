@@ -602,30 +602,32 @@ void dor_next_torus( int cur, int dest, int in_port,
 	*out_port = 2*dim_left + 1; // Left
 	dir = 1;
       }
-
-      if ( balance ) {
-	// Cray's "Partition" allocation
-	// Two datelines: one between k-1 and 0 which forces VC 1
-	//                another between ((k-1)/2) and ((k-1)/2 + 1) which forces VC 0
-	//                otherwise any VC can be used
-	
-	if ( ( ( dir == 0 ) && ( cur > dest ) ) ||
-	     ( ( dir == 1 ) && ( cur < dest ) ) ) {
-	  *partition = 1;
-	} else if ( ( ( dir == 0 ) && ( cur <= (gK-1)/2 ) && ( dest >  (gK-1)/2 ) ) ||
-	       ( ( dir == 1 ) && ( cur >  (gK-1)/2 ) && ( dest <= (gK-1)/2 ) ) ) {
-	  *partition = 0;
-	} else {
-	  *partition = RandomInt( 1 ); // use either VC set
-	}
-      } else {
-      // Deterministic, fixed dateline between nodes k-1 and 0
       
-	if ( ( ( dir == 0 ) && ( cur > dest ) ) ||
-	     ( ( dir == 1 ) && ( dest < cur ) ) ) {
-	  *partition = 1;
+      if ( partition ) {
+	if ( balance ) {
+	  // Cray's "Partition" allocation
+	  // Two datelines: one between k-1 and 0 which forces VC 1
+	  //                another between ((k-1)/2) and ((k-1)/2 + 1) which 
+	  //                forces VC 0 otherwise any VC can be used
+	  
+	  if ( ( ( dir == 0 ) && ( cur > dest ) ) ||
+	       ( ( dir == 1 ) && ( cur < dest ) ) ) {
+	    *partition = 1;
+	  } else if ( ( ( dir == 0 ) && ( cur <= (gK-1)/2 ) && ( dest >  (gK-1)/2 ) ) ||
+		      ( ( dir == 1 ) && ( cur >  (gK-1)/2 ) && ( dest <= (gK-1)/2 ) ) ) {
+	    *partition = 0;
+	  } else {
+	    *partition = RandomInt( 1 ); // use either VC set
+	  }
 	} else {
-	  *partition = 0;
+	  // Deterministic, fixed dateline between nodes k-1 and 0
+	  
+	  if ( ( ( dir == 0 ) && ( cur > dest ) ) ||
+	       ( ( dir == 1 ) && ( dest < cur ) ) ) {
+	    *partition = 1;
+	  } else {
+	    *partition = 0;
+	  }
 	}
       }
     } else {
@@ -1306,40 +1308,45 @@ void valiant_torus( const Router *r, const Flit *f, int in_channel, OutputSet *o
 
   } else {
 
+    int phase;
     if ( in_channel == 2*gN ) {
-      f->ph   = 0;  // Phase 0
+      phase   = 0;  // Phase 0
       f->intm = RandomInt( gNodes - 1 );
+    } else {
+      phase = f->ph / 2;
     }
 
-    if ( ( f->ph == 0 ) && ( r->GetID( ) == f->intm ) ) {
-      f->ph = 1; // Go to phase 1
+    if ( ( phase == 0 ) && ( r->GetID( ) == f->intm ) ) {
+      phase = 1; // Go to phase 1
       in_channel = 2*gN; // ensures correct vc selection at the beginning of phase 2
     }
   
-    dor_next_torus( r->GetID( ), (f->ph == 0) ? f->intm : f->dest, in_channel,
-		    &out_port, &f->ring_par, false );
+    int ring_part;
+    dor_next_torus( r->GetID( ), (phase == 0) ? f->intm : f->dest, in_channel,
+		    &out_port, &ring_part, false );
+
+    f->ph = 2 * phase + ring_part;
 
     // at the destination router, we don't need to separate VCs by phase, etc.
     if(r->GetID() != f->dest) {
 
-      //each class must have at least 4 vcs assigned or else xy_yx + min+ nonmin will deadlock
       int const ring_available_vcs = (vcEnd - vcBegin + 1) / 2;
       assert(ring_available_vcs > 0);
 
-      if(f->ring_par == 0) {
+      if(ring_part == 0) {
 	vcEnd -= ring_available_vcs;
       } else {
-	assert(f->ring_par == 1);
+	assert(ring_part == 1);
 	vcBegin += ring_available_vcs;
       }
 
       int const ph_available_vcs = ring_available_vcs / 2;
       assert(ph_available_vcs > 0);
 
-      if(f->ph == 0) {
+      if(phase == 0) {
 	vcEnd -= ph_available_vcs;
       } else {
-	assert(f->ph == 1);
+	assert(phase == 1);
 	vcBegin += ph_available_vcs;
       }
     }
@@ -1391,9 +1398,12 @@ void valiant_ni_torus( const Router *r, const Flit *f, int in_channel,
 
   } else {
 
+    int phase;
     if ( in_channel == 2*gN ) {
-      f->ph   = 0;  // Phase 0
+      phase   = 0;  // Phase 0
       f->intm = RandomInt( gNodes - 1 );
+    } else {
+      phase = f->ph / 2;
     }
 
     if ( ( f->ph == 0 ) && ( r->GetID( ) == f->intm ) ) {
@@ -1401,32 +1411,33 @@ void valiant_ni_torus( const Router *r, const Flit *f, int in_channel,
       in_channel = 2*gN; // ensures correct vc selection at the beginning of phase 2
     }
   
+    int ring_part;
     dor_next_torus( r->GetID( ), (f->ph == 0) ? f->intm : f->dest, in_channel,
-		    &out_port, &f->ring_par, false );
+		    &out_port, &ring_part, false );
 
-    // at the destination, we don't need to separate VCs by phase, etc.
+    f->ph = 2 * phase + ring_part;
+
+    // at the destination router, we don't need to separate VCs by phase, etc.
     if(r->GetID() != f->dest) {
 
-      // why does this need to be split by phase, but romm_ni_mesh does not?
-      int const available_vcs = (vcEnd - vcBegin + 1) / 4;
-      assert(available_vcs > 0);
+      int const ring_available_vcs = (vcEnd - vcBegin + 1) / 2;
+      assert(ring_available_vcs > 0);
 
-      if ( f->ph == 0 ) { // In phase 0
-	if ( f->ring_par == 0 ) {
-	  vcEnd -= 3 * available_vcs;
-	} else {
-	  assert(f->ring_par == 1);
-	  vcBegin += available_vcs;
-	  vcEnd -= 2 * available_vcs;
-	}
-      } else { // In phase 1
-	assert(f->ph == 1);
-	if ( f->ring_par == 0 ) {
-	  vcBegin += 2 * available_vcs;
-	  vcEnd -= available_vcs;
-	} else {
-	  vcBegin += 3 * available_vcs;
-	}
+      if(ring_part == 0) {
+	vcEnd -= ring_available_vcs;
+      } else {
+	assert(ring_part == 1);
+	vcBegin += ring_available_vcs;
+      }
+
+      int const ph_available_vcs = ring_available_vcs / 2;
+      assert(ph_available_vcs > 0);
+
+      if(phase == 0) {
+	vcEnd -= ph_available_vcs;
+      } else {
+	assert(phase == 1);
+	vcBegin += ph_available_vcs;
       }
     }
 
@@ -1482,7 +1493,7 @@ void dim_order_torus( const Router *r, const Flit *f, int in_channel,
     int dest = f->dest;
 
     dor_next_torus( cur, dest, in_channel,
-		    &out_port, &f->ring_par, false );
+		    &out_port, &f->ph, false );
 
 
     // at the destination router, we don't need to separate VCs by ring partition
@@ -1491,7 +1502,7 @@ void dim_order_torus( const Router *r, const Flit *f, int in_channel,
       int const available_vcs = (vcEnd - vcBegin + 1) / 2;
       assert(available_vcs > 0);
 
-      if ( f->ring_par == 0 ) {
+      if ( f->ph == 0 ) {
 	vcEnd -= available_vcs;
       } else {
 	vcBegin += available_vcs;
@@ -1550,7 +1561,7 @@ void dim_order_ni_torus( const Router *r, const Flit *f, int in_channel,
     int dest = f->dest;
 
     dor_next_torus( cur, dest, in_channel,
-		    &out_port, &f->ring_par, false );
+		    &out_port, NULL, false );
 
     // at the destination router, we don't need to separate VCs by destination
     if(cur != dest) {
@@ -1615,7 +1626,7 @@ void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel,
     int dest = f->dest;
 
     dor_next_torus( cur, dest, in_channel,
-		    &out_port, &f->ring_par, true );
+		    &out_port, &f->ph, true );
 
     // at the destination router, we don't need to separate VCs by ring partition
     if(cur != dest) {
@@ -1623,10 +1634,10 @@ void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel,
       int const available_vcs = (vcEnd - vcBegin + 1) / 2;
       assert(available_vcs > 0);
 
-      if ( f->ring_par == 0 ) {
+      if ( f->ph == 0 ) {
 	vcEnd -= available_vcs;
       } else {
-	assert(f->ring_par == 1);
+	assert(f->ph == 1);
 	vcBegin += available_vcs;
       } 
     }
@@ -1716,16 +1727,17 @@ void min_adapt_torus( const Router *r, const Flit *f, int in_channel, OutputSet 
     // trick the algorithm with the in channel.  want VC assignment
     // as if we had injected at this node
     dor_next_torus( r->GetID( ), f->dest, 2*gN,
-		    &out_port, &f->ring_par, false );
+		    &out_port, &f->ph, false );
   } else {
     // DOR for the escape channel (VCs 0-1), low priority 
     dor_next_torus( cur, dest, in_channel,
-		    &out_port, &f->ring_par, false );
+		    &out_port, &f->ph, false );
   }
 
-  if ( f->ring_par == 0 ) {
+  if ( f->ph == 0 ) {
     outputs->AddRange( out_port, vcBegin, vcBegin, 0 );
   } else  {
+    assert(f->ph == 1);
     outputs->AddRange( out_port, vcBegin+1, vcBegin+1, 0 );
   } 
 }
