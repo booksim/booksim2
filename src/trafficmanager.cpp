@@ -252,7 +252,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _print_csv_results = config.GetInt( "print_csv_results" );
   _deadlock_warn_timeout = config.GetInt( "deadlock_warn_timeout" );
-  _drain_measured_only = config.GetInt( "drain_measured_only" );
 
   string watch_file = config.GetStr( "watch_file" );
   if((watch_file != "") && (watch_file != "-")) {
@@ -798,8 +797,6 @@ void TrafficManager::_ResetSim( )
   for ( int c = 0; c < _classes; ++c ) {
     _requests_outstanding[c].assign(_nodes, 0);
   }
-
-  // TODO: Reset network.
 }
 
 void TrafficManager::_ClearStats( )
@@ -931,11 +928,7 @@ bool TrafficManager::Run( )
 
     bool packets_left = false;
     for(int c = 0; c < _classes; ++c) {
-      if(_drain_measured_only) {
-	packets_left |= !_measured_in_flight_flits[c].empty();
-      } else {
-	packets_left |= !_total_in_flight_flits[c].empty();
-      }
+      packets_left |= !_total_in_flight_flits[c].empty();
     }
 
     while( packets_left ) { 
@@ -949,11 +942,7 @@ bool TrafficManager::Run( )
       
       packets_left = false;
       for(int c = 0; c < _classes; ++c) {
-	if(_drain_measured_only) {
-	  packets_left |= !_measured_in_flight_flits[c].empty();
-	} else {
-	  packets_left |= !_total_in_flight_flits[c].empty();
-	}
+	packets_left |= !_total_in_flight_flits[c].empty();
       }
     }
     //wait until all the credits are drained as well

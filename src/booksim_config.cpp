@@ -253,8 +253,6 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["deadlock_warn_timeout"] = 256;
 
-  _int_map["drain_measured_only"] = 0;
-
   _int_map["viewer_trace"] = 0;
 
   AddStrField("watch_file", "");
