@@ -510,7 +510,6 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
     //dest are in the same group, only use minimum routing
     if (dest_grp_ID == grp_ID) {
       f->ph = 2;
-      f->minimal = 1;
     } else {
       //select a random node
       f->intm =RandomInt(_network_size - 1);
@@ -522,7 +521,6 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
       //random intermediate are in the same group, use minimum routing
       if(grp_ID == intm_grp_ID){
 	f->ph = 1;
-	f->minimal = 1;
       } else {
 	//congestion metrics using queue length, obtained by GetUsedCredit()
 	min_hopcnt = dragonflynew_hopcnt(f->src, f->dest);
@@ -539,10 +537,8 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {	  
 	  if (debug)  cout << " MINIMAL routing " << endl;
 	  f->ph = 1;
-	  f->minimal = 1;
 	} else {
 	  f->ph = 0;
-	  f->minimal = 0;
 	}
       }
     }
@@ -558,7 +554,6 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
   //port assignement based on the phase
   if(f->ph == 0){
-    assert(f->minimal!=1);
     out_port = dragonfly_port(rID, f->src, f->intm);
   } else if(f->ph == 1){
     out_port = dragonfly_port(rID, f->src, f->dest);

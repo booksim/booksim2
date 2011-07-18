@@ -84,7 +84,7 @@ Channel<T>::Channel(Module * parent, string const & name)
 
 template<typename T>
 void Channel<T>::SetLatency(int cycles) {
-  if(!cycles) {
+  if(cycles <= 0) {
     Error("Channel must have positive delay.");
   }
   _delay = cycles ;

@@ -700,7 +700,6 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	  f->ph = 2;
 	} else {
 	  // route non-minimally
-	  f->minimal = 0;
 	  if (debug)  { cout << " Route NONMINIMALLY int node: " <<_ran_intm << endl; }
 	  f->ph = 1;
 	  f->intm = _ran_intm;
@@ -873,7 +872,6 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	  f->ph = 2;
 	} else {
 	  // route non-minimally
-	  f->minimal = 0;
 	  if (debug)  { cout << " Route NONMINIMALLY int node: " <<_ran_intm << endl; }
 	  f->ph = 1;
 	  f->intm = _ran_intm;
