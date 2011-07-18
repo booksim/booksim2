@@ -784,15 +784,15 @@ void romm_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outpu
   } else {
 
     if ( in_channel == 2*gN ) {
-      f->ph   = 1;  // Phase 1
+      f->ph   = 0;  // Phase 0
       f->intm = rand_min_intr_mesh( f->src, f->dest );
     } 
 
-    if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
-      f->ph = 2; // Go to phase 2
+    if ( ( f->ph == 0 ) && ( r->GetID( ) == f->intm ) ) {
+      f->ph = 1; // Go to phase 1
     }
 
-    out_port = dor_next_mesh( r->GetID( ), (f->ph == 1) ? f->intm : f->dest );
+    out_port = dor_next_mesh( r->GetID( ), (f->ph == 0) ? f->intm : f->dest );
 
     // at the destination router, we don't need to separate VCs by phase
     if(r->GetID() != f->dest) {
@@ -801,10 +801,10 @@ void romm_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outpu
       int available_vcs = (vcEnd - vcBegin + 1) / 2;
       assert(available_vcs > 0);
 
-      if(f->ph == 1) {
+      if(f->ph == 0) {
 	vcEnd -= available_vcs;
       } else {
-	assert(f->ph == 2);
+	assert(f->ph == 1);
 	vcBegin += available_vcs;
       }
     }
@@ -856,15 +856,15 @@ void romm_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *ou
   } else {
 
     if ( in_channel == 2*gN ) {
-      f->ph   = 1;  // Phase 1
+      f->ph   = 0;  // Phase 0
       f->intm = rand_min_intr_mesh( f->src, f->dest );
     } 
 
-    if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
-      f->ph = 2; // Go to phase 2
+    if ( ( f->ph == 0 ) && ( r->GetID( ) == f->intm ) ) {
+      f->ph = 1; // Go to phase 1
     }
 
-    out_port = dor_next_mesh( r->GetID( ), (f->ph == 1) ? f->intm : f->dest );
+    out_port = dor_next_mesh( r->GetID( ), (f->ph == 0) ? f->intm : f->dest );
 
   }
 
@@ -1246,15 +1246,15 @@ void valiant_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *ou
   } else {
 
     if ( in_channel == 2*gN ) {
-      f->ph   = 1;  // Phase 1
+      f->ph   = 0;  // Phase 0
       f->intm = RandomInt( gNodes - 1 );
     }
 
-    if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
-      f->ph = 2; // Go to phase 2
+    if ( ( f->ph == 0 ) && ( r->GetID( ) == f->intm ) ) {
+      f->ph = 1; // Go to phase 1
     }
 
-    out_port = dor_next_mesh( r->GetID( ), (f->ph == 1) ? f->intm : f->dest );
+    out_port = dor_next_mesh( r->GetID( ), (f->ph == 0) ? f->intm : f->dest );
 
     // at the destination router, we don't need to separate VCs by phase
     if(r->GetID() != f->dest) {
@@ -1263,10 +1263,10 @@ void valiant_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *ou
       int const available_vcs = (vcEnd - vcBegin + 1) / 2;
       assert(available_vcs > 0);
 
-      if(f->ph == 1) {
+      if(f->ph == 0) {
 	vcEnd -= available_vcs;
       } else {
-	assert(f->ph == 2);
+	assert(f->ph == 1);
 	vcBegin += available_vcs;
       }
     }
@@ -1307,16 +1307,16 @@ void valiant_torus( const Router *r, const Flit *f, int in_channel, OutputSet *o
   } else {
 
     if ( in_channel == 2*gN ) {
-      f->ph   = 1;  // Phase 1
+      f->ph   = 0;  // Phase 0
       f->intm = RandomInt( gNodes - 1 );
     }
 
-    if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
-      f->ph = 2; // Go to phase 2
+    if ( ( f->ph == 0 ) && ( r->GetID( ) == f->intm ) ) {
+      f->ph = 1; // Go to phase 1
       in_channel = 2*gN; // ensures correct vc selection at the beginning of phase 2
     }
   
-    dor_next_torus( r->GetID( ), (f->ph == 1) ? f->intm : f->dest, in_channel,
+    dor_next_torus( r->GetID( ), (f->ph == 0) ? f->intm : f->dest, in_channel,
 		    &out_port, &f->ring_par, false );
 
     // at the destination router, we don't need to separate VCs by phase, etc.
@@ -1336,10 +1336,10 @@ void valiant_torus( const Router *r, const Flit *f, int in_channel, OutputSet *o
       int const ph_available_vcs = ring_available_vcs / 2;
       assert(ph_available_vcs > 0);
 
-      if(f->ph == 1) {
+      if(f->ph == 0) {
 	vcEnd -= ph_available_vcs;
       } else {
-	assert(f->ph == 2);
+	assert(f->ph == 1);
 	vcBegin += ph_available_vcs;
       }
     }
@@ -1392,16 +1392,16 @@ void valiant_ni_torus( const Router *r, const Flit *f, int in_channel,
   } else {
 
     if ( in_channel == 2*gN ) {
-      f->ph   = 1;  // Phase 1
+      f->ph   = 0;  // Phase 0
       f->intm = RandomInt( gNodes - 1 );
     }
 
-    if ( ( f->ph == 1 ) && ( r->GetID( ) == f->intm ) ) {
-      f->ph = 2; // Go to phase 2
+    if ( ( f->ph == 0 ) && ( r->GetID( ) == f->intm ) ) {
+      f->ph = 1; // Go to phase 1
       in_channel = 2*gN; // ensures correct vc selection at the beginning of phase 2
     }
   
-    dor_next_torus( r->GetID( ), (f->ph == 1) ? f->intm : f->dest, in_channel,
+    dor_next_torus( r->GetID( ), (f->ph == 0) ? f->intm : f->dest, in_channel,
 		    &out_port, &f->ring_par, false );
 
     // at the destination, we don't need to separate VCs by phase, etc.
@@ -1411,7 +1411,7 @@ void valiant_ni_torus( const Router *r, const Flit *f, int in_channel,
       int const available_vcs = (vcEnd - vcBegin + 1) / 4;
       assert(available_vcs > 0);
 
-      if ( f->ph == 1 ) { // In phase 1
+      if ( f->ph == 0 ) { // In phase 0
 	if ( f->ring_par == 0 ) {
 	  vcEnd -= 3 * available_vcs;
 	} else {
@@ -1419,8 +1419,8 @@ void valiant_ni_torus( const Router *r, const Flit *f, int in_channel,
 	  vcBegin += available_vcs;
 	  vcEnd -= 2 * available_vcs;
 	}
-      } else { // In phase 2
-	assert(f->ph == 2);
+      } else { // In phase 1
+	assert(f->ph == 1);
 	if ( f->ring_par == 0 ) {
 	  vcBegin += 2 * available_vcs;
 	  vcEnd -= available_vcs;
