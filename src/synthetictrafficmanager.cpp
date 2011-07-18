@@ -228,6 +228,7 @@ void SyntheticTrafficManager::_ClearStats( )
       }
     }
   }
+  TrafficManager::_ClearStats( );
 }
 
 void SyntheticTrafficManager::_UpdateOverallStats( )

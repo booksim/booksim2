@@ -798,6 +798,8 @@ void TrafficManager::_ResetSim( )
   for ( int c = 0; c < _classes; ++c ) {
     _requests_outstanding[c].assign(_nodes, 0);
   }
+
+  // TODO: Reset network.
 }
 
 void TrafficManager::_ClearStats( )
@@ -913,9 +915,9 @@ bool TrafficManager::Run( )
 {
   for ( int sim = 0; sim < _total_sims; ++sim ) {
 
-    _ClearStats( );
-
     _ResetSim( );
+
+    _ClearStats( );
 
     if ( !_SingleSim( ) ) {
       cout << "Simulation unstable, ending ..." << endl;
