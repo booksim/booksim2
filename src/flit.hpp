@@ -54,14 +54,10 @@ public:
 
   bool head;
   bool tail;
-  bool true_tail;
   
   int  time;
   int  ttime;
   int  atime;
-
-  int  sn;
-  int  rob_time;
 
   int  id;
   int  pid;
@@ -77,16 +73,12 @@ public:
   int  hops;
   bool watch;
   int  subnetwork;
-
-  // Fields for multi-phase algorithms
+  
+  // intermediate destination (if any)
   mutable int intm;
+
+  // phase in multi-phase algorithms
   mutable int ph;
-
-  mutable int dr;
-  mutable int minimal; // == 1 minimal routing, == 0, nonminimal routing
-
-  // Which VC parition to use for deadlock avoidance in a ring
-  mutable int ring_par;
 
   // Fields for arbitrary data
   void* data ;
