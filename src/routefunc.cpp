@@ -1145,6 +1145,10 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
 }
 
 //=============================================================
+/*
+  FIXME: This is broken (note that f->dr is never actually modified).
+  Even if it were, this should really use f->ph instead of introducing a single-
+  use field.
 
 void limited_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
@@ -1212,7 +1216,7 @@ void limited_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputS
     outputs->AddRange( 2*gN, vcBegin, vcEnd ); 
   }
 }
-
+*/
 //=============================================================
 
 void valiant_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
@@ -1896,7 +1900,8 @@ void InitializeRoutingMap( const Configuration & config )
 
   gRoutingFunctionMap["planar_adapt_mesh"] = &planar_adapt_mesh;
 
-  gRoutingFunctionMap["limited_adapt_mesh"] = &limited_adapt_mesh;
+  // FIXME: This is broken.
+  //  gRoutingFunctionMap["limited_adapt_mesh"] = &limited_adapt_mesh;
 
   gRoutingFunctionMap["valiant_mesh"]  = &valiant_mesh;
   gRoutingFunctionMap["valiant_torus"] = &valiant_torus;
