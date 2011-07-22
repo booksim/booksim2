@@ -79,6 +79,9 @@ int ECN_CONGEST_THRESHOLD=32;
 int IRD_SCALING_FACTOR = 1;
 //increase function should higher than the decrease function
 int ECN_IRD_INCREASE = 1;
+//Maximum IRD
+int ECN_IRD_LIMIT = 0;
+
 
 #define WATCH_FLID -1
 #define MAX(X,Y) (X>Y?(X):(Y))
@@ -222,6 +225,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   ECN_CONGEST_THRESHOLD = config.GetInt("ecn_congestion_threshold");
   IRD_SCALING_FACTOR = config.GetInt("ird_scaling_factor");
   ECN_IRD_INCREASE = config.GetInt("ecn_ird_increase");
+  ECN_IRD_LIMIT= _nodes*16/IRD_SCALING_FACTOR;
+  cout<<"ECN_IRD_LIMIT "<<ECN_IRD_LIMIT<<endl;
 
   gStatNodeReady.resize(_nodes,0);
   

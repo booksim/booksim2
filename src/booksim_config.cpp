@@ -83,7 +83,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["n"] = 2; //network dimension
   _int_map["c"] = 1; //concentration
   AddStrField( "routing_function", "none" );
-  _int_map["use_noc_latency"] = 1;
+  _int_map["use_noc_latency"] = 0;
 
   //not critical
   _int_map["x"] = 8; //number of routers in X
@@ -133,12 +133,12 @@ BookSimConfig::BookSimConfig( )
   _int_map["vc_priority_donation"] = 0; // allow high-priority flits to donate their priority to low-priority that they are queued up behind
   _int_map["replies_inherit_priority"] = 0; // whenusing request-reply traffic (use_read_write=1) with age-based priority, make replies inherit their corresponding requests' age
 
-  _int_map["hold_switch_for_packet"] = 0; // hold a switch config for the entire packet
+  _int_map["hold_switch_for_packet"] = 1; // hold a switch config for the entire packet
 
   _int_map["input_speedup"]     = 1;  // expansion of input ports into crossbar
   _int_map["output_speedup"]    = 1;  // expansion of output ports into crossbar
 
-  _int_map["routing_delay"]    = 1;  
+  _int_map["routing_delay"]    = 0;  
   _int_map["vc_alloc_delay"]   = 1;  
   _int_map["sw_alloc_delay"]   = 1;  
   _int_map["st_prepare_delay"] = 0;
@@ -184,7 +184,7 @@ BookSimConfig::BookSimConfig( )
   _float_map["injection_rate"]       = 0.1; //if 0.0 assumes it is batch mode
   AddStrField("injection_rate", ""); // workaraound to allow for vector specification
   
-  _int_map["injection_rate_uses_flits"] = 0;
+  _int_map["injection_rate_uses_flits"] = 1;
 
   _int_map["const_flits_per_packet"] = 1; //use  read_request_size etc insted
   AddStrField("const_flits_per_packet", ""); // workaraound to allow for vector specification
@@ -292,7 +292,7 @@ BookSimConfig::BookSimConfig( )
   AddStrField("watch_packets", "");
   AddStrField("watch_transactions", "");
 
-  AddStrField("watch_out", "");
+  AddStrField("watch_out", "-");
 
   AddStrField("stats_out", "");
   AddStrField("flow_out", "");

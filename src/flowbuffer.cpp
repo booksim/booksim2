@@ -5,6 +5,7 @@ extern int IRD_RESET_TIMER;
 extern bool ECN_TIMER_ONLY;
 extern int IRD_SCALING_FACTOR;
 extern int ECN_IRD_INCREASE;
+extern int ECN_IRD_LIMIT;
 
 FlowBuffer::FlowBuffer(int src, int id, int size, int mode, flow* f){
   Activate(src,id, size, mode,f);
@@ -205,10 +206,12 @@ bool FlowBuffer::ack(int sn){
         _IRD_timer = 0;
       }
     }else {
-      //IRD increase ECN on
-      _IRD+=ECN_IRD_INCREASE;
-      if(_IRD>_max_ird)
-	_max_ird = _IRD;
+      if(_IRD<ECN_IRD_LIMIT){
+	//IRD increase ECN on
+	_IRD+=ECN_IRD_INCREASE;
+	if(_IRD>_max_ird)
+	  _max_ird = _IRD;
+      }
     }
   } else {
     assert(false);

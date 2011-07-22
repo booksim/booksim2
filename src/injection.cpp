@@ -39,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include <map>
 #include <cassert>
+#include <set>
 
 #include "injection.hpp"
 #include "network.hpp"
@@ -96,6 +97,8 @@ bool on_off( int source, double rate )
   return false;
 }
 
+
+extern set<int> hs_lookup;
 map<int, double> congestion_rate_lookup;
 extern int bystander_sender;
 
@@ -111,6 +114,14 @@ bool injection_congestion_test( int source, double rate ){
   }
 }
 
+bool injection_hotspot_test(int source, double rate){
+   if(hs_lookup.count(source)!=0){
+     return false;
+   } else {
+     return bernoulli(source,rate);
+   }
+}
+
 //=============================================================
 
 void InitializeInjectionMap( const Configuration & config )
@@ -124,6 +135,7 @@ void InitializeInjectionMap( const Configuration & config )
   gInjectionProcessMap["bernoulli"] = &bernoulli;
   gInjectionProcessMap["on_off"]    = &on_off;
   gInjectionProcessMap["congestion_test"]    = &injection_congestion_test;
+  gInjectionProcessMap["hotspot_test"]    = &injection_hotspot_test;
 
   vector<int> hotspot_senders = config.GetIntArray("hotspot_senders");
   vector<double> hotspot_rates = config.GetFloatArray("hotspot_rates");
