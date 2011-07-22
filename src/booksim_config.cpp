@@ -64,7 +64,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["ecn_buffer_threshold"] = 4;
   _int_map["ecn_congestion_threshold"] = 0.4;
   _int_map["ird_scaling_factor"] = 1;
-
+  _int_map["ecn_ird_increase"] = 1;
 
   //========================================================
   // Network options

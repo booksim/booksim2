@@ -203,6 +203,10 @@ protected:
   vector<vector<Stats *> > _pair_tlat;
   vector<Stats *> _hop_stats;
 
+
+  vector<vector<int> > _sent_data_flits;
+  vector<vector<int> > _accepted_data_flits;
+
   vector<vector<Stats *> > _sent_flits;
   vector<vector<Stats *> > _accepted_flits;
   vector<Stats *> _overall_accepted;

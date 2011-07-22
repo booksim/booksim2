@@ -4,6 +4,7 @@ extern bool FAST_RETRANSMIT_ENABLE;
 extern int IRD_RESET_TIMER;
 extern bool ECN_TIMER_ONLY;
 extern int IRD_SCALING_FACTOR;
+extern int ECN_IRD_INCREASE;
 
 FlowBuffer::FlowBuffer(int src, int id, int size, int mode, flow* f){
   Activate(src,id, size, mode,f);
@@ -205,7 +206,7 @@ bool FlowBuffer::ack(int sn){
       }
     }else {
       //IRD increase ECN on
-      _IRD++;
+      _IRD+=ECN_IRD_INCREASE;
       if(_IRD>_max_ird)
 	_max_ird = _IRD;
     }

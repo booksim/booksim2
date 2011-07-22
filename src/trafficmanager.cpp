@@ -77,6 +77,8 @@ int ECN_BUFFER_THRESHOLD = 64;
 int ECN_CONGEST_THRESHOLD=32;
 //each IRD value delays pakcet injection by this amount
 int IRD_SCALING_FACTOR = 1;
+//increase function should higher than the decrease function
+int ECN_IRD_INCREASE = 1;
 
 #define WATCH_FLID -1
 #define MAX(X,Y) (X>Y?(X):(Y))
@@ -219,6 +221,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   ECN_BUFFER_THRESHOLD = config.GetInt("ecn_buffer_threshold");
   ECN_CONGEST_THRESHOLD = config.GetInt("ecn_congestion_threshold");
   IRD_SCALING_FACTOR = config.GetInt("ird_scaling_factor");
+  ECN_IRD_INCREASE = config.GetInt("ecn_ird_increase");
 
   gStatNodeReady.resize(_nodes,0);
   
@@ -514,6 +517,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   
   _hop_stats.resize(_classes);
   
+  _sent_data_flits.resize(_classes);
+  _accepted_data_flits.resize(_classes);
   _sent_flits.resize(_classes);
   _accepted_flits.resize(_classes);
   
@@ -583,6 +588,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _pair_plat[c].resize(_nodes*_nodes);
     _pair_tlat[c].resize(_nodes*_nodes);
 
+    _sent_data_flits[c].resize(_nodes,0);
+    _accepted_data_flits[c].resize(_nodes,0);
     _sent_flits[c].resize(_nodes);
     _accepted_flits[c].resize(_nodes);
     
@@ -991,6 +998,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       if(f==NULL){
 	  gStatSpecDuplicate[dest]++;
       } else {
+	_sent_data_flits[f->cl][f->src]++;
+	_accepted_data_flits[f->cl][dest]++;
 	if(f->tail){
 	  gStatSpecLatency->AddSample(_time-f->time);
 	}
@@ -1028,10 +1037,15 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       if(f==NULL){
 	  gStatNormDuplicate[dest]++;
       } else {
+	_sent_data_flits[f->cl][f->src]++;
+	_accepted_data_flits[f->cl][dest]++;
 	if(f->tail){
 	  gStatNormLatency->AddSample(_time-f->time);
 	}
       }
+    } else { //for other modes duplication normal is not possible
+      _sent_data_flits[f->cl][f->src]++;
+      _accepted_data_flits[f->cl][dest]++;
     }  
     if(gECN){
       if(f->head){
@@ -2464,6 +2478,17 @@ bool TrafficManager::_SingleSim( )
 	  *_stats_out << "];" << endl;
 	  *_stats_out << "inflight(" << c+1 << ") = " << _total_in_flight_flits[c].size() << ";" << endl;
 	  
+	  *_stats_out<< "sent_data(" << c+1 << ",:) = [ ";
+	  for ( int d = 0; d < _nodes; ++d ) {
+	    *_stats_out << _sent_data_flits[c][d] << " ";
+	  }
+	  *_stats_out << "];" << endl
+		      << "accepted_data(" << c+1 << ",:) = [ ";
+	  for ( int d = 0; d < _nodes; ++d ) {
+	    *_stats_out << _accepted_data_flits[c][d] << " ";
+	  }
+	  *_stats_out << "];" << endl;
+
 	 
 	  for(int i = 0; i<_routers; i++){
 	    *_stats_out <<"drop_router("<<i+1<<",:)="
@@ -2962,9 +2987,9 @@ void TrafficManager::_DisplayTedsShit(){
       *_stats_out<<"];\n";
     }
     for(size_t i = 0; i<rrr.size(); i++){
-      *_stats_out<<"ecn_on(:,"<<i+1<<")=[";
+      *_stats_out<<"ecn_on(:,"<<i+1<<")=";
       *_stats_out<<rrr[i]->_ECN_activated;
-      *_stats_out<<"];\n";
+      *_stats_out<<";\n";
     }
     for(size_t i = 0; i<rrr.size(); i++){
       *_stats_out<<"congestness(:,"<<i+1<<")=[";
