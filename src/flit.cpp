@@ -64,6 +64,7 @@ Flit::Flit()
 
 void Flit::Reset() 
 {  
+  walkin=true;
   fecn = false;
   becn = false;
   flbid = -1;
@@ -74,7 +75,6 @@ void Flit::Reset()
   cl        = -1 ;
   head      = false ;
   tail      = false ;
-  flow_tail = false ;
   ntime = -1;
   time      = -1 ;
   ttime     = -1 ;

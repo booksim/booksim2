@@ -70,7 +70,7 @@ protected:
   int    _classes;
 
   vector<double> _load;
-  int _flow_size;
+  vector<int> _flow_size;
 
   vector<int>    _packet_size;
 

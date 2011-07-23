@@ -50,7 +50,6 @@ public:
   FlitType type;
 
   int res_type;
-  bool flow_tail;
   int exptime;
   int  sn;
   int flid;
@@ -58,6 +57,8 @@ public:
   int head_sn;
 
   int flbid;
+
+  bool walkin;
 
   bool fecn;
   bool becn;

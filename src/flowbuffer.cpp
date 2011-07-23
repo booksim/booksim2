@@ -1,6 +1,10 @@
 #include "flowbuffer.hpp"
 
+//RES config stuff
 extern bool FAST_RETRANSMIT_ENABLE;
+extern int RESERVATION_PACKET_THRESHOLD;
+
+//ECN config  stuff
 extern int IRD_RESET_TIMER;
 extern bool ECN_TIMER_ONLY;
 extern int IRD_SCALING_FACTOR;
@@ -45,7 +49,7 @@ void FlowBuffer::Init( flow* f){
   _last_sn = -1;
   _tail_sent = true;
   _guarantee_sent = 0;
-  if(_mode == RES_MODE){
+  if(_mode == RES_MODE && fl->flow_size>RESERVATION_PACKET_THRESHOLD){
     _reservation_flit  = Flit::New();
     _reservation_flit->flid = fl->flid;
     _reservation_flit->flbid = _id;
@@ -77,6 +81,8 @@ void FlowBuffer::Init( flow* f){
     assert(ff);
     fl->data.pop();
     ff->flbid = _id;
+    if(fl->flow_size>RESERVATION_PACKET_THRESHOLD)
+      ff->walkin = false;
     _flit_status[ff->sn]=FLIT_NORMAL;
     _flit_buffer[ff->sn]=ff;
     _ready++;

@@ -66,6 +66,9 @@ bool VC_ALLOC_DROP = true;
 bool FAST_RETRANSMIT_ENABLE = false;
 //account for reservation overhead by increasing the reservation time by this factor
 float RESERVATION_OVERHEAD_FACTOR = 1.05;
+//flows with flits fewer than this is ignored by reservation
+int RESERVATION_PACKET_THRESHOLD=64;
+
 
 //expiration timer for IRD
 int IRD_RESET_TIMER=1000;
@@ -202,7 +205,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _flow_buffer_dest.resize(_nodes);
  
 
-  _flow_size = config.GetInt("flow_size");
+
 
 
   _rob.resize(_nodes);
@@ -216,6 +219,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   FAST_RESERVATION_TRANSMIT = (config.GetInt("fast_reservation_transmit"));
   RESERVATION_OVERHEAD_FACTOR = config.GetFloat("reservation_overhead_factor");
+  RESERVATION_PACKET_THRESHOLD = config.GetInt("reservation_packet_threshold");
+
 
   FLOW_DEST_MERGE= (config.GetInt("flow_merge")==1);
   FAST_RETRANSMIT_ENABLE = (config.GetInt("fast_retransmit")==1);
@@ -306,7 +311,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   gStatNackByPacket = new Stats(this, "nack_by_sn", 1.0, 1000);
 
-  gStatFastRetransmit=  new Stats( this, "fast_retransmit" , 1.0,  _flow_size);
+  gStatFastRetransmit=  new Stats( this, "fast_retransmit" , 1.0,  100);
   gStatNackArrival = new Stats(this, "nack_arrival",1.0, 1000);
 
   //nodes higher than limit do not produce or receive packets
@@ -413,10 +418,16 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _load.resize(_classes, _load.back());
 
+  _flow_size = config.GetIntArray( "flow_size" );
+  if(_flow_size.empty()) {
+    _flow_size.push_back(config.GetInt("flow_size"));
+  }
+  _flow_size.resize(_classes, _flow_size.back());
+
   if(config.GetInt("injection_rate_uses_flits")) {
     for(int c = 0; c < _classes; ++c){
       _load[c] /= (double)_packet_size[c];
-      _load[c] /=_flow_size;
+      _load[c] /=_flow_size[c];
     }
   }
 
@@ -1023,14 +1034,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   case RES_TYPE_NORM:
 
     gStatNormReceived[dest]++;
-    if(gReservation){
+    if(gReservation && !f->walkin){
       //find or create a reorder buffer
       if(_rob[dest].count(f->flid)==0){
-	  gStatNormDuplicate[dest]++;
+	gStatNormDuplicate[dest]++;
 	f->Free();
 	return;
-	//	receive_rob = new FlowROB();
-	// _rob[dest].insert(pair<int, FlowROB*>(f->flid, receive_rob));
       } else {
 	receive_rob = _rob[dest][f->flid];
       }
@@ -1075,17 +1084,19 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   //duplicate packet would not pass this
   if(gReservation){
     if(f){
-      assert(receive_rob!=NULL);
-      gStatROBRange->AddSample(receive_rob->range());
-      if(receive_rob->done()){ //entire flow has been received
-	gStatFlowLatency->AddSample(_time-receive_rob->_flow_creation_time);
-	delete _rob[dest][f->flid];
-	_rob[dest].erase(f->flid); 
-      }
-      //rest of the code can't process this
-      if(f->res_type == RES_TYPE_RES){
-	f->Free();
-	return;
+      //walk in flits passes last if but fails here
+      if(receive_rob!=NULL){
+	gStatROBRange->AddSample(receive_rob->range());
+	if(receive_rob->done()){ //entire flow has been received
+	  gStatFlowLatency->AddSample(_time-receive_rob->_flow_creation_time);
+	  delete _rob[dest][f->flid];
+	  _rob[dest].erase(f->flid); 
+	}
+	//rest of the code can't process this
+	if(f->res_type == RES_TYPE_RES){
+	  f->Free();
+	  return;
+	}
       }
     } else {
       return;
@@ -1111,7 +1122,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
   //Regular retire flit
   _deadlock_timer = 0;
-
   assert(_total_in_flight_flits[f->cl].count(f->id) > 0);
   _total_in_flight_flits[f->cl].erase(f->id);
   
@@ -1343,7 +1353,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   fl->flid = _cur_flid++;
 
   int sequence_number =0;
-  for(int f_index = 0; f_index<_flow_size; f_index++){
+  for(int f_index = 0; f_index<_flow_size[cl]; f_index++){
     Flit::FlitType packet_type = Flit::ANY_TYPE;
     int size = _packet_size[cl]; //input size 
     int ttime = time;
@@ -1511,7 +1521,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   fl->collect = false;
   fl->flow_size = sequence_number;
   fl->data.front()->payload = fl->flow_size;
-  fl->data.back()->flow_tail = true;
   assert(_pending_flow[source]==NULL);
   _pending_flow[source] = fl;
 }
