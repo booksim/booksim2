@@ -49,14 +49,12 @@ public:
   void grant(int time);
 
   bool eligible();
-  bool receive_ready();
   bool send_norm_ready();
   bool send_spec_ready();
   int done();
 
 
   Flit* send();
-  Flit* receive();
   Flit* front();
 
   void update_transition();
@@ -84,10 +82,8 @@ public:
   //spec mode
   int _status;
   bool _tail_sent; //if the last flit sent was a tail
-  bool _tail_received; //tail received from the node
   int _last_sn;
   int _guarantee_sent;
-  int _received;
   int _ready;
   bool _spec_sent;
   int _vc;

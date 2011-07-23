@@ -8,12 +8,14 @@ extern int ECN_IRD_INCREASE;
 extern int ECN_IRD_LIMIT;
 
 FlowBuffer::FlowBuffer(int src, int id, int size, int mode, flow* f){
+  _dest=-1;//this can cause error
   Activate(src,id, size, mode,f);
+ 
 }
 
 void FlowBuffer::Activate(int src, int id, int size, int mode, flow* f){
  //ECN stuff need to be initilized once not every time or else benefits are lost
-  if(_mode == ECN_MODE && _dest!=f->dest){
+  if(mode == ECN_MODE && _dest!=f->dest){
     _IRD = 0; 
     _IRD_timer = 0;
     _IRD_wait = 0;
@@ -36,15 +38,13 @@ void FlowBuffer::Deactivate(){
 
 void FlowBuffer::Init( flow* f){
   fl = f;
+  _ready = 0;
 
   _dest = f->dest;
   _vc = -1;
   _last_sn = -1;
-  _tail_received = true;
   _tail_sent = true;
   _guarantee_sent = 0;
-  _received = 0;
-  _ready = 0;
   if(_mode == RES_MODE){
     _reservation_flit  = Flit::New();
     _reservation_flit->flid = fl->flid;
@@ -72,10 +72,22 @@ void FlowBuffer::Init( flow* f){
   _flit_buffer.clear();
   
 
+  while(!fl->data.empty()){
+    Flit *ff = fl->data.front();
+    assert(ff);
+    fl->data.pop();
+    ff->flbid = _id;
+    _flit_status[ff->sn]=FLIT_NORMAL;
+    _flit_buffer[ff->sn]=ff;
+    _ready++;
+  }
+
+
+
+
   _watch = false;
 
   //stats variables
-
   _max_ird = _IRD;
   _fast_retransmit = 0;
   _no_retransmit_loss = 0;
@@ -98,9 +110,7 @@ void FlowBuffer::update_stats(){
     _stats[FLOW_STAT_NORM_READY]++;
   }else if(send_spec_ready()){
     _stats[FLOW_STAT_SPEC_READY]++;
-  } else if(_received == fl->flow_size && _ready==0){
-    _no_retransmit_loss++;
-  } else if(_received != fl->flow_size && _ready==0){
+  }else if(_ready==0){
     _stats[FLOW_STAT_NOT_READY]++;
   }
 
@@ -153,7 +163,6 @@ void FlowBuffer::update_transition(){
 }
 
 void FlowBuffer::update_ird(){
-  
   //update ECN fields
   //_IRD_wait inc whenever _tail_sent is asserted
   //_IRD_wait reset when _tail_sent is reasserted
@@ -287,7 +296,7 @@ Flit* FlowBuffer::front(){
     //not in the middle of a packet
     //search the buffer for the first available 
     if(_tail_sent){
-      if( FAST_RETRANSMIT_ENABLE &&_received == fl->flow_size && _ready==0){ //search for spec packets
+      if( FAST_RETRANSMIT_ENABLE && _ready==0){ //search for spec packets
 	for(map<int, int>::iterator i = _flit_status.begin();
 	    i!=_flit_status.end(); 
 	    i++){
@@ -347,7 +356,7 @@ Flit* FlowBuffer::send(){
     //not in the middle of a packet
     //search the buffer for the first available 
     if(_tail_sent){
-      if( FAST_RETRANSMIT_ENABLE && _received == fl->flow_size && _ready==0){ //search for spec packets
+      if( FAST_RETRANSMIT_ENABLE && _ready==0){ //search for spec packets
 	map<int, int>::iterator i;
 	for(i = _flit_status.begin();
 	    i!=_flit_status.end(); 
@@ -448,25 +457,7 @@ Flit* FlowBuffer::send(){
 }
 
 
-Flit*  FlowBuffer::receive(){
-  assert(receive_ready());
-  assert(!fl->data.empty());
-  Flit *f = fl->data.front();
-  assert(f);
-  fl->data.pop();
 
-  f->flbid = _id;
-  _flit_status[f->sn]=FLIT_NORMAL;
-  _flit_buffer[f->sn]=f;
-  _ready++;
-  _received++;
-  if(f->tail){
-    _tail_received = true;
-  } else {
-    _tail_received = false;
-  }
-  return f;
-}
 
 //Is the flow buffer eligbible for injection arbitration
 bool FlowBuffer::eligible(){
@@ -475,13 +466,7 @@ bool FlowBuffer::eligible(){
      send_spec_ready());
 }
 
-//can receive as long as
-//0. tail for the current packet has not being received
-//1. there is buffer space and
-//2. there is more to be received
-bool FlowBuffer::receive_ready(){
-  return !_tail_received ||( ((int)_flit_buffer.size()<_capacity) && (_received < fl->flow_size));
-}
+
 
 bool FlowBuffer::send_norm_ready(){
   switch(_status){
@@ -491,23 +476,12 @@ bool FlowBuffer::send_norm_ready(){
     } else if(_mode==ECN_MODE){
       //flit not ready unless IRD_wait is 0
       if(_IRD_wait >=_IRD*IRD_SCALING_FACTOR){
-	if(_received == fl->flow_size && _ready==0){
-	  assert(_guarantee_sent!=fl->flow_size);
-	  return FAST_RETRANSMIT_ENABLE;
-	} else{
-	  return (_ready>0);
-	}      
+	return (_ready>0);
       } else {
 	return false;
       }
     } else {
-      if(_received == fl->flow_size && _ready==0){ //there maybe outstanding speculative packet for retransmit
-	assert(_guarantee_sent!=fl->flow_size);//otherwise this flow buffer shoudl be been freed
-	return FAST_RETRANSMIT_ENABLE;
-	
-      } else{
-	return (_ready>0);
-      }
+      return (_ready>0);
     }
   default:
     break;
@@ -551,7 +525,6 @@ void FlowBuffer::Reset(){
   assert(!_flow_queue.empty());
   delete fl;
   Init(_flow_queue.front());
-  //  receive();
   _flow_queue.pop();
 }
 

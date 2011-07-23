@@ -905,7 +905,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       gStatAckLatency->AddSample(_time-f->time);
       gStatAckReceived[dest]++;
       receive_flow_buffer = _flow_buffer[dest][f->flbid];
-      gStatECN[dest]->AddSample(f->becn);
       if( receive_flow_buffer!=NULL &&
 	  receive_flow_buffer->_dest == f->src){
 	gStatAckEffective[dest]+= (f->becn)?1:0;
@@ -1053,7 +1052,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       _accepted_data_flits[f->cl][dest]++;
     }  
     if(gECN){
-      if(f->head){
+      //only send if fecn is active
+      if(f->head)
+	gStatECN[f->src]->AddSample(f->fecn);
+      if(f->head &&
+	 f->fecn){
 	gStatAckSent[dest]++;
 	ff = IssueSpecial(dest,f);
 	ff->sn = f->head_sn;
@@ -1663,42 +1666,17 @@ void TrafficManager::_Step( )
 
 
   _Inject();
-  vector<int> injected_flits(_subnets*_nodes);
 
 
-  //from node to flow buffer, 1 flit per flow per cycle, this should not be a problem since you can inject a maximum of 1 flit percycle total
   for(int source = 0; source < _nodes; ++source) {
     bool node_ready = false;
-    for(map<int, pair<int, vector<int> > >::reverse_iterator iter = _class_prio_map.rbegin();
-	iter != _class_prio_map.rend();
-	++iter) {
-      int const & base = iter->second.first;
-      vector<int> const & classes = iter->second.second;
-      int const count = classes.size();
-      for(int j = 1; j <= count; ++j) {
-	int const offset = (base + j) % count;
-	
-	//find a flow buffer thats ready to go
-	FlowBuffer* ready_flow_buffer=NULL;
-	for(int i = 0; i<_max_flow_buffers; i++){
-	  int flb_index = i;
-	  if(_flow_buffer[source][flb_index]!=NULL &&
-	     _flow_buffer[source][flb_index]->active() &&
-	     _flow_buffer[source][flb_index]->receive_ready()){
-	    ready_flow_buffer = _flow_buffer[source][flb_index];
-	    //tranfer from flow to flow buffer is happening internally
-	    ready_flow_buffer->receive();
-	    ++injected_flits[0*_nodes+source]; 
-	    iter->second.first = offset;	  
-	    //break;//this break nearly no effect on performance
-	  }
-	  if(_flow_buffer[source][flb_index]!=NULL &&
-	     _flow_buffer[source][flb_index]->active() &&
-	     (_flow_buffer[source][flb_index]->send_norm_ready() ||
-	      _flow_buffer[source][flb_index]->send_spec_ready())){
-	    node_ready = true;
-	  }
-	}
+    for(int i = 0; i<_max_flow_buffers; i++){
+      if(_flow_buffer[source][i]!=NULL &&
+	 _flow_buffer[source][i]->active() &&
+	 (_flow_buffer[source][i]->send_norm_ready() ||
+	  _flow_buffer[source][i]->send_spec_ready())){
+	node_ready = true;
+	break;
       }
     }
     if(node_ready)
@@ -1732,6 +1710,7 @@ void TrafficManager::_Step( )
       }
     }
     
+    //Fast reservation flit transmit
     if(gReservation && FAST_RESERVATION_TRANSMIT){
       int fb=0;
       for(int fb_index = 0; fb_index<_max_flow_buffers; fb_index++){
@@ -1825,7 +1804,7 @@ void TrafficManager::_Step( )
     }
     _last_vcalloc_flow_buffer[source]=fb;
 
-    //TODO reservatin packet use vc0, and can be sent even if flow buffer vc =-1
+    
     //first check the last flow buffer served
     int flb_index = _last_send_flow_buffer[source];
     if(flb_index!=-1 && //last buffer exists
@@ -1893,12 +1872,9 @@ void TrafficManager::_Step( )
       } else {
 	if(f->head){
 	  dest_buf->TakeBuffer(vc); 
-	  f->vc = vc;
-	  dest_buf->SendingFlit(f);
-	} else { //body 
-	  f->vc = vc;
-	  dest_buf->SendingFlit(f);
 	}
+	f->vc = vc;
+	dest_buf->SendingFlit(f);
       }    
       //VC bookkeeping completed success
       if(f){
@@ -1922,13 +1898,15 @@ void TrafficManager::_Step( )
 	f->ntime = _time;
 	_net[0]->WriteSpecialFlit(f, source);
 	_sent_flits[0][source]->AddSample(1);
+	if(f->tail){
+	  _last_send_flow_buffer[source] =-1;
+	}
 	int flow_done_status = ready_flow_buffer->done();
 	if(flow_done_status !=FLOW_DONE_NOT){
 	  if(ready_flow_buffer->fl->cl==0){
 	    for(size_t i = 0; i<gStatFlowStats.size()-1; i++){
 	      gStatFlowStats[i]+=ready_flow_buffer->_stats[i];
 	    }
-	    
 	    gStatFlowStats[gStatFlowStats.size()-1]++;
 	  }
 	  gStatFlowSenderLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
@@ -1946,7 +1924,7 @@ void TrafficManager::_Step( )
       }
     }
   }
-
+ 
   
 
   vector<int> ejected_flits(_subnets*_nodes);
@@ -1974,31 +1952,7 @@ void TrafficManager::_Step( )
     _net[subnet]->Evaluate( );
     _net[subnet]->WriteOutputs( );
   }
-  
-  if(_flow_out) {
 
-    vector<vector<int> > received_flits(_subnets*_routers);
-    vector<vector<int> > sent_flits(_subnets*_routers);
-    vector<vector<int> > stored_flits(_subnets*_routers);
-    vector<vector<int> > active_packets(_subnets*_routers);
-
-    for (int subnet = 0; subnet < _subnets; ++subnet) {
-      for(int router = 0; router < _routers; ++router) {
-	Router * r = _router[subnet][router];
-	received_flits[subnet*_routers+router] = r->GetReceivedFlits();
-	sent_flits[subnet*_routers+router] = r->GetSentFlits();
-	stored_flits[subnet*_routers+router] = r->GetStoredFlits();
-	active_packets[subnet*_routers+router] = r->GetActivePackets();
-	r->ResetStats();
-      }
-    }
-    *_flow_out << "injected_flits(" << _time + 1 << ",:) = " << injected_flits << ";" << endl;
-    *_flow_out << "received_flits(" << _time + 1 << ",:) = " << received_flits << ";" << endl;
-    *_flow_out << "stored_flits(" << _time + 1 << ",:) = " << stored_flits << ";" << endl;
-    *_flow_out << "sent_flits(" << _time + 1 << ",:) = " << sent_flits << ";" << endl;;
-    *_flow_out << "ejected_flits(" << _time + 1 << ",:) = " << ejected_flits << ";" << endl;
-    *_flow_out << "active_packets(" << _time + 1 << ",:) = " << active_packets << ";" << endl;
-  }
 
   ++_time;
   if(TRANSIENT_ENABLE){

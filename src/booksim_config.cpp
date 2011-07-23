@@ -53,18 +53,18 @@ BookSimConfig::BookSimConfig( )
   _int_map["flow_size"] = 1;
 
 
-  _int_map["fast_retransmit"] = 1;
+  _int_map["fast_retransmit"] = 0;
   _int_map["res_vcs"] = 1;
   _int_map["hotspot_reservation"] = 0;
   _int_map["expiration_time"] = 200;
 
   _int_map["ECN"] = 0;
-  _int_map["ird_reset_timer"] = 10;
+  _int_map["ird_reset_timer"] = 100;
   _int_map["ecn_timer_only"] = 1;
-  _int_map["ecn_buffer_threshold"] = 4;
-  _int_map["ecn_congestion_threshold"] = 0.4;
+  _int_map["ecn_buffer_threshold"] = 30;
+  _int_map["ecn_congestion_threshold"] = 40;
   _int_map["ird_scaling_factor"] = 1;
-  _int_map["ecn_ird_increase"] = 1;
+  _int_map["ecn_ird_increase"] = 4;
 
   //========================================================
   // Network options
