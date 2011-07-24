@@ -29,9 +29,9 @@ Flit* FlowROB::insert(Flit* f){
     break;
   case RES_STATUS_REORDER:
   case RES_STATUS_ASSIGNED:
-    //reservation came late
+    //second res for this flow
     if(f->res_type == RES_TYPE_RES){
-      _flow_size = f->payload;
+      _flow_size += f->payload;
       rf = f;
       break;
     }

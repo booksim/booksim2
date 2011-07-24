@@ -25,7 +25,6 @@ class TrafficManager;
 struct flow{
   int flid;
   int vc;
-  int rtime;  //reserved time
   int flow_size;
   int create_time;
   int data_to_generate;
@@ -64,7 +63,7 @@ public:
   void update_transition();
   void update_stats();
   void update_ird();
-  void update_packets();
+  void update();
 
   bool active(){
     return _active;
@@ -79,6 +78,7 @@ public:
   queue<flow*> _flow_queue;
   flow* fl;
   Flit* _reservation_flit;
+  int _reserved_time;
   int _capacity;			       
   int _src;
   int _dest;
@@ -93,7 +93,8 @@ public:
   int _ready;
   bool _spec_sent;
   int _vc;
-
+  int _reserved_slots;
+  int _total_reserved_slots;//none chunk limit multiple flows
 
   //ECN mode
   int _IRD;

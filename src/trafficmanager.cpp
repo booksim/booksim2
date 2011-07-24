@@ -68,7 +68,8 @@ bool FAST_RETRANSMIT_ENABLE = false;
 float RESERVATION_OVERHEAD_FACTOR = 1.05;
 //flows with flits fewer than this is ignored by reservation
 int RESERVATION_PACKET_THRESHOLD=64;
-
+//each reservation only account for this many flits
+int RESERVATION_CHUNK_LIMIT=256;
 
 //expiration timer for IRD
 int IRD_RESET_TIMER=1000;
@@ -220,7 +221,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   FAST_RESERVATION_TRANSMIT = (config.GetInt("fast_reservation_transmit"));
   RESERVATION_OVERHEAD_FACTOR = config.GetFloat("reservation_overhead_factor");
   RESERVATION_PACKET_THRESHOLD = config.GetInt("reservation_packet_threshold");
-
+  RESERVATION_CHUNK_LIMIT=config.GetInt("reservation_chunk_limit");
 
   FLOW_DEST_MERGE= (config.GetInt("flow_merge")==1);
   FAST_RETRANSMIT_ENABLE = (config.GetInt("fast_retransmit")==1);
@@ -1464,7 +1465,6 @@ void TrafficManager::_GenerateFlow( int source, int stype, int cl, int time ){
   flow* fl = new flow;
   fl->flid = _cur_flid++;
   fl->vc = -1;
-  fl->rtime = -1;
   fl->flow_size = _flow_size[cl]*_packet_size[cl];
   fl->create_time = time;
   fl->data_to_generate = _flow_size[cl]-1; //one get generated right away
@@ -1574,7 +1574,7 @@ void TrafficManager::_Step( )
 	if(_flow_buffer[input][i]->active()){
 	  _flow_buffer[input][i]->update_transition();
 	  _flow_buffer[input][i]->update_stats();
-	  _flow_buffer[input][i]->update_packets();
+	  _flow_buffer[input][i]->update();
 	}
 	if(gECN){
 	  _flow_buffer[input][i]->update_ird();
@@ -2741,8 +2741,8 @@ void TrafficManager::DisplayStats( ostream & os ) {
       }
     }
     os<<"ECN ratio "<<ecn_sum/ecn_num<<endl;
+    os<<"Flows created "<<_cur_flid<<endl;
     _DisplayTedsShit();    
-    
   }
   
   if(_sim_mode == batch)
