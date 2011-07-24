@@ -1,5 +1,5 @@
 #include "flowbuffer.hpp"
-
+#include "trafficmanager.hpp"
 //RES config stuff
 extern bool FAST_RETRANSMIT_ENABLE;
 extern int RESERVATION_PACKET_THRESHOLD;
@@ -11,10 +11,13 @@ extern int IRD_SCALING_FACTOR;
 extern int ECN_IRD_INCREASE;
 extern int ECN_IRD_LIMIT;
 
-FlowBuffer::FlowBuffer(int src, int id, int size, int mode, flow* f){
-  _dest=-1;//this can cause error
+
+FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id, int size, int mode, flow* f){
+  parent = p;
+  _IRD = 0; 
+  _IRD_timer = 0;
+  _IRD_wait = 0;
   Activate(src,id, size, mode,f);
- 
 }
 
 void FlowBuffer::Activate(int src, int id, int size, int mode, flow* f){
@@ -75,11 +78,11 @@ void FlowBuffer::Init( flow* f){
   _flit_status.clear();
   _flit_buffer.clear();
   
-
-  while(!fl->data.empty()){
-    Flit *ff = fl->data.front();
+  
+  while(!fl->buffer.empty()){
+    Flit *ff = fl->buffer.front();
     assert(ff);
-    fl->data.pop();
+    fl->buffer.pop();
     ff->flbid = _id;
     if(fl->flow_size>RESERVATION_PACKET_THRESHOLD)
       ff->walkin = false;
@@ -165,6 +168,24 @@ void FlowBuffer::update_transition(){
     break;
   default: 
     break;
+  }
+}
+//generate packets for flows
+void FlowBuffer::update_packets(){
+  if(_ready<2 && fl->data_to_generate!=0){
+    parent->_GeneratePacket(fl);
+    fl->data_to_generate--;
+    while(!fl->buffer.empty()){
+      Flit *ff = fl->buffer.front();
+      assert(ff);
+      fl->buffer.pop();
+      ff->flbid = _id;
+      if(fl->flow_size>RESERVATION_PACKET_THRESHOLD)
+	ff->walkin = false;
+      _flit_status[ff->sn]=FLIT_NORMAL;
+      _flit_buffer[ff->sn]=ff;
+      _ready++;
+    }
   }
 }
 

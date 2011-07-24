@@ -1,31 +1,31 @@
 // $Id$
 
 /*
-Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
-All rights reserved.
+  Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
+  All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
+  Redistribution and use in source and binary forms, with or without modification,
+  are permitted provided that the following conditions are met:
 
-Redistributions of source code must retain the above copyright notice, this list
-of conditions and the following disclaimer.
-Redistributions in binary form must reproduce the above copyright notice, this 
-list of conditions and the following disclaimer in the documentation and/or 
-other materials provided with the distribution.
-Neither the name of the Stanford University nor the names of its contributors 
-may be used to endorse or promote products derived from this software without 
-specific prior written permission.
+  Redistributions of source code must retain the above copyright notice, this list
+  of conditions and the following disclaimer.
+  Redistributions in binary form must reproduce the above copyright notice, this 
+  list of conditions and the following disclaimer in the documentation and/or 
+  other materials provided with the distribution.
+  Neither the name of the Stanford University nor the names of its contributors 
+  may be used to endorse or promote products derived from this software without 
+  specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR 
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR 
+  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
+  ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /*injection.cpp
@@ -47,11 +47,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "misc_utils.hpp"
 
 map<string, tInjectionProcess> gInjectionProcessMap;
-
+bool permanent_flow;
 //=============================================================
+
 
 bool bernoulli( int source, double rate )
 {
+
+  if(permanent_flow){
+    if(GetSimTime()==0)
+      rate = 1.0;
+    else 
+      rate = 0.0;
+  }
 
   assert( ( source >= 0 ) && ( source < gNodes ) );
   assert( rate <= 1.0 );
@@ -115,12 +123,13 @@ bool injection_congestion_test( int source, double rate ){
 }
 
 bool injection_hotspot_test(int source, double rate){
-   if(hs_lookup.count(source)!=0){
-     return false;
-   } else {
-     return bernoulli(source,rate);
-   }
+  if(hs_lookup.count(source)!=0){
+    return false;
+  } else {
+    return bernoulli(source,rate);
+  }
 }
+
 
 //=============================================================
 
@@ -137,11 +146,11 @@ void InitializeInjectionMap( const Configuration & config )
   gInjectionProcessMap["congestion_test"]    = &injection_congestion_test;
   gInjectionProcessMap["hotspot_test"]    = &injection_hotspot_test;
 
+  permanent_flow = (config.GetInt("create_permanent_flows")==1);
   vector<int> hotspot_senders = config.GetIntArray("hotspot_senders");
   vector<double> hotspot_rates = config.GetFloatArray("hotspot_rates");
 
   if(config.GetStr("injection_process") == "congestion_test"){
-    //    assert(hotspot_senders.size() == hotspot_rates.size());
   
     congestion_rate_lookup.clear();
     int _flow_size = config.GetInt("flow_size");

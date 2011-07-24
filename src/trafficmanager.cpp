@@ -1329,9 +1329,119 @@ int TrafficManager::_IssuePacket( int source, int cl )
   return result;
 }
 
-void TrafficManager::_GeneratePacket( int source, int stype, 
-				      int cl, int time )
+void TrafficManager::_GeneratePacket( flow* fl)
 {
+  Flit::FlitType packet_type = Flit::ANY_TYPE;
+  int size = _packet_size[fl->cl]; //input size 
+  int ttime = fl->create_time;
+  int pid = _cur_pid++;
+  assert(_cur_pid);
+  int tid = _cur_tid;
+  bool record = false;
+  bool watch = gWatchOut && ((_packets_to_watch.count(pid) > 0) ||
+			     (_transactions_to_watch.count(tid) > 0));
+  
+  ++_cur_tid;
+  assert(_cur_tid);
+  
+  
+
+  if ( ( _sim_state == running ) ||
+       ( ( _sim_state == draining ) && ( fl->create_time < _drain_time ) ) ) {
+    record = _measure_stats[fl->cl];
+  }
+
+  int subnetwork = ((packet_type == Flit::ANY_TYPE) ? 
+		    RandomInt(_subnets-1) :
+		    _subnet[packet_type]);
+  
+  if ( watch ) { 
+    *gWatchOut << GetSimTime() << " | "
+	       << "node" << fl->src << " | "
+	       << "Enqueuing packet " << pid
+	       << " at time " << fl->create_time
+	       << "." << endl;
+  }
+  
+
+  for ( int i = 0; i < size; ++i ) {
+    Flit * f  = Flit::New();
+    f ->flid = fl->flid;
+    f->id     = _cur_id++;
+    assert(_cur_id);
+    f->pid    = pid;
+    f->tid    = tid;
+    f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
+    f->subnetwork = subnetwork;
+    f->src    = fl->src;
+    f->time   = fl->create_time;
+    f->ttime  = ttime;
+    f->record = record;
+    f->cl     = fl->cl;
+    f->sn = fl->sn++;
+    //watchwatch
+    if(f->id == -1){
+      f->watch=true;;
+    }
+    _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
+    if(record) {
+      _measured_in_flight_flits[f->cl].insert(make_pair(f->id, f));
+    }
+    
+    if(gTrace){
+      cout<<"New Flit "<<f->src<<endl;
+    }
+    f->type = packet_type;
+
+    if ( i == 0 ) { // Head flit
+      f->head = true;
+      //packets are only generated to nodes smaller or equal to limit
+      f->dest = fl->dest;
+    } else {
+      f->head = false;
+      f->dest = -1;
+    }
+    switch( _pri_type ) {
+    case class_based:
+      f->pri = _class_priority[fl->cl];
+      assert(f->pri >= 0);
+      break;
+    case age_based:
+      f->pri = numeric_limits<int>::max() - (_replies_inherit_priority ? ttime : fl->create_time);
+      assert(f->pri >= 0);
+      break;
+    case sequence_based:
+      f->pri = numeric_limits<int>::max() - _packets_sent[fl->src];
+      assert(f->pri >= 0);
+      break;
+    default:
+      f->pri = 0;
+    }
+    if ( i == ( size - 1 ) ) { // Tail flit
+      f->head_sn = f->sn-size+1;
+      f->tail = true;
+      f->dest =  fl->dest;
+    } else {
+      f->tail = false;
+    }
+    
+    f->vc  = -1;
+
+    if ( f->watch ) { 
+      *gWatchOut << GetSimTime() << " | "
+		 << "node" << fl->src << " | "
+		 << "Enqueuing flit " << f->id
+		 << " flow "<<f->flid
+		 << " (packet " << f->pid
+		 << ") at time " << fl->create_time
+		 << "." << endl;
+    }
+
+    fl->buffer.push( f );
+  }
+}
+
+void TrafficManager::_GenerateFlow( int source, int stype, int cl, int time ){
   assert(stype!=0);
 
   //refusing to generate packets for nodes greater than limit
@@ -1345,182 +1455,26 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   } else {
     packet_destination = _traffic_function[cl](source, _limit);
   }
-
-
-  
-  flow* fl = new flow;
-  fl->cl = cl;
-  fl->flid = _cur_flid++;
-
-  int sequence_number =0;
-  for(int f_index = 0; f_index<_flow_size[cl]; f_index++){
-    Flit::FlitType packet_type = Flit::ANY_TYPE;
-    int size = _packet_size[cl]; //input size 
-    int ttime = time;
-    int pid = _cur_pid++;
-    assert(_cur_pid);
-    int tid = _cur_tid;
-    bool record = false;
-    bool watch = gWatchOut && ((_packets_to_watch.count(pid) > 0) ||
-			       (_transactions_to_watch.count(tid) > 0));
-    if(_use_read_write[cl]){
-      if(stype < 0) {
-	if (stype ==-1) {
-	  packet_type = Flit::READ_REQUEST;
-	  size = _read_request_size[cl];
-	} else if (stype == -2) {
-	  packet_type = Flit::WRITE_REQUEST;
-	  size = _write_request_size[cl];
-	} else {
-	  ostringstream err;
-	  err << "Invalid packet type: " << packet_type;
-	  Error( err.str( ) );
-	}
-	if ( watch ) { 
-	  *gWatchOut << GetSimTime() << " | "
-		     << "node" << source << " | "
-		     << "Beginning transaction " << tid
-		     << " at time " << time
-		     << "." << endl;
-	}
-	++_cur_tid;
-	assert(_cur_tid);
-      } else  {
-	map<int, PacketReplyInfo*>::iterator iter = _repliesDetails.find(stype);
-	PacketReplyInfo* rinfo = iter->second;
-      
-	if (rinfo->type == Flit::READ_REQUEST) {//read reply
-	  size = _read_reply_size[cl];
-	  packet_type = Flit::READ_REPLY;
-	} else if(rinfo->type == Flit::WRITE_REQUEST) {  //write reply
-	  size = _write_reply_size[cl];
-	  packet_type = Flit::WRITE_REPLY;
-	} else {
-	  ostringstream err;
-	  err << "Invalid packet type: " << rinfo->type;
-	  Error( err.str( ) );
-	}
-	packet_destination = rinfo->source;
-	tid = rinfo->tid;
-	time = rinfo->time;
-	ttime = rinfo->ttime;
-	record = rinfo->record;
-	_repliesDetails.erase(iter);
-	rinfo->Free();
-      }
-    } else {
-      ++_cur_tid;
-      assert(_cur_tid);
-    }
-
-    if ((packet_destination <0) || (packet_destination >= _nodes)) {
+  if ((packet_destination <0) || (packet_destination >= _nodes)) {
       ostringstream err;
-      err << "Incorrect packet destination " << packet_destination
-	  << " for stype " << packet_type;
+      err << "Incorrect packet destination " << packet_destination;
       Error( err.str( ) );
-    }
-
-    if ( ( _sim_state == running ) ||
-	 ( ( _sim_state == draining ) && ( time < _drain_time ) ) ) {
-      record = _measure_stats[cl];
-    }
-
-    int subnetwork = ((packet_type == Flit::ANY_TYPE) ? 
-		      RandomInt(_subnets-1) :
-		      _subnet[packet_type]);
-  
-    if ( watch ) { 
-      *gWatchOut << GetSimTime() << " | "
-		 << "node" << source << " | "
-		 << "Enqueuing packet " << pid
-		 << " at time " << time
-		 << "." << endl;
-    }
-  
-
-    for ( int i = 0; i < size; ++i ) {
-      Flit * f  = Flit::New();
-      f ->flid = fl->flid;
-      f->id     = _cur_id++;
-      assert(_cur_id);
-      f->pid    = pid;
-      f->tid    = tid;
-      f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
-      f->subnetwork = subnetwork;
-      f->src    = source;
-      f->time   = time;
-      f->ttime  = ttime;
-      f->record = record;
-      f->cl     = cl;
-      f->sn = sequence_number++;
-      //watchwatch
-      if(f->id == -1){
-	f->watch=true;;
-      }
-      _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
-      if(record) {
-	_measured_in_flight_flits[f->cl].insert(make_pair(f->id, f));
-      }
-    
-      if(gTrace){
-	cout<<"New Flit "<<f->src<<endl;
-      }
-      f->type = packet_type;
-
-      if ( i == 0 ) { // Head flit
-	f->head = true;
-	//packets are only generated to nodes smaller or equal to limit
-	f->dest = packet_destination;
-      } else {
-	f->head = false;
-	f->dest = -1;
-      }
-      switch( _pri_type ) {
-      case class_based:
-	f->pri = _class_priority[cl];
-	assert(f->pri >= 0);
-	break;
-      case age_based:
-	f->pri = numeric_limits<int>::max() - (_replies_inherit_priority ? ttime : time);
-	assert(f->pri >= 0);
-	break;
-      case sequence_based:
-	f->pri = numeric_limits<int>::max() - _packets_sent[source];
-	assert(f->pri >= 0);
-	break;
-      default:
-	f->pri = 0;
-      }
-      if ( i == ( size - 1 ) ) { // Tail flit
-	f->head_sn = f->sn-size+1;
-	f->tail = true;
-	f->dest =  packet_destination;
-      } else {
-	f->tail = false;
-      }
-    
-      f->vc  = -1;
-
-      if ( f->watch ) { 
-	*gWatchOut << GetSimTime() << " | "
-		   << "node" << source << " | "
-		   << "Enqueuing flit " << f->id
-		   << " flow "<<f->flid
-		   << " (packet " << f->pid
-		   << ") at time " << time
-		   << "." << endl;
-      }
-
-      fl->data.push( f );
-    }
   }
-  fl->dest = packet_destination;
-  fl->rtime = -1;
+
+  flow* fl = new flow;
+  fl->flid = _cur_flid++;
   fl->vc = -1;
+  fl->rtime = -1;
+  fl->flow_size = _flow_size[cl]*_packet_size[cl];
   fl->create_time = time;
-  fl->collect = false;
-  fl->flow_size = sequence_number;
-  fl->data.front()->payload = fl->flow_size;
+  fl->data_to_generate = _flow_size[cl]-1; //one get generated right away
+  fl->src = source;
+  fl->dest = packet_destination;
+  fl->cl = cl;
+  fl->sn = 0;
+  _GeneratePacket(fl);
+  fl->buffer.front()->payload = fl->flow_size;
+
   assert(_pending_flow[source]==NULL);
   _pending_flow[source] = fl;
 }
@@ -1535,7 +1489,7 @@ void TrafficManager::_Inject(){
 	  while( !generated && ( _qtime[input][c] <= _time ) ) {
 	    int stype = _IssuePacket( input, c );
 	    if ( stype != 0 ) { //generate a packet
-	      _GeneratePacket( input, stype, c, 
+	      _GenerateFlow( input, stype, c, 
 			       _include_queuing==1 ? 
 			       _qtime[input][c] : _time );	   
 	      generated = true;
@@ -1597,7 +1551,7 @@ void TrafficManager::_Inject(){
 	    _flow_buffer[input][empty_flow]->Activate(input, empty_flow, _flow_buffer_capacity, mode, _pending_flow[input]);
 	  } else {
 	    _flow_buffer[input][empty_flow] = 
-	      new FlowBuffer(input, empty_flow, _flow_buffer_capacity, mode, _pending_flow[input]);
+	      new FlowBuffer(this, input, empty_flow, _flow_buffer_capacity, mode, _pending_flow[input]);
 	  }
 	  if(_pending_flow[input]->flid == WATCH_FLID){
 	    _flow_buffer[input][empty_flow]->_watch = true;
@@ -1620,6 +1574,7 @@ void TrafficManager::_Step( )
 	if(_flow_buffer[input][i]->active()){
 	  _flow_buffer[input][i]->update_transition();
 	  _flow_buffer[input][i]->update_stats();
+	  _flow_buffer[input][i]->update_packets();
 	}
 	if(gECN){
 	  _flow_buffer[input][i]->update_ird();

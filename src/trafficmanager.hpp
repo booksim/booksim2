@@ -281,7 +281,7 @@ protected:
   bool _PacketsOutstanding( ) const;
   
   int  _IssuePacket( int source, int cl );
-  void _GeneratePacket( int source, int size, int cl, int time );
+  void _GenerateFlow( int source, int size, int cl, int time );
 
   void _ClearStats( );
 
@@ -296,6 +296,7 @@ protected:
 
   Flit* IssueSpecial(int src, Flit* ff);
 public:
+  void _GeneratePacket(flow* fl);
 
   Flit* DropPacket(int source, Flit* f);
   TrafficManager( const Configuration &config, const vector<Network *> & net );

@@ -6,6 +6,8 @@
 #include <queue>
 #include "globals.hpp"
 
+class TrafficManager;
+
 #define FLOW_STAT_SPEC 0
 #define FLOW_STAT_NACK 1
 #define FLOW_STAT_WAIT 2
@@ -23,19 +25,21 @@
 struct flow{
   int flid;
   int vc;
-  //reserved time
-  int rtime;
+  int rtime;  //reserved time
   int flow_size;
-  bool collect;
   int create_time;
-  queue<Flit*> data;
+  int data_to_generate;
+  int src;
   int dest;
   int cl;
+
+  int sn;
+  queue<Flit*> buffer;
 };
 
 class FlowBuffer{
 public:
-  FlowBuffer(int src, int id, int size, int mode, flow* fl);
+  FlowBuffer(TrafficManager* p, int src, int id, int size, int mode, flow* fl);
   ~FlowBuffer();
   //activate directly behaves as the constructor
   void Activate(int src, int id, int size, int mode, flow* fl);
@@ -60,6 +64,7 @@ public:
   void update_transition();
   void update_stats();
   void update_ird();
+  void update_packets();
 
   bool active(){
     return _active;
@@ -68,6 +73,7 @@ public:
 
   bool _active;
 
+  TrafficManager* parent;
   map<int, int> _flit_status;
   map<int, Flit*> _flit_buffer;
   queue<flow*> _flow_queue;

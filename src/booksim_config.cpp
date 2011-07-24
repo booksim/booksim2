@@ -43,10 +43,11 @@ BookSimConfig::BookSimConfig( )
   _float_map["reservation_overhead_factor"] = 1.05;
   _int_map["fast_reservation_transmit"] = 0;
   _int_map["reservation_packet_threshold"] = 64;
+  _int_map["reservation_chuck_limit"] = 256;
 
   _int_map["bystander_sender"] = 0;
   _int_map["bystander_receiver"] = 0;
-  
+  _int_map["create_permanent_flows"] = 0;
 
   _int_map["flow_merge"] = 1;
   _int_map["flow_buffer_capacity"] = 128;
