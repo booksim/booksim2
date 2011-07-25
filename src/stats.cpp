@@ -114,7 +114,8 @@ void Stats::AddSample( double val )
   _min = (val < _min)? val : _min;
 
   //double clamp between 0 and num_bins-1
-  b = (int)fmax(floor( val / _bin_size ), 0.0);
+  b = (int)floor( val / _bin_size );
+  b = b<0?0:b;
   b = (b >= _num_bins) ? (_num_bins - 1) : b;
 
   _hist[b]++;

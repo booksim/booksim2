@@ -40,6 +40,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 BookSimConfig::BookSimConfig( )
 { 
+  _int_map["transient_start"] = 100000;
+  _int_map["transient_burst"] = 0;
+  _int_map["transient_enable"] = 0;
+  _int_map["transient_duration"] = 100;
+
   _float_map["reservation_overhead_factor"] = 1.05;
   _int_map["fast_reservation_transmit"] = 0;
   _int_map["reservation_packet_threshold"] = 64;

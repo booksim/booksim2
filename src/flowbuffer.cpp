@@ -198,14 +198,8 @@ void FlowBuffer::update(){
   }
 
   //for large flows, reset and rereserve
-  if(_mode ==RES_MODE){
-      if(fl->src==1){
-	//	cout<<"not\n";
-      }
+  if(_mode ==RES_MODE && fl->flow_size>RESERVATION_PACKET_THRESHOLD){
     if(_reserved_slots==0 && _ready!=0 && _spec_outstanding ==0){
-      if(fl->src==1){
-	//cout<<"here\n";
-      }
       _reservation_flit  = Flit::New();
       _reservation_flit->flid = fl->flid;
       _reservation_flit->flbid = _id;
@@ -229,6 +223,9 @@ void FlowBuffer::update(){
 	_reserved_slots = RESERVATION_CHUNK_LIMIT; 
 	_reservation_flit->payload = RESERVATION_CHUNK_LIMIT; 
       }
+
+      _last_sn = _total_reserved_slots-1;
+      _total_reserved_slots+=_reserved_slots; 
       _vc = -1;
       _reserved_time=-1;
     }
@@ -411,6 +408,8 @@ Flit* FlowBuffer::front(){
       if(_flit_buffer.count(_last_sn+1)!=0){
 	f = _flit_buffer[_last_sn+1];
 	f->res_type = RES_TYPE_SPEC;
+      }  else {
+	assert(false);
       }
     }
     break;
@@ -511,6 +510,8 @@ Flit* FlowBuffer::send(){
 	_spec_outstanding++;
 	_last_sn = f->sn;
 	_tail_sent = f->tail;
+      } else {
+	assert(false);
       }
     }
     break;
@@ -557,7 +558,7 @@ bool FlowBuffer::send_norm_ready(){
       } else {
 	return false;
       }
-    } else if(_mode==RES_MODE){
+    } else if(_mode==RES_MODE && fl->flow_size>RESERVATION_PACKET_THRESHOLD){
       if(_reserved_slots>0){
 	return (_ready>0);
       } else {

@@ -45,16 +45,14 @@
 /*transient shit*/
 bool TRANSIENT_BURST = true;
 bool TRANSIENT_ENABLE = false;
-tTrafficFunction pre_transient_function;
-bool transient_started = false;
 double** transient_stat;
 int** transient_count;
-int transient_prestart = 50;
+int transient_prestart = 0;
 int transient_duration  = 1;
 int transient_record_duration  = 10000;
 int transient_start  = 100000;
-float pre_transient_rate = 0.00078;
- 
+float transient_rate = 1.0;
+int transient_class = 1;
 
 //transmit reservation before as soon as flow is at the head of the flow buffer
 bool FAST_RESERVATION_TRANSMIT=false;
@@ -161,24 +159,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
 
   gStatFlowStats.resize(FLOW_STAT_LIFETIME+1+1,0);
-
-
-  //transient
-  transient_stat = new double*[2];
-  transient_stat[0] = new double[transient_record_duration];
-  transient_stat[1] = new double[transient_record_duration];
-  transient_count= new int*[2];
-  transient_count[0] = new int[transient_record_duration];
-  transient_count[1] = new int[transient_record_duration];
-  
-  for(int i = 0; i<transient_record_duration ; i++){
-    transient_stat[0][i] = 0.0;
-    transient_stat[1][i] = 0.0;
-    transient_count[0][i]= 0;
-    transient_count[1][i]= 0;
-  }
-  pre_transient_function =  gTrafficFunctionMap.find("uniform")->second;
-
   
 
 
@@ -216,6 +196,27 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _cur_flid = 0;
   gExpirationTime =  config.GetInt("expiration_time");
+
+
+  TRANSIENT_BURST = (config.GetInt("transient_burst")==1);
+  TRANSIENT_ENABLE = (config.GetInt("transient_enable")==1);
+  transient_duration  = config.GetInt("transient_duration");
+  transient_start  = config.GetInt("transient_start");
+  //transient
+  transient_stat = new double*[2];
+  transient_stat[0] = new double[transient_record_duration];
+  transient_stat[1] = new double[transient_record_duration];
+  transient_count= new int*[2];
+  transient_count[0] = new int[transient_record_duration];
+  transient_count[1] = new int[transient_record_duration];
+  
+  for(int i = 0; i<transient_record_duration ; i++){
+    transient_stat[0][i] = 0.0;
+    transient_stat[1][i] = 0.0;
+    transient_count[0][i]= 0;
+    transient_count[1][i]= 0;
+  }
+
 
 
   FAST_RESERVATION_TRANSMIT = (config.GetInt("fast_reservation_transmit"));
@@ -430,6 +431,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
       _load[c] /= (double)_packet_size[c];
       _load[c] /=_flow_size[c];
     }
+  }
+
+  if(TRANSIENT_ENABLE){
+    transient_rate = _load[transient_class];
+    _load[transient_class] = 0.0;
   }
 
   _traffic = config.GetStrArray("traffic");
@@ -868,14 +874,14 @@ Flit* TrafficManager::DropPacket(int src, Flit* f){
 void TrafficManager::_RetireFlit( Flit *f, int dest )
 {
 
-    if(TRANSIENT_ENABLE && f){
-	int transient_index = f->ntime-transient_start+transient_prestart;
-	//maybe shoudl use flit creation time
-	if(transient_index>=0 && transient_index < transient_record_duration){
-	  transient_stat[f->cl][transient_index]+= (f->atime - f->ntime);
-	  transient_count[f->cl][transient_index]++;
-	}
-      }
+  if(TRANSIENT_ENABLE && f){
+    int transient_index = f->ntime-transient_start+transient_prestart;
+    //maybe shoudl use flit creation time
+    if(transient_index>=0 && transient_index < transient_record_duration){
+      transient_stat[f->cl][transient_index]+= (f->atime - f->ntime);
+      transient_count[f->cl][transient_index]++;
+    }
+  }
 
 
 
@@ -980,8 +986,17 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       gStatReservationTimeNow[dest]->AddSample(_time-_reservation_schedule[dest]);
     }
     //the return time is offset by the reservation packet latency to prevent schedule fragmentation
-    ff->payload  = MAX(_time, _reservation_schedule[dest]-3*(_time-f->time));
-    _reservation_schedule[dest] =_reservation_schedule[dest]+int((float)f->payload*RESERVATION_OVERHEAD_FACTOR);//ff->payload+f->payload ;//
+    _reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
+    ff->payload  =_reservation_schedule[dest]-3*(_time-f->ntime);
+    if(dest ==-1){
+      cout<<_time <<" "
+	  <<_reservation_schedule[dest] <<" "
+	  <<(_time-f->ntime)<<" "
+	  <<ff->payload<<"\n";
+    }
+    
+    _reservation_schedule[dest] = _reservation_schedule[dest] +int(float(f->payload)*RESERVATION_OVERHEAD_FACTOR);
+
     ff->res_type = RES_TYPE_GRANT;
     ff->pri = FLIT_PRI_GRANT;
     ff->vc = GRANT_PACKET_VC;
@@ -1311,19 +1326,23 @@ int TrafficManager::_IssuePacket( int source, int cl )
 	}
       } 
     } else { //normal mode
-      if(TRANSIENT_ENABLE && !transient_started){
-	if(cl == 0){
-	  return _injection_process[cl]( source, pre_transient_rate )?1:0; 
+      bool transient_started = false;
+      int source_time = _include_queuing==1 ? 
+	_qtime[source][cl] : _time;
+      if(TRANSIENT_ENABLE){
+	if(source_time>=transient_start && source_time<transient_start+transient_duration){
+	  transient_started =true;
+	  _load[transient_class] = transient_rate;
 	} else {
-	  return 0;
+	  transient_started =false;
+	  _load[transient_class] = 0.0;
 	}
+      }
+      if(TRANSIENT_ENABLE && TRANSIENT_BURST && transient_started && cl == transient_class){
+	cout<<"burst"<<endl;
+	return 1;
       } else {
-	if(TRANSIENT_ENABLE && TRANSIENT_BURST && transient_started && cl == 1){
-	  cout<<"burst"<<endl;
-	  return 1;
-	} else {
-	  return _injection_process[cl]( source, _load[cl] ) ? 1 : 0;
-	}
+	return _injection_process[cl]( source, _load[cl] ) ? 1 : 0;
       }
     } 
   }
@@ -1381,7 +1400,7 @@ void TrafficManager::_GeneratePacket( flow* fl)
     f->cl     = fl->cl;
     f->sn = fl->sn++;
     //watchwatch
-    if(f->id == -1){
+    if(f->id == 7904){
       f->watch=true;;
     }
     _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
@@ -1451,11 +1470,9 @@ void TrafficManager::_GenerateFlow( int source, int stype, int cl, int time ){
   }
   
   int packet_destination; 
-  if(TRANSIENT_ENABLE && !transient_started){
-    packet_destination = pre_transient_function(source, _limit);
-  } else {
-    packet_destination = _traffic_function[cl](source, _limit);
-  }
+
+  packet_destination = _traffic_function[cl](source, _limit);
+
   if ((packet_destination <0) || (packet_destination >= _nodes)) {
       ostringstream err;
       err << "Incorrect packet destination " << packet_destination;
@@ -1919,13 +1936,7 @@ void TrafficManager::_Step( )
 
 
   ++_time;
-  if(TRANSIENT_ENABLE){
-    if(_time>=transient_start && _time<transient_start+transient_duration){
-      transient_started =true;
-    } else {
-      transient_started =false;
-    }
-  }
+
 
   //  cout<<"TIME "<<_time<<endl;
   assert(_time);
@@ -2881,8 +2892,8 @@ void TrafficManager::_DisplayTedsShit(){
     if(TRANSIENT_ENABLE){
          for(int i = 0; i<transient_record_duration; i++){
            *_stats_out<<"transient_stat("<<i+1<<",:)= [";
-           *_stats_out<<transient_stat[0][i]<<" "<<transient_count[0][i]<<" "<<transient_stat[0][i]/transient_count[0][i]<<" ";
-           *_stats_out<<transient_stat[1][i]<<" "<<transient_count[1][i]<<" "<<transient_stat[1][i]/transient_count[1][i]<<" ";
+           *_stats_out<<transient_stat[0][i]<<" "<<transient_count[0][i]<<" "<<float(transient_stat[0][i])/transient_count[0][i]<<" ";
+           *_stats_out<<transient_stat[1][i]<<" "<<transient_count[1][i]<<" "<<float(transient_stat[1][i])/transient_count[1][i]<<" ";
              *_stats_out<<" ];"<<endl;
          }
     }
