@@ -1,8 +1,11 @@
 #include "flowbuffer.hpp"
 #include "trafficmanager.hpp"
+#include "stats.hpp"
+#include <vector>
 //RES config stuff
 extern bool FAST_RETRANSMIT_ENABLE;
 extern int RESERVATION_PACKET_THRESHOLD;
+extern int RESERVATION_CHUNK_LIMIT;
 
 //ECN config  stuff
 extern int IRD_RESET_TIMER;
@@ -10,14 +13,16 @@ extern bool ECN_TIMER_ONLY;
 extern int IRD_SCALING_FACTOR;
 extern int ECN_IRD_INCREASE;
 extern int ECN_IRD_LIMIT;
-extern int RESERVATION_CHUNK_LIMIT;
+extern bool ECN_AIMD;
 
+extern vector<Stats*> gStatIRD;
 
 FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id, int size, int mode, flow* f){
   parent = p;
   _IRD = 0; 
   _IRD_timer = 0;
   _IRD_wait = 0;
+  _total_wait = 0;
   Activate(src,id, size, mode,f);
 }
 
@@ -72,6 +77,7 @@ void FlowBuffer::Init( flow* f){
     _reservation_flit->payload = fl->flow_size;
     _status= FLOW_STATUS_SPEC;
     _spec_sent = false;
+    _res_outstanding = false;
     _reserved_slots = fl->flow_size;
     if(fl->flow_size>RESERVATION_CHUNK_LIMIT){
       _reservation_flit->payload = RESERVATION_CHUNK_LIMIT; 
@@ -106,7 +112,6 @@ void FlowBuffer::Init( flow* f){
   _watch = false;
 
   //stats variables
-  _max_ird = _IRD;
   _fast_retransmit = 0;
   _no_retransmit_loss = 0;
   _spec_outstanding = 0;
@@ -199,11 +204,11 @@ void FlowBuffer::update(){
 
   //for large flows, reset and rereserve
   if(_mode ==RES_MODE && fl->flow_size>RESERVATION_PACKET_THRESHOLD){
-    if(_reserved_slots==0 && _ready!=0 && _spec_outstanding ==0){
+    if(_reserved_slots==0 && _ready!=0 && _spec_outstanding ==0 && !_res_outstanding){
       _reservation_flit  = Flit::New();
       _reservation_flit->flid = fl->flid;
       _reservation_flit->flbid = _id;
-      _reservation_flit->sn = 0;
+      _reservation_flit->sn = _total_reserved_slots;
       _reservation_flit->id = -1;
       _reservation_flit->subnetwork = 0;
       _reservation_flit->cl = 0;
@@ -216,6 +221,7 @@ void FlowBuffer::update(){
 
       _status= FLOW_STATUS_SPEC;
       _spec_sent = false;
+      _res_outstanding=false;
       if(fl->flow_size-_total_reserved_slots<RESERVATION_CHUNK_LIMIT){
 	_reserved_slots = fl->flow_size-_total_reserved_slots;
 	_reservation_flit->payload = fl->flow_size-_total_reserved_slots;
@@ -238,10 +244,12 @@ void FlowBuffer::update_ird(){
   //_IRD_wait reset when _tail_sent is reasserted
   if(_tail_sent && _IRD>0){
     _IRD_wait++;
+    _total_wait++;
   }
   if(_mode == ECN_MODE && _IRD >0){
     _IRD_timer++;
-    if(_IRD_timer==IRD_RESET_TIMER){
+    if(_IRD_timer>=IRD_RESET_TIMER){
+      gStatIRD[_src]->AddSample(_IRD);
       _IRD--;
       _IRD_timer = 0;
     }
@@ -285,12 +293,23 @@ bool FlowBuffer::ack(int sn){
         _IRD_timer = 0;
       }
     }else {
-      if(_IRD<ECN_IRD_LIMIT){
-	//IRD increase ECN on
-	_IRD+=ECN_IRD_INCREASE;
-	if(_IRD>_max_ird)
-	  _max_ird = _IRD;
+      if(ECN_AIMD){
+	if(_IRD==0){
+	  _IRD=ECN_IRD_INCREASE;
+	} else {
+	  _IRD*=2;
+	  if(_IRD>ECN_IRD_LIMIT)
+	    _IRD=ECN_IRD_LIMIT;
+	}
+      } else {
+	if(_IRD<ECN_IRD_LIMIT){
+	  //IRD increase ECN on
+	  _IRD+=ECN_IRD_INCREASE;
+	  if(_IRD>ECN_IRD_LIMIT)
+	    _IRD=ECN_IRD_LIMIT;
+	}
       }
+      gStatIRD[_src]->AddSample(_IRD);
     }
   } else {
     assert(false);
@@ -351,6 +370,7 @@ void FlowBuffer::grant(int time){
   }
   assert(_reserved_time == -1);
   _reserved_time = time;
+  _res_outstanding=false;
   if(_tail_sent){
     _vc=-1;
     _status = FLOW_STATUS_WAIT;
@@ -498,6 +518,7 @@ Flit* FlowBuffer::send(){
       f->src = _src;
       f->dest = fl->dest;
       _spec_sent = true;
+      _res_outstanding=true;
     } else {
       if(_flit_buffer.count(_last_sn+1)!=0){
 	f = Flit::New();

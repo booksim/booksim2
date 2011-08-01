@@ -14,7 +14,7 @@ public:
 
   Flit* insert(Flit* f);
   bool done();
-  
+  bool sn_check(int sn);
   int range();
 
   int _flow_creation_time;
@@ -24,6 +24,7 @@ public:
   int _status;
   set<int> _pid;
   set<int> _rob;
+  int _sn_ceiling;
 
 };
 

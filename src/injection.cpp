@@ -151,7 +151,6 @@ void InitializeInjectionMap( const Configuration & config )
   vector<double> hotspot_rates = config.GetFloatArray("hotspot_rates");
 
   if(config.GetStr("injection_process") == "congestion_test"){
-  
     congestion_rate_lookup.clear();
     int _flow_size = config.GetInt("flow_size");
     int  _packet_size = config.GetInt("const_flits_per_packet");

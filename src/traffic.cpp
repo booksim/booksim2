@@ -384,7 +384,7 @@ int traffic_congestion_test(int source, int total_nodes){
   if(source == bystander_sender){
     return bystander_receiver;
   }else {
-    return *hs_lookup.begin();
+    return hotspot(source,total_nodes);
   }
 }
 

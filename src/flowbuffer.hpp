@@ -91,10 +91,12 @@ public:
   int _last_sn;
   int _guarantee_sent;
   int _ready;
-  bool _spec_sent;
+  bool _spec_sent; //I meant res_sent
   int _vc;
   int _reserved_slots;
   int _total_reserved_slots;//none chunk limit multiple flows
+  int _spec_outstanding;
+  bool _res_outstanding;
 
   //ECN mode
   int _IRD;
@@ -102,12 +104,11 @@ public:
   int _IRD_wait;
 
   //these variables for stat collection
-  int _spec_outstanding;
   vector<int> _stats;
   int _no_retransmit_loss;
   int _fast_retransmit;
   bool _watch;
-  int _max_ird;
+  long _total_wait;
  
 
 };

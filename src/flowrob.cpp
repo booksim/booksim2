@@ -7,11 +7,17 @@ FlowROB::FlowROB(){
   _flow_size = -1;
   _max_reorder = 0;
   _flow_creation_time=-1;
+  _sn_ceiling==0;
 }
 
 FlowROB::~FlowROB(){
 
 }
+
+bool FlowROB::sn_check(int sn){
+  return (sn<_sn_ceiling);
+}
+
 
 Flit* FlowROB::insert(Flit* f){
 
@@ -22,16 +28,19 @@ Flit* FlowROB::insert(Flit* f){
   switch(_status){
   case RES_STATUS_NONE:
     assert(f->res_type == RES_TYPE_RES);
+    _sn_ceiling = f->sn+f->payload;
     _flow_size = f->payload;
     _status = RES_STATUS_ASSIGNED;
     _flid = f->flid;
     rf = f;
+    
     break;
   case RES_STATUS_REORDER:
   case RES_STATUS_ASSIGNED:
     //second res for this flow
     if(f->res_type == RES_TYPE_RES){
       _flow_size += f->payload;
+      _sn_ceiling = f->sn+f->payload;
       rf = f;
       break;
     }

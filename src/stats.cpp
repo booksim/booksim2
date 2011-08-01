@@ -132,6 +132,8 @@ void Stats::Display( ostream & os ) const
 }
 
 ostream & operator<<(ostream & os, const Stats & s) {
+  os<<"[ ";
   os << s._hist;
+  os<<" ]";
   return os;
 }

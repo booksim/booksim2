@@ -67,6 +67,9 @@ class IQRouter : public Router {
   int _sw_alloc_delay;
   int** dropped_pid;
   
+  vector<bool> _output_hysteresis;
+  vector<bool> _credit_hysteresis;
+
 
   multimap<int, Flit *> _in_queue_flits;
 

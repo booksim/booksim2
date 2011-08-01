@@ -74,11 +74,9 @@ public:
 
 template<class T>
 ostream & operator<<(ostream & os, const vector<T> & v) {
-  os << "[ ";
   for(size_t i = 0; i < v.size(); ++i) {
     os << v[i] << " ";
   }
-  os << "]";
   return os;
 }
 

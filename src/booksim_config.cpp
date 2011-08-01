@@ -45,17 +45,19 @@ BookSimConfig::BookSimConfig( )
   _int_map["transient_enable"] = 0;
   _int_map["transient_duration"] = 100;
 
+  _float_map["reservation_rtt"] = 3.0;
   _float_map["reservation_overhead_factor"] = 1.05;
   _int_map["fast_reservation_transmit"] = 0;
   _int_map["reservation_packet_threshold"] = 64;
-  _int_map["reservation_chunk_limit"] = 256;
+  _int_map["reservation_chunk_limit"] = 128;
+
 
   _int_map["bystander_sender"] = 0;
   _int_map["bystander_receiver"] = 0;
   _int_map["create_permanent_flows"] = 0;
 
   _int_map["flow_merge"] = 1;
-  _int_map["flow_buffer_capacity"] = 128;
+  _int_map["flow_buffer_capacity"] = 128; //not used
   _int_map["flow_buffers"] = 8;
   _int_map["flow_size"] = 1;
   AddStrField("flow_size","");
@@ -73,7 +75,9 @@ BookSimConfig::BookSimConfig( )
   _int_map["ecn_congestion_threshold"] = 40;
   _int_map["ird_scaling_factor"] = 1;
   _int_map["ecn_ird_increase"] = 4;
-
+  _int_map["ecn_hysteresis"] = 0;
+  _int_map["ecn_ird_limit"]=10000000;
+  _int_map["ecn_aimd"] = 0;
   //========================================================
   // Network options
   //========================================================

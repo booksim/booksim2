@@ -60,6 +60,8 @@ extern bool  VC_ALLOC_DROP;
 extern int ECN_BUFFER_THRESHOLD;
 extern int ECN_CONGEST_THRESHOLD;
 
+extern int ECN_HYSTERESIS;
+
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
 : Router( config, parent, name, id, inputs, outputs ), _active(false)
@@ -78,6 +80,9 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _vc_request_buffer_num.resize(_vcs*outputs,0);
   _vc_ecn.resize(_vcs*outputs,false);
 
+
+  _output_hysteresis.resize(outputs,false);
+  _credit_hysteresis.resize(_vcs*outputs,false);
   _vc_congested.resize(_vcs*outputs,0);
   _ECN_activated.resize(_vcs*outputs,0);
   _input_request.resize(inputs,0);
@@ -1985,21 +1990,40 @@ void IQRouter::_OutputQueuing( )
 
 void IQRouter::_SendFlits( )
 {
+
+  for(int i = 0; i<_outputs; i++){
+    
+    if(_output_hysteresis[i]){
+      _output_hysteresis[i] = (_output_buffer[i].size() >=((size_t)ECN_CONGEST_THRESHOLD-ECN_HYSTERESIS));
+    } else {
+      _output_hysteresis[i] = (_output_buffer[i].size() >=((size_t)ECN_CONGEST_THRESHOLD+ECN_HYSTERESIS));
+    }
+    
+    for(int j = 0; j<_vcs; j++){
+      BufferState * const dest_buf = _next_buf[i];
+      if(_credit_hysteresis[i*_vcs+j]){
+	_credit_hysteresis[i*_vcs+j] = (dest_buf->Size(j) < ECN_BUFFER_THRESHOLD+ECN_HYSTERESIS);
+      } else {
+	_credit_hysteresis[i*_vcs+j] = (dest_buf->Size(j) < ECN_BUFFER_THRESHOLD-ECN_HYSTERESIS);
+      }
+    }
+  }
+
   for ( int output = 0; output < _outputs; ++output ) {
     if ( !_output_buffer[output].empty( ) ) {
       Flit * const f = _output_buffer[output].front( );
       assert(f);
-
-
-    BufferState * const dest_buf = _next_buf[output];
-     if(gECN && f->head && !f->fecn ){	
-       if(_output_buffer[output].size() >=(size_t)ECN_CONGEST_THRESHOLD &&
-	   dest_buf->Size(f->vc) < ECN_BUFFER_THRESHOLD){
+      
+      
+      BufferState * const dest_buf = _next_buf[output];
+      if(gECN && f->head && !f->fecn ){	
+	if(_output_hysteresis[output] &&
+	   _credit_hysteresis[output*_vcs+f->vc]){
 	  _ECN_activated[output*_vcs+f->vc]++;
 	  f->fecn= true; 
 	}
       }
-
+	
 
       _output_buffer[output].pop( );
       ++_sent_flits[output];
