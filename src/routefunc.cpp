@@ -1605,14 +1605,22 @@ void InitializeRoutingMap( const Configuration & config )
   gBeginVCs = config.GetIntArray("start_vc");
   if(gBeginVCs.empty()) {
     int const start_vc = config.GetInt("start_vc");
-    gBeginVCs.push_back((start_vc < 0) ? 0 : start_vc);
+    if(start_vc < 0) {
+      for(int cl = 0; cl < classes; ++cl)
+	gBeginVCs.push_back((cl * gNumVCs) / classes);
+    } else
+      gBeginVCs.push_back(start_vc);
   }
   gBeginVCs.resize(classes, gBeginVCs.back());
 
   gEndVCs = config.GetIntArray("end_vc");
   if(gEndVCs.empty()) {
     int const end_vc = config.GetInt("end_vc");
-    gEndVCs.push_back((end_vc < 0) ? (gNumVCs - 1) : end_vc);
+    if(end_vc < 0) {
+      for(int cl = 0; cl < classes; ++cl)
+	gEndVCs.push_back(((cl + 1) * gNumVCs) / classes - 1);
+    } else
+      gEndVCs.push_back(end_vc);
   }
   gEndVCs.resize(classes, gEndVCs.back());
   for(int c = 0; c < classes; ++c) {
