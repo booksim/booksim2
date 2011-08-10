@@ -49,9 +49,8 @@ class BufferState : public Module {
   public:
     BufferPolicy(Configuration const & config, BufferState * parent, 
 		 const string & name);
-    virtual void AllocVC(int vc = 0);
-    virtual void FreeVC(int vc = 0);
-    virtual void AllocSlotFor(Flit const * const f);
+    virtual void TakeBuffer(int vc = 0);
+    virtual void SendingFlit(Flit const * const f);
     virtual void FreeSlotFor(int vc = 0);
     virtual bool IsFullFor(int vc = 0) const = 0;
 
@@ -74,7 +73,7 @@ class BufferState : public Module {
   public:
     PrivateBufferPolicy(Configuration const & config, BufferState * parent, 
 			const string & name);
-    virtual void AllocSlotFor(Flit const * const f);
+    virtual void SendingFlit(Flit const * const f);
     virtual bool IsFullFor(int vc = 0) const;
   };
   
@@ -91,24 +90,21 @@ class BufferState : public Module {
   public:
     SharedBufferPolicy(Configuration const & config, BufferState * parent, 
 		       const string & name);
-    virtual void FreeVC(int vc = 0);
-    virtual void AllocSlotFor(Flit const * const f);
+    virtual void SendingFlit(Flit const * const f);
     virtual void FreeSlotFor(int vc = 0);
     virtual bool IsFullFor(int vc = 0) const;
   };
 
   class LimitedSharedBufferPolicy : public SharedBufferPolicy {
   protected:
-    bool _release_after_tail;
     int _active_vcs;
     int _max_held_slots;
   public:
     LimitedSharedBufferPolicy(Configuration const & config, 
 			      BufferState * parent,
 			      const string & name);
-    virtual void AllocVC(int vc = 0);
-    virtual void FreeVC(int vc = 0);
-    virtual void AllocSlotFor(Flit const * const f);
+    virtual void TakeBuffer(int vc = 0);
+    virtual void SendingFlit(Flit const * const f);
     virtual bool IsFullFor(int vc = 0) const;
   };
     
@@ -117,9 +113,8 @@ class BufferState : public Module {
     DynamicLimitedSharedBufferPolicy(Configuration const & config, 
 				     BufferState * parent,
 				     const string & name);
-    virtual void AllocVC(int vc = 0);
-    virtual void FreeVC(int vc = 0);
-    virtual void AllocSlotFor(Flit const * const f);
+    virtual void TakeBuffer(int vc = 0);
+    virtual void SendingFlit(Flit const * const f);
   };
   
   class ShiftingDynamicLimitedSharedBufferPolicy : public DynamicLimitedSharedBufferPolicy {
@@ -127,9 +122,8 @@ class BufferState : public Module {
     ShiftingDynamicLimitedSharedBufferPolicy(Configuration const & config, 
 					     BufferState * parent,
 					     const string & name);
-    virtual void AllocVC(int vc = 0);
-    virtual void FreeVC(int vc = 0);
-    virtual void AllocSlotFor(Flit const * const f);
+    virtual void TakeBuffer(int vc = 0);
+    virtual void SendingFlit(Flit const * const f);
   };
   
   class FeedbackSharedBufferPolicy : public SharedBufferPolicy {
@@ -144,7 +138,7 @@ class BufferState : public Module {
   public:
     FeedbackSharedBufferPolicy(Configuration const & config, 
 			       BufferState * parent, const string & name);
-    virtual void AllocSlotFor(Flit const * const f);
+    virtual void SendingFlit(Flit const * const f);
     virtual void FreeSlotFor(int vc = 0);
     virtual bool IsFullFor(int vc = 0) const;
   };
