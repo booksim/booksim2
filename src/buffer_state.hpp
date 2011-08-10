@@ -45,7 +45,6 @@ class BufferState : public Module {
   protected:
     BufferState const * const _buffer_state;
     int _vcs;
-    int _active_vcs;
     vector<int> _vc_occupancy;
   public:
     BufferPolicy(Configuration const & config, BufferState * parent, 
@@ -100,11 +99,14 @@ class BufferState : public Module {
 
   class LimitedSharedBufferPolicy : public SharedBufferPolicy {
   protected:
+    int _active_vcs;
     int _max_held_slots;
   public:
     LimitedSharedBufferPolicy(Configuration const & config, 
 			      BufferState * parent,
 			      const string & name);
+    virtual void AllocVC(int vc = 0);
+    virtual void FreeVC(int vc = 0);
     virtual bool IsFullFor(int vc = 0) const;
   };
     

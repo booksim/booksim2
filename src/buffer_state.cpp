@@ -45,7 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "globals.hpp"
 
 BufferState::BufferPolicy::BufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-: Module(parent, name), _buffer_state(parent), _active_vcs(0)
+: Module(parent, name), _buffer_state(parent)
 {
   _vcs = config.GetInt("num_vcs");
   _vc_occupancy.resize(_vcs, 0);
@@ -54,19 +54,11 @@ BufferState::BufferPolicy::BufferPolicy(Configuration const & config, BufferStat
 void BufferState::BufferPolicy::AllocVC(int vc)
 {
   assert((vc >= 0) && (vc < _vcs));
-  ++_active_vcs;
-  if(_active_vcs > _vcs) {
-    Error("Number of active VCs is too large.");
-  }
 }
 
 void BufferState::BufferPolicy::FreeVC(int vc)
 {
   assert((vc >= 0) && (vc < _vcs));
-  --_active_vcs;
-  if(_active_vcs < 0) {
-    Error("Number of active VCs fell below zero.");
-  }
 }
 
 void BufferState::BufferPolicy::AllocSlotFor(int vc)
@@ -220,7 +212,7 @@ void BufferState::SharedBufferPolicy::ProcessFreeSlot(int vc)
 
 void BufferState::SharedBufferPolicy::FreeVC(int vc)
 {
-  BufferPolicy::FreeVC(vc);
+  assert((vc >= 0) && (vc < _vcs));
   assert((_vc_occupancy[vc] > 0) || (_reserved_slots[vc] > 0));
   while(_reserved_slots[vc]) {
     --_reserved_slots[vc];
@@ -265,11 +257,29 @@ bool BufferState::SharedBufferPolicy::IsFullFor(int vc) const
 }
 
 BufferState::LimitedSharedBufferPolicy::LimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-  : SharedBufferPolicy(config, parent, name)
+  : SharedBufferPolicy(config, parent, name), _active_vcs(0)
 {
   _max_held_slots = config.GetInt("max_held_slots");
   if(_max_held_slots < 0) {
     _max_held_slots = _buf_size;
+  }
+}
+
+void BufferState::LimitedSharedBufferPolicy::AllocVC(int vc)
+{
+  assert((vc >= 0) && (vc < _vcs));
+  ++_active_vcs;
+  if(_active_vcs > _vcs) {
+    Error("Number of active VCs is too large.");
+  }
+}
+
+void BufferState::LimitedSharedBufferPolicy::FreeVC(int vc)
+{
+  SharedBufferPolicy::FreeVC(vc);
+  --_active_vcs;
+  if(_active_vcs < 0) {
+    Error("Number of active VCs fell below zero.");
   }
 }
 
@@ -287,7 +297,7 @@ BufferState::DynamicLimitedSharedBufferPolicy::DynamicLimitedSharedBufferPolicy(
 
 void BufferState::DynamicLimitedSharedBufferPolicy::AllocVC(int vc)
 {
-  BufferPolicy::AllocVC(vc);
+  LimitedSharedBufferPolicy::AllocVC(vc);
   assert(_active_vcs > 0);
   _max_held_slots = _buf_size / _active_vcs;
   assert(_max_held_slots > 0);
@@ -295,7 +305,7 @@ void BufferState::DynamicLimitedSharedBufferPolicy::AllocVC(int vc)
 
 void BufferState::DynamicLimitedSharedBufferPolicy::FreeVC(int vc)
 {
-  SharedBufferPolicy::FreeVC(vc);
+  LimitedSharedBufferPolicy::FreeVC(vc);
   if(_active_vcs) {
     _max_held_slots = _buf_size / _active_vcs;
   }
@@ -310,7 +320,7 @@ BufferState::ShiftingDynamicLimitedSharedBufferPolicy::ShiftingDynamicLimitedSha
 
 void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::AllocVC(int vc)
 {
-  BufferPolicy::AllocVC(vc);
+  LimitedSharedBufferPolicy::AllocVC(vc);
   assert(_active_vcs);
   int i = _active_vcs - 1;
   _max_held_slots = _buf_size;
@@ -323,7 +333,7 @@ void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::AllocVC(int vc)
 
 void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::FreeVC(int vc)
 {
-  SharedBufferPolicy::FreeVC(vc);
+  LimitedSharedBufferPolicy::FreeVC(vc);
   if(_active_vcs) {
     int i = _active_vcs - 1;
     _max_held_slots = _buf_size;
