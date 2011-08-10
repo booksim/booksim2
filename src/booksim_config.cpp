@@ -114,6 +114,7 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["max_held_slots"] = -1;
 
+  _int_map["limited_release_after_tail"] = 1;
   _int_map["feedback_aging_scale"] = 1;
   _int_map["feedback_offset"] = 0;
 

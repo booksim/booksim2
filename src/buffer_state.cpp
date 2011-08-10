@@ -61,8 +61,10 @@ void BufferState::BufferPolicy::FreeVC(int vc)
   assert((vc >= 0) && (vc < _vcs));
 }
 
-void BufferState::BufferPolicy::AllocSlotFor(int vc)
+void BufferState::BufferPolicy::AllocSlotFor(Flit const * const f)
 {
+  assert(f);
+  int const vc = f->vc;
   assert((vc >= 0) && (vc < _vcs));
   ++_vc_occupancy[vc];
 }
@@ -111,9 +113,10 @@ BufferState::PrivateBufferPolicy::PrivateBufferPolicy(Configuration const & conf
   assert(_vc_buf_size > 0);
 }
 
-void BufferState::PrivateBufferPolicy::AllocSlotFor(int vc)
+void BufferState::PrivateBufferPolicy::AllocSlotFor(Flit const * const f)
 {
-  BufferPolicy::AllocSlotFor(vc);
+  BufferPolicy::AllocSlotFor(f);
+  int const vc = f->vc;
   if(_vc_occupancy[vc] > _vc_buf_size) {
     ostringstream err;
     err << "Buffer overflow for VC " << vc;
@@ -220,9 +223,10 @@ void BufferState::SharedBufferPolicy::FreeVC(int vc)
   }
 }
 
-void BufferState::SharedBufferPolicy::AllocSlotFor(int vc)
+void BufferState::SharedBufferPolicy::AllocSlotFor(Flit const * const f)
 {
-  BufferPolicy::AllocSlotFor(vc);
+  BufferPolicy::AllocSlotFor(f);
+  int const vc = f->vc;
   if(_reserved_slots[vc] > 0) {
     --_reserved_slots[vc];
   } else {
@@ -259,6 +263,7 @@ bool BufferState::SharedBufferPolicy::IsFullFor(int vc) const
 BufferState::LimitedSharedBufferPolicy::LimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
   : SharedBufferPolicy(config, parent, name), _active_vcs(0)
 {
+  _release_after_tail = config.GetInt("limited_release_after_tail") > 0;
   _max_held_slots = config.GetInt("max_held_slots");
   if(_max_held_slots < 0) {
     _max_held_slots = _buf_size;
@@ -277,9 +282,22 @@ void BufferState::LimitedSharedBufferPolicy::AllocVC(int vc)
 void BufferState::LimitedSharedBufferPolicy::FreeVC(int vc)
 {
   SharedBufferPolicy::FreeVC(vc);
-  --_active_vcs;
-  if(_active_vcs < 0) {
-    Error("Number of active VCs fell below zero.");
+  if(!_release_after_tail) {
+    --_active_vcs;
+    if(_active_vcs < 0) {
+      Error("Number of active VCs fell below zero.");
+    }
+  }
+}
+
+void BufferState::LimitedSharedBufferPolicy::AllocSlotFor(Flit const * const f)
+{
+  SharedBufferPolicy::AllocSlotFor(f);
+  if(_release_after_tail && f->tail) {
+    --_active_vcs;
+    if(_active_vcs < 0) {
+      Error("Number of active VCs fell below zero.");
+    }
   }
 }
 
@@ -306,7 +324,16 @@ void BufferState::DynamicLimitedSharedBufferPolicy::AllocVC(int vc)
 void BufferState::DynamicLimitedSharedBufferPolicy::FreeVC(int vc)
 {
   LimitedSharedBufferPolicy::FreeVC(vc);
-  if(_active_vcs) {
+  if(!_release_after_tail && _active_vcs) {
+    _max_held_slots = _buf_size / _active_vcs;
+  }
+  assert(_max_held_slots > 0);
+}
+
+void BufferState::DynamicLimitedSharedBufferPolicy::AllocSlotFor(Flit const * const f)
+{
+  LimitedSharedBufferPolicy::AllocSlotFor(f);
+  if(_release_after_tail && f->tail && _active_vcs) {
     _max_held_slots = _buf_size / _active_vcs;
   }
   assert(_max_held_slots > 0);
@@ -334,7 +361,21 @@ void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::AllocVC(int vc)
 void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::FreeVC(int vc)
 {
   LimitedSharedBufferPolicy::FreeVC(vc);
-  if(_active_vcs) {
+  if(!_release_after_tail && _active_vcs) {
+    int i = _active_vcs - 1;
+    _max_held_slots = _buf_size;
+    while(i) {
+      _max_held_slots >>= 1;
+      i >>= 1;
+    }
+  }
+  assert(_max_held_slots > 0);
+}
+
+void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::AllocSlotFor(Flit const * const f)
+{
+  LimitedSharedBufferPolicy::AllocSlotFor(f);
+  if(_release_after_tail && f->tail && _active_vcs) {
     int i = _active_vcs - 1;
     _max_held_slots = _buf_size;
     while(i) {
@@ -358,9 +399,9 @@ BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuratio
   _min_round_trip_time = _buf_size;
 }
 
-void BufferState::FeedbackSharedBufferPolicy::AllocSlotFor(int vc)
+void BufferState::FeedbackSharedBufferPolicy::AllocSlotFor(Flit const * const f)
 {
-  SharedBufferPolicy::AllocSlotFor(vc);
+  SharedBufferPolicy::AllocSlotFor(f);
   _flit_sent_time.push(GetSimTime());
 }
 
@@ -465,7 +506,7 @@ void BufferState::SendingFlit( Flit const * const f )
     Error("Buffer overflow.");
   }
 
-  _buffer_policy->AllocSlotFor(f->vc);
+  _buffer_policy->AllocSlotFor(f);
   
   if ( f->tail ) {
     _tail_sent[f->vc] = true;
