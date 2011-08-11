@@ -129,7 +129,9 @@ void BufferState::ProcessCredit( Credit const * const c )
       }
     } else {
       cout << "VC = " << *iter << endl;
-      Error( "Buffer occupancy fell below zero" );
+      cout<< "Buffer occupancy fell below zero" ;
+      assert(false);
+      //      Error( "Buffer occupancy fell below zero" );
     }
     ++iter;
   }

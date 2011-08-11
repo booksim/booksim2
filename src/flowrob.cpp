@@ -7,7 +7,8 @@ FlowROB::FlowROB(){
   _flow_size = -1;
   _max_reorder = 0;
   _flow_creation_time=-1;
-  _sn_ceiling==0;
+
+  _sn_ceiling=0;
 }
 
 FlowROB::~FlowROB(){

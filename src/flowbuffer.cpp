@@ -18,7 +18,9 @@ extern bool ECN_AIMD;
 extern vector<Stats*> gStatIRD;
 
 FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id, int size, int mode, flow* f){
+
   parent = p;
+  _dest=-1;
   _IRD = 0; 
   _IRD_timer = 0;
   _IRD_wait = 0;

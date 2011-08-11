@@ -41,6 +41,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class Buffer : public Module {
   
+
+protected:
   int _vc_size;
   int _shared_count;
   int _shared_size;
@@ -48,7 +50,7 @@ class Buffer : public Module {
   vector<VC*> _vc;
 
 public:
-  
+  Buffer(Module *parent, const string& name);
   Buffer( const Configuration& config, int outputs,
 	  Module *parent, const string& name );
   ~Buffer();
@@ -138,7 +140,7 @@ public:
   }
 
   inline bool IsWatched( int vc ) const
-  {
+ { 
     return _vc[vc]->IsWatched( );
   }
 

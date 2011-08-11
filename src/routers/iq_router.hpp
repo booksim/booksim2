@@ -53,6 +53,16 @@ class BufferMonitor;
 
 class IQRouter : public Router {
 
+  bool _voq;
+  vector<pair<int,int> > _voq_pid;
+  //this is dynamic for arriving packets
+  OutputSet* _voq_init_route;
+
+  //this is static for a VOQ VC
+  vector<OutputSet*> _voq_route_set;
+  vector<bool> _res_voq_drop;
+
+  int _real_vcs; //problem when voq is used
   int _vcs;
   int _classes;
 
@@ -132,6 +142,11 @@ class IQRouter : public Router {
 
   void _SendFlits( );
   void _SendCredits( );
+
+  // helper function for voq
+  bool is_voq_vc(int vc);
+  int voq_vc(int vc, int output=-1);
+  int real_vc(int vvc, int output);
   
   // ----------------------------------------
   //

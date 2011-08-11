@@ -34,6 +34,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include "buffer.hpp"
 
+Buffer::Buffer(Module *parent, const string& name) :
+Module( parent, name ){
+  
+ }
+
 Buffer::Buffer( const Configuration& config, int outputs, 
 		Module *parent, const string& name ) :
 Module( parent, name ), _shared_count(0)

@@ -164,8 +164,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
 
   gStatFlowStats.resize(FLOW_STAT_LIFETIME+1+1,0);
-  
-
 
   _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
@@ -267,16 +265,16 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   for(int i = 0; i< _nodes; i++){
     ostringstream tmp_name;
     tmp_name << "grant_time_now_" << i;
-    gStatGrantTimeNow[i] =  new Stats( this, tmp_name.str() , 1.0, 1000 );
+    gStatGrantTimeNow[i] =  new Stats( this, tmp_name.str() , 10.0, 100 );
     tmp_name.str("");
     tmp_name << "grant_time_future_" << i;
-    gStatGrantTimeFuture[i] =  new Stats( this, tmp_name.str() , 1.0, 1000 );
+    gStatGrantTimeFuture[i] =  new Stats( this, tmp_name.str() , 10.0, 100 );
     tmp_name.str("");
     tmp_name << "res_time_now_" << i;
-    gStatReservationTimeNow[i] =  new Stats( this, tmp_name.str() , 1.0, 1000 );
+    gStatReservationTimeNow[i] =  new Stats( this, tmp_name.str() , 10.0, 100 );
     tmp_name.str("");
     tmp_name << "res_time_future_" << i;
-    gStatReservationTimeFuture[i] =  new Stats( this, tmp_name.str() , 1.0, 1000 );
+    gStatReservationTimeFuture[i] =  new Stats( this, tmp_name.str() , 10.0, 100 );
     tmp_name.str("");
   }
 
@@ -298,7 +296,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   gStatROBRange =  new Stats( this, "rob_range" , 1.0, 300 );
   
-  gStatFlowSenderLatency =  new Stats( this, "flow_sender_latency" , 1.0, 5000 );
+  gStatFlowSenderLatency =  new Stats( this, "flow_sender_latency" , 5.0, 1000 );
   gStatFlowLatency=  new Stats( this, "flow_latency" , 1.0, 5000 );
   gStatActiveFlowBuffers=  new Stats( this, "sender_active_flows" , 1.0, 10 );
   gStatReadyFlowBuffers=  new Stats( this, "sender_ready_flows" , 1.0, 10 );
@@ -2918,10 +2916,16 @@ void TrafficManager::_DisplayTedsShit(){
       }
     }
     for(int i = 0; i<_routers; i++){
+      *_stats_out <<"router_"<<i<<"_activity=["
+		  <<rrr[i]->_vc_activity;
+      for(size_t ii=0; ii<max_outputs-rrr[i]->NumOutputs(); ii++)	 *_stats_out<<"0 ";
+      *_stats_out <<"];"<<endl;
+    }
+    for(int i = 0; i<_routers; i++){
       *_stats_out <<"drop_router("<<i+1<<",:)=["
 		  <<gDropStats[i] ;
-	for(size_t ii=0; ii<max_outputs-rrr[i]->NumOutputs(); ii++)	 *_stats_out<<"0 ";
-	*_stats_out <<"];"<<endl;
+      for(size_t ii=0; ii<max_outputs-rrr[i]->NumOutputs(); ii++)	 *_stats_out<<"0 ";
+      *_stats_out <<"];"<<endl;
     }
 
     for(size_t i = 0; i<rrr.size(); i++){

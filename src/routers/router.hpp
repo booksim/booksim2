@@ -89,7 +89,7 @@ public:
   vector<int> _input_request;
   vector<int> _input_grant;
   vector<long> _vc_congested_sum;
-
+  vector<int> _vc_activity;
 
 public:
   Router( const Configuration& config,
