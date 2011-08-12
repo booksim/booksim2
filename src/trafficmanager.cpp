@@ -773,7 +773,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
 
   string stats_out_file = config.GetStr( "stats_out" );
-  if(stats_out_file == "") {
+  if(stats_out_file == "" || stats_out_file == "NULL") {
     _stats_out = NULL;
   } else if(stats_out_file == "-") {
     _stats_out = &cout;

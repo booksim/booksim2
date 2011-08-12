@@ -87,6 +87,7 @@ Module( parent, name ), _shared_occupied(0), _active_vcs(0)
 
   _wait_for_tail_credit = config.GetInt( "wait_for_tail_credit" );
   _vc_busy_when_full = config.GetInt( "vc_busy_when_full" );
+  _cut_through = (config.GetInt("cut_through")==1);
 
   _in_use.resize(_vcs, false);
   _tail_sent.resize(_vcs, false);
@@ -204,6 +205,19 @@ bool BufferState::IsAvailableFor( int vc ) const
 {
  
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
+  if(_in_use[vc]){
+    return false;
+  } else {
+    if(!_vc_busy_when_full)
+      return true;
+    else {
+      if(_cut_through){
+	return _vc_buf_size - _cur_occupied[vc] >=16;
+      } else {
+	return !IsFullFor(vc);
+      }
+    }
+  }
   return !_in_use[vc] && (!_vc_busy_when_full || !IsFullFor(vc));
 }
 

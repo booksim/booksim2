@@ -136,6 +136,8 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   gDropStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
   gDropStats[id].resize(inputs,0);
   
+  _cut_through = (config.GetInt("cut_through")==1);
+  _use_voq_size=(config.GetInt("use_voq_size")==1);
   _voq = (config.GetInt("voq") ==1);
   _real_vcs         = config.GetInt( "num_vcs" );
 
@@ -1149,6 +1151,8 @@ void IQRouter::_SWHoldEvaluate( )
     _input_request[expanded_input]++;
 
     if(!dest_buf->HasCreditFor(match_vc)) {
+
+      assert(!_cut_through);
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "  Unable to reuse held connection from input " << input
@@ -1777,6 +1781,7 @@ void IQRouter::_SWAllocEvaluate( )
 	    }
 	    iter->second.second = -1;
 	  } else if(!dest_buf->HasCreditFor((output_and_vc % _real_vcs))) {
+	    assert(!_cut_through);
 	    if(f->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 			 << "Discarding grant from input " << input
@@ -1848,6 +1853,7 @@ void IQRouter::_SWAllocEvaluate( )
 	assert((match_vc >= 0) && (match_vc < _real_vcs));
 
 	if(!dest_buf->HasCreditFor(match_vc)) {
+	  assert(!_cut_through);
 	  if(f->watch) {
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		       << "  Discarding grant from input " << input
@@ -2201,7 +2207,7 @@ void IQRouter::_SendFlits( )
 
   for(int i = 0; i<_outputs; i++){
     if(gECN){
-      if(_voq){
+      if(_voq && _use_voq_size){
 	int voq_size =0;
 	for(int j = 0;  j<_inputs; j++){
 	  voq_size+=_buf[j]->GetSize(voq_vc(ECN_RESERVED_VCS,i));

@@ -53,6 +53,8 @@ class BufferMonitor;
 
 class IQRouter : public Router {
 
+  bool _cut_through;
+  bool _use_voq_size;
   bool _voq;
   vector<pair<int,int> > _voq_pid;
   //this is dynamic for arriving packets

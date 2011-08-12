@@ -93,7 +93,8 @@ class BufferState : public Module {
   int  _shared_occupied;
   int  _vcs;
   int  _active_vcs;
-  
+  bool _cut_through;
+
   SharingPolicy * _sharing_policy;
   
   vector<bool> _in_use;
