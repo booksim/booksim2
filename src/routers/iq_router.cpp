@@ -60,7 +60,8 @@ extern map<int, vector<int> > gDropStats;
 extern bool  VC_ALLOC_DROP;
 extern int ECN_BUFFER_THRESHOLD;
 extern int ECN_CONGEST_THRESHOLD;
-extern int ECN_HYSTERESIS;
+extern int ECN_BUFFER_HYSTERESIS;
+extern int ECN_CREDIT_HYSTERESIS;
 
 
 int IQRouter::real_vc(int vvc, int output){
@@ -2206,23 +2207,23 @@ void IQRouter::_SendFlits( )
 	  voq_size+=_buf[j]->GetSize(voq_vc(ECN_RESERVED_VCS,i));
 	}	
 	if(_output_hysteresis[i]){
-	  _output_hysteresis[i] = (voq_size >=((size_t)ECN_CONGEST_THRESHOLD-ECN_HYSTERESIS));
+	  _output_hysteresis[i] = (voq_size >=((size_t)ECN_CONGEST_THRESHOLD-ECN_BUFFER_HYSTERESIS));
 	} else {
-	  _output_hysteresis[i] = (voq_size >=((size_t)ECN_CONGEST_THRESHOLD+ECN_HYSTERESIS));
+	  _output_hysteresis[i] = (voq_size >=((size_t)ECN_CONGEST_THRESHOLD+ECN_BUFFER_HYSTERESIS));
 	}
       } else {
 	if(_output_hysteresis[i]){
-	  _output_hysteresis[i] = (_output_buffer[i].size() >=((size_t)ECN_CONGEST_THRESHOLD-ECN_HYSTERESIS));
+	  _output_hysteresis[i] = (_output_buffer[i].size() >=((size_t)ECN_CONGEST_THRESHOLD-ECN_BUFFER_HYSTERESIS));
 	} else {
-	  _output_hysteresis[i] = (_output_buffer[i].size() >=((size_t)ECN_CONGEST_THRESHOLD+ECN_HYSTERESIS));
+	  _output_hysteresis[i] = (_output_buffer[i].size() >=((size_t)ECN_CONGEST_THRESHOLD+ECN_BUFFER_HYSTERESIS));
 	}
       }
       for(int j = 0; j<_real_vcs; j++){
 	BufferState * const dest_buf = _next_buf[i];
 	if(_credit_hysteresis[i*_real_vcs+j]){
-	  _credit_hysteresis[i*_real_vcs+j] = (dest_buf->Size(j) < ECN_BUFFER_THRESHOLD+ECN_HYSTERESIS);
+	  _credit_hysteresis[i*_real_vcs+j] = (dest_buf->Size(j) < ECN_BUFFER_THRESHOLD+ECN_CREDIT_HYSTERESIS);
 	} else {
-	  _credit_hysteresis[i*_real_vcs+j] = (dest_buf->Size(j) < ECN_BUFFER_THRESHOLD-ECN_HYSTERESIS);
+	  _credit_hysteresis[i*_real_vcs+j] = (dest_buf->Size(j) < ECN_BUFFER_THRESHOLD-ECN_CREDIT_HYSTERESIS);
 	}
       }
     }

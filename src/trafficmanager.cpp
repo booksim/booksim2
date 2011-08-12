@@ -86,7 +86,8 @@ int ECN_IRD_INCREASE = 1;
 //Maximum IRD
 int ECN_IRD_LIMIT = 0;
 //hysteresis for ECN
-int ECN_HYSTERESIS=0;
+int ECN_BUFFER_HYSTERESIS=0;
+int ECN_CREDIT_HYSTERESIS=0;
 //ECN AIMD
 bool ECN_AIMD = false;
 
@@ -237,7 +238,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   IRD_SCALING_FACTOR = config.GetInt("ird_scaling_factor");
   ECN_IRD_INCREASE = config.GetInt("ecn_ird_increase");
   ECN_IRD_LIMIT= config.GetInt("ecn_ird_limit");
-  ECN_HYSTERESIS=config.GetInt("ecn_hysteresis");
+  ECN_BUFFER_HYSTERESIS=config.GetInt("ecn_buffer_hysteresis");
+  ECN_CREDIT_HYSTERESIS=config.GetInt("ecn_credit_hysteresis");
   ECN_AIMD = (config.GetInt("ecn_aimd")==1);
   cout<<"ECN_IRD_LIMIT "<<ECN_IRD_LIMIT<<endl;
 
@@ -706,7 +708,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _sample_period = config.GetInt( "sample_period" );
   _max_samples    = config.GetInt( "max_samples" );
   _warmup_periods = config.GetInt( "warmup_periods" );
-
+  _forced_warmup = (config.GetInt("forced_warmup")==1);
   _measure_stats = config.GetIntArray( "measure_stats" );
   if(_measure_stats.empty()) {
     _measure_stats.push_back(config.GetInt("measure_stats"));
@@ -749,6 +751,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _print_vc_stats = config.GetInt( "print_vc_stats" );
   _deadlock_warn_timeout = config.GetInt( "deadlock_warn_timeout" );
   _drain_measured_only = config.GetInt( "drain_measured_only" );
+  _no_drain = (config.GetInt("no_drain")==1);
+  
 
   string watch_file = config.GetStr( "watch_file" );
   _LoadWatchList(watch_file);
@@ -1231,7 +1235,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
     // Only record statistics once per packet (at tail)
     // and based on the simulation state
-    if ( ( _sim_state == warming_up ) || f->record ) {
+    if ( ( _sim_state == warming_up ) || (f->record ||_no_drain) ) {
       
       _hop_stats[f->cl]->AddSample( f->hops );
 
@@ -2000,6 +2004,8 @@ void TrafficManager::_ClearStats( )
     }
 
     for ( int i = 0; i < _nodes; ++i ) {
+      _sent_data_flits[c][i]=0;
+      _accepted_data_flits[c][i]=0;
       _accepted_flits[c][i]->Clear( );
     }
   
@@ -2012,6 +2018,8 @@ void TrafficManager::_ClearStats( )
       gDropStats[i][j] = 0;
     }
   }
+  gStatNodeReady.clear();
+  gStatNodeReady.resize(_nodes,0);
 
   gStatAckReceived.clear();
   gStatAckReceived.resize(_nodes,0);
@@ -2094,25 +2102,30 @@ void TrafficManager::_ClearStats( )
   gStatFlowStats.resize(FLOW_STAT_LIFETIME+1+1,0);
 }
 
-int TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const 
+int TrafficManager::_ComputeStats( const vector<Stats *> & stats, double *avg, double *min , double *max) const 
 {
   int dmin = -1;
-
-  //  *min = numeric_limits<double>::max();
-  *min = -numeric_limits<double>::max();
-  *avg = 0.0;
-
+  if(min)
+    *min = numeric_limits<double>::max();
+  if(max)
+    *max = -numeric_limits<double>::max();
+  if(avg)
+    *avg = 0.0;
+  
   for ( int d = 0; d < _nodes; ++d ) {
     double curr = stats[d]->Average( );
-    //    if ( curr < *min ) {
-    if ( curr > *min ) {
+    if (min !=NULL  &&  curr < *min ) {
       *min = curr;
       dmin = d;
     }
-    *avg += curr;
+    if (max!=NULL &&  curr > *max ) {
+      *max = curr;
+    } 
+    if(avg)
+      *avg += curr;
   }
-
-  *avg /= (double)_nodes;
+  if(avg)
+    *avg /= (double)_nodes;
 
   return dmin;
 }
@@ -2250,6 +2263,7 @@ bool TrafficManager::_SingleSim( )
 	  packets_left |= !_total_in_flight_flits[c].empty();
 	}
       }
+      packets_left = packets_left && !_no_drain;
 
       while( packets_left ) { 
 	_Step( ); 
@@ -2449,7 +2463,8 @@ bool TrafficManager::_SingleSim( )
 	  count++;
 	}
 	
-	if((lat_exc_class < 0) &&
+	if((_sim_state != warming_up || !_forced_warmup) &&
+	   (lat_exc_class < 0) &&
 	   (_latency_thres[c] >= 0.0) &&
 	   ((latency / count) > _latency_thres[c])) {
 	  lat_exc_class = c;
@@ -2585,7 +2600,7 @@ bool TrafficManager::_SingleSim( )
 	packets_left |= !_total_in_flight_flits[c].empty();
       }
     }
-
+    packets_left = packets_left && !_no_drain;
 
     while( packets_left ) { 
       _Step( ); 
@@ -2605,7 +2620,7 @@ bool TrafficManager::_SingleSim( )
 	}
       }
     }
-    if(_drain_measured_only!=1){
+    if(_drain_measured_only!=1 && !_no_drain){
       //wait until all the credits are drained as well
       while(Credit::OutStanding()!=0){
 	++empty_steps;
@@ -2716,9 +2731,9 @@ void TrafficManager::DisplayStats( ostream & os ) {
     
     os << "Overall minimum latency = " << _overall_min_plat[c]->Average( )
        << " (" << _overall_min_plat[c]->NumSamples( ) << " samples)" << endl;
-    //os << "Overall average latency = " << _overall_avg_plat[c]->Average( )
-    // << " (" << _overall_avg_plat[c]->NumSamples( ) << " samples)" << endl;
-    os << "Overall average latency = " <<gStatPureNetworkLatency->Average( )
+    os << "Overall average latency = " << _overall_avg_plat[c]->Average( )
+       << " (" << _overall_avg_plat[c]->NumSamples( ) << " samples)" << endl;
+    os << "Overall average network latency = " <<gStatPureNetworkLatency->Average( )
        << " (" << _overall_avg_plat[c]->NumSamples( ) << " samples)" << endl;
 
     os << "Overall maximum latency = " << _overall_max_plat[c]->Average( )
@@ -2741,6 +2756,9 @@ void TrafficManager::DisplayStats( ostream & os ) {
        << " (" << _overall_accepted[c]->NumSamples( ) << " samples)" << endl;
     os << "Overall min accepted rate = " << _overall_accepted_min[c]->Average( )
        << " (" << _overall_accepted_min[c]->NumSamples( ) << " samples)" << endl;
+    double max;
+    _ComputeStats( _accepted_flits[c], NULL, NULL, &max );
+    os << "Overall max accepted rate = " <<max << endl;
     
     os << "Average hops = " << _hop_stats[c]->Average( )
        << " (" << _hop_stats[c]->NumSamples( ) << " samples)" << endl;

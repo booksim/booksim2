@@ -232,6 +232,7 @@ protected:
 
   int   _limit; //any higher clients do not generate packets
 
+  bool _forced_warmup;
   int   _warmup_time;
   int   _drain_time;
 
@@ -264,6 +265,7 @@ protected:
 
   bool _print_csv_results;
   bool _print_vc_stats;
+  bool _no_drain;
   bool _drain_measured_only;
 
   //flits to watch
@@ -285,7 +287,7 @@ protected:
 
   void _ClearStats( );
 
-  int  _ComputeStats( const vector<Stats *> & stats, double *avg, double *min ) const;
+  int  _ComputeStats( const vector<Stats *> & stats, double *avg, double *min , double *max=NULL) const;
 
   bool _SingleSim( );
 

@@ -42,7 +42,8 @@ BookSimConfig::BookSimConfig( )
 { 
 
   _int_map["voq"] = 0;
-  _int_map["cut_through"] =0;
+  _int_map["forced_warmup"] = 0;
+  _int_map["no_drain"] = 0;
 
   _int_map["transient_start"] = 100000;
   _int_map["transient_burst"] = 0;
@@ -79,7 +80,10 @@ BookSimConfig::BookSimConfig( )
   _int_map["ecn_congestion_threshold"] = 40;
   _int_map["ird_scaling_factor"] = 1;
   _int_map["ecn_ird_increase"] = 4;
-
+  _int_map["ecn_buffer_hysteresis"] = 0;
+  _int_map["ecn_credit_hysteresis"] = 0;
+  _int_map["ecn_ird_limit"]=10000000;
+  _int_map["ecn_aimd"] = 0;
   _int_map["ecn_hysteresis"] = 0;
   _int_map["ecn_ird_limit"]=1000;
   _int_map["ecn_aimd"] = 0;
