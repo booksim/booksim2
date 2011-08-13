@@ -45,32 +45,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "globals.hpp"
 
 BufferState::BufferPolicy::BufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-: Module(parent, name), _buffer_state(parent), _active_vcs(0)
+: Module(parent, name), _buffer_state(parent)
 {
   _vcs = config.GetInt("num_vcs");
   _vc_occupancy.resize(_vcs, 0);
 }
 
-void BufferState::BufferPolicy::AllocVC(int vc)
+void BufferState::BufferPolicy::TakeBuffer(int vc)
 {
   assert((vc >= 0) && (vc < _vcs));
-  ++_active_vcs;
-  if(_active_vcs > _vcs) {
-    Error("Number of active VCs is too large.");
-  }
 }
 
-void BufferState::BufferPolicy::FreeVC(int vc)
+void BufferState::BufferPolicy::SendingFlit(Flit const * const f)
 {
-  assert((vc >= 0) && (vc < _vcs));
-  --_active_vcs;
-  if(_active_vcs < 0) {
-    Error("Number of active VCs fell below zero.");
-  }
-}
-
-void BufferState::BufferPolicy::AllocSlotFor(int vc)
-{
+  assert(f);
+  int const vc = f->vc;
   assert((vc >= 0) && (vc < _vcs));
   ++_vc_occupancy[vc];
 }
@@ -119,9 +108,10 @@ BufferState::PrivateBufferPolicy::PrivateBufferPolicy(Configuration const & conf
   assert(_vc_buf_size > 0);
 }
 
-void BufferState::PrivateBufferPolicy::AllocSlotFor(int vc)
+void BufferState::PrivateBufferPolicy::SendingFlit(Flit const * const f)
 {
-  BufferPolicy::AllocSlotFor(vc);
+  BufferPolicy::SendingFlit(f);
+  int const vc = f->vc;
   if(_vc_occupancy[vc] > _vc_buf_size) {
     ostringstream err;
     err << "Buffer overflow for VC " << vc;
@@ -218,19 +208,10 @@ void BufferState::SharedBufferPolicy::ProcessFreeSlot(int vc)
   }
 }
 
-void BufferState::SharedBufferPolicy::FreeVC(int vc)
+void BufferState::SharedBufferPolicy::SendingFlit(Flit const * const f)
 {
-  BufferPolicy::FreeVC(vc);
-  assert((_vc_occupancy[vc] > 0) || (_reserved_slots[vc] > 0));
-  while(_reserved_slots[vc]) {
-    --_reserved_slots[vc];
-    ProcessFreeSlot(vc);
-  }
-}
-
-void BufferState::SharedBufferPolicy::AllocSlotFor(int vc)
-{
-  BufferPolicy::AllocSlotFor(vc);
+  BufferPolicy::SendingFlit(f);
+  int const vc = f->vc;
   if(_reserved_slots[vc] > 0) {
     --_reserved_slots[vc];
   } else {
@@ -241,6 +222,12 @@ void BufferState::SharedBufferPolicy::AllocSlotFor(int vc)
       if(_shared_buf_occupancy > _shared_buf_size) {
 	Error("Shared buffer overflow.");
       }
+    }
+  }
+  if(f->tail) {
+    while(_reserved_slots[vc]) {
+      --_reserved_slots[vc];
+      ProcessFreeSlot(vc);
     }
   }
 }
@@ -265,11 +252,31 @@ bool BufferState::SharedBufferPolicy::IsFullFor(int vc) const
 }
 
 BufferState::LimitedSharedBufferPolicy::LimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-  : SharedBufferPolicy(config, parent, name)
+  : SharedBufferPolicy(config, parent, name), _active_vcs(0)
 {
   _max_held_slots = config.GetInt("max_held_slots");
   if(_max_held_slots < 0) {
     _max_held_slots = _buf_size;
+  }
+}
+
+void BufferState::LimitedSharedBufferPolicy::TakeBuffer(int vc)
+{
+  assert((vc >= 0) && (vc < _vcs));
+  ++_active_vcs;
+  if(_active_vcs > _vcs) {
+    Error("Number of active VCs is too large.");
+  }
+}
+
+void BufferState::LimitedSharedBufferPolicy::SendingFlit(Flit const * const f)
+{
+  SharedBufferPolicy::SendingFlit(f);
+  if(f->tail) {
+    --_active_vcs;
+    if(_active_vcs < 0) {
+      Error("Number of active VCs fell below zero.");
+    }
   }
 }
 
@@ -285,18 +292,18 @@ BufferState::DynamicLimitedSharedBufferPolicy::DynamicLimitedSharedBufferPolicy(
   _max_held_slots = _buf_size;
 }
 
-void BufferState::DynamicLimitedSharedBufferPolicy::AllocVC(int vc)
+void BufferState::DynamicLimitedSharedBufferPolicy::TakeBuffer(int vc)
 {
-  BufferPolicy::AllocVC(vc);
+  LimitedSharedBufferPolicy::TakeBuffer(vc);
   assert(_active_vcs > 0);
   _max_held_slots = _buf_size / _active_vcs;
   assert(_max_held_slots > 0);
 }
 
-void BufferState::DynamicLimitedSharedBufferPolicy::FreeVC(int vc)
+void BufferState::DynamicLimitedSharedBufferPolicy::SendingFlit(Flit const * const f)
 {
-  SharedBufferPolicy::FreeVC(vc);
-  if(_active_vcs) {
+  LimitedSharedBufferPolicy::SendingFlit(f);
+  if(f->tail && _active_vcs) {
     _max_held_slots = _buf_size / _active_vcs;
   }
   assert(_max_held_slots > 0);
@@ -308,9 +315,9 @@ BufferState::ShiftingDynamicLimitedSharedBufferPolicy::ShiftingDynamicLimitedSha
 
 }
 
-void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::AllocVC(int vc)
+void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::TakeBuffer(int vc)
 {
-  BufferPolicy::AllocVC(vc);
+  LimitedSharedBufferPolicy::TakeBuffer(vc);
   assert(_active_vcs);
   int i = _active_vcs - 1;
   _max_held_slots = _buf_size;
@@ -321,10 +328,10 @@ void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::AllocVC(int vc)
   assert(_max_held_slots > 0);
 }
 
-void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::FreeVC(int vc)
+void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::SendingFlit(Flit const * const f)
 {
-  SharedBufferPolicy::FreeVC(vc);
-  if(_active_vcs) {
+  LimitedSharedBufferPolicy::SendingFlit(f);
+  if(f->tail && _active_vcs) {
     int i = _active_vcs - 1;
     _max_held_slots = _buf_size;
     while(i) {
@@ -348,9 +355,9 @@ BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuratio
   _min_round_trip_time = _buf_size;
 }
 
-void BufferState::FeedbackSharedBufferPolicy::AllocSlotFor(int vc)
+void BufferState::FeedbackSharedBufferPolicy::SendingFlit(Flit const * const f)
 {
-  SharedBufferPolicy::AllocSlotFor(vc);
+  SharedBufferPolicy::SendingFlit(f);
   _flit_sent_time.push(GetSimTime());
 }
 
@@ -439,7 +446,6 @@ void BufferState::ProcessCredit( Credit const * const c )
     if(_wait_for_tail_credit && IsEmptyFor(*iter) && _tail_sent[*iter]) {
       assert(_in_use[*iter]);
       _in_use[*iter] = false;
-      _buffer_policy->FreeVC(*iter);
     }
     ++iter;
   }
@@ -455,7 +461,7 @@ void BufferState::SendingFlit( Flit const * const f )
     Error("Buffer overflow.");
   }
 
-  _buffer_policy->AllocSlotFor(f->vc);
+  _buffer_policy->SendingFlit(f);
   
   if ( f->tail ) {
     _tail_sent[f->vc] = true;
@@ -463,7 +469,6 @@ void BufferState::SendingFlit( Flit const * const f )
     if ( !_wait_for_tail_credit ) {
       assert(_in_use[f->vc]);
       _in_use[f->vc] = false;
-      _buffer_policy->FreeVC(f->vc);
     }
   }
   _last_id[f->vc] = f->id;
@@ -481,7 +486,7 @@ void BufferState::TakeBuffer( int vc )
   }
   _in_use[vc]    = true;
   _tail_sent[vc] = false;
-  _buffer_policy->AllocVC(vc);
+  _buffer_policy->TakeBuffer(vc);
 }
 
 void BufferState::Display( ostream & os ) const
