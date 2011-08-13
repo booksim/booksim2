@@ -352,6 +352,7 @@ BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuratio
   int const initial_limit = _buf_size / _vcs;
   _occupancy_limit.resize(_vcs, initial_limit);
   _round_trip_time.resize(_vcs, initial_limit);
+  _flit_sent_time.resize(_vcs);
   _total_mapped_size = initial_limit * _vcs;
   _min_round_trip_time = numeric_limits<int>::max();
 }
@@ -359,15 +360,15 @@ BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuratio
 void BufferState::FeedbackSharedBufferPolicy::SendingFlit(Flit const * const f)
 {
   SharedBufferPolicy::SendingFlit(f);
-  _flit_sent_time.push(GetSimTime());
+  _flit_sent_time[f->vc].push(GetSimTime());
 }
 
 void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
 {
   SharedBufferPolicy::FreeSlotFor(vc);
-  assert(!_flit_sent_time.empty());
-  int const last_rtt = GetSimTime() - _flit_sent_time.front();
-  _flit_sent_time.pop();
+  assert(!_flit_sent_time[vc].empty());
+  int const last_rtt = GetSimTime() - _flit_sent_time[vc].front();
+  _flit_sent_time[vc].pop();
   
   // determine minimum round trip time (could be hardcoded in a real network, 
   // but since some of the topologies here have varying channel lengths, it's 
