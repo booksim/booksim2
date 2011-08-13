@@ -143,6 +143,13 @@ class BufferState : public Module {
     virtual bool IsFullFor(int vc = 0) const;
   };
   
+  class SimpleFeedbackSharedBufferPolicy : public FeedbackSharedBufferPolicy {
+  public:
+    SimpleFeedbackSharedBufferPolicy(Configuration const & config, 
+				     BufferState * parent, const string & name);
+    virtual void SendingFlit(Flit const * const f);
+  };
+  
   bool _wait_for_tail_credit;
   int  _size;
   int  _occupancy;

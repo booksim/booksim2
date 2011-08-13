@@ -93,6 +93,8 @@ BufferState::BufferPolicy * BufferState::BufferPolicy::New(Configuration const &
     sp = new ShiftingDynamicLimitedSharedBufferPolicy(config, parent, name);
   } else if(buffer_policy == "feedback") {
     sp = new FeedbackSharedBufferPolicy(config, parent, name);
+  } else if(buffer_policy == "simplefeedback") {
+    sp = new SimpleFeedbackSharedBufferPolicy(config, parent, name);
   } else {
     cout << "Unknown buffer policy: " << buffer_policy << endl;
   }
@@ -366,7 +368,9 @@ void BufferState::FeedbackSharedBufferPolicy::SendingFlit(Flit const * const f)
 void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
 {
   SharedBufferPolicy::FreeSlotFor(vc);
-  assert(!_flit_sent_time[vc].empty());
+  if(_flit_sent_time[vc].empty()) {
+    return;
+  }
   int const last_rtt = GetSimTime() - _flit_sent_time[vc].front();
   _flit_sent_time[vc].pop();
   
@@ -397,6 +401,19 @@ bool BufferState::FeedbackSharedBufferPolicy::IsFullFor(int vc) const
 {
   return (SharedBufferPolicy::IsFullFor(vc) ||
 	  (_vc_occupancy[vc] >= _occupancy_limit[vc]));
+}
+
+BufferState::SimpleFeedbackSharedBufferPolicy::SimpleFeedbackSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
+  : FeedbackSharedBufferPolicy(config, parent, name)
+{
+}
+
+void BufferState::SimpleFeedbackSharedBufferPolicy::SendingFlit(Flit const * const f)
+{
+  SharedBufferPolicy::SendingFlit(f);
+  if(_flit_sent_time[f->vc].empty()) {
+    _flit_sent_time[f->vc].push(GetSimTime());
+  }
 }
 
 BufferState::BufferState( const Configuration& config, Module *parent, const string& name ) : 
