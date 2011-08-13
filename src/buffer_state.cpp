@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sstream>
 #include <cstdlib>
 #include <cassert>
+#include <limits>
 
 #include "booksim.hpp"
 #include "buffer_state.hpp"
@@ -92,6 +93,8 @@ BufferState::BufferPolicy * BufferState::BufferPolicy::New(Configuration const &
     sp = new ShiftingDynamicLimitedSharedBufferPolicy(config, parent, name);
   } else if(buffer_policy == "feedback") {
     sp = new FeedbackSharedBufferPolicy(config, parent, name);
+  } else if(buffer_policy == "simplefeedback") {
+    sp = new SimpleFeedbackSharedBufferPolicy(config, parent, name);
   } else {
     cout << "Unknown buffer policy: " << buffer_policy << endl;
   }
@@ -351,22 +354,25 @@ BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuratio
   int const initial_limit = _buf_size / _vcs;
   _occupancy_limit.resize(_vcs, initial_limit);
   _round_trip_time.resize(_vcs, initial_limit);
+  _flit_sent_time.resize(_vcs);
   _total_mapped_size = initial_limit * _vcs;
-  _min_round_trip_time = _buf_size;
+  _min_round_trip_time = numeric_limits<int>::max();
 }
 
 void BufferState::FeedbackSharedBufferPolicy::SendingFlit(Flit const * const f)
 {
   SharedBufferPolicy::SendingFlit(f);
-  _flit_sent_time.push(GetSimTime());
+  _flit_sent_time[f->vc].push(GetSimTime());
 }
 
 void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
 {
   SharedBufferPolicy::FreeSlotFor(vc);
-  assert(!_flit_sent_time.empty());
-  int const last_rtt = GetSimTime() - _flit_sent_time.front();
-  _flit_sent_time.pop();
+  if(_flit_sent_time[vc].empty()) {
+    return;
+  }
+  int const last_rtt = GetSimTime() - _flit_sent_time[vc].front();
+  _flit_sent_time[vc].pop();
   
   // determine minimum round trip time (could be hardcoded in a real network, 
   // but since some of the topologies here have varying channel lengths, it's 
@@ -395,6 +401,19 @@ bool BufferState::FeedbackSharedBufferPolicy::IsFullFor(int vc) const
 {
   return (SharedBufferPolicy::IsFullFor(vc) ||
 	  (_vc_occupancy[vc] >= _occupancy_limit[vc]));
+}
+
+BufferState::SimpleFeedbackSharedBufferPolicy::SimpleFeedbackSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
+  : FeedbackSharedBufferPolicy(config, parent, name)
+{
+}
+
+void BufferState::SimpleFeedbackSharedBufferPolicy::SendingFlit(Flit const * const f)
+{
+  SharedBufferPolicy::SendingFlit(f);
+  if(_flit_sent_time[f->vc].empty()) {
+    _flit_sent_time[f->vc].push(GetSimTime());
+  }
 }
 
 BufferState::BufferState( const Configuration& config, Module *parent, const string& name ) : 

@@ -130,7 +130,7 @@ class BufferState : public Module {
   protected:
     vector<int> _occupancy_limit;
     vector<int> _round_trip_time;
-    queue<int> _flit_sent_time;
+    vector<queue<int> > _flit_sent_time;
     int _min_round_trip_time;
     int _total_mapped_size;
     int _aging_scale;
@@ -141,6 +141,13 @@ class BufferState : public Module {
     virtual void SendingFlit(Flit const * const f);
     virtual void FreeSlotFor(int vc = 0);
     virtual bool IsFullFor(int vc = 0) const;
+  };
+  
+  class SimpleFeedbackSharedBufferPolicy : public FeedbackSharedBufferPolicy {
+  public:
+    SimpleFeedbackSharedBufferPolicy(Configuration const & config, 
+				     BufferState * parent, const string & name);
+    virtual void SendingFlit(Flit const * const f);
   };
   
   bool _wait_for_tail_credit;
