@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sstream>
 #include <cstdlib>
 #include <cassert>
+#include <limits>
 
 #include "booksim.hpp"
 #include "buffer_state.hpp"
@@ -352,7 +353,7 @@ BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuratio
   _occupancy_limit.resize(_vcs, initial_limit);
   _round_trip_time.resize(_vcs, initial_limit);
   _total_mapped_size = initial_limit * _vcs;
-  _min_round_trip_time = _buf_size;
+  _min_round_trip_time = numeric_limits<int>::max();
 }
 
 void BufferState::FeedbackSharedBufferPolicy::SendingFlit(Flit const * const f)
