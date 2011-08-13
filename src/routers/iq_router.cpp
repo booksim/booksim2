@@ -84,6 +84,21 @@ int IQRouter::real_vc(int vvc, int output){
   }
 }
 
+bool IQRouter::is_control_vc(int vc){
+  assert(_voq);
+  if(gReservation){
+    if(vc<RES_RESERVED_VCS){
+      return true;
+    }
+  } else if(gECN){
+    if(vc<ECN_RESERVED_VCS){
+      return true;
+    }
+  }
+
+  return false;
+
+}
 bool IQRouter::is_voq_vc(int vc){
   assert(_voq);
   if(gReservation){
@@ -305,6 +320,9 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   // Output queues
   _output_buffer_size = config.GetInt("output_buffer_size");
   _output_buffer.resize(_outputs); 
+  if(gReservation || gECN){
+    _output_control_buffer.resize(_outputs);
+  }
   _credit_buffer.resize(_inputs); 
 
   // Switch configuration (when held for multiple cycles)
@@ -1496,7 +1514,19 @@ void IQRouter::_SWAllocEvaluate( )
       
       BufferState const * const dest_buf = _next_buf[dest_output];
   
-      if(!dest_buf->HasCreditFor(dest_vc) || ( _output_buffer_size!=-1  && _output_buffer[dest_output].size()>=(size_t)(_output_buffer_size))) {
+
+      if( (gReservation||gECN) &&
+	  is_control_vc(dest_vc) && 
+	  (!dest_buf->HasCreditFor(dest_vc) || ( _output_buffer_size!=-1  && _output_control_buffer[dest_output].size()>=(size_t)(_output_buffer_size)))){
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "  VC control" << dest_vc 
+			 << " at output " << dest_output 
+			 << " is full." << endl;
+	    }
+	    continue;
+      }
+      else if(!dest_buf->HasCreditFor(dest_vc) || ( _output_buffer_size!=-1  && _output_buffer[dest_output].size()>=(size_t)(_output_buffer_size))) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  VC " << dest_vc 
@@ -1554,8 +1584,13 @@ void IQRouter::_SWAllocEvaluate( )
 	
 	for(int dest_vc = iset->vc_start; dest_vc <= iset->vc_end; ++dest_vc) {
 	  assert((dest_vc >= 0) && (dest_vc < _real_vcs));
-	  
-	  if(dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_buffer[dest_output].size()<(size_t)(_output_buffer_size))) {
+	  if( (gReservation||gECN) &&
+	      is_control_vc(dest_vc) && 
+	      (dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_control_buffer[dest_output].size()<(size_t)(_output_buffer_size))) ){
+
+	    do_request = true;
+	    break;
+	       } else if(dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_buffer[dest_output].size()<(size_t)(_output_buffer_size))) {
 	    do_request = true;
 	    break;
 	  }
@@ -2168,7 +2203,12 @@ void IQRouter::_SwitchUpdate( )
 		 << " at output " << output
 		 << "." << endl;
     }
-    _output_buffer[output].push(f);
+    if( (gECN || gReservation) &&
+	is_control_vc(f->vc)){ 
+      _output_control_buffer[output].push(f);
+    } else {
+      _output_buffer[output].push(f);
+    }
 
 
     _crossbar_flits.pop_front();
@@ -2235,7 +2275,23 @@ void IQRouter::_SendFlits( )
     }
   }
   for ( int output = 0; output < _outputs; ++output ) {
-    if ( !_output_buffer[output].empty( ) ) {
+    if((gECN||gReservation) &&
+       !_output_control_buffer[output].empty( )) {
+      Flit * const f = _output_control_buffer[output].front( );
+      assert(f);     
+
+      _output_control_buffer[output].pop( );
+      ++_sent_flits[output];
+      if(f->watch)
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		   << "Sending control flit " << f->id
+		   << " to channel at output " << output
+		   << "." << endl;
+      if(gTrace) {
+	cout << "Outport " << output << endl << "Stop Mark" << endl;
+      }
+      _output_channels[output]->Send( f );
+    } else    if ( !_output_buffer[output].empty( ) ) {
       Flit * const f = _output_buffer[output].front( );
 
       assert(f);      

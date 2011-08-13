@@ -108,6 +108,7 @@ class IQRouter : public Router {
 
   tRoutingFunction   _rf;
 
+  vector<queue<Flit *> > _output_control_buffer;
   vector<queue<Flit *> > _output_buffer;
   int _output_buffer_size;
 
@@ -146,6 +147,7 @@ class IQRouter : public Router {
   void _SendCredits( );
 
   // helper function for voq
+  bool is_control_vc(int vc);
   bool is_voq_vc(int vc);
   int voq_vc(int vc, int output=-1);
   int real_vc(int vvc, int output);

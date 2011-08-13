@@ -2445,9 +2445,9 @@ bool TrafficManager::_SingleSim( )
 	 
 	  vector<FlitChannel *>  temp = _net[0]->GetChannels();
 	  for(unsigned int i = 0; i<temp.size(); i++){
-	    *_stats_out <<"chan_idle("<<i+1<<",:)="
+	    *_stats_out <<"chan_idle("<<i+1<<",:)=["
 			<<temp[i]->GetActivity()
-			<<";"<<endl;
+			<<"];"<<endl;
 	  }
 	  *_stats_out <<"run_time = "<<_time<<";"<<endl;
 	}
