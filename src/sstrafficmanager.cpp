@@ -37,6 +37,7 @@ SSTrafficManager::SSTrafficManager(  const Configuration &config, const vector<B
   
   string trace_out = config.GetStr("trace_out");
   if(trace_out!=""){
+    cout<<"Generating Trace"<<endl;
     _trace_out = new ofstream(trace_out.c_str());
     
   } else {
@@ -305,34 +306,33 @@ void SSTrafficManager::_GeneratePacket( int source, int stype,
 
   if(perfect){
 
- 
-    Flit * f  = Flit::New();
-    f->id     = _cur_id++;
-    assert(_cur_id);
-    f->pid    = _cur_pid;
-    f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
-    f->subnetwork = subnetwork;
-    f->src    = source;
-    f->time   = time;
-    f->ttime  = ttime;
-    f->record = record;
-    f->cl     = cl;
-    packet_payload[_cur_pid] = msg;
-    _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
-    if(record) {
-      _measured_in_flight_flits[f->cl].insert(make_pair(f->id, f));
-    }
-    f->type = packet_type;
-    f->head = true;
-    f->tail = true;
-    //packets are only generated to nodes smaller or equal to limit
-    f->dest = packet_destination;
-    ++_cur_pid;
-    f->atime = time+perfect_latency;
-    nodes[source]->pop(-1);
-    retardq.push(f);
-    retardt.push(time+perfect_latency);
-    return;
+      Flit * f  = Flit::New();
+      f->id     = _cur_id++;
+      assert(_cur_id);
+      f->pid    = _cur_pid;
+      f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
+      f->subnetwork = subnetwork;
+      f->src    = source;
+      f->time   = time;
+      f->ttime  = ttime;
+      f->record = record;
+      f->cl     = cl;
+      packet_payload[_cur_pid] = msg;
+      _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
+      if(record) {
+	_measured_in_flight_flits[f->cl].insert(make_pair(f->id, f));
+      }
+      f->type = packet_type;
+      f->head = true;
+      f->tail = true;
+      //packets are only generated to nodes smaller or equal to limit
+      f->dest = packet_destination;
+      ++_cur_pid;
+      f->atime = time+perfect_latency;
+      nodes[source]->pop(-1);
+      retardq.push(f);
+      retardt.push(time+perfect_latency);
+      return;
   }
 
 
