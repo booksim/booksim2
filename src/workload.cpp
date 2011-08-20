@@ -262,10 +262,6 @@ TraceWorkload::TraceWorkload(int nodes, vector<string> const & filenames,
   }
   _skips.resize(nodes, _skips.back());
 
-  for(int n = 0; n < nodes; ++n) {
-    _skips[n] *= _scales[n];
-  }
-
   _traces.resize(nodes);
   for(int n = 0; n < _nodes; ++n) {
     string const & filename = (n < filenames.size()) ? filenames[n] : filenames.back();
@@ -309,20 +305,22 @@ void TraceWorkload::reset()
       ++count;
       int delay, source, dest, type;
       *trace >> delay >> source >> dest >> type;
-      time += delay * scale;
-      if((time >= skip) && (source == n) && (type >= 0)) {
-	PacketInfo pi;
-	pi.time = time - skip;
-	pi.source = source;
-	pi.dest = dest;
-	pi.size = _packet_sizes[type];
-	assert(pi.size > 0);
-	if(time > skip) {
-	  _waiting_packets.push_back(pi);
-	} else {
-	  _ready_packets.push_back(pi);
+      if(count > skip) {
+	time += delay;
+	if((source == n) && (type >= 0)) {
+	  PacketInfo pi;
+	  pi.time = time;
+	  pi.source = source;
+	  pi.dest = dest;
+	  pi.size = _packet_sizes[type];
+	  assert(pi.size > 0);
+	  if(time / scale > 0) {
+	    _waiting_packets.push_back(pi);
+	  } else {
+	    _ready_packets.push_back(pi);
+	  }
+	  break;
 	}
-	break;
       }
     }
   }
@@ -336,7 +334,7 @@ void TraceWorkload::advanceTime()
   // promote from waiting to ready
   list<PacketInfo>::iterator iter = _waiting_packets.begin();
   while(iter != _waiting_packets.end()) {
-    if(iter->time <= _time) {
+    if(iter->time / _scales[iter->source] <= _time) {
       list<PacketInfo>::iterator source_iter = iter;
       ++iter;
       _ready_packets.splice(_ready_packets.end(), _waiting_packets, source_iter);
@@ -381,7 +379,7 @@ int TraceWorkload::size() const
 int TraceWorkload::time() const
 {
   assert(!empty());
-  return _ready_iter->time;
+  return _ready_iter->time / _scales[_ready_iter->source];
 }
 
 void TraceWorkload::inject()
@@ -397,7 +395,7 @@ void TraceWorkload::inject()
     ++count;
     int delay, source, dest, type;
     *trace >> delay >> source >> dest >> type;
-    time += delay * scale;
+    time += delay;
     if((source == n) && (type >= 0)) {
       _ready_iter->time = time;
       assert(_ready_iter->source == source);
@@ -410,7 +408,7 @@ void TraceWorkload::inject()
   }
   if(empty) {
     _ready_iter = _ready_packets.erase(_ready_iter);
-  } else if(time > _time) {
+  } else if(time / scale > _time) {
     list<PacketInfo>::iterator source_iter = _ready_iter;
     ++_ready_iter;
     _waiting_packets.splice(_waiting_packets.end(), _ready_packets, source_iter);
