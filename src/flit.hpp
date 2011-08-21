@@ -55,7 +55,7 @@ public:
   bool head;
   bool tail;
   
-  int  time;
+  int  ctime;
   int  ttime;
   int  atime;
 

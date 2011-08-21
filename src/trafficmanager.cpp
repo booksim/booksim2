@@ -505,7 +505,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	       << ", src = " << f->src 
 	       << ", dest = " << f->dest
 	       << ", hops = " << f->hops
-	       << ", lat = " << f->atime - f->time
+	       << ", lat = " << f->atime - f->ctime
 	       << ")." << endl;
   }
 
@@ -531,7 +531,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       *gWatchOut << GetSimTime() << " | "
 		 << "node" << dest << " | "
 		 << "Retiring packet " << f->pid 
-		 << " (lat = " << f->atime - head->time
+		 << " (lat = " << f->atime - head->ctime
 		 << ", frag = " << (f->atime - head->atime) - (f->id - head->id) // NB: In the spirit of solving problems using ugly hacks, we compute the packet length by taking advantage of the fact that the IDs of flits within a packet are contiguous.
 		 << ", src = " << head->src 
 		 << ", dest = " << head->dest
@@ -572,14 +572,14 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       _hop_stats[f->cl]->AddSample( f->hops );
 
       if((_slowest_flit[f->cl] < 0) ||
-	 (_plat_stats[f->cl]->Max() < (f->atime - f->time)))
+	 (_plat_stats[f->cl]->Max() < (f->atime - f->ctime)))
 	_slowest_flit[f->cl] = f->id;
-      _plat_stats[f->cl]->AddSample( f->atime - f->time);
+      _plat_stats[f->cl]->AddSample( f->atime - f->ctime);
       _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
 	_tlat_stats[f->cl]->AddSample( f->atime - f->ttime );
    
-      _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->time );
+      _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->ctime );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY)
 	_pair_tlat[f->cl][dest*_nodes+f->src]->AddSample( f->atime - f->ttime );
       else if(f->type == Flit::ANY_TYPE)
@@ -727,7 +727,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
     f->subnetwork = subnetwork;
     f->src    = source;
-    f->time   = time;
+    f->ctime  = time;
     f->ttime  = ttime;
     f->record = record;
     f->cl     = cl;
@@ -1248,7 +1248,7 @@ bool TrafficManager::_SingleSim( )
       for(iter = _total_in_flight_flits[c].begin(); 
 	  iter != _total_in_flight_flits[c].end(); 
 	  iter++) {
-	latency += (double)(_time - iter->second->time);
+	latency += (double)(_time - iter->second->ctime);
 	count++;
       }
       
@@ -1350,7 +1350,7 @@ bool TrafficManager::_SingleSim( )
 	    for(iter = _total_in_flight_flits[c].begin(); 
 		iter != _total_in_flight_flits[c].end(); 
 		iter++) {
-	      acc_latency += (double)(_time - iter->second->time);
+	      acc_latency += (double)(_time - iter->second->ctime);
 	      acc_count++;
 	    }
 	    
