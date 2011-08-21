@@ -314,7 +314,7 @@ void TraceWorkload::reset()
 	  pi.dest = dest;
 	  pi.size = _packet_sizes[type];
 	  assert(pi.size > 0);
-	  if(time / scale > 0) {
+	  if(((scale > 0) ? (time / scale) : (time * -scale)) > 0) {
 	    _waiting_packets.push_back(pi);
 	  } else {
 	    _ready_packets.push_back(pi);
@@ -334,7 +334,9 @@ void TraceWorkload::advanceTime()
   // promote from waiting to ready
   list<PacketInfo>::iterator iter = _waiting_packets.begin();
   while(iter != _waiting_packets.end()) {
-    if(iter->time / _scales[iter->source] <= _time) {
+    int time = iter->time;
+    int scale = _scales[iter->source];
+    if(((scale > 0) ? (time / scale) : (time * -scale)) <= _time) {
       list<PacketInfo>::iterator source_iter = iter;
       ++iter;
       _ready_packets.splice(_ready_packets.end(), _waiting_packets, source_iter);
@@ -379,7 +381,9 @@ int TraceWorkload::size() const
 int TraceWorkload::time() const
 {
   assert(!empty());
-  return _ready_iter->time / _scales[_ready_iter->source];
+  int time = _ready_iter->time;
+  int scale = _scales[_ready_iter->source];
+  return (scale > 0) ? (time / scale) : (time * -scale);
 }
 
 void TraceWorkload::inject()
@@ -408,7 +412,7 @@ void TraceWorkload::inject()
   }
   if(empty) {
     _ready_iter = _ready_packets.erase(_ready_iter);
-  } else if(time / scale > _time) {
+  } else if(((scale > 0) ? (time / scale) : (time * -scale)) > _time) {
     list<PacketInfo>::iterator source_iter = _ready_iter;
     ++_ready_iter;
     _waiting_packets.splice(_waiting_packets.end(), _ready_packets, source_iter);
