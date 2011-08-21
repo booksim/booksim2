@@ -166,7 +166,13 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_avg_frag.resize(_classes, 0.0);
   _overall_max_frag.resize(_classes, 0.0);
 
+  _nlat_stats.resize(_classes);
+  _overall_min_nlat.resize(_classes, 0.0);
+  _overall_avg_nlat.resize(_classes, 0.0);
+  _overall_max_nlat.resize(_classes, 0.0);
+
   _pair_plat.resize(_classes);
+  _pair_nlat.resize(_classes);
   
   _hop_stats.resize(_classes);
   _overall_hop_stats.resize(_classes, 0.0);
@@ -207,12 +213,18 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _stats[tmp_name.str()] = _frag_stats[c];
     tmp_name.str("");
 
+    tmp_name << "nlat_stat_" << c;
+    _nlat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _nlat_stats[c];
+    tmp_name.str("");
+
     tmp_name << "hop_stat_" << c;
     _hop_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 20 );
     _stats[tmp_name.str()] = _hop_stats[c];
     tmp_name.str("");
 
     _pair_plat[c].resize(_nodes*_nodes);
+    _pair_nlat[c].resize(_nodes*_nodes);
 
     _offered_flits[c].resize(_nodes, 0);
     _sent_flits[c].resize(_nodes, 0);
@@ -224,11 +236,17 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 	_pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
 	_stats[tmp_name.str()] = _pair_plat[c][i*_nodes+j];
 	tmp_name.str("");
+	
+	tmp_name << "pair_nlat_stat_" << c << "_" << i << "_" << j;
+	_pair_nlat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+	_stats[tmp_name.str()] = _pair_nlat[c][i*_nodes+j];
+	tmp_name.str("");
       }
     }
   }
 
   _slowest_flit.resize(_classes, -1);
+  _slowest_packet.resize(_classes, -1);
 
   // ============ Simulation parameters ============ 
 
@@ -324,11 +342,13 @@ TrafficManager::~TrafficManager( )
   for ( int c = 0; c < _classes; ++c ) {
     delete _plat_stats[c];
     delete _frag_stats[c];
+    delete _nlat_stats[c];
     delete _hop_stats[c];
 
     for ( int i = 0; i < _nodes; ++i ) {
       for ( int j = 0; j < _nodes; ++j ) {
 	delete _pair_plat[c][i*_nodes+j];
+	delete _pair_nlat[c][i*_nodes+j];
       }
     }
   }
@@ -368,7 +388,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	       << ", src = " << f->src 
 	       << ", dest = " << f->dest
 	       << ", hops = " << f->hops
-	       << ", lat = " << f->atime - f->time
+	       << ", lat = " << f->atime - f->ctime
 	       << ")." << endl;
   }
 
@@ -377,7 +397,13 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     err << "Flit " << f->id << " arrived at incorrect output " << dest;
     Error( err.str( ) );
   }
-
+  
+  if((_slowest_flit[f->cl] < 0) ||
+     (_nlat_stats[f->cl]->Max() < (f->atime - f->itime)))
+    _slowest_flit[f->cl] = f->id;
+  _nlat_stats[f->cl]->AddSample( f->atime - f->itime);
+  _pair_nlat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->itime );
+      
   if ( f->tail ) {
     Flit * head;
     if(f->head) {
@@ -394,7 +420,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       *gWatchOut << GetSimTime() << " | "
 		 << "node" << dest << " | "
 		 << "Retiring packet " << head->pid 
-		 << " (lat = " << f->atime - head->time
+		 << " (lat = " << f->atime - head->ctime
 		 << ", frag = " << (f->atime - head->atime) - (f->id - head->id)
 		 << ", src = " << head->src 
 		 << ", dest = " << head->dest
@@ -409,13 +435,13 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       
       _hop_stats[f->cl]->AddSample( f->hops );
       
-      if((_slowest_flit[f->cl] < 0) ||
-	 (_plat_stats[f->cl]->Max() < (f->atime - f->time))) {
-	_slowest_flit[f->cl] = f->id;
+      if((_slowest_packet[f->cl] < 0) ||
+	 (_plat_stats[f->cl]->Max() < (f->atime - f->ctime))) {
+	_slowest_packet[f->cl] = f->pid;
       }
-      _plat_stats[f->cl]->AddSample( f->atime - f->time);
+      _plat_stats[f->cl]->AddSample( f->atime - f->ctime);
       _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
-      _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->time );
+      _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->ctime );
     }
     
     if(f != head) {
@@ -505,7 +531,7 @@ void TrafficManager::_GeneratePacket( int source, int dest, int size,
     f->watch = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
     f->src = source;
     f->dest = dest;
-    f->time = time;
+    f->ctime = time;
     f->ttime = ttime;
     f->record = record;
     f->cl = cl;
@@ -703,7 +729,8 @@ void TrafficManager::_Step( )
 		     << ")." << endl;
 	  *gWatchOut << *f;
 	}
-	
+	f->itime = _time;
+
 	// Pass VC "back"
 	if(!_partial_packets[c][n].empty() && !f->tail) {
 	  Flit * const nf = _partial_packets[c][n].front();
@@ -802,6 +829,7 @@ void TrafficManager::_ResetSim( )
 void TrafficManager::_ClearStats( )
 {
   _slowest_flit.assign(_classes, -1);
+  _slowest_packet.assign(_classes, -1);
 
   for ( int c = 0; c < _classes; ++c ) {
 
@@ -1003,6 +1031,9 @@ void TrafficManager::_UpdateOverallStats() {
     _overall_min_frag[c] += _frag_stats[c]->Min();
     _overall_avg_frag[c] += _frag_stats[c]->Average();
     _overall_max_frag[c] += _frag_stats[c]->Max();
+    _overall_min_nlat[c] += _nlat_stats[c]->Min();
+    _overall_avg_nlat[c] += _nlat_stats[c]->Average();
+    _overall_max_nlat[c] += _nlat_stats[c]->Max();
     
     _overall_hop_stats[c] += _hop_stats[c]->Average();
 
@@ -1066,12 +1097,17 @@ void TrafficManager::DisplayStats(ostream & os) const {
 
 void TrafficManager::_DisplayClassStats(int c, ostream & os) const {
   
-  os << "Minimum latency = " << _plat_stats[c]->Min() << endl;
-  os << "Average latency = " << _plat_stats[c]->Average() << endl;
-  os << "Maximum latency = " << _plat_stats[c]->Max() << endl;
+  os << "Minimum packet latency = " << _plat_stats[c]->Min() << endl;
+  os << "Average packet latency = " << _plat_stats[c]->Average() << endl;
+  os << "Maximum packet latency = " << _plat_stats[c]->Max() << endl;
+  os << "Slowest packet = " << _slowest_packet[c] << endl;
   os << "Minimum fragmentation = " << _frag_stats[c]->Min() << endl;
   os << "Average fragmentation = " << _frag_stats[c]->Average() << endl;
   os << "Maximum fragmentation = " << _frag_stats[c]->Max() << endl;
+  os << "Minimum network latency = " << _nlat_stats[c]->Min() << endl;
+  os << "Average network latency = " << _nlat_stats[c]->Average() << endl;
+  os << "Maximum network latency = " << _nlat_stats[c]->Max() << endl;
+  os << "Slowest flit = " << _slowest_flit[c] << endl;
   
   int count_sum, count_min, count_max;
   double rate_sum, rate_min, rate_max;
@@ -1125,9 +1161,11 @@ void TrafficManager::WriteStats(ostream & os) const {
 
 void TrafficManager::_WriteClassStats(int c, ostream & os) const {
   
-  os << "lat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
-     << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
+  os << "plat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
+     << "plat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
      << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
+     << "nlat(" << c+1 << ") = " << _nlat_stats[c]->Average() << ";" << endl
+     << "nlat_hist(" << c+1 << ",:) = " << *_nlat_stats[c] << ";" << endl
      << "hops(" << c+1 << ",:) = " << *_hop_stats[c] << ";" << endl
      << "pair_sent(" << c+1 << ",:) = [ ";
   for(int i = 0; i < _nodes; ++i) {
@@ -1140,6 +1178,13 @@ void TrafficManager::_WriteClassStats(int c, ostream & os) const {
   for(int i = 0; i < _nodes; ++i) {
     for(int j = 0; j < _nodes; ++j) {
       os << _pair_plat[c][i*_nodes+j]->Average( ) << " ";
+    }
+  }
+  os << "];" << endl
+     << "pair_nlat(" << c+1 << ",:) = [ ";
+  for(int i = 0; i < _nodes; ++i) {
+    for(int j = 0; j < _nodes; ++j) {
+      os << _pair_nlat[c][i*_nodes+j]->Average( ) << " ";
     }
   }
 
@@ -1165,11 +1210,11 @@ void TrafficManager::_WriteClassStats(int c, ostream & os) const {
 
 void TrafficManager::_DisplayOverallClassStats( int c, ostream & os ) const {
   
-  os << "Overall minimum latency = " << _overall_min_plat[c] / (double)_total_sims
+  os << "Overall minimum packet latency = " << _overall_min_plat[c] / (double)_total_sims
      << " (" << _total_sims << " samples)" << endl
-     << "Overall average latency = " << _overall_avg_plat[c] / (double)_total_sims
+     << "Overall average packet latency = " << _overall_avg_plat[c] / (double)_total_sims
      << " (" << _total_sims << " samples)" << endl
-     << "Overall maximum latency = " << _overall_max_plat[c] / (double)_total_sims
+     << "Overall maximum packet latency = " << _overall_max_plat[c] / (double)_total_sims
      << " (" << _total_sims << " samples)" << endl;
     
   os << "Overall minimum fragmentation = " << _overall_min_frag[c] / (double)_total_sims
@@ -1178,6 +1223,14 @@ void TrafficManager::_DisplayOverallClassStats( int c, ostream & os ) const {
      << " (" << _total_sims << " samples)" << endl
      << "Overall maximum fragmentation = " << _overall_max_frag[c] / (double)_total_sims
      << " (" << _total_sims << " samples)" << endl;
+
+  os << "Overall minimum network latency = " << _overall_min_nlat[c] / (double)_total_sims
+     << " (" << _total_sims << " samples)" << endl
+     << "Overall average network latency = " << _overall_avg_nlat[c] / (double)_total_sims
+     << " (" << _total_sims << " samples)" << endl
+     << "Overall maximum network latency = " << _overall_max_nlat[c] / (double)_total_sims
+     << " (" << _total_sims << " samples)" << endl;
+
   os << "Overall minimum offered rate = " << _overall_min_offered[c] / (double)_total_sims
      << " (" << _total_sims << " samples)" << endl
      << "Overall average offered rate = " << _overall_avg_offered[c] / (double)_total_sims
@@ -1218,6 +1271,9 @@ string TrafficManager::_OverallStatsHeaderCSV() const
      << ',' << "min_frag"
      << ',' << "avg_frag"
      << ',' << "max_frag"
+     << ',' << "min_nlat"
+     << ',' << "avg_nlat"
+     << ',' << "max_nlat"
      << ',' << "min_offered"
      << ',' << "avg_offered"
      << ',' << "max_offered"
@@ -1247,6 +1303,9 @@ string TrafficManager::_OverallClassStatsCSV(int c) const
      << ',' << _overall_min_frag[c] / (double)_total_sims
      << ',' << _overall_avg_frag[c] / (double)_total_sims
      << ',' << _overall_max_frag[c] / (double)_total_sims
+     << ',' << _overall_min_nlat[c] / (double)_total_sims
+     << ',' << _overall_avg_nlat[c] / (double)_total_sims
+     << ',' << _overall_max_nlat[c] / (double)_total_sims
      << ',' << _overall_min_offered[c] / (double)_total_sims
      << ',' << _overall_avg_offered[c] / (double)_total_sims
      << ',' << _overall_max_offered[c] / (double)_total_sims

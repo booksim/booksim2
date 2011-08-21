@@ -47,7 +47,8 @@ public:
   bool head;
   bool tail;
   
-  int  time;
+  int  ctime;
+  int  itime;
   int  ttime;
   int  atime;
 

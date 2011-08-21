@@ -183,7 +183,7 @@ bool SteadyStateTrafficManager::_SingleSim( )
       for(iter = _total_in_flight_flits[c].begin(); 
 	  iter != _total_in_flight_flits[c].end(); 
 	  iter++) {
-	latency += (double)(_time - iter->second->time);
+	latency += (double)(_time - iter->second->ctime);
 	count++;
       }
       
@@ -285,7 +285,7 @@ bool SteadyStateTrafficManager::_SingleSim( )
 	    for(iter = _total_in_flight_flits[c].begin(); 
 		iter != _total_in_flight_flits[c].end(); 
 		iter++) {
-	      acc_latency += (double)(_time - iter->second->time);
+	      acc_latency += (double)(_time - iter->second->ctime);
 	      acc_count++;
 	    }
 	    

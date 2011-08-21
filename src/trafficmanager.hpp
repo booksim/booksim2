@@ -114,7 +114,13 @@ protected:
   vector<double> _overall_avg_frag;
   vector<double> _overall_max_frag;
 
+  vector<Stats *> _nlat_stats;     
+  vector<double> _overall_min_nlat;  
+  vector<double> _overall_avg_nlat;  
+  vector<double> _overall_max_nlat;  
+
   vector<vector<Stats *> > _pair_plat;
+  vector<vector<Stats *> > _pair_nlat;
 
   vector<Stats *> _hop_stats;
   vector<double> _overall_hop_stats;
@@ -141,6 +147,7 @@ protected:
 #endif
 
   vector<int> _slowest_flit;
+  vector<int> _slowest_packet;
 
   map<string, Stats *> _stats;
 
