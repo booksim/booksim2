@@ -388,7 +388,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	       << ", src = " << f->src 
 	       << ", dest = " << f->dest
 	       << ", hops = " << f->hops
-	       << ", lat = " << f->atime - f->ctime
+	       << ", nlat = " << f->atime - f->itime
 	       << ")." << endl;
   }
 
@@ -420,7 +420,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       *gWatchOut << GetSimTime() << " | "
 		 << "node" << dest << " | "
 		 << "Retiring packet " << head->pid 
-		 << " (lat = " << f->atime - head->ctime
+		 << " (plat = " << f->atime - head->ctime
 		 << ", frag = " << (f->atime - head->atime) - (f->id - head->id)
 		 << ", src = " << head->src 
 		 << ", dest = " << head->dest
@@ -463,7 +463,7 @@ void TrafficManager::_RetirePacket(Flit * head, Flit * tail, int dest)
     *gWatchOut << GetSimTime() << " | "
 	       << "node" << dest << " | "
 	       << "Completing transation " << tail->tid
-	       << " (lat = " << tail->atime - head->ttime
+	       << " (tlat = " << tail->atime - head->ttime
 	       << ", src = " << head->src 
 	       << ", dest = " << head->dest
 	       << ")." << endl;
