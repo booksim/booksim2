@@ -56,6 +56,7 @@ public:
   bool tail;
   
   int  ctime;
+  int  itime;
   int  ttime;
   int  atime;
 
