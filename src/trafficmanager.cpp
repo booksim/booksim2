@@ -525,7 +525,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	       << ", src = " << f->src 
 	       << ", dest = " << f->dest
 	       << ", hops = " << f->hops
-	       << ", lat = " << f->atime - f->ctime
+	       << ", nlat = " << f->atime - f->itime
 	       << ")." << endl;
   }
 
@@ -557,7 +557,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       *gWatchOut << GetSimTime() << " | "
 		 << "node" << dest << " | "
 		 << "Retiring packet " << f->pid 
-		 << " (lat = " << f->atime - head->ctime
+		 << " (plat = " << f->atime - head->ctime
 		 << ", frag = " << (f->atime - head->atime) - (f->id - head->id) // NB: In the spirit of solving problems using ugly hacks, we compute the packet length by taking advantage of the fact that the IDs of flits within a packet are contiguous.
 		 << ", src = " << head->src 
 		 << ", dest = " << head->dest
@@ -578,7 +578,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	*gWatchOut << GetSimTime() << " | "
 		   << "node" << dest << " | "
 		   << "Completing transation " << f->tid
-		   << " (lat = " << f->atime - head->ttime
+		   << " (tlat = " << f->atime - head->ttime
 		   << ", src = " << head->src 
 		   << ", dest = " << head->dest
 		   << ")." << endl;
