@@ -258,6 +258,7 @@ protected:
   int _cur_pid;
   int _cur_tid;
   int _time;
+  int _stat_time;
 
   set<int> _flits_to_watch;
   set<int> _packets_to_watch;
@@ -295,6 +296,7 @@ protected:
   void _DisplayRemaining( ostream & os = cout ) const;
   
   void _LoadWatchList(const string & filename);
+  void _LoadTransient(const string & filename);
 
   Flit* IssueSpecial(int src, Flit* ff);
 public:

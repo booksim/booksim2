@@ -71,7 +71,8 @@ FatTree::FatTree( const Configuration& config,const string & name )
 
 void FatTree::_ComputeSize( const Configuration& config )
 {
-
+  _latency = config.GetInt("default_channel_latency");
+ 
   _k = config.GetInt( "k" );
   _n = config.GetInt( "n" );
    
@@ -171,8 +172,8 @@ void FatTree::_BuildNet( const Configuration& config )
 	int link = (level*chan_per_level) + pos*_k + port;
 	_Router(level, pos)->AddOutputChannel( _chan[link],
 						_chan_cred[link] );
-	_chan[link]->SetLatency( 1 );
-	_chan_cred[link]->SetLatency( 1 ); 
+	_chan[link]->SetLatency( _latency );
+	_chan_cred[link]->SetLatency( _latency ); 
 #ifdef FATTREE_DEBUG
 	cout<<_Router(level, pos)->Name()<<" "
 	    <<"down output "<<port<<" "
@@ -190,8 +191,8 @@ void FatTree::_BuildNet( const Configuration& config )
 	int link = (level*chan_per_level - chan_per_direction) + pos*_k + port ;
 	_Router(level, pos)->AddOutputChannel( _chan[link],
 						_chan_cred[link] );
-	_chan[link]->SetLatency( 1 );
-	_chan_cred[link]->SetLatency( 1 ); 
+	_chan[link]->SetLatency( _latency );
+	_chan_cred[link]->SetLatency( _latency ); 
 #ifdef FATTREE_DEBUG
 	cout<<_Router(level, pos)->Name()<<" "
 	    <<"up output "<<port<<" "

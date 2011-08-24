@@ -109,6 +109,8 @@ bool on_off( int source, double rate )
 extern set<int> hs_lookup;
 map<int, double> congestion_rate_lookup;
 extern int bystander_sender;
+extern bool hs_send_all;
+extern set<int> hs_senders;
 
 //special injection function fo congestion test, the rate argumetn does nothing
 //rate is overloaded onthe "hotspot"rate option
@@ -126,7 +128,11 @@ bool injection_hotspot_test(int source, double rate){
   if(hs_lookup.count(source)!=0){
     return false;
   } else {
-    return bernoulli(source,rate);
+    if( hs_send_all || hs_senders.count(source)!=0){
+      return bernoulli(source,rate);
+    } else {
+      return false;
+    }
   }
 }
 

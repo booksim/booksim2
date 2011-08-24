@@ -41,17 +41,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 BookSimConfig::BookSimConfig( )
 { 
 
+  _int_map["default_channel_latency"]=1;
+
   _int_map["voq"] = 0;
   _int_map["use_voq_size"] = 0;
   _int_map["forced_warmup"] = 0;
   _int_map["no_drain"] = 0;
   _int_map["cut_through"]=0;
 
+  _int_map["transient_granularity"] = 1;
   _int_map["transient_start"] = 100000;
   _int_map["transient_burst"] = 0;
   _int_map["transient_enable"] = 0;
   _int_map["transient_duration"] = 100;
+  _int_map["transient_stat_size"] = 1000;
+  _int_map["transient_finalize"]=0;;
+  AddStrField("transient_data","");
 
+  _int_map["reservation_always_succeed"] = 0;
   _float_map["reservation_rtt"] = 3.0;
   _float_map["reservation_overhead_factor"] = 1.05;
   _int_map["fast_reservation_transmit"] = 0;

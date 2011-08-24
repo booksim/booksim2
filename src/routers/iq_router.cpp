@@ -2267,9 +2267,9 @@ void IQRouter::_SendFlits( )
       for(int j = 0; j<_real_vcs; j++){
 	BufferState * const dest_buf = _next_buf[i];
 	if(_credit_hysteresis[i*_real_vcs+j]){
-	  _credit_hysteresis[i*_real_vcs+j] = (dest_buf->Size(j) < ECN_BUFFER_THRESHOLD+ECN_CREDIT_HYSTERESIS);
+	  _credit_hysteresis[i*_real_vcs+j] = ( (dest_buf->Size(j)-_output_buffer[i].size()) < ECN_BUFFER_THRESHOLD+ECN_CREDIT_HYSTERESIS);
 	} else {
-	  _credit_hysteresis[i*_real_vcs+j] = (dest_buf->Size(j) < ECN_BUFFER_THRESHOLD-ECN_CREDIT_HYSTERESIS);
+	  _credit_hysteresis[i*_real_vcs+j] = ( (dest_buf->Size(j)-_output_buffer[i].size()) < ECN_BUFFER_THRESHOLD-ECN_CREDIT_HYSTERESIS);
 	}
       }
     }

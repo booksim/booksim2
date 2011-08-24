@@ -370,6 +370,7 @@ int hotspot(int source, int total_nodes){
 
 
 int noself_hotspot(int source, int total_nodes){
+  assert( hs_send_all || hs_senders.count(source)!=0);
   if(hs_lookup.count(source)!=0){
     return background_uniform( source,  total_nodes);
   } else {

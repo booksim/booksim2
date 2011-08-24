@@ -48,6 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class FatTree : public Network {
 
+  int _latency;
   int _k;
   int _n;
 
