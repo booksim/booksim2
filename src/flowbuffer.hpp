@@ -33,7 +33,13 @@ struct flow{
   int cl;
 
   int sn;
-  queue<Flit*> buffer;
+  queue<Flit*>* buffer;
+  ~flow(){
+    while(!buffer->empty()){
+      buffer->front()->Free();
+      buffer->pop();
+    }
+  }
 };
 
 class FlowBuffer{
@@ -60,9 +66,6 @@ public:
   Flit* send();
   Flit* front();
 
-  void update_transition();
-  void update_stats();
-  void update_ird();
   void update();
 
   bool active(){
