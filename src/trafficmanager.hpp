@@ -175,8 +175,9 @@ protected:
   vector< RoundRobinArbiter*> _reservation_arb;
   
   vector< set< FlowBuffer*> > _reservation_set;
-  vector< set< FlowBuffer*> > _speculative_set;
-  vector< set< FlowBuffer*> > _normal_set;
+  vector< set< FlowBuffer*> > _active_set;
+  vector< set< FlowBuffer*> > _deactive_set;
+  vector< multimap<int, FlowBuffer*> > _sleep_set;
 
   // ============ Statistics ============
 

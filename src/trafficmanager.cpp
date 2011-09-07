@@ -103,7 +103,8 @@ int ECN_CREDIT_HYSTERESIS=0;
 bool ECN_AIMD = false;
 
 #define WATCH_FLID -1
-#define MAX(X,Y) (X>Y?(X):(Y))
+#define MAX(X,Y) ((X)>(Y)?(X):(Y))
+#define MIN(X,Y) ((X)<(Y)?(X):(Y))
 
 map<int, vector<int> > gDropStats;
 
@@ -125,6 +126,7 @@ vector<int> gStatReservationReceived;
 Stats** gStatReservationTimeNow;
 Stats** gStatReservationTimeFuture;
 
+vector<int> gStatSpecSent;
 vector<int> gStatSpecReceived;
 vector<int> gStatSpecDuplicate;
 
@@ -189,8 +191,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _last_sent_spec_buffer.resize(_nodes,NULL);
   _flow_buffer.resize(_nodes);
   _reservation_set.resize(_nodes);
-  _speculative_set.resize(_nodes);
-  _normal_set.resize(_nodes);
+  _active_set.resize(_nodes);
+  _deactive_set.resize(_nodes);
+  _sleep_set.resize(_nodes);
   
 
 
@@ -327,6 +330,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     tmp_name.str("");
   }
 
+  gStatSpecSent.resize(_nodes,0);
   gStatSpecReceived.resize(_nodes,0);
   gStatSpecDuplicate.resize(_nodes,0);
 
@@ -961,15 +965,15 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	  gStatFlowSenderLatency->AddSample(_time-receive_flow_buffer->fl->create_time);
 	  gStatFastRetransmit->AddSample(receive_flow_buffer->_fast_retransmit);
 
-	  assert(_normal_set[dest].erase(receive_flow_buffer));
 	  if(flow_done_status==FLOW_DONE_DONE){
 	    //Flow is done
+	    _active_set[dest].erase(receive_flow_buffer);
+	    _deactive_set[dest].insert(receive_flow_buffer);
 	    _flow_buffer[dest][f->flbid]->Deactivate();
 	  } else {
 	    //Reactivate the flow, assign vc, and insertinto the correct queues
 	    receive_flow_buffer->Reset();
 	    _FlowVC(receive_flow_buffer);
-	    _speculative_set[dest].insert(receive_flow_buffer);
 	    _reservation_set[dest].insert(receive_flow_buffer);
 	  }
 	}
@@ -1449,7 +1453,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
 #define NMAX 4
 int TrafficManager::_GeneratePacket( flow* fl, int n)
 {
-  int generate  = MAX(n,NMAX);
+  int generate  = MIN(n,NMAX);
   for(int nn = 0; nn<generate;nn++){  
   Flit::FlitType packet_type = Flit::ANY_TYPE;
   int size = _packet_size[fl->cl]; //input size 
@@ -1688,11 +1692,10 @@ void TrafficManager::_Inject(){
 	  
 
 	  //insert into the correct queue
+	  _active_set[input].insert(_flow_buffer[input][empty_flow]);
+	  _deactive_set[input].erase(_flow_buffer[input][empty_flow]);
 	  if(gReservation){
-	    _speculative_set[input].insert(_flow_buffer[input][empty_flow]);
 	    _reservation_set[input].insert(_flow_buffer[input][empty_flow]);
-	  } else {
-	    _normal_set[input].insert(_flow_buffer[input][empty_flow]);
 	  }
 	  if(_pending_flow[input]->flid == WATCH_FLID){
 	    _flow_buffer[input][empty_flow]->_watch = true;
@@ -1756,32 +1759,47 @@ void TrafficManager::_Step( )
   //update 
   for ( int input = 0; input < _nodes; ++input ) {
     bool node_ready = false;
-    for(int i = 0; i<_max_flow_buffers; i++){
-      if(_flow_buffer[input][i] != NULL){
-	if(_flow_buffer[input][i]->active()){
-	  _flow_buffer[input][i]->active_update();
-	  if(_flow_buffer[input][i]->_vc == -1 &&
-	     _flow_buffer[input][i]->send_norm_ready()){
-	    //move flow from speculatiev to normal set
-	    assert( _speculative_set[input].erase(_flow_buffer[input][i]));
-	    _FlowVC( _flow_buffer[input][i]);
-	    _normal_set[input].insert(_flow_buffer[input][i]);
-	  }
-	  if(_flow_buffer[input][i]->eligible()){
-	    node_ready = true;
-	  }
-	}
-	if(gECN){
-	  _flow_buffer[input][i]->ecn_update();
-	}
+    for(set<FlowBuffer*>::iterator i = _active_set[input].begin();
+	i!=_active_set[input].end();
+	i++){
+      FlowBuffer* flb = *i;
+      flb->active_update();
+      if(flb->_vc == -1 &&
+	 (flb->send_norm_ready())){
+	_FlowVC( flb);
+      }
+      if(flb->_vc == -1 &&
+	 flb->send_spec_ready()){
+	_FlowVC( flb);
+	_reservation_set[input].insert(flb);
+      }
+      if(flb->eligible()){
+	node_ready = true;
+      }
+      if(gECN){
+	flb->ecn_update();
+      }
+    }
+    if(gECN){
+      for(set<FlowBuffer*>::iterator i = _deactive_set[input].begin();
+	  i!=_deactive_set[input].end();
+	  i++){
+	FlowBuffer* flb = *i;
+	flb->ecn_update();
+      }
+      for(multimap<int, FlowBuffer*>::iterator i = _sleep_set[input].begin();
+	  i!=_sleep_set[input].end();
+	  i++){
+	FlowBuffer* flb = i->second;
+	flb->ecn_update();
       }
     }
     if(node_ready)
       gStatNodeReady[input]++;
     //this stat may not be accurate, flows can be in both queues
-    gStatActiveFlowBuffers->AddSample(int(_speculative_set[input].size()+_normal_set[input].size()));  
+    gStatActiveFlowBuffers->AddSample(int(_active_set[input].size()));  
   }
-
+  
 
   _Inject();  
 
@@ -1861,37 +1879,23 @@ void TrafficManager::_Step( )
     }
 
     int flow_bids = 0;
-
     if(ready_flow_buffer==NULL){
       _flow_buffer_arb[source]->Clear();
-      //normal priority
-      if(!_normal_set[source].empty()) {
-	for(set<FlowBuffer*>::iterator i=_normal_set[source].begin();
-	    i!=_normal_set[source].end();
+      // prioritized
+      if(!_active_set[source].empty()) {
+	for(set<FlowBuffer*>::iterator i=_active_set[source].begin();
+	    i!=_active_set[source].end();
 	    i++){
 	  FlowBuffer* flb = *i;
 	  if(flb->eligible() &&
 	     (dest_buf->IsAvailableFor(flb->_vc)||!flb->_tail_sent)&&
 	     dest_buf->HasCreditFor(flb->_vc)){
-	    _flow_buffer_arb[source]->AddRequest(flb->_dest, flb->_dest, 1);
+	    _flow_buffer_arb[source]->AddRequest(flb->_dest, flb->_dest, flb->priority());
 	    flow_bids++;
 	  }
 	}
       }
-      //second priority speculative
-      if(flow_bids==0 && !_speculative_set[source].empty()) {
-	for(set<FlowBuffer*>::iterator i=_speculative_set[source].begin();
-	    i!=_speculative_set[source].end();
-	    i++){
-	  FlowBuffer* flb = *i;
-	  if(flb->eligible() &&
-	     (dest_buf->IsAvailableFor(flb->_vc)||!flb->_tail_sent)&&
-	     dest_buf->HasCreditFor(flb->_vc)){
-	    _flow_buffer_arb[source]->AddRequest(flb->_dest, flb->_dest, 0);
-	    flow_bids++;
-	  }
-	}
-      }	
+      
       
       if(flow_bids!=0){
 	int id;
@@ -1960,20 +1964,17 @@ void TrafficManager::_Step( )
 	//flow continuation book keeping
 	if(f->tail){
 	  if(f->res_type==RES_TYPE_SPEC){
-	    _last_sent_spec_buffer[source] =ready_flow_buffer;
-	  } else if(f->res_type==RES_TYPE_RES){
+	    gStatSpecSent[source]++;
 	    _last_sent_spec_buffer[source] =NULL;
 	  } else {
 	    _last_sent_norm_buffer[source] =NULL;
 	  }
 	} else {
 	  if(f->res_type==RES_TYPE_SPEC){
+	    gStatSpecSent[source]++;
 	    _last_sent_spec_buffer[source] =ready_flow_buffer;
 	  } else if(f->res_type==RES_TYPE_NORM) {
 	    _last_sent_norm_buffer[source] =ready_flow_buffer;
-	  } else {
-	    //res packets are singlet
-	    assert(false);
 	  }
 	}
 
@@ -1988,23 +1989,19 @@ void TrafficManager::_Step( )
 	  }
 	  gStatFlowSenderLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
 	  gStatFastRetransmit->AddSample(ready_flow_buffer->_fast_retransmit);
-	  _normal_set[source].erase(ready_flow_buffer);
 	  if(flow_done_status==FLOW_DONE_DONE){
 	    _flow_buffer[source][f->flbid]->Deactivate();
+	    _active_set[source].erase(ready_flow_buffer);
+	    _deactive_set[source].insert(ready_flow_buffer);
 	  } else {
 	    ready_flow_buffer->Reset();
 	    _FlowVC(ready_flow_buffer);
 	    if(gReservation){
-	      _speculative_set[source].insert(ready_flow_buffer);
 	      _reservation_set[source].insert(ready_flow_buffer);
-	    } else {
-	      _normal_set[source].insert(ready_flow_buffer);
 	    }	  
 	  }
 	}
-
       }
-
     }
   }
  
@@ -2147,7 +2144,8 @@ void TrafficManager::_ClearStats( )
     gStatReservationTimeFuture[i]->Clear();
   }
 
-
+  gStatSpecSent.clear();
+  gStatSpecSent.resize(_nodes,0);
   gStatSpecReceived.clear();
   gStatSpecReceived.resize(_nodes,0);
   gStatSpecDuplicate.clear();
@@ -2919,7 +2917,8 @@ void TrafficManager::_DisplayTedsShit(){
 
     *_stats_out<< "res_received = ["
 	       <<gStatReservationReceived<<"];\n";
-
+    *_stats_out<< "spec_sent = ["
+	       <<gStatSpecSent<<"];\n";
     *_stats_out<< "spec_received = ["
 	       <<gStatSpecReceived<<"];\n";
     *_stats_out<< "spec_dup = ["

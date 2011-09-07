@@ -72,7 +72,13 @@ public:
   inline bool active(){
     return _active;
   }
-
+  inline int priority(){
+    if(_status== FLOW_STATUS_NORM){
+      return 1;
+    } else {
+      return 0;
+    }
+  }
 
   bool _active;
 
