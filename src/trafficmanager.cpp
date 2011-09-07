@@ -215,7 +215,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _rob.resize(_nodes);
   _reservation_schedule.resize(_nodes, 0);
   _response_packets.resize(_nodes);
-  _reservation_packets.resize(_nodes);
 
   _cur_flid = 0;
   gExpirationTime =  config.GetInt("expiration_time");
@@ -1101,7 +1100,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	gStatSpecDuplicate[dest]++;
       } else {
 	_sent_data_flits[f->cl][f->src]++;
-	_accepted_data_flits[f->cl][dest]++;
 	if(f->tail){
 	  gStatSpecLatency->AddSample(_time-f->time);
 	}
@@ -1138,14 +1136,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	gStatNormDuplicate[dest]++;
       } else {
 	_sent_data_flits[f->cl][f->src]++;
-	_accepted_data_flits[f->cl][dest]++;
 	if(f->tail){
 	  gStatNormLatency->AddSample(_time-f->time);
 	}
       }
     } else { //for other modes duplication normal is not possible
       _sent_data_flits[f->cl][f->src]++;
-      _accepted_data_flits[f->cl][dest]++;
     }  
     if(gECN){
       //only send if fecn is active
@@ -1224,6 +1220,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   
 
   //Regular retire flit
+
+  _accepted_data_flits[f->cl][dest]++;
   _deadlock_timer = 0;
   assert(_total_in_flight_flits[f->cl].count(f->id) > 0);
   _total_in_flight_flits[f->cl].erase(f->id);
@@ -1773,9 +1771,7 @@ void TrafficManager::_Step( )
 	_FlowVC( flb);
 	_reservation_set[input].insert(flb);
       }
-      if(flb->eligible()){
-	node_ready = true;
-      }
+      node_ready = 	node_ready || flb->eligible();
       if(gECN){
 	flb->ecn_update();
       }
@@ -1793,9 +1789,8 @@ void TrafficManager::_Step( )
 	FlowBuffer* flb = i->second;
 	flb->ecn_update();
       }
-    }
-    if(node_ready)
-      gStatNodeReady[input]++;
+    }  
+    gStatNodeReady[input]+=int(node_ready);
     //this stat may not be accurate, flows can be in both queues
     gStatActiveFlowBuffers->AddSample(int(_active_set[input].size()));  
   }
@@ -1827,28 +1822,7 @@ void TrafficManager::_Step( )
 	}
       }
     }
-    
-    //Fast reservation flit transmit
-    if(gReservation && 
-       FAST_RESERVATION_TRANSMIT && 
-       !_reservation_set[source].empty()){
-      _reservation_arb[source]->Clear();
-      for(set<FlowBuffer*>::iterator i=_reservation_set[source].begin();
-	  i!=_reservation_set[source].end();
-	  i++){
-	FlowBuffer* flb = *i;
-	assert(flb && flb->active() && flb->send_spec_ready());
-	_reservation_arb[source]->AddRequest(flb->_dest, flb->_dest, 1);
-      }
-      int id;
-      int pri;
-      _reservation_arb[source]->Arbitrate(&id, &pri);
-      FlowBuffer* flb = _flow_buffer[source][id];
-      Flit* f =  _flow_buffer[source][id]->send();
-      assert(f->res_type==RES_TYPE_RES);
-      _reservation_packets[source].push_back(f);
-      assert(_reservation_set[source].erase(flb));
-    }    
+ 
 
     
     //first check dangling  flowbuffer
@@ -1873,8 +1847,7 @@ void TrafficManager::_Step( )
 	  ready_flow_buffer =  flb;
 	}
       } else {
-	//this occurs, when the spec buffer after reservation is supreceded by normal flow, it finally got its turn grant is already back and it is out of the spec mode
-	_last_sent_spec_buffer[source]=NULL;
+	assert(false);
       }
     }
 
@@ -1901,10 +1874,13 @@ void TrafficManager::_Step( )
 	int id;
 	int pri;
 	_flow_buffer_arb[source]->Arbitrate(&id, &pri);
+	_flow_buffer_arb[source]->UpdateState();
 	ready_flow_buffer = _flow_buffer[source][id];
       }
     }
     
+
+
     
     if(ready_flow_buffer){
       int vc = ready_flow_buffer->_vc;
@@ -1916,24 +1892,44 @@ void TrafficManager::_Step( )
 	   dest_buf->HasCreditFor(0)){
 	  dest_buf->TakeBuffer(0); 
 	  dest_buf->SendingFlit(f);
+	  assert(_reservation_set[source].erase(ready_flow_buffer));
 	} else {
 	  f = NULL;
 	}
       } else {
-	if(gReservation && FAST_RESERVATION_TRANSMIT && !_reservation_packets[source].empty() ){
+	//Fast reservation flit transmit
+	if(gReservation && 
+	   FAST_RESERVATION_TRANSMIT &&
+	   !_reservation_set[source].empty()){
 	  if(dest_buf->IsAvailableFor(0) &&
 	     dest_buf->HasCreditFor(0)){
 	    dest_buf->TakeBuffer(0); 
-	    Flit* f = _reservation_packets[source].front();
-	    dest_buf->SendingFlit(f);
-	    f->ntime = _time;
-	    _net[0]->WriteSpecialFlit(f, source);
+
+	    _reservation_arb[source]->Clear();
+	    for(set<FlowBuffer*>::iterator i=_reservation_set[source].begin();
+		i!=_reservation_set[source].end();
+		i++){
+	      FlowBuffer* flb = *i;
+	      assert(flb && flb->active() && flb->send_spec_ready());
+	      _reservation_arb[source]->AddRequest(flb->_dest, flb->_dest, 1);
+	    }
+	    int id;
+	    int pri;
+	    _reservation_arb[source]->Arbitrate(&id, &pri);
+	    
+	    _reservation_arb[source]->UpdateState() ;
+	    
+	    FlowBuffer* flb = _flow_buffer[source][id];
+	    Flit* rf =  _flow_buffer[source][id]->send();
+	    
+	    assert(rf->res_type==RES_TYPE_RES);
+	    dest_buf->SendingFlit(rf);
+	    rf->ntime = _time;
+	    _net[0]->WriteSpecialFlit(rf, source);
 	    _sent_flits[0][source]->AddSample(1);
-	    _reservation_packets[source].pop_front();
-	    gStatSourceTrueLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
-	  } 
+	    assert(_reservation_set[source].erase(flb));
+	  }   
 	}
-	
 	if(f->head){
 	  dest_buf->TakeBuffer(vc); 
 	}
@@ -1945,21 +1941,10 @@ void TrafficManager::_Step( )
 	//actual the actual packet to send
 	f =  ready_flow_buffer->send();
 	f->exptime = _time+gExpirationTime;
-	if(f->res_type==RES_TYPE_RES){
-	  assert(_reservation_set[source].erase(ready_flow_buffer));
-	  gStatSourceTrueLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
-	}
-	if(f->sn==0 && f->res_type== RES_TYPE_SPEC){
-	  gStatSourceLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
-	}
-	if(f->head && f->res_type== RES_TYPE_NORM){
-	  gStatNormSent[source]++;
-	}
 	//flit network traffic time
 	f->ntime = _time;
 	_net[0]->WriteSpecialFlit(f, source);
 	_sent_flits[0][source]->AddSample(1);
-
 
 	//flow continuation book keeping
 	if(f->tail){
@@ -1967,6 +1952,7 @@ void TrafficManager::_Step( )
 	    gStatSpecSent[source]++;
 	    _last_sent_spec_buffer[source] =NULL;
 	  } else {
+	    gStatNormSent[source]++;
 	    _last_sent_norm_buffer[source] =NULL;
 	  }
 	} else {
