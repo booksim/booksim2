@@ -112,10 +112,8 @@ protected:
   vector<vector<vector<int> > > _last_interm;
 
   vector<int> _last_reservation_flow_buffer;
-  vector<int> _last_vcalloc_flow_buffer;
-  vector<int> _last_send_flow_buffer;
-  vector<int> _last_normal_vc;
-  vector<int> _last_spec_vc;
+  vector<FlowBuffer*> _last_sent_spec_buffer;
+  vector<FlowBuffer*> _last_sent_norm_buffer;
 
   // ============ Routing ============ 
 
@@ -125,7 +123,6 @@ protected:
 
   vector<vector<int> > _qtime;
   vector<vector<bool> > _qdrained;
-  //  vector<vector<list<Flit *> > > _partial_packets;
 
   vector<map<int, Flit *> > _total_in_flight_flits;
   vector<map<int, Flit *> > _measured_in_flight_flits;
@@ -172,14 +169,14 @@ protected:
 
   //sender
   vector<flow*> _pending_flow;
-  int _flow_buffer_capacity;
   int _max_flow_buffers;
   vector< vector< FlowBuffer*> > _flow_buffer;
-  vector< multimap<int, int> > _flow_buffer_dest;
   vector< RoundRobinArbiter*> _flow_buffer_arb;
-
-  //  vector< map<int, flow*> > _flow;
-  //map<int, flow*> _flow_master;
+  vector< RoundRobinArbiter*> _reservation_arb;
+  
+  vector< set< FlowBuffer*> > _reservation_set;
+  vector< set< FlowBuffer*> > _speculative_set;
+  vector< set< FlowBuffer*> > _normal_set;
 
   // ============ Statistics ============
 
@@ -285,6 +282,7 @@ protected:
   
   int  _IssuePacket( int source, int cl );
   void _GenerateFlow( int source, int size, int cl, int time );
+  void _FlowVC(FlowBuffer* flb);
 
   void _ClearStats( );
 
@@ -300,7 +298,7 @@ protected:
 
   Flit* IssueSpecial(int src, Flit* ff);
 public:
-  void _GeneratePacket(flow* fl);
+  int _GeneratePacket(flow* fl, int n);
 
   Flit* DropPacket(int source, Flit* f);
   TrafficManager( const Configuration &config, const vector<Network *> & net );

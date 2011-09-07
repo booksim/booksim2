@@ -44,10 +44,10 @@ struct flow{
 
 class FlowBuffer{
 public:
-  FlowBuffer(TrafficManager* p, int src, int id, int size, int mode, flow* fl);
+  FlowBuffer(TrafficManager* p, int src, int id, int mode, flow* fl);
   ~FlowBuffer();
   //activate directly behaves as the constructor
-  void Activate(int src, int id, int size, int mode, flow* fl);
+  void Activate(int src, int id, int mode, flow* fl);
   void Deactivate();
   //init is called by activate and reset and only modifed some state for a new flow
   void Init( flow* fl);
@@ -66,9 +66,10 @@ public:
   Flit* send();
   Flit* front();
 
-  void update();
+  void active_update();
+  void ecn_update();
 
-  bool active(){
+  inline bool active(){
     return _active;
   }
 
@@ -82,7 +83,6 @@ public:
   flow* fl;
   Flit* _reservation_flit;
   int _reserved_time;
-  int _capacity;			       
   int _src;
   int _dest;
   int _id;

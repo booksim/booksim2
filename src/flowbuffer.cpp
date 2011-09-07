@@ -18,7 +18,7 @@ extern vector<Stats*> gStatIRD;
 extern bool RESERVATION_SPEC_OFF;
 
 
-FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id, int size, int mode, flow* f){
+FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id,int mode, flow* f){
 
   parent = p;
   _dest=-1;
@@ -26,10 +26,10 @@ FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id, int size, int mode, f
   _IRD_timer = 0;
   _IRD_wait = 0;
   _total_wait = 0;
-  Activate(src,id, size, mode,f);
+  Activate(src,id, mode,f);
 }
 
-void FlowBuffer::Activate(int src, int id, int size, int mode, flow* f){
+void FlowBuffer::Activate(int src, int id,  int mode, flow* f){
  //ECN stuff need to be initilized once not every time or else benefits are lost
   if(mode == ECN_MODE && _dest!=f->dest){
     _IRD = 0; 
@@ -40,7 +40,6 @@ void FlowBuffer::Activate(int src, int id, int size, int mode, flow* f){
   _active= true;
   _src = src;
   _id = id;
-  _capacity = size;
   _mode = mode;
 
   Init(f);  
@@ -71,6 +70,8 @@ void FlowBuffer::Init( flow* f){
   _guarantee_sent = 0;
   if(_mode == RES_MODE && fl->flow_size>RESERVATION_PACKET_THRESHOLD){
     _reservation_flit  = Flit::New();
+    _reservation_flit ->src = _src;
+    _reservation_flit ->dest = fl->dest;
     _reservation_flit->flid = fl->flid;
     _reservation_flit->flbid = _id;
     _reservation_flit->sn = 0;
@@ -104,7 +105,8 @@ void FlowBuffer::Init( flow* f){
   
   
   fl->buffer=new  queue<Flit*>;
-  parent->_GeneratePacket(fl);
+  int deduction =   parent->_GeneratePacket(fl,fl->data_to_generate);
+  fl->data_to_generate-=deduction;
   fl->buffer->front()->payload = fl->flow_size;  
   while(!fl->buffer->empty()){
     Flit *ff = fl->buffer->front();
@@ -138,132 +140,133 @@ FlowBuffer::~FlowBuffer(){
 }
 
 //generate packets for flows
-void FlowBuffer::update(){
-  if(_active){
-    ////////////////////////////////
-    ///update transiention
-    switch(_status){
-    case FLOW_STATUS_NACK_TRANSITION:
-      if(_tail_sent){
-	_status = FLOW_STATUS_NACK;
-      }
-      break;
-    case FLOW_STATUS_GRANT_TRANSITION:
-      if(_tail_sent){
-	_vc=-1;
-	_status = FLOW_STATUS_WAIT;
-      } else {
-	break;
-      }
-    case FLOW_STATUS_WAIT:
-      if(GetSimTime()>=_reserved_time){
-	_status = FLOW_STATUS_NORM;
-      }
-      break;
-    default: 
+void FlowBuffer::active_update(){
+  ////////////////////////////////
+  ///update transiention
+  switch(_status){
+  case FLOW_STATUS_NACK_TRANSITION:
+    if(_tail_sent){
+      _status = FLOW_STATUS_NACK;
+    }
+    break;
+  case FLOW_STATUS_GRANT_TRANSITION:
+    if(_tail_sent){
+      _vc=-1;
+      _status = FLOW_STATUS_WAIT;
+    } else {
       break;
     }
-
-    ////////////////////////////////////
-    //update stats
-    _stats[FLOW_STAT_LIFETIME]++;
-    if(send_norm_ready()){
-      _stats[FLOW_STAT_NORM_READY]++;
-    }else if(send_spec_ready()){
-      _stats[FLOW_STAT_SPEC_READY]++;
-    }else if(_ready==0){
-      _stats[FLOW_STAT_NOT_READY]++;
+  case FLOW_STATUS_WAIT:
+    if(GetSimTime()>=_reserved_time){
+      _status = FLOW_STATUS_NORM;
     }
-    switch(_status){
-    case FLOW_STATUS_GRANT_TRANSITION:
-    case FLOW_STATUS_NACK_TRANSITION:
-    case FLOW_STATUS_SPEC:
-      _stats[FLOW_STAT_SPEC]++;
-      break;
-    case FLOW_STATUS_WAIT:
-      _stats[FLOW_STAT_WAIT]++;
-      break;
-    case FLOW_STATUS_NACK:
-      _stats[FLOW_STAT_NACK]++;
-      break;
-    case FLOW_STATUS_NORM:
-      _stats[FLOW_STAT_NORM]++;
-      break;
-    default:
-      break;
-    }
+    break;
+  default: 
+    break;
+  }
 
-    ///////////////////////
-    //update the rest
-    if(_ready<4 && fl->data_to_generate!=0){
-      parent->_GeneratePacket(fl);
-      fl->data_to_generate--;
-      while(!fl->buffer->empty()){
-	Flit *ff = fl->buffer->front();
-	assert(ff);
-	fl->buffer->pop();
-	ff->flbid = _id;
-	if(fl->flow_size>RESERVATION_PACKET_THRESHOLD)
-	  ff->walkin = false;
-	_flit_status[ff->sn]=FLIT_NORMAL;
-	_flit_buffer[ff->sn]=ff;
-	_ready++;
-      }
-    }
+  ////////////////////////////////////
+  //update stats
+  _stats[FLOW_STAT_LIFETIME]++;
+  if(send_norm_ready()){
+    _stats[FLOW_STAT_NORM_READY]++;
+  }else if(send_spec_ready()){
+    _stats[FLOW_STAT_SPEC_READY]++;
+  }else if(_ready==0){
+    _stats[FLOW_STAT_NOT_READY]++;
+  }
+  switch(_status){
+  case FLOW_STATUS_GRANT_TRANSITION:
+  case FLOW_STATUS_NACK_TRANSITION:
+  case FLOW_STATUS_SPEC:
+    _stats[FLOW_STAT_SPEC]++;
+    break;
+  case FLOW_STATUS_WAIT:
+    _stats[FLOW_STAT_WAIT]++;
+    break;
+  case FLOW_STATUS_NACK:
+    _stats[FLOW_STAT_NACK]++;
+    break;
+  case FLOW_STATUS_NORM:
+    _stats[FLOW_STAT_NORM]++;
+    break;
+  default:
+    break;
+  }
 
-    //for large flows, reset and rereserve
-    if(_mode ==RES_MODE && fl->flow_size>RESERVATION_PACKET_THRESHOLD){
-      if(_reserved_slots==0 && _ready!=0 && _spec_outstanding ==0 && !_res_outstanding){
-	_reservation_flit  = Flit::New();
-	_reservation_flit->flid = fl->flid;
-	_reservation_flit->flbid = _id;
-	_reservation_flit->sn = _total_reserved_slots;
-	_reservation_flit->id = -1;
-	_reservation_flit->subnetwork = 0;
-	_reservation_flit->cl = 0;
-	_reservation_flit->type = Flit::ANY_TYPE;
-	_reservation_flit->head = true;
-	_reservation_flit->tail = true;
-	_reservation_flit->vc = 0;
-	_reservation_flit->res_type = RES_TYPE_RES;
-	_reservation_flit->pri = FLIT_PRI_RES;
-
-	_status= FLOW_STATUS_SPEC;
-	_spec_sent = false;
-	_res_outstanding=false;
-	if(fl->flow_size-_total_reserved_slots<RESERVATION_CHUNK_LIMIT){
-	  _reserved_slots = fl->flow_size-_total_reserved_slots;
-	  _reservation_flit->payload = fl->flow_size-_total_reserved_slots;
-	} else {
-	  _reserved_slots = RESERVATION_CHUNK_LIMIT; 
-	  _reservation_flit->payload = RESERVATION_CHUNK_LIMIT; 
-	}
-
-	_last_sn = _total_reserved_slots-1;
-	_total_reserved_slots+=_reserved_slots; 
-	_vc = -1;
-	_reserved_time=-1;
-      }
+  ///////////////////////
+  //update the rest
+  if(_ready<4 && fl->data_to_generate!=0){
+    int deduction = parent->_GeneratePacket(fl, fl->data_to_generate);
+    fl->data_to_generate-= deduction;
+    while(!fl->buffer->empty()){
+      Flit *ff = fl->buffer->front();
+      assert(ff);
+      fl->buffer->pop();
+      ff->flbid = _id;
+      if(fl->flow_size>RESERVATION_PACKET_THRESHOLD)
+	ff->walkin = false;
+      _flit_status[ff->sn]=FLIT_NORMAL;
+      _flit_buffer[ff->sn]=ff;
+      _ready++;
     }
   }
 
+  //for large flows, reset and rereserve
+  if(_mode ==RES_MODE && fl->flow_size>RESERVATION_PACKET_THRESHOLD){
+    if(_reserved_slots==0 && _ready!=0 && _spec_outstanding ==0 && !_res_outstanding){
+      _reservation_flit  = Flit::New();
+      _reservation_flit ->src = _src;
+      _reservation_flit ->dest = fl->dest;
+      _reservation_flit->flid = fl->flid;
+      _reservation_flit->flbid = _id;
+      _reservation_flit->sn = _total_reserved_slots;
+      _reservation_flit->id = -1;
+      _reservation_flit->subnetwork = 0;
+      _reservation_flit->cl = 0;
+      _reservation_flit->type = Flit::ANY_TYPE;
+      _reservation_flit->head = true;
+      _reservation_flit->tail = true;
+      _reservation_flit->vc = 0;
+      _reservation_flit->res_type = RES_TYPE_RES;
+      _reservation_flit->pri = FLIT_PRI_RES;
+
+      _status= FLOW_STATUS_SPEC;
+      _spec_sent = false;
+      _res_outstanding=false;
+      if(fl->flow_size-_total_reserved_slots<RESERVATION_CHUNK_LIMIT){
+	_reserved_slots = fl->flow_size-_total_reserved_slots;
+	_reservation_flit->payload = fl->flow_size-_total_reserved_slots;
+      } else {
+	_reserved_slots = RESERVATION_CHUNK_LIMIT; 
+	_reservation_flit->payload = RESERVATION_CHUNK_LIMIT; 
+      }
+
+      _last_sn = _total_reserved_slots-1;
+      _total_reserved_slots+=_reserved_slots; 
+      _vc = -1;
+      _reserved_time=-1;
+    }
+  }
+}
+
+  
+void FlowBuffer::ecn_update(){
   /////////////////////////////////////////
   //ECN ONLY
-  if(_mode==ECN_MODE){
-    //update ECN fields
-    //_IRD_wait inc whenever _tail_sent is asserted
-    //_IRD_wait reset when _tail_sent is reasserted
-    if(_tail_sent && _IRD>0){
-      _IRD_wait++;
+  //update ECN fields
+  //_IRD_wait inc whenever _tail_sent is asserted
+  //_IRD_wait reset when _tail_sent is reasserted
+  if(_tail_sent && _IRD>0){
+    _IRD_wait++;
     _total_wait++;
-    }
-    if(_mode == ECN_MODE && _IRD >0){
-      _IRD_timer++;
-      if(_IRD_timer>=IRD_RESET_TIMER){
-	gStatIRD[_src]->AddSample(_IRD);
-	_IRD--;
-	_IRD_timer = 0;
-      }
+  }
+  if(_mode == ECN_MODE && _IRD >0){
+    _IRD_timer++;
+    if(_IRD_timer>=IRD_RESET_TIMER){
+      gStatIRD[_src]->AddSample(_IRD);
+      _IRD--;
+      _IRD_timer = 0;
     }
   }
 }
@@ -514,6 +517,7 @@ Flit* FlowBuffer::send(){
       _tail_sent = f->tail;
       //enable ECN waiting time
       if(_mode==ECN_MODE && _tail_sent){
+	//I shoudl change this
 	_IRD_wait = 0;
       }
     }
@@ -528,8 +532,6 @@ Flit* FlowBuffer::send(){
       _reservation_flit->vc=RES_PACKET_VC;
       _reservation_flit->time = GetSimTime();
       f = _reservation_flit;
-      f->src = _src;
-      f->dest = fl->dest;
       _spec_sent = true;
       _res_outstanding=true;
     } else {
@@ -573,7 +575,7 @@ Flit* FlowBuffer::send(){
 
 //Is the flow buffer eligbible for injection arbitration
 bool FlowBuffer::eligible(){
-  return _vc!=-1 &&
+  return _active && _vc!=-1 &&
     (send_norm_ready() ||
      send_spec_ready());
 }
