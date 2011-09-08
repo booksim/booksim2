@@ -249,6 +249,14 @@ SparseAllocator::SparseAllocator( Module *parent, const string& name,
 
 void SparseAllocator::Clear( )
 {
+
+  for(set<map<int, sRequest>* >::iterator i=_used_req.begin();
+      i!=_used_req.end();
+      i++){
+    (*i)->clear(); 
+  }
+  _used_req.clear();
+  /*
   for ( int i = 0; i < _inputs; ++i ) {
     if(!_in_req[i].empty())
       _in_req[i].clear( );
@@ -257,7 +265,7 @@ void SparseAllocator::Clear( )
   for ( int j = 0; j < _outputs; ++j ) {
     if(!_out_req[j].empty())
       _out_req[j].clear( );
-  }
+      }*/
 
   _in_occ.clear( );
   _out_occ.clear( );
@@ -323,6 +331,8 @@ void SparseAllocator::AddRequest( int in, int out, int label,
   req.port  = in;
 
   _out_req[out][in] = req;
+  _used_req.insert(&_in_req[in]);
+  _used_req.insert(&_out_req[out]);
 }
 
 void SparseAllocator::RemoveRequest( int in, int out, int label )

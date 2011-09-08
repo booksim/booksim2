@@ -38,7 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _SEPARABLE_HPP_
 
 #include <vector>
-
+#include <set>
 #include "allocator.hpp"
 
 class Arbiter;
@@ -50,6 +50,7 @@ protected:
   vector<Arbiter*> _input_arb ;
   vector<Arbiter*> _output_arb ;
 
+  set<Arbiter*> _used_set;
 public:
   
   SeparableAllocator( Module* parent, const string& name, int inputs,

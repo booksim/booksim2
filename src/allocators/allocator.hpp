@@ -129,6 +129,8 @@ protected:
   vector<map<int, sRequest> > _in_req;
   vector<map<int, sRequest> > _out_req;
 
+  set<map<int, sRequest>* > _used_req;
+
 public:
   SparseAllocator( Module *parent, const string& name,
 		   int inputs, int outputs );

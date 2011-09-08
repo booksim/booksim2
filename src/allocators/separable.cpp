@@ -77,6 +77,14 @@ SeparableAllocator::~SeparableAllocator() {
 }
 
 void SeparableAllocator::Clear() {
+
+  for(set<Arbiter*>::iterator i = _used_set.begin();
+      i!=_used_set.end();
+      i++){
+    (*i)->Clear();
+  }
+  _used_set.clear();
+  /*
   for ( int i = 0 ; i < _inputs ; i++ ) {
     if(_input_arb[i]-> _num_reqs)
       _input_arb[i]->Clear();
@@ -85,5 +93,6 @@ void SeparableAllocator::Clear() {
     if(_output_arb[o]->_num_reqs)
       _output_arb[o]->Clear();
   }
+  */
   SparseAllocator::Clear();
 }

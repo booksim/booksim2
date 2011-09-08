@@ -64,7 +64,7 @@ void SeparableOutputFirstAllocator::Allocate() {
       const sRequest & req = req_iter->second;
 
       _output_arb[output]->AddRequest(req.port, req.label, req.out_pri);
-
+      _used_set.insert(_output_arb[output]);
       ++req_iter;
     }
     
@@ -79,6 +79,7 @@ void SeparableOutputFirstAllocator::Allocate() {
     assert((req.port == output) && (req.label == label));
 
     _input_arb[input]->AddRequest(req.port, req.label, req.in_pri);
+    _used_set.insert(_input_arb[input]);
 
     ++port_iter;
   }
