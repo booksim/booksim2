@@ -365,6 +365,20 @@ void BufferState::FeedbackSharedBufferPolicy::SendingFlit(Flit const * const f)
   _flit_sent_time[f->vc].push(GetSimTime());
 }
 
+int BufferState::FeedbackSharedBufferPolicy::_ComputeRTT(int vc, int last_rtt) const
+{
+  // compute moving average of round-trip time
+  int rtt = _round_trip_time[vc];
+  return ((rtt << _aging_scale) + last_rtt - rtt) >> _aging_scale;
+}
+
+int BufferState::FeedbackSharedBufferPolicy::_ComputeLimit(int rtt) const
+{
+  // for every cycle that the measured average round trip time exceeded the 
+  // observed minimum round trip time, reduce buffer occupancy limit by one
+  return max((_min_round_trip_time << 1) - rtt + _offset, 1);
+}
+
 void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
 {
   SharedBufferPolicy::FreeSlotFor(vc);
@@ -381,26 +395,27 @@ void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
     _min_round_trip_time = last_rtt;
   }
 
-  // update moving average of round-trip time
-  int rtt = _round_trip_time[vc];
-  rtt = ((rtt << _aging_scale) + last_rtt - rtt) >> _aging_scale;
+  int rtt = _ComputeRTT(vc, last_rtt);
   _round_trip_time[vc] = rtt;
-  
-  // update occupancy limit for this VC
-  // 
-  // for every cycle that the measured average round trip time exceeded the 
-  // observed minimum round trip time, reduce buffer occupancy limit by one
-  int limit = _occupancy_limit[vc];
-  _total_mapped_size -= limit;
-  limit = max((_min_round_trip_time << 1) - rtt + _offset, 1);
+
+  int limit = _ComputeLimit(rtt);
+  _total_mapped_size += (limit - _occupancy_limit[vc]);
   _occupancy_limit[vc] = limit;
-  _total_mapped_size += limit;  
 }
 
 bool BufferState::FeedbackSharedBufferPolicy::IsFullFor(int vc) const
 {
-  return (SharedBufferPolicy::IsFullFor(vc) ||
-	  (_vc_occupancy[vc] >= _occupancy_limit[vc]));
+  if(SharedBufferPolicy::IsFullFor(vc)) {
+    return true;
+  }
+  int max_slots = _occupancy_limit[vc];
+  if(!_flit_sent_time[vc].empty()) {
+    int min_rtt = GetSimTime() - _flit_sent_time[vc].front();
+    int rtt = _ComputeRTT(vc, min_rtt);
+    int limit = _ComputeLimit(rtt);
+    max_slots = min(max_slots, limit);
+  }
+  return (_vc_occupancy[vc] >= max_slots);
 }
 
 BufferState::SimpleFeedbackSharedBufferPolicy::SimpleFeedbackSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)

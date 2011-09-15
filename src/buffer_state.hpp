@@ -128,6 +128,8 @@ class BufferState : public Module {
   
   class FeedbackSharedBufferPolicy : public SharedBufferPolicy {
   protected:
+    int _ComputeRTT(int vc, int last_rtt) const;
+    int _ComputeLimit(int rtt) const;
     vector<int> _occupancy_limit;
     vector<int> _round_trip_time;
     vector<queue<int> > _flit_sent_time;
