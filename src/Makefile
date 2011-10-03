@@ -32,7 +32,7 @@
 #
 MOC = /usr/lib/qt4/bin/moc
 CPP    = /usr/bin/g++
-YACC   = /usr/bin/bison -d
+YACC   = /usr/bin/bison -y
 LEX    = /usr/bin/flex
 PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
@@ -82,8 +82,8 @@ ifeq ($(DEFINE) , $(DEFINE_TEST))
 else 
 endif
 
-LEX_OBJS  = ${OBJDIR}/lex.config.o
-YACC_OBJS = ${OBJDIR}/config.tab.o
+LEX_OBJS  = ${OBJDIR}/lex.yy.o
+YACC_OBJS = ${OBJDIR}/y.tab.o
 
 # networks 
 NETWORKS:= $(wildcard networks/*.cpp) 
@@ -115,10 +115,10 @@ moc_bgui.cpp: booksim_config.hpp \
 		bgui.hpp
 	$(MOC) $(INCPATH) bgui.hpp -o moc_bgui.cpp
 
-${LEX_OBJS}: lex.config.c config.tab.h
+${LEX_OBJS}: lex.yy.c y.tab.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-${YACC_OBJS}: config.tab.c config.tab.h
+${YACC_OBJS}: y.tab.c y.tab.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 ${OBJDIR}/%.o: %.cpp 
@@ -154,7 +154,7 @@ clean:
 	rm -f runfiles/*~
 	rm -f routers/*~
 	rm -f examples/*~
-	rm -f config.tab.c config.tab.h lex.config.c
+	rm -f y.tab.c y.tab.h lex.yy.c
 	rm -f moc_bgui.cpp
 
 
@@ -164,8 +164,8 @@ clean:
 #quantify: $(OBJS)
 #	$(QUANT) -always-use-cache-dir $(CPP) $(OBJS) -o $(PROG) -L/usr/pubsw/lib
 
-config.tab.c config.tab.h: config.y
-	$(YACC) -bconfig -pconfig $<
+y.tab.c y.tab.h: config.y
+	$(YACC) -d $<
 
-lex.config.c: config.l
-	$(LEX) -Pconfig $<
+lex.yy.c: config.l
+	$(LEX) $<
