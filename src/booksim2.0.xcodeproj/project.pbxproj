@@ -31,9 +31,7 @@
 		85B4F8460EC297F800782F32 /* roundrobin_arb.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85B4F7D40EC297F800782F32 /* roundrobin_arb.cpp */; };
 		85B4F8470EC297F800782F32 /* booksim_config.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85B4F7D70EC297F800782F32 /* booksim_config.cpp */; };
 		85B4F8480EC297F800782F32 /* buffer_state.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85B4F7D90EC297F800782F32 /* buffer_state.cpp */; };
-		85B4F8490EC297F800782F32 /* config_tab.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85B4F7DB0EC297F800782F32 /* config_tab.cpp */; };
 		85B4F84A0EC297F800782F32 /* config_utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85B4F7DD0EC297F800782F32 /* config_utils.cpp */; };
-		85B4F84B0EC297F800782F32 /* configlex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85B4F7DF0EC297F800782F32 /* configlex.cpp */; };
 		85B4F84C0EC297F800782F32 /* credit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85B4F7E00EC297F800782F32 /* credit.cpp */; };
 		85B4F84E0EC297F800782F32 /* flit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85B4F7E40EC297F800782F32 /* flit.cpp */; };
 		85B4F84F0EC297F800782F32 /* flitchannel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85B4F7E60EC297F800782F32 /* flitchannel.cpp */; };
@@ -61,6 +59,8 @@
 		85B4F8760EC297F800782F32 /* trafficmanager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85B4F8350EC297F800782F32 /* trafficmanager.cpp */; };
 		85B4F8770EC297F800782F32 /* vc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85B4F8370EC297F800782F32 /* vc.cpp */; };
 		85C861D9137DA4C500EF203B /* batchtrafficmanager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85C861D7137DA4C500EF203B /* batchtrafficmanager.cpp */; };
+		85D0068E143A649200FCD30C /* config.l in Sources */ = {isa = PBXBuildFile; fileRef = 85D0068C143A649200FCD30C /* config.l */; };
+		85D0068F143A649200FCD30C /* config.y in Sources */ = {isa = PBXBuildFile; fileRef = 85D0068D143A649200FCD30C /* config.y */; };
 		85D1D247126500F50063D93E /* buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85D1D245126500F50063D93E /* buffer.cpp */; };
 		8DD76F650486A84900D96B5E /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 08FB7796FE84155DC02AAC07 /* main.cpp */; settings = {ATTRIBUTES = (); }; };
 /* End PBXBuildFile section */
@@ -129,11 +129,8 @@
 		85B4F7D80EC297F800782F32 /* booksim_config.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = booksim_config.hpp; sourceTree = "<group>"; };
 		85B4F7D90EC297F800782F32 /* buffer_state.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = buffer_state.cpp; sourceTree = "<group>"; };
 		85B4F7DA0EC297F800782F32 /* buffer_state.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = buffer_state.hpp; sourceTree = "<group>"; };
-		85B4F7DB0EC297F800782F32 /* config_tab.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = config_tab.cpp; sourceTree = "<group>"; };
-		85B4F7DC0EC297F800782F32 /* config_tab.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = config_tab.hpp; sourceTree = "<group>"; };
 		85B4F7DD0EC297F800782F32 /* config_utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = config_utils.cpp; sourceTree = "<group>"; };
 		85B4F7DE0EC297F800782F32 /* config_utils.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = config_utils.hpp; sourceTree = "<group>"; };
-		85B4F7DF0EC297F800782F32 /* configlex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = configlex.cpp; sourceTree = "<group>"; };
 		85B4F7E00EC297F800782F32 /* credit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = credit.cpp; sourceTree = "<group>"; };
 		85B4F7E10EC297F800782F32 /* credit.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = credit.hpp; sourceTree = "<group>"; };
 		85B4F7E40EC297F800782F32 /* flit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = flit.cpp; sourceTree = "<group>"; };
@@ -187,14 +184,16 @@
 		85B4F8360EC297F800782F32 /* trafficmanager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = trafficmanager.hpp; sourceTree = "<group>"; };
 		85B4F8370EC297F800782F32 /* vc.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vc.cpp; sourceTree = "<group>"; };
 		85B4F8380EC297F800782F32 /* vc.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = vc.hpp; sourceTree = "<group>"; };
-		85B4F87C0EC2982300782F32 /* config.l */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.lex; path = config.l; sourceTree = "<group>"; };
-		85B4F87D0EC2982300782F32 /* config.y */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.yacc; path = config.y; sourceTree = "<group>"; };
 		85C861D7137DA4C500EF203B /* batchtrafficmanager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = batchtrafficmanager.cpp; sourceTree = "<group>"; };
 		85C861D8137DA4C500EF203B /* batchtrafficmanager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = batchtrafficmanager.hpp; sourceTree = "<group>"; };
+		85D0068C143A649200FCD30C /* config.l */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.lex; path = config.l; sourceTree = "<group>"; };
+		85D0068D143A649200FCD30C /* config.y */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.yacc; path = config.y; sourceTree = "<group>"; };
+		85D00692143A6B5400FCD30C /* rng-double.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "rng-double.c"; sourceTree = "<group>"; };
+		85D00693143A6B5400FCD30C /* rng.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = rng.c; sourceTree = "<group>"; };
 		85D1D245126500F50063D93E /* buffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = buffer.cpp; sourceTree = "<group>"; };
 		85D1D246126500F50063D93E /* buffer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = buffer.hpp; sourceTree = "<group>"; };
 		85F9E23B1172FC5D00D9DDCC /* channel.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = channel.hpp; sourceTree = "<group>"; };
-		8DD76F6C0486A84900D96B5E /* booksim2.0 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = booksim2.0; sourceTree = BUILT_PRODUCTS_DIR; };
+		8DD76F6C0486A84900D96B5E /* booksim2.0 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = booksim2.0; path = booksim; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -229,8 +228,6 @@
 				85D1D245126500F50063D93E /* buffer.cpp */,
 				85D1D246126500F50063D93E /* buffer.hpp */,
 				85F9E23B1172FC5D00D9DDCC /* channel.hpp */,
-				85B4F87C0EC2982300782F32 /* config.l */,
-				85B4F87D0EC2982300782F32 /* config.y */,
 				85B4F7B80EC297F800782F32 /* allocators */,
 				85B4F7CD0EC297F800782F32 /* arbiters */,
 				85B4F7D60EC297F800782F32 /* booksim.hpp */,
@@ -238,11 +235,10 @@
 				85B4F7D80EC297F800782F32 /* booksim_config.hpp */,
 				85B4F7D90EC297F800782F32 /* buffer_state.cpp */,
 				85B4F7DA0EC297F800782F32 /* buffer_state.hpp */,
-				85B4F7DB0EC297F800782F32 /* config_tab.cpp */,
-				85B4F7DC0EC297F800782F32 /* config_tab.hpp */,
+				85D0068C143A649200FCD30C /* config.l */,
+				85D0068D143A649200FCD30C /* config.y */,
 				85B4F7DD0EC297F800782F32 /* config_utils.cpp */,
 				85B4F7DE0EC297F800782F32 /* config_utils.hpp */,
-				85B4F7DF0EC297F800782F32 /* configlex.cpp */,
 				85B4F7E00EC297F800782F32 /* credit.cpp */,
 				85B4F7E10EC297F800782F32 /* credit.hpp */,
 				85B4F7E40EC297F800782F32 /* flit.cpp */,
@@ -264,6 +260,8 @@
 				85B4F8120EC297F800782F32 /* random_utils.hpp */,
 				85B4F8160EC297F800782F32 /* rng_double_wrapper.cpp */,
 				85B4F8170EC297F800782F32 /* rng_wrapper.cpp */,
+				85D00692143A6B5400FCD30C /* rng-double.c */,
+				85D00693143A6B5400FCD30C /* rng.c */,
 				85B4F8180EC297F800782F32 /* routefunc.cpp */,
 				85B4F8190EC297F800782F32 /* routefunc.hpp */,
 				85B4F81A0EC297F800782F32 /* routers */,
@@ -480,9 +478,7 @@
 				85B4F8460EC297F800782F32 /* roundrobin_arb.cpp in Sources */,
 				85B4F8470EC297F800782F32 /* booksim_config.cpp in Sources */,
 				85B4F8480EC297F800782F32 /* buffer_state.cpp in Sources */,
-				85B4F8490EC297F800782F32 /* config_tab.cpp in Sources */,
 				85B4F84A0EC297F800782F32 /* config_utils.cpp in Sources */,
-				85B4F84B0EC297F800782F32 /* configlex.cpp in Sources */,
 				85B4F84C0EC297F800782F32 /* credit.cpp in Sources */,
 				85B4F84E0EC297F800782F32 /* flit.cpp in Sources */,
 				85B4F84F0EC297F800782F32 /* flitchannel.cpp in Sources */,
@@ -519,6 +515,8 @@
 				85630DA612718A5B005B3471 /* packet_reply_info.cpp in Sources */,
 				853F6F76127828260071E1B2 /* iq_router.cpp in Sources */,
 				85C861D9137DA4C500EF203B /* batchtrafficmanager.cpp in Sources */,
+				85D0068E143A649200FCD30C /* config.l in Sources */,
+				85D0068F143A649200FCD30C /* config.y in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -530,15 +528,13 @@
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"_GLIBCXX_DEBUG=1",
 					"_GLIBCXX_DEBUG_PEDANTIC=1",
 				);
 				INSTALL_PATH = /usr/local/bin;
-				PRODUCT_NAME = booksim2.0;
-				ZERO_LINK = YES;
+				PRODUCT_NAME = booksim;
 			};
 			name = Debug;
 		};
@@ -546,9 +542,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				GCC_MODEL_TUNING = G5;
 				INSTALL_PATH = /usr/local/bin;
-				PRODUCT_NAME = booksim2.0;
+				PRODUCT_NAME = booksim;
 			};
 			name = Release;
 		};
