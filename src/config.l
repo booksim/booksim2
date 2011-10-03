@@ -6,7 +6,6 @@ static unsigned int lineno = 1;
 
 void config_error(char * msg, int lineno);
 void yyerror(char * msg);
-int yywrap() { return 1; }
 
 extern int config_input(char *, int);
 #undef YY_INPUT
@@ -47,4 +46,9 @@ StrConst [A-Za-z_\-/\.][A-Za-z0-9_\-/\.\+(\{\,)\}]*
 void yyerror( char * msg )
 {
   config_error( msg, lineno );
+}
+
+int yywrap()
+{
+  return 1;
 }
