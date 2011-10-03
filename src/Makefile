@@ -32,14 +32,15 @@
 #
 MOC = /usr/lib/qt4/bin/moc
 CPP    = /usr/bin/g++
-YACC   = /usr/bin/bison -d
+YACC   = /usr/bin/bison -y
 LEX    = /usr/bin/flex
 PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
 DEFINE = 
 DEFINE_TEST = -DUSE_GUI
 INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
-CPPFLAGS = -Wall -O3  -ggdb $(INCPATH) $(DEFINE) 
+CFLAGS = -Wall -O3  -ggdb $(INCPATH) $(DEFINE) 
+CPPFLAGS = $(CFLAGS)
 LFLAGS =  
 
 
@@ -84,8 +85,8 @@ ifeq ($(DEFINE) , $(DEFINE_TEST))
 else 
 endif
 
-LEX_OBJS  = ${OBJDIR}/configlex.o
-YACC_OBJS = ${OBJDIR}/config_tab.o
+LEX_OBJS  = ${OBJDIR}/lex.yy.o
+YACC_OBJS = ${OBJDIR}/y.tab.o
 
 # networks 
 NETWORKS:= $(wildcard networks/*.cpp) 
@@ -117,8 +118,11 @@ moc_bgui.cpp: booksim_config.hpp \
 		bgui.hpp
 	$(MOC) $(INCPATH) bgui.hpp -o moc_bgui.cpp
 
-${LEX_OBJS}: configlex.cpp config_tab.hpp
-	$(CPP) $(CPPFLAGS) -c $< -o $@
+${LEX_OBJS}: lex.yy.c y.tab.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+${YACC_OBJS}: y.tab.c y.tab.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
 ${OBJDIR}/%.o: %.cpp 
 	$(CPP) $(CPPFLAGS) -c $< -o $@
@@ -153,7 +157,7 @@ clean:
 	rm -f runfiles/*~
 	rm -f routers/*~
 	rm -f examples/*~
-	rm -f *_tab.cpp *_tab.hpp *.tab.c *.tab.h *lex.cpp
+	rm -f y.tab.c y.tab.h lex.yy.c
 	rm -f moc_bgui.cpp
 
 
@@ -163,14 +167,8 @@ clean:
 #quantify: $(OBJS)
 #	$(QUANT) -always-use-cache-dir $(CPP) $(OBJS) -o $(PROG) -L/usr/pubsw/lib
 
-config.tab.c config.tab.h: config.y
-	$(YACC) -bconfig -pconfig $<
+y.tab.c y.tab.h: config.y
+	$(YACC) -d $<
 
-configlex.cpp: config.l
-	$(LEX) -Pconfig -o$@ $<
-
-config_tab.cpp: config.tab.c
-	cp -f $< $@
-
-config_tab.hpp: config.tab.h
-	cp -f $< $@
+lex.yy.c: config.l
+	$(LEX) $<

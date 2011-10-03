@@ -173,7 +173,7 @@ void Configuration::ParseFile(string const & filename)
     exit(-1);
   }
 
-  configparse();
+  yyparse();
 
   fclose(_config_file);
   _config_file = 0;
@@ -182,7 +182,7 @@ void Configuration::ParseFile(string const & filename)
 void Configuration::ParseString(string const & str)
 {
   _config_string = str + ';';
-  configparse();
+  yyparse();
   _config_string = "";
 }
 
@@ -220,7 +220,27 @@ Configuration * Configuration::GetTheConfig()
 
 //============================================================
 
-int config_input(char * line, int max_size)
+extern "C" void config_error( char const * msg, int lineno )
+{
+  Configuration::GetTheConfig( )->ParseError( msg, lineno );
+}
+
+extern "C" void config_assign_string( char const * field, char const * value )
+{
+  Configuration::GetTheConfig()->Assign(field, value);
+}
+
+extern "C" void config_assign_int( char const * field, int value )
+{
+  Configuration::GetTheConfig()->Assign(field, value);
+}
+
+extern "C" void config_assign_float( char const * field, double value )
+{
+  Configuration::GetTheConfig()->Assign(field, value);
+}
+
+extern "C" int config_input(char * line, int max_size)
 {
   return Configuration::GetTheConfig()->Input(line, max_size);
 }

@@ -38,7 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include<map>
 #include<vector>
 
-extern int configparse();
+extern "C" int yyparse();
 
 class Configuration {
   static Configuration * theConfig;

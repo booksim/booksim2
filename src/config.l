@@ -1,17 +1,11 @@
 %{
 
-#include "booksim.hpp"
-#include <stdlib.h>
-#include <string>
-#include <cstring>
-
-#include "config_tab.hpp"
-#include "config_utils.hpp"
+#include "y.tab.h"
 
 static unsigned int lineno = 1;
 
-void configerror(string msg);
-extern "C" int configwrap() { return 1; }
+void config_error(char * msg, int lineno);
+void yyerror(char * msg);
 
 extern int config_input(char *, int);
 #undef YY_INPUT
@@ -35,23 +29,26 @@ StrConst [A-Za-z_\-/\.][A-Za-z0-9_\-/\.\+(\{\,)\}]*
 
    /* Commands */
 
-\{[A-Za-z0-9_\-\.(\{\,)\}]+(\,[A-Za-z0-9_\-\.(\{\,)\}]+)*\} { configlval.name = strdup( yytext ); return STR; }
+\{[A-Za-z0-9_\-\.(\{\,)\}]+(\,[A-Za-z0-9_\-\.(\{\,)\}]+)*\} { yylval.name = strdup( yytext ); return STR; }
 
--?[0-9]+     { configlval.num = atoi( yytext ); return NUM; }
+-?[0-9]+     { yylval.num = atoi( yytext ); return NUM; }
 
--?[0-9]*\.[0-9]+ { configlval.fnum = atof( yytext ); return FNUM; }
+-?[0-9]*\.[0-9]+ { yylval.fnum = atof( yytext ); return FNUM; }
 
--?{DblConst}  { configlval.fnum = atof( yytext ); return FNUM;}
+-?{DblConst}  { yylval.fnum = atof( yytext ); return FNUM;}
 
-{StrConst} { configlval.name = strdup( yytext ); return STR; }
+{StrConst} { yylval.name = strdup( yytext ); return STR; }
 
 .          { return yytext[0]; }
 
 %%
 
-void configerror( string msg )
+void yyerror( char * msg )
 {
-  Configuration::GetTheConfig( )->ParseError( msg, lineno );
+  config_error( msg, lineno );
 }
 
-
+int yywrap()
+{
+  return 1;
+}
