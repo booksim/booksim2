@@ -14,7 +14,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "8DD76F620486A84900D96B5E"
-               BuildableName = "booksim2.0"
+               BuildableName = "booksim"
                BlueprintName = "booksim2.0"
                ReferencedContainer = "container:booksim2.0.xcodeproj">
             </BuildableReference>
@@ -39,7 +39,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "8DD76F620486A84900D96B5E"
-            BuildableName = "booksim2.0"
+            BuildableName = "booksim"
             BlueprintName = "booksim2.0"
             ReferencedContainer = "container:booksim2.0.xcodeproj">
          </BuildableReference>
@@ -74,7 +74,7 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "../../examples/mesh88_lat"
+            argument = "$(SRCROOT)/examples/mesh88_lat"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -118,7 +118,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "8DD76F620486A84900D96B5E"
-            BuildableName = "booksim2.0"
+            BuildableName = "booksim"
             BlueprintName = "booksim2.0"
             ReferencedContainer = "container:booksim2.0.xcodeproj">
          </BuildableReference>
