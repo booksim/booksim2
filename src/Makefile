@@ -39,7 +39,8 @@ QUANT  = /usr/bin/quantify
 DEFINE = 
 DEFINE_TEST = -DUSE_GUI
 INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
-CPPFLAGS = -Wall -O3  -ggdb $(INCPATH) $(DEFINE) 
+CFLAGS = -Wall -O3  -ggdb $(INCPATH) $(DEFINE) 
+CPPFLAGS = $(CFLAGS)
 LFLAGS =  
 
 
@@ -81,8 +82,8 @@ ifeq ($(DEFINE) , $(DEFINE_TEST))
 else 
 endif
 
-LEX_OBJS  = ${OBJDIR}/configlex.o
-YACC_OBJS = ${OBJDIR}/config_tab.o
+LEX_OBJS  = ${OBJDIR}/lex.config.o
+YACC_OBJS = ${OBJDIR}/config.tab.o
 
 # networks 
 NETWORKS:= $(wildcard networks/*.cpp) 
@@ -114,8 +115,11 @@ moc_bgui.cpp: booksim_config.hpp \
 		bgui.hpp
 	$(MOC) $(INCPATH) bgui.hpp -o moc_bgui.cpp
 
-${LEX_OBJS}: configlex.cpp config_tab.hpp
-	$(CPP) $(CPPFLAGS) -c $< -o $@
+${LEX_OBJS}: lex.config.c config.tab.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+${YACC_OBJS}: config.tab.c config.tab.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
 ${OBJDIR}/%.o: %.cpp 
 	$(CPP) $(CPPFLAGS) -c $< -o $@
@@ -150,7 +154,7 @@ clean:
 	rm -f runfiles/*~
 	rm -f routers/*~
 	rm -f examples/*~
-	rm -f *_tab.cpp *_tab.hpp *.tab.c *.tab.h *lex.cpp
+	rm -f config.tab.c config.tab.h lex.config.c
 	rm -f moc_bgui.cpp
 
 
@@ -163,11 +167,5 @@ clean:
 config.tab.c config.tab.h: config.y
 	$(YACC) -bconfig -pconfig $<
 
-configlex.cpp: config.l
-	$(LEX) -Pconfig -o$@ $<
-
-config_tab.cpp: config.tab.c
-	cp -f $< $@
-
-config_tab.hpp: config.tab.h
-	cp -f $< $@
+lex.config.c: config.l
+	$(LEX) -Pconfig $<
