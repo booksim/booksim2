@@ -1,17 +1,12 @@
 %{
 
-#include "booksim.hpp"
-#include <stdlib.h>
-#include <string>
-#include <cstring>
-
-#include "config_tab.hpp"
-#include "config_utils.hpp"
+#include "config.tab.h"
 
 static unsigned int lineno = 1;
 
-void configerror(string msg);
-extern "C" int configwrap() { return 1; }
+void configerror(char * msg);
+void config_error(char * msg, int lineno);
+int configwrap() { return 1; }
 
 extern int config_input(char *, int);
 #undef YY_INPUT
@@ -49,9 +44,7 @@ StrConst [A-Za-z_\-/\.][A-Za-z0-9_\-/\.\+(\{\,)\}]*
 
 %%
 
-void configerror( string msg )
+void configerror( char * msg )
 {
-  Configuration::GetTheConfig( )->ParseError( msg, lineno );
+  config_error( msg, lineno );
 }
-
-
