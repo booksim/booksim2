@@ -9,12 +9,15 @@
 /* Begin PBXBuildFile section */
 		852A43DC0FCE047600BD5D04 /* dragonfly.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 852A43DA0FCE047600BD5D04 /* dragonfly.cpp */; };
 		853F6F76127828260071E1B2 /* iq_router.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 853F6F74127828260071E1B2 /* iq_router.cpp */; };
+		855FC03E143A788100929995 /* steadystatetrafficmanager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 855FC036143A788100929995 /* steadystatetrafficmanager.cpp */; };
+		855FC03F143A788100929995 /* synthetictrafficmanager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 855FC038143A788100929995 /* synthetictrafficmanager.cpp */; };
+		855FC040143A788100929995 /* workload.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 855FC03A143A788100929995 /* workload.cpp */; };
+		855FC041143A788100929995 /* workloadtrafficmanager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 855FC03C143A788100929995 /* workloadtrafficmanager.cpp */; };
 		85630D7F127187EC005B3471 /* fair_wavefront.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85630D7B127187EC005B3471 /* fair_wavefront.cpp */; };
 		85630D80127187EC005B3471 /* prio_wavefront.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85630D7D127187EC005B3471 /* prio_wavefront.cpp */; };
 		85630D8912718803005B3471 /* buffer_monitor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85630D8312718803005B3471 /* buffer_monitor.cpp */; };
 		85630D8A12718803005B3471 /* power_module.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85630D8512718803005B3471 /* power_module.cpp */; };
 		85630D8B12718803005B3471 /* switch_monitor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85630D8712718803005B3471 /* switch_monitor.cpp */; };
-		85630DA612718A5B005B3471 /* packet_reply_info.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85630DA412718A5B005B3471 /* packet_reply_info.cpp */; };
 		85B4F8390EC297F800782F32 /* allocator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85B4F7B90EC297F800782F32 /* allocator.cpp */; };
 		85B4F83A0EC297F800782F32 /* islip.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85B4F7BB0EC297F800782F32 /* islip.cpp */; };
 		85B4F83B0EC297F800782F32 /* loa.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85B4F7BD0EC297F800782F32 /* loa.cpp */; };
@@ -83,6 +86,14 @@
 		852A43DB0FCE047600BD5D04 /* dragonfly.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = dragonfly.hpp; sourceTree = "<group>"; };
 		853F6F74127828260071E1B2 /* iq_router.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = iq_router.cpp; sourceTree = "<group>"; };
 		853F6F75127828260071E1B2 /* iq_router.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = iq_router.hpp; sourceTree = "<group>"; };
+		855FC036143A788100929995 /* steadystatetrafficmanager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = steadystatetrafficmanager.cpp; sourceTree = "<group>"; };
+		855FC037143A788100929995 /* steadystatetrafficmanager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = steadystatetrafficmanager.hpp; sourceTree = "<group>"; };
+		855FC038143A788100929995 /* synthetictrafficmanager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = synthetictrafficmanager.cpp; sourceTree = "<group>"; };
+		855FC039143A788100929995 /* synthetictrafficmanager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = synthetictrafficmanager.hpp; sourceTree = "<group>"; };
+		855FC03A143A788100929995 /* workload.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = workload.cpp; sourceTree = "<group>"; };
+		855FC03B143A788100929995 /* workload.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = workload.hpp; sourceTree = "<group>"; };
+		855FC03C143A788100929995 /* workloadtrafficmanager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = workloadtrafficmanager.cpp; sourceTree = "<group>"; };
+		855FC03D143A788100929995 /* workloadtrafficmanager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = workloadtrafficmanager.hpp; sourceTree = "<group>"; };
 		85630D7B127187EC005B3471 /* fair_wavefront.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fair_wavefront.cpp; sourceTree = "<group>"; };
 		85630D7C127187EC005B3471 /* fair_wavefront.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = fair_wavefront.hpp; sourceTree = "<group>"; };
 		85630D7D127187EC005B3471 /* prio_wavefront.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = prio_wavefront.cpp; sourceTree = "<group>"; };
@@ -93,8 +104,6 @@
 		85630D8612718803005B3471 /* power_module.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = power_module.hpp; path = power/power_module.hpp; sourceTree = "<group>"; };
 		85630D8712718803005B3471 /* switch_monitor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = switch_monitor.cpp; path = power/switch_monitor.cpp; sourceTree = "<group>"; };
 		85630D8812718803005B3471 /* switch_monitor.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = switch_monitor.hpp; path = power/switch_monitor.hpp; sourceTree = "<group>"; };
-		85630DA412718A5B005B3471 /* packet_reply_info.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = packet_reply_info.cpp; sourceTree = "<group>"; };
-		85630DA512718A5B005B3471 /* packet_reply_info.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = packet_reply_info.hpp; sourceTree = "<group>"; };
 		85AD7B30129C5B3B00CD876A /* timed_module.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = timed_module.hpp; sourceTree = "<group>"; };
 		85B4F7B90EC297F800782F32 /* allocator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = allocator.cpp; sourceTree = "<group>"; };
 		85B4F7BA0EC297F800782F32 /* allocator.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = allocator.hpp; sourceTree = "<group>"; };
@@ -220,9 +229,6 @@
 		08FB7795FE84155DC02AAC07 /* Source */ = {
 			isa = PBXGroup;
 			children = (
-				85AD7B30129C5B3B00CD876A /* timed_module.hpp */,
-				85630DA412718A5B005B3471 /* packet_reply_info.cpp */,
-				85630DA512718A5B005B3471 /* packet_reply_info.hpp */,
 				85C861D7137DA4C500EF203B /* batchtrafficmanager.cpp */,
 				85C861D8137DA4C500EF203B /* batchtrafficmanager.hpp */,
 				85D1D245126500F50063D93E /* buffer.cpp */,
@@ -267,12 +273,21 @@
 				85B4F81A0EC297F800782F32 /* routers */,
 				85B4F8310EC297F800782F32 /* stats.cpp */,
 				85B4F8320EC297F800782F32 /* stats.hpp */,
+				855FC036143A788100929995 /* steadystatetrafficmanager.cpp */,
+				855FC037143A788100929995 /* steadystatetrafficmanager.hpp */,
+				855FC038143A788100929995 /* synthetictrafficmanager.cpp */,
+				855FC039143A788100929995 /* synthetictrafficmanager.hpp */,
+				85AD7B30129C5B3B00CD876A /* timed_module.hpp */,
 				85B4F8330EC297F800782F32 /* traffic.cpp */,
 				85B4F8340EC297F800782F32 /* traffic.hpp */,
 				85B4F8350EC297F800782F32 /* trafficmanager.cpp */,
 				85B4F8360EC297F800782F32 /* trafficmanager.hpp */,
 				85B4F8370EC297F800782F32 /* vc.cpp */,
 				85B4F8380EC297F800782F32 /* vc.hpp */,
+				855FC03A143A788100929995 /* workload.cpp */,
+				855FC03B143A788100929995 /* workload.hpp */,
+				855FC03C143A788100929995 /* workloadtrafficmanager.cpp */,
+				855FC03D143A788100929995 /* workloadtrafficmanager.hpp */,
 				08FB7796FE84155DC02AAC07 /* main.cpp */,
 			);
 			name = Source;
@@ -512,11 +527,14 @@
 				85630D8912718803005B3471 /* buffer_monitor.cpp in Sources */,
 				85630D8A12718803005B3471 /* power_module.cpp in Sources */,
 				85630D8B12718803005B3471 /* switch_monitor.cpp in Sources */,
-				85630DA612718A5B005B3471 /* packet_reply_info.cpp in Sources */,
 				853F6F76127828260071E1B2 /* iq_router.cpp in Sources */,
 				85C861D9137DA4C500EF203B /* batchtrafficmanager.cpp in Sources */,
 				85D0068E143A649200FCD30C /* config.l in Sources */,
 				85D0068F143A649200FCD30C /* config.y in Sources */,
+				855FC03E143A788100929995 /* steadystatetrafficmanager.cpp in Sources */,
+				855FC03F143A788100929995 /* synthetictrafficmanager.cpp in Sources */,
+				855FC040143A788100929995 /* workload.cpp in Sources */,
+				855FC041143A788100929995 /* workloadtrafficmanager.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
