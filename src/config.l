@@ -1,12 +1,12 @@
 %{
 
-#include "config.tab.h"
+#include "y.tab.h"
 
 static unsigned int lineno = 1;
 
-void configerror(char * msg);
 void config_error(char * msg, int lineno);
-int configwrap() { return 1; }
+void yyerror(char * msg);
+int yywrap() { return 1; }
 
 extern int config_input(char *, int);
 #undef YY_INPUT
@@ -30,21 +30,21 @@ StrConst [A-Za-z_\-/\.][A-Za-z0-9_\-/\.\+(\{\,)\}]*
 
    /* Commands */
 
-\{[A-Za-z0-9_\-\.(\{\,)\}]+(\,[A-Za-z0-9_\-\.(\{\,)\}]+)*\} { configlval.name = strdup( yytext ); return STR; }
+\{[A-Za-z0-9_\-\.(\{\,)\}]+(\,[A-Za-z0-9_\-\.(\{\,)\}]+)*\} { yylval.name = strdup( yytext ); return STR; }
 
--?[0-9]+     { configlval.num = atoi( yytext ); return NUM; }
+-?[0-9]+     { yylval.num = atoi( yytext ); return NUM; }
 
--?[0-9]*\.[0-9]+ { configlval.fnum = atof( yytext ); return FNUM; }
+-?[0-9]*\.[0-9]+ { yylval.fnum = atof( yytext ); return FNUM; }
 
--?{DblConst}  { configlval.fnum = atof( yytext ); return FNUM;}
+-?{DblConst}  { yylval.fnum = atof( yytext ); return FNUM;}
 
-{StrConst} { configlval.name = strdup( yytext ); return STR; }
+{StrConst} { yylval.name = strdup( yytext ); return STR; }
 
 .          { return yytext[0]; }
 
 %%
 
-void configerror( char * msg )
+void yyerror( char * msg )
 {
   config_error( msg, lineno );
 }
