@@ -648,6 +648,9 @@ void TrafficManager::_Step( )
 	}
       }
 
+      const FlitChannel * inject = _net[subnet]->GetInject(n);
+      const Router * router = _net[subnet]->GetRouter(inject->GetSink());
+
       for(int i = 1; i <= class_limit; ++i) {
 
 	int const c = (last_class + i) % _classes;
@@ -673,7 +676,7 @@ void TrafficManager::_Step( )
 	if(cf->head && cf->vc == -1) { // Find first available VC
 	  
 	  OutputSet route_set;
-	  _rf(NULL, cf, 0, &route_set, true);
+	  _rf(router, cf, -1, &route_set, true);
 	  set<OutputSet::sSetElement> const & os = route_set.GetSet();
 	  assert(os.size() == 1);
 	  OutputSet::sSetElement const & se = *os.begin();
