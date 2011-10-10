@@ -1,0 +1,89 @@
+// Total number of VCs must match the above assignments
+vc_buf_size = 8;
+
+wait_for_tail_credit = 0;
+
+//
+// Router architectureq
+//
+
+credit_delay   = 2;
+routing_delay  = 0;
+vc_alloc_delay = 1;
+sw_alloc_delay = 1;
+st_final_delay = 1;
+
+input_speedup     = 1;
+output_speedup    = 1;
+internal_speedup  = 1.0;
+
+//
+// Traffic
+//
+
+sim_type = latency;
+
+warmup_periods = 3;
+
+
+sim_count          = 1;
+
+///////////////////END IMMUTABLE////////////////////////////////
+priority = age;
+//use_vc_age =1;
+//speculative=2;
+vc_buf_size = 8 ;
+
+
+hold_switch_for_packet = 0;
+
+num_vcs     = 2;
+
+// Flatfly x
+//
+// #node = k^(n+1)
+//
+// x, y, specifies the arrangement of routers in x and y dim
+// xr, yr specifiies the arayment of clients in a router
+//
+topology = flatfly;
+
+vc_allocator = separable_input_first;
+sw_allocator = separable_input_first;
+
+
+alloc_iters  = 1;
+
+c  = 4;
+k  = 4;
+n  = 2;
+x  = 4;
+y  = 4;
+xr = 2;
+yr = 2;
+
+
+routing_function = ran_min;
+	
+
+const_flits_per_packet = 1;
+
+traffic       =  uniform;
+
+print_activity = 0;
+
+sample_period  = 10000;  
+
+use_read_write = 0;
+
+injection_rate = 0.2;
+
+injection_rate_uses_flits =1;
+
+use_noc_latency=0;
+
+//print_vc_stats = 1;
+
+seed = 54321;
+
+watch_out= -;
