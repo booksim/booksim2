@@ -424,7 +424,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
     int inject_vc= RandomInt(gNumVCs-1);
-    outputs->AddRange(0,inject_vc, inject_vc);
+    outputs->AddRange(-1, inject_vc, inject_vc);
     return;
   }
 
@@ -474,7 +474,7 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
   outputs->Clear( );
   if(inject) {
     int inject_vc= RandomInt(gNumVCs-1);
-    outputs->AddRange(0,inject_vc, inject_vc);
+    outputs->AddRange(-1, inject_vc, inject_vc);
     return;
   }
   

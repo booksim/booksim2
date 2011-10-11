@@ -355,7 +355,7 @@ void adaptive_xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -432,7 +432,7 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -525,7 +525,7 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -594,7 +594,7 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -649,7 +649,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -848,7 +848,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
