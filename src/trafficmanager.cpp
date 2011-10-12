@@ -680,7 +680,7 @@ void TrafficManager::_Step( )
 	  set<OutputSet::sSetElement> const & os = route_set.GetSet();
 	  assert(os.size() == 1);
 	  OutputSet::sSetElement const & se = *os.begin();
-	  assert(se.output_port == 0);
+	  assert(se.output_port == -1);
 	  int const vc_start = se.vc_start;
 	  int const vc_end = se.vc_end;
 	  int const vc_count = vc_end - vc_start + 1;

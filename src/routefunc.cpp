@@ -78,7 +78,7 @@ void qtree_nca( const Router *r, const Flit *f,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -119,7 +119,7 @@ void tree4_anca( const Router *r, const Flit *f,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -175,7 +175,7 @@ void tree4_nca( const Router *r, const Flit *f,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -226,7 +226,7 @@ void fattree_nca( const Router *r, const Flit *f,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
     
@@ -280,7 +280,7 @@ void fattree_anca( const Router *r, const Flit *f,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -347,7 +347,7 @@ void adaptive_xy_yx_mesh( const Router *r, const Flit *f,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else if(r->GetID() == f->dest) {
 
@@ -407,7 +407,7 @@ void xy_yx_mesh( const Router *r, const Flit *f,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else if(r->GetID() == f->dest) {
 
@@ -553,7 +553,7 @@ void dor_next_torus( int cur, int dest, int in_port,
 
 void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
-  int out_port = inject ? 0 : dor_next_mesh( r->GetID( ), f->dest );
+  int out_port = inject ? -1 : dor_next_mesh( r->GetID( ), f->dest );
   
   int vcBegin = gBeginVCs[f->cl];
   int vcEnd = gEndVCs[f->cl];
@@ -580,7 +580,7 @@ void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
 
 void dim_order_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
-  int out_port = inject ? 0 : dor_next_mesh( r->GetID( ), f->dest );
+  int out_port = inject ? -1 : dor_next_mesh( r->GetID( ), f->dest );
   
   int vcBegin = gBeginVCs[f->cl];
   int vcEnd = gEndVCs[f->cl];
@@ -653,7 +653,7 @@ void romm_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outpu
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -713,7 +713,7 @@ void romm_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *ou
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -747,7 +747,7 @@ void min_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
   
   if(inject) {
     // injection can use all VCs
-    outputs->AddRange(0, vcBegin, vcEnd);
+    outputs->AddRange(-1, vcBegin, vcEnd);
     return;
   } else if(r->GetID() == f->dest) {
     // ejection can also use all VCs
@@ -835,7 +835,7 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
   
   if(inject) {
     // injection can use all VCs
-    outputs->AddRange(0, vcBegin, vcEnd);
+    outputs->AddRange(-1, vcBegin, vcEnd);
     return;
   }
 
@@ -997,7 +997,7 @@ void limited_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputS
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
   if ( inject ) {
-    outputs->AddRange( 0, vcBegin, vcEnd - 1 );
+    outputs->AddRange( -1, vcBegin, vcEnd - 1 );
     f->dr = 0; // zero dimension reversals
     return;
   }
@@ -1055,7 +1055,7 @@ void valiant_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *ou
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -1104,7 +1104,7 @@ void valiant_torus( const Router *r, const Flit *f, int in_channel, OutputSet *o
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -1182,7 +1182,7 @@ void valiant_ni_torus( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -1261,7 +1261,7 @@ void dim_order_torus( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
     
@@ -1317,7 +1317,7 @@ void dim_order_ni_torus( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
     
@@ -1370,7 +1370,7 @@ void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -1425,7 +1425,7 @@ void min_adapt_torus( const Router *r, const Flit *f, int in_channel, OutputSet 
 
   if(inject) {
     // injection can use all VCs
-    outputs->AddRange(0, vcBegin, vcEnd);
+    outputs->AddRange(-1, vcBegin, vcEnd);
     return;
   } else if(r->GetID() == f->dest) {
     // ejection can also use all VCs
@@ -1495,7 +1495,7 @@ void dest_tag_fly( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -1525,7 +1525,7 @@ void chaos_torus( const Router *r, const Flit *f,
   outputs->Clear( );
 
   if(inject) {
-    outputs->AddRange(0, 0, 0);
+    outputs->AddRange(-1, 0, 0);
     return;
   }
 
@@ -1564,7 +1564,7 @@ void chaos_mesh( const Router *r, const Flit *f,
   outputs->Clear( );
 
   if(inject) {
-    outputs->AddRange(0, 0, 0);
+    outputs->AddRange(-1, 0, 0);
     return;
   }
 

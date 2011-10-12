@@ -343,7 +343,7 @@ void adaptive_xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -408,7 +408,7 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -446,14 +446,12 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
 }
 
 int flatfly_outport_yx(int dest, int rID) {
-  int dest_rID;
+  int dest_rID = (int) (dest / gC);
   int _dim   = gN;
   int output = -1, dID, sID;
   
-  dest_rID = (int) (dest / gC);
-  
   if(dest_rID==rID){
-    return dest  - rID*gC;
+    return dest % gC;
   }
 
   for (int d=_dim-1;d >= 0; d--) {
@@ -491,7 +489,7 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -548,7 +546,7 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -591,7 +589,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -778,7 +776,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -1001,14 +999,12 @@ int find_ran_intm (int src, int dest) {
 //=============================================================
 // starting from DIM 0 (x first)
 int flatfly_outport(int dest, int rID) {
-  int dest_rID;
+  int dest_rID = (int) (dest / gC);
   int _dim   = gN;
   int output = -1, dID, sID;
   
-  dest_rID = (int) (dest / gC);
-  
   if(dest_rID==rID){
-    return dest  - rID*gC;
+    return dest % gC;
   }
 
 

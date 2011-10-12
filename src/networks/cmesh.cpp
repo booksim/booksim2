@@ -468,7 +468,7 @@ void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -596,7 +596,7 @@ void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -711,7 +711,7 @@ void dor_cmesh( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
@@ -783,7 +783,7 @@ void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
 
   if(inject) {
 
-    out_port = 0;
+    out_port = -1;
 
   } else {
 
