@@ -351,7 +351,7 @@ void adaptive_xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
     int targetr = (int)(dest/gC);
 
     if(targetr==r->GetID()){ //if we are at the final router, yay, output to client
-      out_port = dest  - targetr*gC;
+      out_port = dest % gC;
 
     } else {
    
@@ -416,7 +416,7 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
     int targetr = (int)(dest/gC);
 
     if(targetr==r->GetID()){ //if we are at the final router, yay, output to client
-      out_port = dest  - targetr*gC;
+      out_port = dest % gC;
 
     } else {
    
@@ -559,7 +559,7 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
     //int ycurr = ((r->GetID())) / gK;
 
     if(targetr==r->GetID()){ //if we are at the final router, yay, output to client
-      out_port = dest  - targetr*gC;
+      out_port = dest % gC;
     } else{ //else select a dimension at random
       out_port = flatfly_outport(dest, r->GetID());
     }
@@ -912,7 +912,10 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     }
 
     if (debug) cout << "        through output port : " << out_port << endl;
-    if(gTrace){cout<<"Outport "<<out_port<<endl;cout<<"Stop Mark"<<endl;}
+    if(gTrace) {
+      cout<<"Outport "<<out_port<<endl;
+      cout<<"Stop Mark"<<endl;
+    }
   }
 
   outputs->Clear( );
