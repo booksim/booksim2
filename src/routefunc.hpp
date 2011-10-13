@@ -39,7 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "outputset.hpp"
 #include "config_utils.hpp"
 
-typedef void (*tRoutingFunction)( const Router *, const Flit *, int in_channel, OutputSet *, bool );
+typedef void (*tRoutingFunction)( const Router *, const Flit *, int in_channel, OutputSet * );
 
 void InitializeRoutingMap( const Configuration & config );
 

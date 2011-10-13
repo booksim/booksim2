@@ -180,8 +180,8 @@ void AnyNet::RegisterRoutingFunctions() {
 }
 
 void min_anynet( const Router *r, const Flit *f, int in_channel, 
-		 OutputSet *outputs, bool inject ){
-  int out_port = inject ? -1 : global_routing_table[r->GetID()].find(f->dest)->second;
+		 OutputSet *outputs ){
+  int out_port = global_routing_table[r->GetID()].find(f->dest)->second;
 
   int vcBegin = gBeginVCs[f->cl];
   int vcEnd = gEndVCs[f->cl];

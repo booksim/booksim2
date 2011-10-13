@@ -456,55 +456,47 @@ int cmesh_yx( int cur, int dest ) {
 }
 
 void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel, 
-		  OutputSet *outputs, bool inject )
+		  OutputSet *outputs )
 {
 
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = gBeginVCs[f->cl];
   int vcEnd = gEndVCs[f->cl];
-  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
+  assert((f->vc >= vcBegin) && (f->vc <= vcEnd));
+
+  // Current Router
+  int cur_router = r->GetID();
+
+  // Destination Router
+  int dest_router = CMesh::NodeToRouter( f->dest ) ;  
 
   int out_port;
 
-  if(inject) {
+  if (dest_router == cur_router) {
 
-    out_port = -1;
+    // Forward to processing element
+    out_port = CMesh::NodeToPort( f->dest );      
 
   } else {
 
-    // Current Router
-    int cur_router = r->GetID();
+    // Forward to neighbouring router
 
-    // Destination Router
-    int dest_router = CMesh::NodeToRouter( f->dest ) ;  
+    //each class must have at least 2 vcs assigned or else xy_yx will deadlock
+    int const available_vcs = (vcEnd - vcBegin + 1) / 2;
+    assert(available_vcs > 0);
 
-    if (dest_router == cur_router) {
+    // randomly select dimension order at first hop
+    bool x_then_y = ((in_channel < gC) ?
+		     (RandomInt(1) > 0) :
+		     (f->vc < (vcBegin + available_vcs)));
 
-      // Forward to processing element
-      out_port = CMesh::NodeToPort( f->dest );      
-
+    if(x_then_y) {
+      out_port = cmesh_xy( cur_router, dest_router );
+      vcEnd -= available_vcs;
     } else {
-
-      // Forward to neighbouring router
-
-      //each class must have at least 2 vcs assigned or else xy_yx will deadlock
-      int const available_vcs = (vcEnd - vcBegin + 1) / 2;
-      assert(available_vcs > 0);
-
-      // randomly select dimension order at first hop
-      bool x_then_y = ((in_channel < gC) ?
-		       (RandomInt(1) > 0) :
-		       (f->vc < (vcBegin + available_vcs)));
-
-      if(x_then_y) {
-	out_port = cmesh_xy( cur_router, dest_router );
-	vcEnd -= available_vcs;
-      } else {
-	out_port = cmesh_yx( cur_router, dest_router );
-	vcBegin += available_vcs;
-      }
+      out_port = cmesh_yx( cur_router, dest_router );
+      vcBegin += available_vcs;
     }
-
   }
 
   outputs->Clear();
@@ -585,52 +577,45 @@ int cmesh_yx_no_express( int cur, int dest ) {
 }
 
 void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel, 
-			     OutputSet *outputs, bool inject )
+			     OutputSet *outputs )
 {
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = gBeginVCs[f->cl];
   int vcEnd = gEndVCs[f->cl];
-  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
+  assert((f->vc >= vcBegin) && (f->vc <= vcEnd));
+
+  // Current Router
+  int cur_router = r->GetID();
+
+  // Destination Router
+  int dest_router = CMesh::NodeToRouter( f->dest );  
 
   int out_port;
 
-  if(inject) {
+  if (dest_router == cur_router) {
 
-    out_port = -1;
+    // Forward to processing element
+    out_port = CMesh::NodeToPort( f->dest );
 
   } else {
 
-    // Current Router
-    int cur_router = r->GetID();
-
-    // Destination Router
-    int dest_router = CMesh::NodeToRouter( f->dest );  
-
-    if (dest_router == cur_router) {
-
-      // Forward to processing element
-      out_port = CMesh::NodeToPort( f->dest );
-
-    } else {
-
-      // Forward to neighbouring router
+    // Forward to neighbouring router
     
-      //each class must have at least 2 vcs assigned or else xy_yx will deadlock
-      int const available_vcs = (vcEnd - vcBegin + 1) / 2;
-      assert(available_vcs > 0);
+    //each class must have at least 2 vcs assigned or else xy_yx will deadlock
+    int const available_vcs = (vcEnd - vcBegin + 1) / 2;
+    assert(available_vcs > 0);
 
-      // randomly select dimension order at first hop
-      bool x_then_y = ((in_channel < gC) ?
-		       (RandomInt(1) > 0) :
-		       (f->vc < (vcBegin + available_vcs)));
+    // randomly select dimension order at first hop
+    bool x_then_y = ((in_channel < gC) ?
+		     (RandomInt(1) > 0) :
+		     (f->vc < (vcBegin + available_vcs)));
 
-      if(x_then_y) {
-	out_port = cmesh_xy_no_express( cur_router, dest_router );
-	vcEnd -= available_vcs;
-      } else {
-	out_port = cmesh_yx_no_express( cur_router, dest_router );
-	vcBegin += available_vcs;
-      }
+    if(x_then_y) {
+      out_port = cmesh_xy_no_express( cur_router, dest_router );
+      vcEnd -= available_vcs;
+    } else {
+      out_port = cmesh_yx_no_express( cur_router, dest_router );
+      vcBegin += available_vcs;
     }
   }
 
@@ -700,37 +685,30 @@ int cmesh_next( int cur, int dest ) {
 }
 
 void dor_cmesh( const Router *r, const Flit *f, int in_channel, 
-		OutputSet *outputs, bool inject )
+		OutputSet *outputs )
 {
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = gBeginVCs[f->cl];
   int vcEnd = gEndVCs[f->cl];
-  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
+  assert((f->vc >= vcBegin) && (f->vc <= vcEnd));
 
+  // Current Router
+  int cur_router = r->GetID();
+
+  // Destination Router
+  int dest_router = CMesh::NodeToRouter( f->dest ) ;  
+  
   int out_port;
 
-  if(inject) {
+  if (dest_router == cur_router) {
 
-    out_port = -1;
+    // Forward to processing element
+    out_port = CMesh::NodeToPort( f->dest ) ;
 
   } else {
 
-    // Current Router
-    int cur_router = r->GetID();
-
-    // Destination Router
-    int dest_router = CMesh::NodeToRouter( f->dest ) ;  
-  
-    if (dest_router == cur_router) {
-
-      // Forward to processing element
-      out_port = CMesh::NodeToPort( f->dest ) ;
-
-    } else {
-
-      // Forward to neighbouring router
-      out_port = cmesh_next( cur_router, dest_router );
-    }
+    // Forward to neighbouring router
+    out_port = cmesh_next( cur_router, dest_router );
   }
 
   outputs->Clear();
@@ -772,37 +750,30 @@ int cmesh_next_no_express( int cur, int dest ) {
 }
 
 void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel, 
-			   OutputSet *outputs, bool inject )
+			   OutputSet *outputs )
 {
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = gBeginVCs[f->cl];
   int vcEnd = gEndVCs[f->cl];
-  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
+  assert((f->vc >= vcBegin) && (f->vc <= vcEnd));
 
+  // Current Router
+  int cur_router = r->GetID();
+
+  // Destination Router
+  int dest_router = CMesh::NodeToRouter( f->dest ) ;  
+  
   int out_port;
 
-  if(inject) {
+  if (dest_router == cur_router) {
 
-    out_port = -1;
+    // Forward to processing element
+    out_port = CMesh::NodeToPort( f->dest );
 
   } else {
 
-    // Current Router
-    int cur_router = r->GetID();
-
-    // Destination Router
-    int dest_router = CMesh::NodeToRouter( f->dest ) ;  
-  
-    if (dest_router == cur_router) {
-
-      // Forward to processing element
-      out_port = CMesh::NodeToPort( f->dest );
-
-    } else {
-
-      // Forward to neighbouring router
-      out_port = cmesh_next_no_express( cur_router, dest_router );
-    }
+    // Forward to neighbouring router
+    out_port = cmesh_next_no_express( cur_router, dest_router );
   }
 
   outputs->Clear();

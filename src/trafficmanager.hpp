@@ -76,10 +76,6 @@ protected:
   vector<vector<BufferState *> > _buf_states;
   vector<vector<vector<int> > > _last_vc;
 
-  // ============ Routing ============ 
-
-  tRoutingFunction _rf;
-
   // ============ Injection queues ============ 
 
   vector<vector<list<Flit *> > > _partial_packets;
