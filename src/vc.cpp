@@ -180,7 +180,7 @@ void VC::UpdatePriority()
 
 void VC::Route( tRoutingFunction rf, const Router* router, const Flit* f, int in_channel )
 {
-  rf( router, f, in_channel, _route_set, false );
+  rf( router, f, in_channel, _route_set );
   _out_port = -1;
   _out_vc = -1;
 }
