@@ -639,9 +639,6 @@ void TrafficManager::_Step( )
 	}
       }
 
-      const FlitChannel * inject = _net[subnet]->GetInject(n);
-      const Router * router = _net[subnet]->GetRouter(inject->GetSink());
-
       for(int i = 1; i <= class_limit; ++i) {
 
 	int const c = (last_class + i) % _classes;
