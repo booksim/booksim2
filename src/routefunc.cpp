@@ -569,6 +569,47 @@ void dim_order_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
 
 //=============================================================
 
+void dim_order_pni_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs )
+{
+  int out_port = dor_next_mesh( r->GetID(), f->dest );
+  
+  int vcBegin = gBeginVCs[f->cl];
+  int vcEnd = gEndVCs[f->cl];
+  assert((f->vc >= vcBegin) && (f->vc <= vcEnd));
+
+  if(out_port < 2 * gN) {
+    int out_dim = out_port / 2;
+    int next_coord = f->dest;
+    for(int d = out_dim + 1; d < gN; ++d) {
+      next_coord /= gK;
+    }
+    next_coord %= gK;
+    assert(next_coord >= 0 && next_coord < gK);
+    int vcs_per_dest = (vcEnd - vcBegin + 1) / gK;
+    assert(vcs_per_dest > 0);
+    vcBegin += next_coord * vcs_per_dest;
+    vcEnd = vcBegin + vcs_per_dest - 1;
+  }
+  
+  if( f->watch ) {
+    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+	       << "Adding VC range [" 
+	       << vcBegin << "," 
+	       << vcEnd << "]"
+	       << " at output port " << out_port
+	       << " for flit " << f->id
+	       << " (input port " << in_channel
+	       << ", destination " << f->dest << ")"
+	       << "." << endl;
+  }
+  
+  outputs->Clear( );
+  
+  outputs->AddRange( out_port, vcBegin, vcEnd );
+}
+
+//=============================================================
+
 // Random intermediate in the minimal quadrant defined
 // by the source and destination
 int rand_min_intr_mesh( int src, int dest )
@@ -1481,6 +1522,7 @@ void InitializeRoutingMap( const Configuration & config )
 
   gRoutingFunctionMap["dim_order_mesh"]  = &dim_order_mesh;
   gRoutingFunctionMap["dim_order_ni_mesh"]  = &dim_order_ni_mesh;
+  gRoutingFunctionMap["dim_order_pni_mesh"]  = &dim_order_pni_mesh;
   gRoutingFunctionMap["dim_order_torus"] = &dim_order_torus;
   gRoutingFunctionMap["dim_order_ni_torus"] = &dim_order_ni_torus;
   gRoutingFunctionMap["dim_order_bal_torus"] = &dim_order_bal_torus;
