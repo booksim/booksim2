@@ -53,6 +53,13 @@ class BufferMonitor;
 
 class IQRouter : public Router {
 
+  int _inj_request;
+  int _inj_grant;
+
+  int _cross_request;
+  int _cross_grant;
+
+
   int _vcs;
   int _classes;
 

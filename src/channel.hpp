@@ -69,7 +69,16 @@ public:
   virtual void Evaluate() {}
   virtual void WriteOutputs();
 
+  void SetIO(){
+    is_io = true;
+  }
+  bool IsIO(){
+    return is_io;
+  }
+
+
 protected:
+  bool is_io;
   int _delay;
   T * _input;
   T * _output;
@@ -79,7 +88,7 @@ protected:
 
 template<typename T>
 Channel<T>::Channel(Module * parent, string const & name)
-  : TimedModule(parent, name), _delay(1), _input(0), _output(0) {
+  : TimedModule(parent, name), _delay(1), _input(0), _output(0),is_io(false) {
 }
 
 template<typename T>

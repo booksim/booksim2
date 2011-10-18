@@ -1723,6 +1723,9 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
   
     
   }
+  //this is a rough approximate  from updatepriority()
+  cout<<"inversion "<<double(VC::invert_cycles)/VC::total_cycles<<endl;
+ 
   
 }
 

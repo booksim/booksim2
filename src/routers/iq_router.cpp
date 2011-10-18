@@ -229,6 +229,11 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
 IQRouter::~IQRouter( )
 {
+  cout<<FullName()<<endl;
+  cout<<_inj_request<<endl;
+  cout<<"\t"<<_inj_grant<<endl;
+  cout<<_cross_request<<endl;
+  cout<<"\t"<<_cross_grant<<endl;
 
   if(gPrintActivity) {
     cout << Name() << ".bufferMonitor:" << endl ; 
@@ -1242,6 +1247,12 @@ void IQRouter::_SWAllocEvaluate( )
     int const & vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
     
+    if(_input_channels[input]->IsIO()){
+      _inj_request++;
+    } else {
+      _cross_request++;
+    }
+
     assert(_switch_hold_vc[input * _input_speedup + vc % _input_speedup] != vc);
 
     Buffer const * const cur_buf = _buf[input];
@@ -1408,6 +1419,11 @@ void IQRouter::_SWAllocEvaluate( )
 		     << " at input " << input
 		     << "." << (vc % _input_speedup)
 		     << "." << endl;
+	}
+	if(_input_channels[expanded_input]->IsIO()){
+	  _inj_grant++;
+	} else {
+	  _cross_grant++;
 	}
 	_sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
       } else {

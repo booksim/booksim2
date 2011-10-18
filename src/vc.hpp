@@ -78,7 +78,9 @@ private:
   int _pri_cap;
   int _hop_offset;
 public:
-  
+  static int invert_cycles;
+  static int total_cycles;
+
   VC( const Configuration& config, int outputs,
       Module *parent, const string& name );
   ~VC();

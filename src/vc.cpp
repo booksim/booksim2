@@ -47,7 +47,8 @@ const char * const VC::VCSTATE[] = {"idle",
 				    "routing",
 				    "vc_alloc",
 				    "active"};
-
+int VC::invert_cycles = 0;
+int VC::total_cycles = 0;
 VC::VC( const Configuration& config, int outputs, 
 	Module *parent, const string& name )
   : Module( parent, name ), 
@@ -159,6 +160,7 @@ void VC::SetOutput( int port, int vc )
 
 void VC::UpdatePriority()
 {
+  total_cycles++;
   if(_buffer.empty()) return;
   if(_pri_type == queue_length_based) {
     _pri = _buffer.size();
@@ -212,6 +214,13 @@ void VC::UpdatePriority()
     int current_p = (numeric_limits<int>::max() -GetSimTime())>>_pri_granularity;;
     if(_pri_cap!=-1 && current_p+_pri_cap<_pri){
       _pri = current_p+_pri_cap;
+    }
+    int top_pri =  (_buffer.front()->pri  - (_queuing_age?_hop_offset*_buffer.front()->hops:0))>>_pri_granularity;
+    for(int i = 1; i < _buffer.size(); ++i) {
+      if((_buffer[i]->pri-(_queuing_age?_hop_offset*_buffer[i]->hops:0))>>_pri_granularity >top_pri){
+        invert_cycles++;
+        break;
+      }
     }
   }
 }

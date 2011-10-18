@@ -1916,6 +1916,7 @@ void InitializeRoutingMap( const Configuration & config )
   gRoutingFunctionMap["dim_order_mesh"]  = &dim_order_mesh;
   gRoutingFunctionMap["dim_order_ni_mesh"]  = &dim_order_ni_mesh;
   gRoutingFunctionMap["dim_order_torus"] = &dim_order_torus;
+  gRoutingFunctionMap["dor_torus"] = &dim_order_torus;
   gRoutingFunctionMap["dim_order_ni_torus"] = &dim_order_ni_torus;
   gRoutingFunctionMap["dim_order_bal_torus"] = &dim_order_bal_torus;
 
