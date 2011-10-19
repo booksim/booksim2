@@ -57,6 +57,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _vcs         = config.GetInt( "num_vcs" );
 
   _vc_busy_when_full = (config.GetInt("vc_busy_when_full") > 0);
+  _vc_prioritize_empty = (config.GetInt("vc_prioritize_empty") > 0);
 
   _speculative = (config.GetInt("speculative") > 0);
   _spec_check_elig = (config.GetInt("spec_check_elig") > 0);
@@ -576,7 +577,11 @@ void IQRouter::_VCAllocEvaluate( )
       for(int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc) {
 	assert((out_vc >= 0) && (out_vc < _vcs));
 
-	int const in_priority = iset->pri;
+	int in_priority = iset->pri;
+	if(_vc_prioritize_empty && !dest_buf->IsEmptyFor(out_vc)) {
+	  assert(in_priority >= 0);
+	  in_priority += numeric_limits<int>::min();
+	}
 
 	// On the input input side, a VC might request several output VCs. 
 	// These VCs can be prioritized by the routing function, and this is 
@@ -1126,6 +1131,7 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
       if(_spec_sw_allocator) {
 	allocator = _spec_sw_allocator;
       } else {
+	assert(prio >= 0);
 	prio += numeric_limits<int>::min();
       }
     }
@@ -1738,17 +1744,23 @@ void IQRouter::_SWAllocUpdate( )
 		++out_vc) {
 	      assert((out_vc >= 0) && (out_vc < _vcs));
 	      
+	      int vc_prio = iset->pri;
+	      if(_vc_prioritize_empty && !dest_buf->IsEmptyFor(out_vc)) {
+		assert(vc_prio >= 0);
+		vc_prio += numeric_limits<int>::min();
+	      }
+
 	      // FIXME: This check should probably be performed in Evaluate(), 
 	      // not Update(), as the latter can cause the outcome to depend on 
 	      // the order of evaluation!
 	      if(dest_buf->IsAvailableFor(out_vc) && 
 		 !dest_buf->IsFullFor(out_vc) &&
 		 ((match_vc < 0) || 
-		  RoundRobinArbiter::Supersedes(out_vc, iset->pri, 
+		  RoundRobinArbiter::Supersedes(out_vc, vc_prio, 
 						match_vc, match_prio, 
 						vc_offset, _vcs))) {
 		match_vc = out_vc;
-		match_prio = iset->pri;
+		match_prio = vc_prio;
 	      }
 	    }	
 	  }
