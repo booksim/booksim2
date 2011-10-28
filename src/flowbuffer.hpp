@@ -24,13 +24,13 @@ class TrafficManager;
 
 struct flow{
   int flid;
-  int vc;
+  char vc;
   int flow_size;
   int create_time;
   int data_to_generate;
-  int src;
-  int dest;
-  int cl;
+  short src;
+  short dest;
+  char cl;
 
   int sn;
   queue<Flit*>* buffer;
@@ -39,6 +39,7 @@ struct flow{
       buffer->front()->Free();
       buffer->pop();
     }
+    delete buffer;
   }
 };
 

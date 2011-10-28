@@ -1179,6 +1179,7 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
 
 void limited_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
+  /*
   outputs->Clear( );
 
   int vcBegin = 0, vcEnd = gNumVCs-1;
@@ -1242,6 +1243,7 @@ void limited_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputS
   } else { // at destination
     outputs->AddRange( 2*gN, vcBegin, vcEnd ); 
   }
+  */
 }
 
 //=============================================================
@@ -1309,6 +1311,7 @@ void valiant_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *ou
 
 void valiant_torus( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
+  /*
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
     vcBegin = gReadReqBeginVC;
@@ -1376,6 +1379,7 @@ void valiant_torus( const Router *r, const Flit *f, int in_channel, OutputSet *o
   outputs->Clear( );
 
   outputs->AddRange( out_port, vcBegin, vcEnd );
+  */
 }
 
 //=============================================================
@@ -1383,6 +1387,7 @@ void valiant_torus( const Router *r, const Flit *f, int in_channel, OutputSet *o
 void valiant_ni_torus( const Router *r, const Flit *f, int in_channel, 
 		       OutputSet *outputs, bool inject )
 {
+  /*
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
     vcBegin = gReadReqBeginVC;
@@ -1474,13 +1479,14 @@ void valiant_ni_torus( const Router *r, const Flit *f, int in_channel,
   outputs->Clear( );
 
   outputs->AddRange( out_port, vcBegin, vcEnd );
+  */
 }
 
 //=============================================================
 
 void dim_order_torus( const Router *r, const Flit *f, int in_channel, 
 		      OutputSet *outputs, bool inject )
-{
+{/*
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
     vcBegin = gReadReqBeginVC;
@@ -1542,13 +1548,13 @@ void dim_order_torus( const Router *r, const Flit *f, int in_channel,
   outputs->Clear( );
 
   outputs->AddRange( out_port, vcBegin, vcEnd );
-}
+ */}
 
 //=============================================================
 
 void dim_order_ni_torus( const Router *r, const Flit *f, int in_channel, 
 			 OutputSet *outputs, bool inject )
-{
+{/*
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
     vcBegin = gReadReqBeginVC;
@@ -1607,13 +1613,13 @@ void dim_order_ni_torus( const Router *r, const Flit *f, int in_channel,
   outputs->Clear( );
 
   outputs->AddRange( out_port, vcBegin, vcEnd );
-}
+ */}
 
 //=============================================================
 
 void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel, 
 			  OutputSet *outputs, bool inject )
-{
+{/*
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
     vcBegin = gReadReqBeginVC;
@@ -1675,12 +1681,12 @@ void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel,
   outputs->Clear( );
 
   outputs->AddRange( out_port, vcBegin, vcEnd );
-}
+ */}
 
 //=============================================================
 
 void min_adapt_torus( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
-{
+{/*
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
     vcBegin = gReadReqBeginVC;
@@ -1727,8 +1733,8 @@ void min_adapt_torus( const Router *r, const Flit *f, int in_channel, OutputSet 
       if ( ( cur % gK ) != ( dest % gK ) ) {
 	int dist2 = gK - 2 * ( ( ( dest % gK ) - ( cur % gK ) + gK ) % gK );
 	
-	if ( dist2 > 0 ) { /*) || 
-			     ( ( dist2 == 0 ) && ( RandomInt( 1 ) ) ) ) {*/
+	if ( dist2 > 0 ) { //) || 
+			   //  ( ( dist2 == 0 ) && ( RandomInt( 1 ) ) ) ) {
 	  outputs->AddRange( 2*n, vcBegin+3, vcBegin+3, 1 ); // Right
 	} else {
 	  outputs->AddRange( 2*n + 1, vcBegin+3, vcBegin+3, 1 ); // Left
@@ -1755,7 +1761,7 @@ void min_adapt_torus( const Router *r, const Flit *f, int in_channel, OutputSet 
   } else  {
     outputs->AddRange( out_port, vcBegin+1, vcBegin+1, 0 );
   } 
-}
+*/}
 
 //=============================================================
 

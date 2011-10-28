@@ -44,12 +44,12 @@ ostream& operator<<( ostream& os, const Flit& f )
 {
   os << "  Flit ID: " << f.id << " (" << &f << ")" 
      << " Packet ID: " << f.pid
-     << " Transaction ID: " << f.tid
+    //     << " Transaction ID: " << f.tid
      << " Type: " << f.type 
      << " Head: " << f.head
      << " Tail: " << f.tail << endl;
   os << "  Source: " << f.src << "  Dest: " << f.dest << " Intm: "<<f.intm<<endl;
-  os << "  Injection time: " << f.time << " Transaction start: " << f.ttime << "Arrival time: " << f.atime << " Phase: "<<f.ph<< endl;
+  os << "  Injection time: " << f.time << " Transaction start: "  << "Arrival time: " << f.atime << " Phase: "<<f.ph<< endl;
   os << "  VC: " << f.vc << endl;
   return os;
 }
@@ -74,15 +74,15 @@ void Flit::Reset()
   tail      = false ;
   ntime = -1;
   time      = -1 ;
-  ttime     = -1 ;
+  //  ttime     = -1 ;
   atime     = -1 ;
   exptime =-1;
   sn        = -1 ;
   head_sn = -1;
-  rob_time  = 0 ;
+  //  rob_time  = 0 ;
   id        = -1 ;
   pid       = -1 ;
-  tid       = -1 ;
+  //  tid       = -1 ;
   flid = -1;
   hops      = 0 ;
   watch     = false ;
@@ -93,10 +93,10 @@ void Flit::Reset()
   pri = 0;
   intm =-1;
   ph = -1;
-  dr = -1;
+  //dr = -1;
   minimal = 1;
-  ring_par = -1;
-  data = 0;
+  //ring_par = -1;
+  //data = 0;
   payload = -1;
 }  
 

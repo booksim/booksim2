@@ -46,11 +46,11 @@ public:
                   ANY_TYPE      = 4 };
   FlitType type;
 
-  int res_type;
+  char res_type;
   int exptime;
   int  sn;
   int flid;
-  int payload;
+  short payload;
   int head_sn;
 
   int flbid;
@@ -60,46 +60,46 @@ public:
   bool fecn;
   bool becn;
 
-  int vc;
-  int cl;
+  char vc;
+  char cl;
 
   bool head;
   bool tail;
 
   int ntime;
   int  time;
-  int  ttime;
+  //  int  ttime;
   int  atime;
 
-  int  rob_time;
+  //  int  rob_time;
 
   int  id;
   int  pid;
-  int  tid;
+  //  int  tid;
 
   bool record;
 
-  int  src;
-  int  dest;
+  short  src;
+  short  dest;
 
   int  pri;
 
-  int  hops;
+  short  hops;
   bool watch;
-  int  subnetwork;
+  char  subnetwork;
 
   // Fields for multi-phase algorithms
-  mutable int intm;
-  mutable int ph;
+  mutable short intm;
+  mutable char ph;
 
-  mutable int dr;
-  mutable int minimal; // == 1 minimal routing, == 0, nonminimal routing
+  //mutable int dr;
+  mutable char minimal; // == 1 minimal routing, == 0, nonminimal routing
 
   // Which VC parition to use for deadlock avoidance in a ring
-  mutable int ring_par;
+  //mutable int ring_par;
 
   // Fields for arbitrary data
-  void* data ;
+  //  void* data ;
 
   void Reset();
 

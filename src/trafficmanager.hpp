@@ -48,7 +48,7 @@
 #include "flowbuffer.hpp"
 #include "flowrob.hpp"
 #include "roundrobin_arb.hpp"
-
+#include "large_roundrobin_arb.hpp"
 
 //register the requests to a node
 class PacketReplyInfo;
@@ -168,9 +168,13 @@ protected:
   vector<flow*> _pending_flow;
   int _max_flow_buffers;
   vector< vector< FlowBuffer*> > _flow_buffer;
-  vector< RoundRobinArbiter*> _flow_buffer_arb;
-  vector< RoundRobinArbiter*> _reservation_arb;
   
+  //  vector< RoundRobinArbiter*> _flow_buffer_arb;
+  //vector< RoundRobinArbiter*> _reservation_arb;
+  
+  vector< LargeRoundRobinArbiter*> _flow_buffer_arb;
+  vector< LargeRoundRobinArbiter*> _reservation_arb;
+
   vector< set< FlowBuffer*> > _reservation_set;
   vector< set< FlowBuffer*> > _active_set;
   vector< set< FlowBuffer*> > _deactive_set;
