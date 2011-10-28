@@ -162,7 +162,7 @@ do
 			${sim} $* print_csv_results=1 injection_rate=${inj_rate} | tee ${sim}.${HOSTNAME}.${$}.log
 			intm_lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 6`
 			rm ${sim}.${HOSTNAME}.${$}.log
-			if [ ${?} -eq 0 ]
+			if [ "${intm_lat}" = "" ]
 			then
 			    echo "SWEEP: Simulation failed unexpectedly."
 			    continue
