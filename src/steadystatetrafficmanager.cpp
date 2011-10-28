@@ -314,9 +314,8 @@ bool SteadyStateTrafficManager::_SingleSim( )
 string SteadyStateTrafficManager::_OverallStatsHeaderCSV() const
 {
   ostringstream os;
-  os << "injection"
-     << ',' << "load"
-     << ',' << TrafficManager::_OverallStatsHeaderCSV();
+  os << "load"
+     << ',' << SyntheticTrafficManager::_OverallStatsHeaderCSV();
   return os.str();
 }
 
@@ -324,6 +323,6 @@ string SteadyStateTrafficManager::_OverallClassStatsCSV(int c) const
 {
   ostringstream os;
   os << _load[c]
-     << ',' << TrafficManager::_OverallClassStatsCSV(c);
+     << ',' << SyntheticTrafficManager::_OverallClassStatsCSV(c);
   return os.str();
 }
