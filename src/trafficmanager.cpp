@@ -622,7 +622,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
     //check queue for waiting replies.
     //check to make sure it is on time yet
     if (!_repliesPending[source].empty()) {
-      if(_repliesPending[source].front()->time <= _qtime[source][cl]) {
+      if(_repliesPending[source].front()->time <= _time) {
 	result = -1;
       }
     } else {
