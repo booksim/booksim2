@@ -556,6 +556,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     if (f->type == Flit::READ_REQUEST || f->type == Flit::WRITE_REQUEST) {
       PacketReplyInfo* rinfo = PacketReplyInfo::New();
       rinfo->source = f->src;
+      rinfo->tid = f->tid;
       rinfo->time = f->atime;
       rinfo->ttime = f->ttime;
       rinfo->record = f->record;
@@ -658,8 +659,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   int tid = _cur_tid;
   int packet_destination = _traffic_pattern[cl]->dest(source);
   bool record = false;
-  bool watch = gWatchOut && ((_packets_to_watch.count(pid) > 0) ||
-			     (_transactions_to_watch.count(tid) > 0));
+  bool watch = gWatchOut && (_packets_to_watch.count(pid) > 0);
   if(_use_read_write[cl]){
     if(stype > 0) {
       if (stype == 1) {
@@ -673,6 +673,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 	err << "Invalid packet type: " << packet_type;
 	Error( err.str( ) );
       }
+      watch = watch || (gWatchOut && (_transactions_to_watch.count(tid) > 0));
       if ( watch ) { 
 	*gWatchOut << GetSimTime() << " | "
 		   << "node" << source << " | "
@@ -702,8 +703,24 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       record = rinfo->record;
       _repliesPending[source].pop_front();
       rinfo->Free();
+      watch = watch || (gWatchOut && (_transactions_to_watch.count(tid) > 0));
+      if ( watch ) { 
+	*gWatchOut << GetSimTime() << " | "
+		   << "node" << source << " | "
+		   << "Continuing transaction " << tid
+		   << " at time " << time
+		   << "." << endl;
+      }
     }
   } else {
+    watch = watch || (gWatchOut && (_transactions_to_watch.count(tid) > 0));
+    if ( watch ) { 
+      *gWatchOut << GetSimTime() << " | "
+		 << "node" << source << " | "
+		 << "Beginning transaction " << tid
+		 << " at time " << time
+		 << "." << endl;
+    }
     ++_cur_tid;
     assert(_cur_tid);
   }
