@@ -835,9 +835,8 @@ void TrafficManager::_Inject(){
 			     _qtime[input][c] : _time );
 	    generated = true;
 	  }
-	  //this is not a request packet
-	  //don't advance time
-	  if(!_use_read_write[c] || (stype <= 0)){
+	  // only advance time if this is not a reply packet
+	  if(!_use_read_write[c] || (stype >= 0)){
 	    ++_qtime[input][c];
 	  }
 	}
