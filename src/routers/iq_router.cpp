@@ -60,6 +60,8 @@ extern int ECN_CONGEST_THRESHOLD;
 extern int ECN_BUFFER_HYSTERESIS;
 extern int ECN_CREDIT_HYSTERESIS;
 
+//improves large simulation performance
+#define USE_LARGE_ARB
 
 int IQRouter::real_vc(int vvc, int output){
   assert(_voq);
@@ -138,6 +140,8 @@ int IQRouter::voq_vc(int vc, int output){
     return  output; 
   }
 }
+
+
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
@@ -260,17 +264,23 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
       Error("Piggyback VC allocation requires speculative switch allocation to be enabled.");
     }
     _vc_allocator = NULL;
+    _VOQArbs = NULL;
     _vc_rr_offset.resize(_outputs*_classes, -1);
   } else {
     arb_type = config.GetStr( "vc_alloc_arb_type" );
     iters = config.GetInt( "vc_alloc_iters" );
     if(iters == 0) iters = config.GetInt("alloc_iters");
     if(_voq){
-      _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
-					       alloc_type,
-					       _vcs*_inputs, 
-					       _real_vcs*_outputs,
-					       iters, arb_type );
+#ifdef USE_LARGE_ARB
+      _vc_allocator = NULL;_VOQArbs = new LargeRoundRobinArbiter*[_real_vcs*_outputs];
+      for(int i = 0; i<_real_vcs*_outputs; i++){
+	_VOQArbs[i] = new LargeRoundRobinArbiter("inject_arb",
+						 _vcs*_inputs);
+      }
+#else
+      _VOQArbs = NULL;_vc_allocator = Allocator::NewAllocator( this, "vc_allocator", alloc_type,_vcs*_inputs, _real_vcs*_outputs, iters, arb_type );
+#endif	     
+      
     } else {
       _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
 					       alloc_type,
@@ -278,7 +288,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 					       _real_vcs*_outputs,
 					       iters, arb_type );
     }
-    if ( !_vc_allocator ) {
+    if ( !_vc_allocator && !_VOQArbs  ) {
       Error("Unknown vc_allocator type: " + alloc_type);
     }
   }
@@ -361,8 +371,14 @@ IQRouter::~IQRouter( )
   
   for(int j = 0; j < _outputs; ++j)
     delete _next_buf[j];
-
+  if(!_voq){
   delete _vc_allocator;
+  } else {
+    for(int i = 0; i<_real_vcs*_outputs; i++){
+      delete _VOQArbs[i];
+    }
+    delete [] _VOQArbs;
+  }
   delete _sw_allocator;
   if(_spec_sw_allocator)
     delete _spec_sw_allocator;
@@ -389,8 +405,19 @@ void IQRouter::_InternalStep( )
 
   if(!_route_vcs.empty())
     _RouteEvaluate( );
-  if(_vc_allocator) {
-    _vc_allocator->Clear();
+  if(_vc_allocator ||_VOQArbs  ) {
+    if(!_voq){
+      _vc_allocator->Clear();
+    } else {
+#ifdef USE_LARGE_ARB
+      for(int i = 0; i<_real_vcs*_outputs; i++){
+	_VOQArbs[i]->UpdateState();
+	_VOQArbs[i]->Clear();
+      }
+#else
+   _vc_allocator->Clear();
+#endif
+    }
     if(!_vc_alloc_vcs.empty())
       _VCAllocEvaluate( );
   }
@@ -629,7 +656,7 @@ void IQRouter::_InputQueuing( )
 	  _sw_alloc_vcs.push_back(make_pair(-1, make_pair(make_pair(input, vc),
 							  -1)));
 	}
-	if(_vc_allocator) {
+	if(_vc_allocator ||  _VOQArbs  ) {
 	  _vc_alloc_vcs.push_back(make_pair(-1, make_pair(make_pair(input, vc), 
 							  -1)));
 	}
@@ -751,7 +778,7 @@ void IQRouter::_RouteUpdate( )
     if(_speculative) {
       _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second, -1)));
     }
-    if(_vc_allocator) {
+    if(_vc_allocator ||  _VOQArbs  ) {
       _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second, -1)));
     }
 
@@ -838,7 +865,7 @@ void IQRouter::_VCAllocEvaluate( )
 
       for(int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc) {
 	assert((out_vc >= 0) && (out_vc < _vcs));
-
+	assert( iset->vc_end-iset->vc_start==0 || !_voq);
 	int const & in_priority = iset->pri;
 
 	// On the input input side, a VC might request several output VCs. 
@@ -857,9 +884,16 @@ void IQRouter::_VCAllocEvaluate( )
 		       << ")." << endl;
 	    watched = true;
 	  }
+	  if(!_voq){
+	    _vc_allocator->AddRequest(input*_vcs + vc, out_port*_real_vcs + out_vc, 0, in_priority, out_priority);
+	  } else {
+#ifdef USE_LARGE_ARB
 
-	  _vc_allocator->AddRequest(input*_vcs + vc, out_port*_real_vcs + out_vc, 0, 
-				    in_priority, out_priority);
+	    _VOQArbs[out_port*_real_vcs + out_vc]->AddRequest(input*_vcs + vc,0,out_priority); 
+#else
+	    _vc_allocator->AddRequest(input*_vcs + vc, out_port*_real_vcs + out_vc, 0, in_priority, out_priority);
+#endif
+	  }
 	} else {
 	  if(f->watch)
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -875,8 +909,13 @@ void IQRouter::_VCAllocEvaluate( )
     *gWatchOut << GetSimTime() << " | " << _vc_allocator->FullName() << " | ";
     _vc_allocator->PrintRequests( gWatchOut );
   }
-
-  _vc_allocator->Allocate();
+  if(!_voq){
+    _vc_allocator->Allocate();
+  } else {
+#ifndef USE_LARGE_ARB
+    _vc_allocator->Allocate();
+#endif
+  }
 
   if(watched) {
     *gWatchOut << GetSimTime() << " | " << _vc_allocator->FullName() << " | ";
@@ -899,9 +938,34 @@ void IQRouter::_VCAllocEvaluate( )
     assert((vc >= 0) && (vc < _vcs));
 
     int & output_and_vc = iter->second.second;
-    output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
-
-
+    if(!_voq){
+      output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
+    } else {
+#ifdef USE_LARGE_ARB      
+      Buffer * const cur_buf = _buf[input];
+      const OutputSet *route_set;
+      if(_voq && is_voq_vc(vc)){
+	if(_res_voq_drop[input*_vcs+vc]){
+	  route_set = cur_buf->GetRouteSet(vc);
+	} else {
+	  route_set = _voq_route_set[input*_vcs+vc];
+	}
+      } else {
+	route_set = cur_buf->GetRouteSet(vc);
+      }
+      set<OutputSet::sSetElement> const setlist = route_set->GetSet();
+      set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
+      int out_port = iset->output_port;
+      int out_vc = iset->vc_start;
+      if(_VOQArbs[ _real_vcs*out_port+ out_vc]->Arbitrate()!=input * _vcs + vc){
+	output_and_vc = -1;
+      } else {
+	output_and_vc =  _real_vcs*out_port+out_vc;
+      }
+#else
+      output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
+#endif
+    }
  
     if(output_and_vc >= 0) {
 
@@ -1329,7 +1393,7 @@ void IQRouter::_SWHoldUpdate( )
 	      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
 							      -1)));
 	    }
-	    if(_vc_allocator) {
+	    if(_vc_allocator || _VOQArbs) {
 	      _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
 							      -1)));
 	    }
@@ -1785,11 +1849,11 @@ void IQRouter::_SWAllocEvaluate( )
 	}
 	iter->second.second = -1;
       } else if(_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)) {
-
+	assert(false);
 	assert(f->head);
 
-	if(_vc_allocator) { // separate VC and switch allocators
-
+	if(_vc_allocator || _VOQArbs) { // separate VC and switch allocators
+	  assert(false);
 	  int const output_and_vc = _vc_allocator->OutputAssigned(input*_vcs+vc);
 
 	  if(output_and_vc < 0) {
@@ -1950,7 +2014,7 @@ void IQRouter::_SWAllocUpdate( )
 
       int match_vc;
 
-      if(!_vc_allocator && (cur_buf->GetState(vc) == VC::vc_alloc)) {
+      if((!_vc_allocator && !_VOQArbs) && (cur_buf->GetState(vc) == VC::vc_alloc)) {
 
 	int const & cl = f->cl;
 	assert((cl >= 0) && (cl < _classes));

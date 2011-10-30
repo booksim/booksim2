@@ -46,7 +46,7 @@ public:
                   ANY_TYPE      = 4 };
   FlitType type;
 
-  char res_type;
+  short res_type;
   int exptime;
   int  sn;
   int flid;
@@ -60,8 +60,8 @@ public:
   bool fecn;
   bool becn;
 
-  char vc;
-  char cl;
+  short vc;
+  short cl;
 
   bool head;
   bool tail;
@@ -86,14 +86,14 @@ public:
 
   short  hops;
   bool watch;
-  char  subnetwork;
+  short  subnetwork;
 
   // Fields for multi-phase algorithms
   mutable short intm;
-  mutable char ph;
+  mutable short ph;
 
   //mutable int dr;
-  mutable char minimal; // == 1 minimal routing, == 0, nonminimal routing
+  mutable short minimal; // == 1 minimal routing, == 0, nonminimal routing
 
   // Which VC parition to use for deadlock avoidance in a ring
   //mutable int ring_par;

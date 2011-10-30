@@ -47,7 +47,7 @@
 struct timeval start_time, end_time; /* Time before/after user code */
 
  
-//#define ENABLE_STATS
+#define ENABLE_STATS
 
 /*transient shit*/
 bool TRANSIENT_BURST = true;
@@ -960,10 +960,10 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       receive_flow_buffer = _flow_buffer[dest][f->flbid];
       if( receive_flow_buffer!=NULL &&
 	  receive_flow_buffer->fl->flid == f->flid){
-	int flow_done_status = receive_flow_buffer->done();
 #ifdef ENABLE_STATS
 	gStatAckEffective[dest]+= receive_flow_buffer->ack(f->sn)?1:0;
 #endif
+	int flow_done_status = receive_flow_buffer->done();
 	if(flow_done_status!=FLOW_DONE_NOT){
 #ifdef ENABLE_STATS
 	  if(receive_flow_buffer->fl->cl==0){
@@ -2068,7 +2068,7 @@ void TrafficManager::_Step( )
 
   ++_stat_time;
   ++_time;
-  if(_time%10==0){
+  if(_time%1000==0){
     gettimeofday(&end_time, NULL);
     
     cout<<"F Created "<<Flit::Allocated()<<" Cycles "<<_time<<" Tdelta "<<((double)(end_time.tv_sec) + (double)(end_time.tv_usec)/1000000.0)- ((double)(start_time.tv_sec) + (double)(start_time.tv_usec)/1000000.0)<<endl;

@@ -41,9 +41,9 @@
 #include <assert.h>
 class LargeRoundRobinArbiter{
   // Priority pointer
+  bool _claimed;
   int  _pointer ;
   int  _size ;
-
   int  _selected ;
   int _highest_pri;
   int _best_input;

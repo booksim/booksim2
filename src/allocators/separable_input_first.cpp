@@ -44,7 +44,7 @@ SeparableInputFirstAllocator::
 SeparableInputFirstAllocator( Module* parent, const string& name, int inputs,
 			      int outputs, const string& arb_type )
   : SeparableAllocator( parent, name, inputs, outputs, arb_type )
-{cout<<inputs<<"\t"<<outputs<<endl;}
+{}
 
 void SeparableInputFirstAllocator::Allocate() {
   

@@ -37,7 +37,7 @@
 
 LargeRoundRobinArbiter::LargeRoundRobinArbiter(const string &name,
 				      int size ) 
-  : _pointer( 0 ),_size(size), _selected(-1), _highest_pri(numeric_limits<int>::min()), _best_input(-1), _num_reqs(0){
+  : _pointer( 0 ),_size(size), _selected(-1), _highest_pri(numeric_limits<int>::min()), _best_input(-1), _num_reqs(0),_claimed(false){
 }
 
 void LargeRoundRobinArbiter::PrintState() const  {
@@ -55,6 +55,7 @@ void LargeRoundRobinArbiter::AddRequest( int input, int id, int pri )
 {
   //only support a single addreq call from each input
   //else it will replase it?
+  assert(  _best_input != input);
   if((_num_reqs == 0) || 
      Supersedes(input, pri, _best_input, _highest_pri, _pointer,_size )) {
     _highest_pri = pri;
@@ -67,7 +68,7 @@ void LargeRoundRobinArbiter::AddRequest( int input, int id, int pri )
 int LargeRoundRobinArbiter::Arbitrate() {
   
   _selected = _best_input;
-
+  _claimed=true;
   assert((_selected >= 0) || (_num_reqs == 0));
 
   return _selected ;
@@ -77,8 +78,10 @@ void LargeRoundRobinArbiter::Clear()
 {
   _highest_pri = numeric_limits<int>::min();
   _best_input = -1;
-  if(_num_reqs > 0) {
+  if(_num_reqs > 0){
+    assert(_claimed);
     _num_reqs = 0 ;
     _selected = -1;
+    _claimed=false;
   }
 }

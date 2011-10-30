@@ -137,6 +137,8 @@ void FlowBuffer::Init( flow* f){
 
 FlowBuffer::~FlowBuffer(){
   delete fl;
+  _flit_status.clear();
+  _flit_buffer.clear();
 }
 
 //generate packets for flows

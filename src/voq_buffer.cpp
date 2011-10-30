@@ -26,8 +26,6 @@ VOQ_Buffer::VOQ_Buffer(const Configuration& config, int outputs,
   _vc.resize(num_vcs);
 
   for(int i = 0; i < num_vcs; ++i) {
-    ostringstream vc_name;
-    vc_name << "vc_voq_" << i;
-    _vc[i] = new VC(config, outputs, this, vc_name.str( ) );
+    _vc[i] = new VC(config, outputs, this,"" );
   }
 }

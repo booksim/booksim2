@@ -47,7 +47,7 @@
 #include "reservation.hpp"
 #include "flowbuffer.hpp"
 #include "flowrob.hpp"
-#include "roundrobin_arb.hpp"
+#include "large_roundrobin_arb.hpp"
 #include "large_roundrobin_arb.hpp"
 
 //register the requests to a node
@@ -168,6 +168,8 @@ protected:
   vector<flow*> _pending_flow;
   int _max_flow_buffers;
   vector< vector< FlowBuffer*> > _flow_buffer;
+  vector< LargeRoundRobinArbiter*> _flow_buffer_arb;
+  vector< LargeRoundRobinArbiter*> _reservation_arb;
   
   //  vector< RoundRobinArbiter*> _flow_buffer_arb;
   //vector< RoundRobinArbiter*> _reservation_arb;

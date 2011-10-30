@@ -36,7 +36,7 @@
 
 #include "router.hpp"
 #include "routefunc.hpp"
-
+#include "large_roundrobin_arb.hpp"
 using namespace std;
 
 class VC;
@@ -96,6 +96,7 @@ class IQRouter : public Router {
   vector<Buffer *> _buf;
   vector<BufferState *> _next_buf;
 
+  LargeRoundRobinArbiter** _VOQArbs;
   Allocator *_vc_allocator;
   Allocator *_sw_allocator;
   Allocator *_spec_sw_allocator;
