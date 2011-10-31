@@ -45,33 +45,15 @@
 BufferState::BufferPolicy::BufferPolicy(Configuration const & config, BufferState * parent, const string & name)
 : Module(parent, name), _buffer_state(parent)
 {
-  _vcs = config.GetInt("num_vcs");
-  _vc_occupancy.resize(_vcs, 0);
 }
 
-void BufferState::BufferPolicy::TakeBuffer(int vc)
-{
-  assert((vc >= 0) && (vc < _vcs));
+void BufferState::BufferPolicy::TakeBuffer(int vc) {
 }
 
-void BufferState::BufferPolicy::SendingFlit(Flit const * const f)
-{
-  assert(f);
-  int const vc = f->vc;
-  assert((vc >= 0) && (vc < _vcs));
-  ++_vc_occupancy[vc];
+void BufferState::BufferPolicy::SendingFlit(Flit const * const f) {
 }
 
-void BufferState::BufferPolicy::FreeSlotFor(int vc)
-{
-  assert((vc >= 0) && (vc < _vcs));
-  assert(_vc_occupancy[vc] > 0);
-  --_vc_occupancy[vc];
-  if(_vc_occupancy[vc] < 0) {
-    ostringstream err;
-    err << "Buffer occupancy fell below zero for VC " << vc;
-    Error(err.str());
-  }
+void BufferState::BufferPolicy::FreeSlotFor(int vc) {
 }
 
 BufferState::BufferPolicy * BufferState::BufferPolicy::New(Configuration const & config, BufferState * parent, const string & name)
@@ -101,18 +83,20 @@ BufferState::BufferPolicy * BufferState::BufferPolicy::New(Configuration const &
 BufferState::PrivateBufferPolicy::PrivateBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
   : BufferPolicy(config, parent, name)
 {
-  _vc_buf_size = config.GetInt("buf_size") / _vcs;
-  if(_vc_buf_size <= 0) {
+  int const vcs = config.GetInt( "num_vcs" );
+  int const buf_size = config.GetInt("buf_size");
+  if(buf_size <= 0) {
     _vc_buf_size = config.GetInt("vc_buf_size");
+  } else {
+    _vc_buf_size = buf_size / vcs;
   }
   assert(_vc_buf_size > 0);
 }
 
 void BufferState::PrivateBufferPolicy::SendingFlit(Flit const * const f)
 {
-  BufferPolicy::SendingFlit(f);
   int const vc = f->vc;
-  if(_vc_occupancy[vc] > _vc_buf_size) {
+  if(_buffer_state->Occupancy(vc) > _vc_buf_size) {
     ostringstream err;
     err << "Buffer overflow for VC " << vc;
     Error(err.str());
@@ -121,16 +105,16 @@ void BufferState::PrivateBufferPolicy::SendingFlit(Flit const * const f)
 
 bool BufferState::PrivateBufferPolicy::IsFullFor(int vc) const
 {
-  assert((vc >= 0) && (vc < _vcs));
   return (_buffer_state->Occupancy(vc) >= _vc_buf_size);
 }
 
 BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
   : BufferPolicy(config, parent, name), _shared_buf_occupancy(0)
 {
+  int const vcs = config.GetInt( "num_vcs" );
   int num_private_bufs = config.GetInt("private_bufs");
   if(num_private_bufs < 0) {
-    num_private_bufs = _vcs;
+    num_private_bufs = vcs;
   } else if(num_private_bufs == 0) {
     num_private_bufs = 1;
   }
@@ -138,6 +122,9 @@ BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config
   _private_buf_occupancy.resize(num_private_bufs, 0);
 
   _buf_size = config.GetInt("buf_size");
+  if(_buf_size < 0) {
+    _buf_size = vcs * config.GetInt("vc_buf_size");
+  }
 
   _private_buf_size = config.GetIntArray("private_buf_size");
   if(_private_buf_size.empty()) {
@@ -156,7 +143,7 @@ BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config
     if(sv < 0) {
       start_vc.resize(num_private_bufs);
       for(int i = 0; i < num_private_bufs; ++i) {
-	start_vc[i] = i * _vcs / num_private_bufs;
+	start_vc[i] = i * vcs / num_private_bufs;
       }
     } else {
       start_vc.push_back(sv);
@@ -169,14 +156,14 @@ BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config
     if(ev < 0) {
       end_vc.resize(num_private_bufs);
       for(int i = 0; i < num_private_bufs; ++i) {
-	end_vc[i] = (i + 1) * _vcs / num_private_bufs - 1;
+	end_vc[i] = (i + 1) * vcs / num_private_bufs - 1;
       }
     } else {
       end_vc.push_back(ev);
     }
   }
 
-  _private_buf_vc_map.resize(_vcs, -1);
+  _private_buf_vc_map.resize(vcs, -1);
   _shared_buf_size = _buf_size;
   for(int i = 0; i < num_private_bufs; ++i) {
     _shared_buf_size -= _private_buf_size[i];
@@ -188,12 +175,11 @@ BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config
   }
   assert(_shared_buf_size >= 0);
 
-  _reserved_slots.resize(_vcs, 0);
+  _reserved_slots.resize(vcs, 0);
 }
 
 void BufferState::SharedBufferPolicy::ProcessFreeSlot(int vc)
 {
-  assert((vc >= 0) && (vc < _vcs));
   int i = _private_buf_vc_map[vc];
   --_private_buf_occupancy[i];
   if(_private_buf_occupancy[i] < 0) {
@@ -210,7 +196,6 @@ void BufferState::SharedBufferPolicy::ProcessFreeSlot(int vc)
 
 void BufferState::SharedBufferPolicy::SendingFlit(Flit const * const f)
 {
-  BufferPolicy::SendingFlit(f);
   int const vc = f->vc;
   if(_reserved_slots[vc] > 0) {
     --_reserved_slots[vc];
@@ -234,8 +219,7 @@ void BufferState::SharedBufferPolicy::SendingFlit(Flit const * const f)
 
 void BufferState::SharedBufferPolicy::FreeSlotFor(int vc)
 {
-  BufferPolicy::FreeSlotFor(vc);
-  if(_vc_occupancy[vc] == 0) {
+  if(!_buffer_state->IsAvailableFor(vc) && _buffer_state->IsEmptyFor(vc)) {
     ++_reserved_slots[vc];
   } else {
     ProcessFreeSlot(vc);
@@ -244,7 +228,6 @@ void BufferState::SharedBufferPolicy::FreeSlotFor(int vc)
 
 bool BufferState::SharedBufferPolicy::IsFullFor(int vc) const
 {
-  assert((vc >= 0) && (vc < _vcs));
   int i = _private_buf_vc_map[vc];
   return ((_reserved_slots[vc] == 0) &&
 	  (_private_buf_occupancy[i] >= _private_buf_size[i]) &&
@@ -254,6 +237,7 @@ bool BufferState::SharedBufferPolicy::IsFullFor(int vc) const
 BufferState::LimitedSharedBufferPolicy::LimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
   : SharedBufferPolicy(config, parent, name), _active_vcs(0)
 {
+  _vcs = config.GetInt("num_vcs");
   _max_held_slots = config.GetInt("max_held_slots");
   if(_max_held_slots < 0) {
     _max_held_slots = _buf_size;
@@ -262,7 +246,6 @@ BufferState::LimitedSharedBufferPolicy::LimitedSharedBufferPolicy(Configuration 
 
 void BufferState::LimitedSharedBufferPolicy::TakeBuffer(int vc)
 {
-  assert((vc >= 0) && (vc < _vcs));
   ++_active_vcs;
   if(_active_vcs > _vcs) {
     Error("Number of active VCs is too large.");
@@ -283,7 +266,7 @@ void BufferState::LimitedSharedBufferPolicy::SendingFlit(Flit const * const f)
 bool BufferState::LimitedSharedBufferPolicy::IsFullFor(int vc) const
 {
   return (SharedBufferPolicy::IsFullFor(vc) ||
-	  (_vc_occupancy[vc] >= _max_held_slots));
+	  (_buffer_state->Occupancy(vc) >= _max_held_slots));
 }
 
 BufferState::DynamicLimitedSharedBufferPolicy::DynamicLimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
@@ -347,6 +330,7 @@ BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuratio
 {
   _aging_scale = config.GetInt("feedback_aging_scale");
   _offset = config.GetInt("feedback_offset");
+  _vcs = config.GetInt("num_vcs");
 
   int const initial_limit = _buf_size / _vcs;
   _occupancy_limit.resize(_vcs, initial_limit);
@@ -412,7 +396,7 @@ bool BufferState::FeedbackSharedBufferPolicy::IsFullFor(int vc) const
     int limit = _ComputeLimit(rtt);
     max_slots = min(max_slots, limit);
   }
-  return (_vc_occupancy[vc] >= max_slots);
+  return (_buffer_state->Occupancy(vc) >= max_slots);
 }
 
 BufferState::SimpleFeedbackSharedBufferPolicy::SimpleFeedbackSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
@@ -441,6 +425,8 @@ BufferState::BufferState( const Configuration& config, Module *parent, const str
 
   _wait_for_tail_credit = config.GetInt( "wait_for_tail_credit" );
 
+  _vc_occupancy.resize(_vcs, 0);
+
   _in_use.resize(_vcs, false);
   _tail_sent.resize(_vcs, false);
 
@@ -460,24 +446,33 @@ void BufferState::ProcessCredit( Credit const * const c )
   set<int>::iterator iter = c->vc.begin();
   while(iter != c->vc.end()) {
 
-    assert( ( *iter >= 0 ) && ( *iter < _vcs ) );
+    int const vc = *iter;
+
+    assert( ( vc >= 0 ) && ( vc < _vcs ) );
 
     if ( ( _wait_for_tail_credit ) && 
-	 ( !_in_use[*iter] ) ) {
+	 ( !_in_use[vc] ) ) {
       ostringstream err;
-      err << "Received credit for idle VC " << *iter;
+      err << "Received credit for idle VC " << vc;
       Error( err.str() );
     }
     --_occupancy;
     if(_occupancy < 0) {
       Error("Buffer occupancy fell below zero.");
     }
-    _buffer_policy->FreeSlotFor(*iter);
-
-    if(_wait_for_tail_credit && IsEmptyFor(*iter) && _tail_sent[*iter]) {
-      assert(_in_use[*iter]);
-      _in_use[*iter] = false;
+    --_vc_occupancy[vc];
+    if(_vc_occupancy[vc] < 0) {
+      ostringstream err;
+      err << "Buffer occupancy fell below zero for VC " << vc;
+      Error(err.str());
     }
+    if(_wait_for_tail_credit && !_vc_occupancy[vc] && _tail_sent[vc]) {
+      assert(_in_use[vc]);
+      _in_use[vc] = false;
+    }
+
+    _buffer_policy->FreeSlotFor(vc);
+
     ++iter;
   }
 }
@@ -485,25 +480,29 @@ void BufferState::ProcessCredit( Credit const * const c )
 
 void BufferState::SendingFlit( Flit const * const f )
 {
-  assert( f && ( f->vc >= 0 ) && ( f->vc < _vcs ) );
+  int const vc = f->vc;
+
+  assert( f && ( vc >= 0 ) && ( vc < _vcs ) );
 
   ++_occupancy;
   if(_occupancy > _size) {
     Error("Buffer overflow.");
   }
 
+  ++_vc_occupancy[vc];
+  
   _buffer_policy->SendingFlit(f);
   
   if ( f->tail ) {
-    _tail_sent[f->vc] = true;
+    _tail_sent[vc] = true;
     
     if ( !_wait_for_tail_credit ) {
-      assert(_in_use[f->vc]);
-      _in_use[f->vc] = false;
+      assert(_in_use[vc]);
+      _in_use[vc] = false;
     }
   }
-  _last_id[f->vc] = f->id;
-  _last_pid[f->vc] = f->pid;
+  _last_id[vc] = f->id;
+  _last_pid[vc] = f->pid;
 }
 
 void BufferState::TakeBuffer( int vc )
@@ -528,6 +527,6 @@ void BufferState::Display( ostream & os ) const
     os << "  VC " << v << ": ";
     os << "in_use = " << _in_use[v] 
        << ", tail_sent = " << _tail_sent[v]
-       << ", occupied = " << _buffer_policy->Occupancy(v) << endl;
+       << ", occupied = " << _vc_occupancy[v] << endl;
   }
 }

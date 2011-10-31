@@ -41,8 +41,6 @@ class BufferState : public Module {
   class BufferPolicy : public Module {
   protected:
     BufferState const * const _buffer_state;
-    int _vcs;
-    vector<int> _vc_occupancy;
   public:
     BufferPolicy(Configuration const & config, BufferState * parent, 
 		 const string & name);
@@ -50,15 +48,6 @@ class BufferState : public Module {
     virtual void SendingFlit(Flit const * const f);
     virtual void FreeSlotFor(int vc = 0);
     virtual bool IsFullFor(int vc = 0) const = 0;
-
-    inline bool IsEmptyFor(int vc = 0) const {
-      assert((vc >= 0) && (vc < _vcs));
-      return (_vc_occupancy[vc] == 0);
-    }
-    inline int Occupancy(int vc = 0) const {
-      assert((vc >= 0) && (vc < _vcs));
-      return _vc_occupancy[vc];
-    }
 
     static BufferPolicy * New(Configuration const & config, 
 			      BufferState * parent, const string & name);
@@ -94,6 +83,7 @@ class BufferState : public Module {
 
   class LimitedSharedBufferPolicy : public SharedBufferPolicy {
   protected:
+    int _vcs;
     int _active_vcs;
     int _max_held_slots;
   public:
@@ -127,6 +117,7 @@ class BufferState : public Module {
   protected:
     int _ComputeRTT(int vc, int last_rtt) const;
     int _ComputeLimit(int rtt) const;
+    int _vcs;
     vector<int> _occupancy_limit;
     vector<int> _round_trip_time;
     vector<queue<int> > _flit_sent_time;
@@ -152,6 +143,7 @@ class BufferState : public Module {
   bool _wait_for_tail_credit;
   int  _size;
   int  _occupancy;
+  vector<int> _vc_occupancy;
   int  _vcs;
   
   BufferPolicy * _buffer_policy;
@@ -179,8 +171,9 @@ public:
   inline bool IsFullFor( int vc = 0 ) const {
     return _buffer_policy->IsFullFor(vc);
   }
-  inline bool IsEmptyFor( int vc = 0 ) const {
-    return _buffer_policy->IsEmptyFor(vc);
+  inline bool IsEmptyFor(int vc = 0) const {
+    assert((vc >= 0) && (vc < _vcs));
+    return (_vc_occupancy[vc] == 0);
   }
   inline bool IsAvailableFor( int vc = 0 ) const {
     assert( ( vc >= 0 ) && ( vc < _vcs ) );
@@ -188,7 +181,8 @@ public:
   }
   
   inline int Occupancy(int vc = 0) const {
-    return  _buffer_policy->Occupancy(vc);
+    assert((vc >= 0) && (vc < _vcs));
+    return _vc_occupancy[vc];
   }
   
   void Display( ostream & os = cout ) const;
