@@ -50,7 +50,7 @@ public:
   int exptime;
   int  sn;
   int flid;
-  short payload;
+  int payload;
   int head_sn;
 
   int flbid;

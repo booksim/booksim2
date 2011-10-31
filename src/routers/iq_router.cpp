@@ -365,6 +365,17 @@ IQRouter::~IQRouter( )
     cout << "Outputs=" << _outputs ;
     cout << *_switchMonitor << endl ;
   }
+  for(int i = 0; i<_inputs; i++){
+    for(int j = 0; j<_vcs; j++){
+      int index = i*_vcs+j;
+      delete _voq_route_set[index];
+    }
+  }
+  delete _voq_init_route;
+  for(int i = 0; i<_inputs; i++){
+     delete[] dropped_pid[i];
+  }
+  delete[] dropped_pid;
 
   for(int i = 0; i < _inputs; ++i)
     delete _buf[i];

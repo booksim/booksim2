@@ -45,7 +45,7 @@
 //time benchmarks
 #include <sys/time.h>
 struct timeval start_time, end_time; /* Time before/after user code */
-
+Stats* retired;
  
 #define ENABLE_STATS
 
@@ -449,6 +449,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     gStatSpecNetworkLatency[c] =  new Stats( this, "spec_net_hist" , 1.0, 5000 );
     gStatPureNetworkLatency[c] =  new Stats( this, "net_hist" , 1.0, 5000 );
   }
+  retired =  new Stats( this, "r_hist" , 1.0, 5000 );
 
   _use_read_write = config.GetIntArray("use_read_write");
   if(_use_read_write.empty()) {
@@ -860,6 +861,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 TrafficManager::~TrafficManager( )
 {
 
+  for(int i = 0; i<_nodes; i++){
+    delete _flow_buffer_arb[i];
+    delete _reservation_arb[i];
+  }
   for ( int subnet = 0; subnet < _subnets; ++subnet ) {
     for ( int source = 0; source < _nodes; ++source ) {
       delete _buf_states[source][subnet];
@@ -911,6 +916,63 @@ TrafficManager::~TrafficManager( )
   PacketReplyInfo::FreeAll();
   Flit::FreeAll();
   Credit::FreeAll();
+
+  for(size_t i = 0; i<_flow_buffer.size();i++){
+    for(size_t j = 0; j<_flow_buffer[i].size(); j++){
+      if(_flow_buffer[i][j])
+	delete _flow_buffer[i][j];
+    }
+    _flow_buffer[i].clear();
+  }
+  _flow_buffer.clear();
+#ifdef ENABLE_STATS
+ for ( int c = 0; c < _classes; ++c ) {
+   delete gStatPureNetworkLatency[c];
+   delete gStatSpecNetworkLatency[c];
+ }
+ delete [] gStatPureNetworkLatency;
+ delete [] gStatSpecNetworkLatency;
+
+ for(int i = 0; i< _nodes; i++){
+ delete  gStatGrantTimeNow[i];
+ delete  gStatGrantTimeFuture[i];
+ delete  gStatReservationTimeNow[i];
+ delete  gStatReservationTimeFuture[i];
+ }
+ delete [] gStatGrantTimeNow;
+ delete [] gStatGrantTimeFuture;
+ delete [] gStatReservationTimeNow;
+ delete [] gStatReservationTimeFuture;
+
+ delete gStatROBRange ;
+ 
+ delete gStatFlowSenderLatency;
+ delete gStatFlowLatency;
+ delete gStatActiveFlowBuffers;
+ delete  gStatReadyFlowBuffers;
+ delete  gStatResponseBuffer;
+  
+ 
+ delete  gStatAckLatency;
+ delete  gStatNackLatency;
+ delete  gStatResLatency;
+ delete  gStatGrantLatency;
+ delete  gStatSpecLatency;
+ delete  gStatNormLatency;
+
+ delete  gStatSourceLatency;
+ delete  gStatSourceTrueLatency;
+
+  for(int i = 0; i<_nodes; i++){
+    delete gStatECN[i];
+    delete gStatIRD[i];
+  }
+  delete  gStatNackByPacket;
+
+  delete gStatFastRetransmit;
+  delete gStatNackArrival;
+
+#endif
 }
 
 Flit* TrafficManager::IssueSpecial(int src, Flit* ff){
@@ -1272,7 +1334,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   
 
   //Regular retire flit
-
+  retired->AddSample(f->atime - f->ntime);
   _accepted_data_flits[f->cl][dest]++;
   _deadlock_timer = 0;
   assert(_total_in_flight_flits[f->cl].count(f->id) > 0);
@@ -2068,11 +2130,12 @@ void TrafficManager::_Step( )
 
   ++_stat_time;
   ++_time;
-  if(_time%1000==0){
+  if(_time%10000==0){
     gettimeofday(&end_time, NULL);
     
-    cout<<"F Created "<<Flit::Allocated()<<" Cycles "<<_time<<" Tdelta "<<((double)(end_time.tv_sec) + (double)(end_time.tv_usec)/1000000.0)- ((double)(start_time.tv_sec) + (double)(start_time.tv_usec)/1000000.0)<<endl;
+    cout<<"Retired "<<retired->NumSamples()<<" lat "<<retired->Average()<<" Cycles "<<_time<<" Tdelta "<<((double)(end_time.tv_sec) + (double)(end_time.tv_usec)/1000000.0)- ((double)(start_time.tv_sec) + (double)(start_time.tv_usec)/1000000.0)<<endl;
     gettimeofday(&start_time, NULL);
+    retired->Clear();
   }
 
 

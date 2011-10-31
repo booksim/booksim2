@@ -46,6 +46,7 @@ void FlowBuffer::Activate(int src, int id,  int mode, flow* f){
 }
 void FlowBuffer::Deactivate(){
   delete fl;
+  fl= NULL;
   _active= false;
   if(!_flow_queue.empty()){
     cerr<<"caution premature flow deactivation, hope you are running only transient\n";
@@ -136,7 +137,8 @@ void FlowBuffer::Init( flow* f){
 
 
 FlowBuffer::~FlowBuffer(){
-  delete fl;
+  if(fl)
+    delete fl;
   _flit_status.clear();
   _flit_buffer.clear();
 }

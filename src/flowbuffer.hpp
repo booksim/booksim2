@@ -33,13 +33,21 @@ struct flow{
   char cl;
 
   int sn;
+  flow(){
+    buffer=NULL;
+  }
   queue<Flit*>* buffer;
   ~flow(){
-    while(!buffer->empty()){
-      buffer->front()->Free();
-      buffer->pop();
+    if(buffer){
+      while(!buffer->empty()){
+	buffer->front()->Free();
+	buffer->pop();
+      }
+      delete buffer;
+      buffer = NULL;
+    } else {
+      assert(false);
     }
-    delete buffer;
   }
 };
 
