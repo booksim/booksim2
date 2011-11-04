@@ -50,6 +50,10 @@
 #include "large_roundrobin_arb.hpp"
 
 
+
+#define FLOW_MIX_SINGLE 0
+#define FLOW_MIX_RANGE 1
+#define FLOW_MIX_BIMOD 2
 //register the requests to a node
 class PacketReplyInfo;
 
@@ -68,6 +72,8 @@ protected:
 
   vector<double> _load;
   vector<int> _flow_size;
+  vector<int> _flow_size_range;
+  int _flow_mix_mode;
 
   vector<int>    _packet_size;
 
@@ -235,6 +241,7 @@ protected:
   int   _drain_time;
 
   int   _total_sims;
+  int   _warmup_cycles;
   int   _sample_period;
   int   _max_samples;
   int   _warmup_periods;

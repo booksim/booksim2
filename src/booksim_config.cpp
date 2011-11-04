@@ -38,6 +38,8 @@
 BookSimConfig::BookSimConfig( )
 { 
 
+  _int_map["warmup_cycles"] = 0; // how long between measurements
+
   _int_map["default_channel_latency"]=1;
 
   _int_map["voq"] = 0;
@@ -71,8 +73,12 @@ BookSimConfig::BookSimConfig( )
   _int_map["flow_merge"] = 1;
   _int_map["flow_buffer_capacity"] = 128; //not used
   _int_map["flow_buffers"] = 8;
+
   _int_map["flow_size"] = 1;
   AddStrField("flow_size","");
+  _int_map["flow_size_range"] = 0;
+  AddStrField("flow_size_range","");
+  _int_map["flow_mix_mode"] = 0;
 
 
   _int_map["fast_retransmit"] = 0;

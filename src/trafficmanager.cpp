@@ -180,6 +180,8 @@ vector<Stats*> gStatECN;
 
 vector<int> gStatNodeReady;
 
+map<int, int> gStatFlowSizes;
+
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
   : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0),_stat_time(0)
 {
@@ -504,11 +506,34 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _flow_size.resize(_classes, _flow_size.back());
 
-  if(config.GetInt("injection_rate_uses_flits")) {
-    for(int c = 0; c < _classes; ++c){
-      _load[c] /= (double)_packet_size[c];
-      _load[c] /=_flow_size[c];
-    }
+  _flow_size_range = config.GetIntArray( "flow_size_range" );
+  if(_flow_size_range.empty()) {
+    _flow_size_range.push_back(config.GetInt("flow_size_range"));
+  }
+  _flow_size_range.resize(_classes, _flow_size_range.back());
+
+  _flow_mix_mode=config.GetInt("flow_mix_mode");
+
+  if(config.GetInt("injection_rate_uses_flits")){
+    if(_flow_mix_mode == FLOW_MIX_SINGLE){
+      for(int c = 0; c < _classes; ++c){
+	_load[c] /= (double)_packet_size[c];
+	_load[c] /= (double)_flow_size[c];
+      }
+    } else if(_flow_mix_mode == FLOW_MIX_RANGE){
+      for(int c = 0; c < _classes; ++c){
+	_load[c] /= (double)_packet_size[c];
+	_load[c] /= (((double)_flow_size[c]*2+(double)_flow_size_range[c])/2.0);
+	cout<<_load[c]<<endl;
+      }
+
+    } else if(_flow_mix_mode == FLOW_MIX_BIMOD){
+      for(int c = 0; c < _classes; ++c){
+	_load[c] /= (double)_packet_size[c];
+	_load[c] /=(((double)_flow_size[c]*2+(double)_flow_size_range[c])/2.0);
+      }
+    } else 
+      assert(false);
   }
 
   if(TRANSIENT_ENABLE){
@@ -769,6 +794,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     Error( "Unknown sim_type value : " + sim_type );
   }
 
+  _warmup_cycles = (config.GetInt( "warmup_cycles")==0)?config.GetInt( "sample_period" ):config.GetInt( "warmup_cycles");
   _sample_period = config.GetInt( "sample_period" );
   _max_samples    = config.GetInt( "max_samples" );
   _warmup_periods = config.GetInt( "warmup_periods" );
@@ -1702,9 +1728,18 @@ void TrafficManager::_GenerateFlow( int source, int stype, int cl, int time ){
   flow* fl = new flow;
   fl->flid = _cur_flid++;
   fl->vc = -1;
-  fl->flow_size = _flow_size[cl]*_packet_size[cl];
+  int flow_packet_size = 0;
+  if(_flow_mix_mode==FLOW_MIX_SINGLE){
+    flow_packet_size  = _flow_size[cl];
+  } else if (_flow_mix_mode == FLOW_MIX_RANGE){
+    flow_packet_size  =  (RandomInt(_flow_size_range[cl])+_flow_size[cl]);
+  } else if (_flow_mix_mode == FLOW_MIX_BIMOD){
+    flow_packet_size  = (RandomInt(1)*_flow_size_range[cl]+_flow_size[cl]);
+  }
+  fl->flow_size = flow_packet_size*_packet_size[cl];
+  gStatFlowSizes[flow_packet_size]++;
   fl->create_time = time;
-  fl->data_to_generate = _flow_size[cl];
+  fl->data_to_generate = flow_packet_size;
   fl->src = source;
   fl->dest = packet_destination;
   fl->cl = cl;
@@ -2182,6 +2217,8 @@ void TrafficManager::_ClearStats( )
   _stat_time=0;
   _slowest_flit.assign(_classes, -1);
 
+  gStatFlowSizes.clear();
+
   for ( int c = 0; c < _classes; ++c ) {
 
     _plat_stats[c]->Clear( );
@@ -2556,8 +2593,8 @@ bool TrafficManager::_SingleSim( )
 	_ClearStats( );
       }
       
-      
-      for ( int iter = 0; iter < _sample_period; ++iter )
+     
+      for ( int iter = 0; iter < ((_sim_state==warming_up)?_warmup_cycles:_sample_period); ++iter )
 	_Step( );
       
       if(_stats_out)
@@ -3006,6 +3043,28 @@ void TrafficManager::DisplayStats( ostream & os ) {
 
 void TrafficManager::_DisplayTedsShit(){
   if(_stats_out){
+    for(int c = 0; c < _classes; ++c) {
+      *_stats_out<< "sent_data(" << c+1 << ",:) = [ ";
+      for ( int d = 0; d < _nodes; ++d ) {
+	*_stats_out << _sent_data_flits[c][d] << " ";
+      }
+      *_stats_out << "];" << endl
+		  << "accepted_data(" << c+1 << ",:) = [ ";
+      for ( int d = 0; d < _nodes; ++d ) {
+	*_stats_out << _accepted_data_flits[c][d] << " ";
+      }
+      *_stats_out << "];" << endl;
+      
+      vector<FlitChannel *>  temp = _net[0]->GetChannels();
+      for(unsigned int i = 0; i<temp.size(); i++){
+	*_stats_out <<"chan_idle("<<i+1<<",:)=["
+		    <<temp[i]->GetActivity()
+		    <<"];"<<endl;
+      }
+    }
+    
+    *_stats_out <<"run_time = "<<_stat_time<<";"<<endl;
+    
     *_stats_out<< "ack_received = ["
 	       <<gStatAckReceived<<"];\n";
     *_stats_out<< "ack_eff = ["
@@ -3278,6 +3337,12 @@ void TrafficManager::_DisplayTedsShit(){
       *_stats_out<<" "<<sum;
     }
     *_stats_out<<"];\n";
+    int j=0;
+    for(map<int, int>::iterator i = gStatFlowSizes.begin();
+	i!=gStatFlowSizes.end(); 
+	i++,j++){
+      *_stats_out<<"flow_size("<<j+1<<",:)=["<<i->first<<" "<<i->second<<"];\n";
+    }
   }
 }
 
