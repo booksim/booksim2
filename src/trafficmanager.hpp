@@ -73,6 +73,7 @@ protected:
    *to "read_request_size" etc. 
    */
   vector<int> _use_read_write;
+  vector<double> _write_fraction;
 
   vector<int> _read_request_size;
   vector<int> _read_reply_size;
