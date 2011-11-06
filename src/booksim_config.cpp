@@ -183,6 +183,8 @@ BookSimConfig::BookSimConfig( )
   // Use read/write request reply scheme
   _int_map["use_read_write"] = 0;
   AddStrField("use_read_write", ""); // workaraound to allow for vector specification
+  _float_map["write_fraction"] = 0.5;
+  AddStrField("write_fraction", "");
 
   // Control assignment of packets to VCs
   _int_map["read_request_begin_vc"] = 0;

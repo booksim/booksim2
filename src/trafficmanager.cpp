@@ -105,6 +105,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _use_read_write.resize(_classes, _use_read_write.back());
 
+  _write_fraction = config.GetFloatArray("write_fraction");
+  if(_write_fraction.empty()) {
+    _write_fraction.push_back(config.GetFloat("write_fraction"));
+  }
+  _write_fraction.resize(_classes, _write_fraction.back());
+
   _read_request_size = config.GetIntArray("read_request_size");
   if(_read_request_size.empty()) {
     _read_request_size.push_back(config.GetInt("read_request_size"));
@@ -631,7 +637,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
       if(_injection_process[cl]->test(source)) {
 	
 	//coin toss to determine request type.
-	result = (RandomFloat() < 0.5) ? 2 : 1;
+	result = (RandomFloat() < _write_fraction[cl]) ? 2 : 1;
 	
 	_requestsOutstanding[source]++;
       }
