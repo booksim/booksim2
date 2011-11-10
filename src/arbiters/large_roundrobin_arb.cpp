@@ -37,7 +37,7 @@
 
 LargeRoundRobinArbiter::LargeRoundRobinArbiter(const string &name,
 				      int size ) 
-  : _pointer( 0 ),_size(size), _selected(-1), _highest_pri(numeric_limits<int>::min()), _best_input(-1), _num_reqs(0),_claimed(false){
+  :_claimed(false), _pointer( 0 ),_size(size), _selected(-1), _highest_pri(numeric_limits<int>::min()), _best_input(-1), _num_reqs(0){
 }
 
 void LargeRoundRobinArbiter::PrintState() const  {

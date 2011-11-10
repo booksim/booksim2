@@ -59,12 +59,14 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["reservation_spec_off"] = 0;
   _int_map["reservation_always_succeed"] = 0;
-  _float_map["reservation_rtt"] = 3.0;
+  _float_map["reservation_rtt"] = 1.0;
   _float_map["reservation_overhead_factor"] = 1.05;
   _int_map["fast_reservation_transmit"] = 0;
   _int_map["reservation_packet_threshold"] = 64;
   _int_map["reservation_chunk_limit"] = 128;
-
+  _int_map["fast_retransmit"] = 0;
+  _int_map["reservation_queuing_drop"]= 0;
+  _int_map["reservation_post_wait"]= 0;
 
   _int_map["bystander_sender"] = 0;
   _int_map["bystander_receiver"] = 0;
@@ -81,7 +83,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["flow_mix_mode"] = 0;
 
 
-  _int_map["fast_retransmit"] = 0;
+
   _int_map["res_vcs"] = 1;
   _int_map["hotspot_reservation"] = 0;
   _int_map["expiration_time"] = 200;

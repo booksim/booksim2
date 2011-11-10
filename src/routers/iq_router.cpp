@@ -50,11 +50,15 @@
 #include "buffer_monitor.hpp"
 #include "reservation.hpp"
 #include "trafficmanager.hpp"
+#include "stats.hpp"
+
 extern vector< Network * > net;
 extern TrafficManager * trafficManager;
 extern map<int, vector<int> > gDropStats;
+extern Stats* gStatDropLateness;
 
-extern bool  VC_ALLOC_DROP;
+extern bool RESERVATION_QUEUING_DROP;
+extern bool VC_ALLOC_DROP;
 extern int ECN_BUFFER_THRESHOLD;
 extern int ECN_CONGEST_THRESHOLD;
 extern int ECN_BUFFER_HYSTERESIS;
@@ -492,19 +496,24 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
   if(f && f->res_type == RES_TYPE_SPEC){
     bool drop = false;
     if(f->head){
-      if(f->exptime<GetSimTime()){
-	//send drop nack
-	if(f->watch){
-	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		     << "drop flit " << f->id
-		     << " from channel at input " << input
-		     << "." << endl;
+      if(RESERVATION_QUEUING_DROP){
+       
+      } else { 
+	if(f->exptime<GetSimTime()){
+	  //send drop nack
+	  if(f->watch){
+	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		       << "drop flit " << f->id
+		       << " from channel at input " << input
+		       << "." << endl;
+	  }
+	  gDropStats[_id][input]++;
+	  drop_f = trafficManager->DropPacket(input, f);
+	  drop_f->vc = f->vc;
+	  drop = true;
+	  dropped_pid[input][f->vc] = f->pid;
+	  gStatDropLateness->AddSample(GetSimTime()-f->exptime);
 	}
-	gDropStats[_id][input]++;
-	drop_f = trafficManager->DropPacket(input, f);
-	drop_f->vc = f->vc;
-	drop = true;
-	dropped_pid[input][f->vc] = f->pid;
       }
     } else {
       if(f->pid == dropped_pid[input][f->vc]){//body
@@ -520,6 +529,7 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
 	_out_queue_credits.find(input)->second->id=666;
 	_out_queue_credits.find(input)->second->vc.push_back(f->vc);
       }
+
       f->Free();
       return drop_f;
     }
@@ -828,7 +838,8 @@ void IQRouter::_VCAllocEvaluate( )
 
     //check for expiration
     if(VC_ALLOC_DROP && f && f->res_type == RES_TYPE_SPEC){
-      if(f->exptime<GetSimTime()){
+      if(( RESERVATION_QUEUING_DROP && f->exptime<GetSimTime()-cur_buf->TimeStamp(vc)) ||
+	 (!RESERVATION_QUEUING_DROP && f->exptime<GetSimTime())){
 	if(f->watch){
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "about to drop flit " << f->id
@@ -1087,7 +1098,9 @@ void IQRouter::_VCAllocUpdate( )
     assert(f);
     assert(f->head);
    
-    if(VC_ALLOC_DROP && f->res_type == RES_TYPE_SPEC && f->exptime<GetSimTime() ){
+    if(VC_ALLOC_DROP && f->res_type == RES_TYPE_SPEC && 
+       (( RESERVATION_QUEUING_DROP &&  f->exptime<GetSimTime()-cur_buf->TimeStamp(vc))||
+	(!RESERVATION_QUEUING_DROP && f->exptime<GetSimTime())) ){
       if(f->watch){
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "drop flit " << f->id
@@ -1102,9 +1115,18 @@ void IQRouter::_VCAllocUpdate( )
       drop_f = trafficManager->DropPacket(input, f);
       drop_f->vc = f->vc;
 
+      assert(f->head);
+      if(RESERVATION_QUEUING_DROP){
+	gStatDropLateness->AddSample((GetSimTime()-cur_buf->TimeStamp(vc))
+				     -f->exptime);
+      } else {
+	gStatDropLateness->AddSample(GetSimTime()-f->exptime);
+      }
+
       int pid_drop = f->pid;
       bool tail_dropped = false;
    
+
       while(!cur_buf->Empty(vc)){
 	f = cur_buf->FrontFlit(vc);
 	tail_dropped = f->tail;
@@ -1327,8 +1349,11 @@ void IQRouter::_SWHoldUpdate( )
 		   << "." << endl;
       }
       
+      if(RESERVATION_QUEUING_DROP && f->type==RES_TYPE_SPEC && f->head)
+	f->exptime-=(GetSimTime()-cur_buf->TimeStamp(vc));
       cur_buf->RemoveFlit(vc);
       --_stored_flits[input];
+
       if(f->tail) --_active_packets[input];
       _bufferMonitor->read(input, f) ;
       

@@ -44,9 +44,9 @@
 
 //time benchmarks
 #include <sys/time.h>
-struct timeval start_time, end_time; /* Time before/after user code */
-Stats* retired;
- 
+Stats* retired; 
+Stats* gStatResEarly;
+
 #define ENABLE_STATS
 
 /*transient shit*/
@@ -73,6 +73,8 @@ bool FAST_RESERVATION_TRANSMIT=false;
 bool FLOW_DEST_MERGE = true;
 //expiration check also occurs during VC allocation
 bool VC_ALLOC_DROP = true;
+//expiration time only count queuing delays
+bool RESERVATION_QUEUING_DROP= false;
 //retransmit unacked packets as soon as there is nothing else to send
 bool FAST_RETRANSMIT_ENABLE = false;
 //account for reservation overhead by increasing the reservation time by this factor
@@ -87,7 +89,9 @@ int RESERVATION_CHUNK_LIMIT=256;
 bool RESERVATION_ALWAYS_SUCCEED=false;
 //debug, no speculation is ever set
 bool RESERVATION_SPEC_OFF = false;
-
+//flow buffers dont start the next reseration until this reservation's time window
+//has passed
+bool RESERVATION_POST_WAIT = false;
 
 //expiration timer for IRD
 int IRD_RESET_TIMER=1000;
@@ -113,6 +117,8 @@ bool ECN_AIMD = false;
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 
+Stats* gStatDropLateness;
+
 map<int, vector<int> > gDropStats;
 
 int gExpirationTime = 0;
@@ -132,6 +138,8 @@ Stats** gStatGrantTimeFuture;
 vector<int> gStatReservationReceived;
 Stats** gStatReservationTimeNow;
 Stats** gStatReservationTimeFuture;
+
+Stats* gStatReservationMismatch;
 
 vector<int> gStatSpecSent;
 vector<int> gStatSpecReceived;
@@ -288,6 +296,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   RESERVATION_ALWAYS_SUCCEED=(config.GetInt("reservation_always_succeed")==1);
   RESERVATION_SPEC_OFF = (config.GetInt("reservation_spec_off")==1);
   
+  RESERVATION_QUEUING_DROP=(config.GetInt("reservation_queuing_drop")==1);
+  RESERVATION_POST_WAIT = (config.GetInt("reservation_post_wait")==1);
 
   FLOW_DEST_MERGE= (config.GetInt("flow_merge")==1);
   FAST_RETRANSMIT_ENABLE = (config.GetInt("fast_retransmit")==1);
@@ -320,7 +330,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   gStatReservationReceived.resize(_nodes,0);
 
-
+  gStatDropLateness = new  Stats(this, "spec drop too early", 10.0, 100);
+  gStatResEarly = new Stats(this, "reservation too early", 10.0, 100);
+  gStatReservationMismatch = new Stats(this, "res mismatch", 10.0, 100);
+  
   gStatGrantTimeNow=new Stats*[_nodes];
   gStatGrantTimeFuture=new Stats*[_nodes];
   gStatReservationTimeNow=new Stats*[_nodes];
@@ -958,7 +971,10 @@ TrafficManager::~TrafficManager( )
  }
  delete [] gStatPureNetworkLatency;
  delete [] gStatSpecNetworkLatency;
-
+ 
+ delete gStatDropLateness;
+ delete gStatResEarly;
+ delete gStatReservationMismatch;
  for(int i = 0; i< _nodes; i++){
  delete  gStatGrantTimeNow[i];
  delete  gStatGrantTimeFuture[i];
@@ -1178,7 +1194,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	  <<ff->payload<<"\n";
     }
     
-    _reservation_schedule[dest] = _reservation_schedule[dest] +int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
+    _reservation_schedule[dest] += int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
 
     ff->res_type = RES_TYPE_GRANT;
     ff->pri = FLIT_PRI_GRANT;
@@ -1266,6 +1282,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	gStatNormDuplicate[dest]++;
 #endif
       } else {
+	if(f->payload!=-1){
+	  gStatReservationMismatch->AddSample(_time-f->payload);
+	}
 	_sent_data_flits[f->cl][f->src]++;
 	if(f->tail){
 #ifdef ENABLE_STATS
@@ -2077,7 +2096,11 @@ void TrafficManager::_Step( )
       if(f){
 	//actual the actual packet to send
 	f =  ready_flow_buffer->send();
-	f->exptime = _time+gExpirationTime;
+	if(RESERVATION_QUEUING_DROP ){
+	  f->exptime = gExpirationTime;
+	} else {
+	  f->exptime = _time+gExpirationTime;
+	}
 	//flit network traffic time
 	f->ntime = _time;
 	_net[0]->WriteSpecialFlit(f, source);
@@ -2090,11 +2113,15 @@ void TrafficManager::_Step( )
 	    gStatSpecSent[source]++;
 #endif
 	    _last_sent_spec_buffer[source] =NULL;
-	  } else {
+	  } else if(f->res_type==RES_TYPE_NORM) {
+
 #ifdef ENABLE_STATS
 	    gStatNormSent[source]++;
 #endif
 	    _last_sent_norm_buffer[source] =NULL;
+	  } else {
+	    assert(f->res_type==RES_TYPE_RES);
+	    _last_sent_spec_buffer[source] =NULL;
 	  }
 	} else {
 	  if(f->res_type==RES_TYPE_SPEC){
@@ -2104,6 +2131,9 @@ void TrafficManager::_Step( )
 	    _last_sent_spec_buffer[source] =ready_flow_buffer;
 	  } else if(f->res_type==RES_TYPE_NORM) {
 	    _last_sent_norm_buffer[source] =ready_flow_buffer;
+#ifdef ENABLE_STATS
+	    gStatNormSent[source]++;
+#endif
 	  }
 	}
 
@@ -2166,10 +2196,12 @@ void TrafficManager::_Step( )
   ++_stat_time;
   ++_time;
   if(_time%10000==0){
-    gettimeofday(&end_time, NULL);
     
-    cout<<"Retired "<<retired->NumSamples()<<" lat "<<retired->Average()<<" Cycles "<<_time<<" Tdelta "<<((double)(end_time.tv_sec) + (double)(end_time.tv_usec)/1000000.0)- ((double)(start_time.tv_sec) + (double)(start_time.tv_usec)/1000000.0)<<endl;
-    gettimeofday(&start_time, NULL);
+    cout<<"Retired "<<retired->NumSamples()<<" lat "<<retired->Average()
+	<<" mismatch "<<gStatReservationMismatch->Average()<<"("<<gStatReservationMismatch->NumSamples()<<")"
+	<<" early "<<gStatResEarly->Average()<<"("<<gStatResEarly->NumSamples()<<")"<<endl;
+    gStatResEarly->Clear();
+    gStatReservationMismatch->Clear();
     retired->Clear();
   }
 
@@ -2253,6 +2285,9 @@ void TrafficManager::_ClearStats( )
     }
   }
 #ifdef ENABLE_STATS
+
+  gStatDropLateness->Clear();
+
   gStatNodeReady.clear();
   gStatNodeReady.resize(_nodes,0);
 
@@ -3065,6 +3100,9 @@ void TrafficManager::_DisplayTedsShit(){
     
     *_stats_out <<"run_time = "<<_stat_time<<";"<<endl;
     
+    *_stats_out<< "late_drop =["
+	       << *gStatDropLateness<<"];\n";
+
     *_stats_out<< "ack_received = ["
 	       <<gStatAckReceived<<"];\n";
     *_stats_out<< "ack_eff = ["
@@ -3100,7 +3138,9 @@ void TrafficManager::_DisplayTedsShit(){
 
     *_stats_out<< "lost_flits = ["
 	       <<gStatLostPacket<<"];\n";
-
+    
+    *_stats_out<<"reservation_mismatch =["
+	       <<*gStatReservationMismatch <<"];\n";
 
     for(int i = 0; i<_nodes; i++){
       *_stats_out<<"inject_vc_dist("<<i+1<<",:)=["

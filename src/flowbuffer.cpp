@@ -16,7 +16,9 @@ extern int ECN_IRD_LIMIT;
 extern bool ECN_AIMD;
 extern vector<Stats*> gStatIRD;
 extern bool RESERVATION_SPEC_OFF;
+extern bool RESERVATION_POST_WAIT;
 
+extern Stats* gStatResEarly;
 
 FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id,int mode, flow* f){
 
@@ -37,6 +39,7 @@ void FlowBuffer::Activate(int src, int id,  int mode, flow* f){
     _IRD_wait = 0;
   }
 
+  _sleep_time = -1;
   _active= true;
   _src = src;
   _id = id;
@@ -65,6 +68,7 @@ void FlowBuffer::Init( flow* f){
 
   _dest = f->dest;
   _reserved_time = -1;
+  _reservation_check = false;
   _vc = -1;
   _last_sn = -1;
   _tail_sent = true;
@@ -87,7 +91,7 @@ void FlowBuffer::Init( flow* f){
     _reservation_flit->pri = FLIT_PRI_RES;
     _reservation_flit->payload = fl->flow_size;
     _status= FLOW_STATUS_SPEC;
-    _spec_sent = false;
+    _res_sent = false;
     _res_outstanding = false;
     _reserved_slots = fl->flow_size;
     if(fl->flow_size>RESERVATION_CHUNK_LIMIT){
@@ -98,7 +102,7 @@ void FlowBuffer::Init( flow* f){
 
   } else {
     _status =FLOW_STATUS_NORM;
-    _spec_sent = true;
+    _res_sent = true;
   }
   
   _flit_status.clear();
@@ -108,7 +112,7 @@ void FlowBuffer::Init( flow* f){
   fl->buffer=new  queue<Flit*>;
   int deduction =   parent->_GeneratePacket(fl,fl->data_to_generate);
   fl->data_to_generate-=deduction;
-  fl->buffer->front()->payload = fl->flow_size;  
+  //fl->buffer->front()->payload = fl->flow_size;  
   while(!fl->buffer->empty()){
     Flit *ff = fl->buffer->front();
     assert(ff);
@@ -236,7 +240,7 @@ void FlowBuffer::active_update(){
       _reservation_flit->pri = FLIT_PRI_RES;
 
       _status= FLOW_STATUS_SPEC;
-      _spec_sent = false;
+      _res_sent = false;
       _res_outstanding=false;
       if(fl->flow_size-_total_reserved_slots<RESERVATION_CHUNK_LIMIT){
 	_reserved_slots = fl->flow_size-_total_reserved_slots;
@@ -390,6 +394,7 @@ void FlowBuffer::grant(int time){
   }
   assert(_reserved_time == -1);
   _reserved_time = time;
+  _reservation_check = true;
   _res_outstanding=false;
   if(_tail_sent){
     _vc=-1;
@@ -442,7 +447,7 @@ Flit* FlowBuffer::front(){
   case FLOW_STATUS_NACK_TRANSITION:
   case FLOW_STATUS_GRANT_TRANSITION:
   case FLOW_STATUS_SPEC:
-    if(!_spec_sent){
+    if(!_res_sent){
       f = _reservation_flit;
     } else {
       if(_flit_buffer.count(_last_sn+1)!=0){
@@ -514,6 +519,10 @@ Flit* FlowBuffer::send(){
       _flit_status.erase(f->sn);
       f->res_type = RES_TYPE_NORM;
       f->pri = FLIT_PRI_NORM;
+      if(_mode == RES_MODE && _reservation_check){
+	f->payload = _reserved_time;
+	_reservation_check=false;
+      }
       _ready--;
       _reserved_slots--;
       _guarantee_sent++;
@@ -532,11 +541,11 @@ Flit* FlowBuffer::send(){
   case FLOW_STATUS_GRANT_TRANSITION:
   case FLOW_STATUS_SPEC:
     //first send the spec packet
-    if(!_spec_sent){
+    if(!_res_sent){
       _reservation_flit->vc=RES_PACKET_VC;
       _reservation_flit->time = GetSimTime();
       f = _reservation_flit;
-      _spec_sent = true;
+      _res_sent = true;
       _res_outstanding=true;
     } else {
       if(_flit_buffer.count(_last_sn+1)!=0){
@@ -589,6 +598,7 @@ bool FlowBuffer::eligible(){
 bool FlowBuffer::send_norm_ready(){
   switch(_status){
   case FLOW_STATUS_NORM:
+    assert(GetSimTime()>=_sleep_time);
     if(!_tail_sent){
       return true;
     } else if(_mode==ECN_MODE){
@@ -600,7 +610,7 @@ bool FlowBuffer::send_norm_ready(){
       }
     } else if(_mode==RES_MODE && fl->flow_size>RESERVATION_PACKET_THRESHOLD){
       if(_reserved_slots>0){
-	return (_ready>0);
+	return (_ready>0)||(_spec_outstanding>0 && FAST_RETRANSMIT_ENABLE ); //
       } else {
 	return false;
       }
@@ -620,7 +630,9 @@ bool FlowBuffer::send_spec_ready(){
   case FLOW_STATUS_GRANT_TRANSITION:
   case FLOW_STATUS_NACK_TRANSITION:
   case FLOW_STATUS_SPEC:
-    if(!_spec_sent){
+    if(GetSimTime()<_sleep_time)
+      return false;
+    if(!_res_sent){
       return true;
     } else if(!_tail_sent){
       return true;
@@ -652,6 +664,15 @@ int FlowBuffer::done(){
 void FlowBuffer::Reset(){
   assert(_guarantee_sent == fl->flow_size);
   assert(!_flow_queue.empty());
+
+  //only update sleep time here becuas there is a flow ready to go
+  //statistically this should be a rare problem 
+  if(RESERVATION_POST_WAIT && _mode==RES_MODE)
+    _sleep_time = _reserved_time;
+
+  if(GetSimTime()<_reserved_time+fl->flow_size-1){
+    gStatResEarly->AddSample(_reserved_time+fl->flow_size-1-GetSimTime());
+  }
   delete fl;
   Init(_flow_queue.front());
   _flow_queue.pop();

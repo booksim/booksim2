@@ -47,6 +47,7 @@ public:
 private:
   int _size;
 
+  deque<int> _time_stamp;
   deque<Flit *> _buffer;
   
   eVCState _state;
@@ -100,6 +101,10 @@ public:
     _expected_pid = -1;
   }
   
+  inline int TimeStamp() const{
+    return _time_stamp.front();
+  }
+
   inline bool Empty( ) const
   {
     return _buffer.empty( );

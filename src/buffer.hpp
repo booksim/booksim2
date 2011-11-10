@@ -64,6 +64,12 @@ public:
   inline void ResetExpected(int vc){
     _vc[vc]->ResetExpected( );
   }
+
+  inline int TimeStamp( int vc ) const
+  {
+    return _vc[vc]->TimeStamp();
+  }
+
   inline Flit *FrontFlit( int vc ) const
   {
     return _vc[vc]->FrontFlit( );

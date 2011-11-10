@@ -85,7 +85,8 @@ VC::~VC()
 }
 
 bool VC::SubstituteFrontFlit( Flit *f ){
-
+  if(f->head)
+    _time_stamp.push_front(GetSimTime());
   _buffer.push_front(f);
   UpdatePriority();
   return true;
@@ -123,6 +124,8 @@ bool VC::AddFlit( Flit *f )
     assert(f->pri >= 0);
   }
 
+  if(f->head)
+    _time_stamp.push_back(GetSimTime());
   _buffer.push_back(f);
   UpdatePriority();
   return true;
@@ -134,6 +137,8 @@ Flit *VC::RemoveFlit( )
   if ( !_buffer.empty( ) ) {
     f = _buffer.front( );
     _buffer.pop_front( );
+    if(f->head)
+      _time_stamp.pop_front();
     _last_id = f->id;
     _last_pid = f->pid;
     UpdatePriority();

@@ -109,12 +109,14 @@ public:
   int _last_sn;
   int _guarantee_sent;
   int _ready;
-  bool _spec_sent; //I meant res_sent
+  bool _res_sent; //I meant res_sent
   int _vc;
   int _reserved_slots;
   int _total_reserved_slots;//none chunk limit multiple flows
   int _spec_outstanding;
   bool _res_outstanding;
+  int _sleep_time; //pause the buffer before issuing next res to the same dest
+
 
   //ECN mode
   int _IRD;
@@ -127,7 +129,7 @@ public:
   int _fast_retransmit;
   bool _watch;
   long _total_wait;
- 
+  bool _reservation_check;
 
 };
 
