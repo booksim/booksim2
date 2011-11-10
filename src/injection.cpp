@@ -102,6 +102,10 @@ InjectionProcess * InjectionProcess::New(string const & inject, int nodes,
       cout << "Missing parameters for injection process: " << inject << endl;
       exit(-1);
     }
+    if(alpha < 0.0 && beta < 0.0) {
+      cout << "Invalid parameters for injection process: " << inject << endl;
+      exit(-1);
+    }
     vector<int> initial(nodes);
     if(params.size() > 2) {
       vector<string> initial_str = tokenize(params[2]);
@@ -145,6 +149,7 @@ OnOffInjectionProcess::OnOffInjectionProcess(int nodes, double rate,
 {
   assert((alpha >= 0.0) && (alpha <= 1.0));
   assert((beta >= 0.0) && (beta <= 1.0));
+  _r1 = rate * (alpha + beta) / alpha;
   reset();
 }
 
@@ -158,23 +163,9 @@ bool OnOffInjectionProcess::test(int source)
   assert((source >= 0) && (source < _nodes));
 
   // advance state
-
-  if(!_state[source]) {
-    if(RandomFloat() < _alpha) { // from off to on
-      _state[source] = true;
-    }
-  } else {
-    if(RandomFloat() < _beta) { // from on to off
-      _state[source] = false;
-    }
-  }
+  _state[source] = 
+    _state[source] ? (RandomFloat() >= _beta) : (RandomFloat() < _alpha);
 
   // generate packet
-
-  if(_state[source]) { // on?
-    double r1 = _rate * (_alpha + _beta) / _alpha;
-    return (RandomFloat() < r1);
-  }
-
-  return false;
+  return _state[source] && (RandomFloat() < _r1);
 }
