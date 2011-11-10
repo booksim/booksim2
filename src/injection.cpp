@@ -145,11 +145,18 @@ bool BernoulliInjectionProcess::test(int source)
 OnOffInjectionProcess::OnOffInjectionProcess(int nodes, double rate, 
 					     double alpha, double beta, 
 					     vector<int> initial)
-  : InjectionProcess(nodes, rate), _alpha(alpha), _beta(beta), _initial(initial)
+  : InjectionProcess(nodes, rate), 
+    _alpha(alpha), _beta(beta), _r1(1.0), _initial(initial)
 {
   assert((alpha >= 0.0) && (alpha <= 1.0));
   assert((beta >= 0.0) && (beta <= 1.0));
-  _r1 = rate * (alpha + beta) / alpha;
+  if(alpha < 0.0) {
+    _alpha = beta * rate / (1.0 - rate);
+  } else if(beta < 0.0) {
+    _beta = alpha * (1.0 - rate) / rate;
+  } else {
+    _r1 = rate * (alpha + beta) / alpha;
+  }
   reset();
 }
 
