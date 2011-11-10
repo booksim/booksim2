@@ -55,6 +55,7 @@ class OnOffInjectionProcess : public InjectionProcess {
 private:
   double _alpha;
   double _beta;
+  double _r1;
   vector<int> _initial;
   vector<int> _state;
 public:
