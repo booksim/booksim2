@@ -100,6 +100,10 @@ protected:
   vector<vector<BufferState *> > _buf_states;
   vector<vector<vector<int> > > _last_vc;
 
+  // ============ Routing ============ 
+
+  tRoutingFunction _rf;
+
   // ============ Injection queues ============ 
 
   vector<vector<int> > _qtime;
