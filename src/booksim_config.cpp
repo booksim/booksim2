@@ -188,6 +188,7 @@ BookSimConfig::BookSimConfig( )
 
   _float_map["burst_alpha"] = 0.5; // burst interval
   _float_map["burst_beta"]  = 0.5; // burst length
+  _float_map["burst_r1"] = -1.0; // burst rate
 
   AddStrField( "priority", "none" );  // message priorities
 

@@ -90,6 +90,15 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     Error( "Unkown priority value: " + priority );
   }
 
+  // ============ Routing ============ 
+
+  string rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
+  map<string, tRoutingFunction>::const_iterator rf_iter = gRoutingFunctionMap.find(rf);
+  if(rf_iter == gRoutingFunctionMap.end()) {
+    Error("Invalid routing function: " + rf);
+  }
+  _rf = rf_iter->second;
+
   // ============ Traffic ============ 
 
   _classes = config.GetInt("classes");
@@ -660,8 +669,14 @@ void TrafficManager::_Step( )
 
 	if(cf->head && cf->vc == -1) { // Find first available VC
 	  
-	  int vcBegin = gBeginVCs[cf->cl];
-	  int vcEnd = gEndVCs[cf->cl];
+	  OutputSet route_set;
+	  _rf(NULL, cf, -1, &route_set, true);
+	  set<OutputSet::sSetElement> const & os = route_set.GetSet();
+	  assert(os.size() == 1);
+	  OutputSet::sSetElement const & se = *os.begin();
+	  assert(se.output_port == -1);
+	  int const vcBegin = se.vc_start;
+	  int const vcEnd = se.vc_end;
 	  int const vc_count = vcEnd - vcBegin + 1;
 	  for(int i = 1; i <= vc_count; ++i) {
 	    int const vc = vcBegin + (_last_vc[n][subnet][c] - vcBegin + i) % vc_count;
