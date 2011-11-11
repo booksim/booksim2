@@ -98,16 +98,25 @@ InjectionProcess * InjectionProcess::New(string const & inject, int nodes,
     } else {
       beta = atof(params[1].c_str());
     }
+    double r1 = numeric_limits<double>::quiet_NaN();
+    if(params.size() < 3) {
+      r1 = config ? config->GetFloat("burst_r1") : -1.0;
+    } else {
+      r1 = atof(params[2].c_str());
+    }
     if(missing_params) {
       cout << "Missing parameters for injection process: " << inject << endl;
       exit(-1);
     }
-    if(alpha < 0.0 && beta < 0.0) {
+    if((alpha < 0.0 && beta < 0.0) || 
+       (alpha < 0.0 && r1 < 0.0) || 
+       (beta < 0.0 && r1 < 0.0) || 
+       (alpha >= 0.0 && beta >= 0.0 && r1 >= 0.0)) {
       cout << "Invalid parameters for injection process: " << inject << endl;
       exit(-1);
     }
     vector<int> initial(nodes);
-    if(params.size() > 2) {
+    if(params.size() > 3) {
       vector<string> initial_str = tokenize(params[2]);
       initial_str.resize(nodes, initial_str.back());
       for(int n = 0; n < nodes; ++n) {
@@ -118,7 +127,7 @@ InjectionProcess * InjectionProcess::New(string const & inject, int nodes,
 	initial[n] = RandomInt(1);
       }
     }
-    result = new OnOffInjectionProcess(nodes, load, alpha, beta, initial);
+    result = new OnOffInjectionProcess(nodes, load, alpha, beta, r1, initial);
   } else {
     cout << "Invalid injection process: " << inject << endl;
     exit(-1);
@@ -144,17 +153,23 @@ bool BernoulliInjectionProcess::test(int source)
 
 OnOffInjectionProcess::OnOffInjectionProcess(int nodes, double rate, 
 					     double alpha, double beta, 
-					     vector<int> initial)
+					     double r1, vector<int> initial)
   : InjectionProcess(nodes, rate), 
-    _alpha(alpha), _beta(beta), _r1(1.0), _initial(initial)
+    _alpha(alpha), _beta(beta), _r1(r1), _initial(initial)
 {
-  assert((alpha >= 0.0) && (alpha <= 1.0));
-  assert((beta >= 0.0) && (beta <= 1.0));
+  assert(alpha <= 1.0);
+  assert(beta <= 1.0);
+  assert(r1 <= 1.0);
   if(alpha < 0.0) {
-    _alpha = beta * rate / (1.0 - rate);
+    assert(beta >= 0.0);
+    assert(r1 >= 0.0);
+    _alpha = beta * rate / (r1 - rate);
   } else if(beta < 0.0) {
-    _beta = alpha * (1.0 - rate) / rate;
+    assert(alpha >= 0.0);
+    assert(r1 >= 0.0);
+    _beta = alpha * (r1 - rate) / rate;
   } else {
+    assert(r1 < 0.0);
     _r1 = rate * (alpha + beta) / alpha;
   }
   reset();

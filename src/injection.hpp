@@ -60,7 +60,7 @@ private:
   vector<int> _state;
 public:
   OnOffInjectionProcess(int nodes, double rate, double alpha, double beta, 
-			vector<int> initial);
+			double r1, vector<int> initial);
   virtual void reset();
   virtual bool test(int source);
 };
