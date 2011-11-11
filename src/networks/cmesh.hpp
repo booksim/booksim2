@@ -81,15 +81,15 @@ private:
 // Routing Functions
 //
 void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel, 
-		  OutputSet *outputs ) ;
+		  OutputSet *outputs, bool inject ) ;
 
 void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel, 
-			     OutputSet *outputs ) ;
+			     OutputSet *outputs, bool inject ) ;
 
 void dor_cmesh( const Router *r, const Flit *f, int in_channel, 
-		OutputSet *outputs ) ;
+		OutputSet *outputs, bool inject ) ;
 
 void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel, 
-			   OutputSet *outputs ) ;
+			   OutputSet *outputs, bool inject ) ;
 
 #endif

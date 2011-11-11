@@ -418,9 +418,15 @@ void DragonFlyNew::RegisterRoutingFunctions(){
 
 
 void min_dragonflynew( const Router *r, const Flit *f, int in_channel, 
-		       OutputSet *outputs )
+		       OutputSet *outputs, bool inject )
 {
   outputs->Clear( );
+
+  if(inject) {
+    int inject_vc= RandomInt(gNumVCs-1);
+    outputs->AddRange(-1, inject_vc, inject_vc);
+    return;
+  }
 
   int _grp_num_routers= gA;
 
@@ -460,12 +466,17 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
 //Basic adaptive routign algorithm for the dragonfly
 void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel, 
-			OutputSet *outputs )
+			OutputSet *outputs, bool inject )
 {
   //need 3 VCs for deadlock freedom
 
   assert(gNumVCs==3);
   outputs->Clear( );
+  if(inject) {
+    int inject_vc= RandomInt(gNumVCs-1);
+    outputs->AddRange(-1, inject_vc, inject_vc);
+    return;
+  }
   
   //this constant biases the adaptive decision toward minimum routing
   //negative value woudl biases it towards nonminimum routing
