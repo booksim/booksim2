@@ -48,6 +48,13 @@
 class PacketReplyInfo;
 
 class TrafficManager : public Module {
+
+private:
+
+  vector<vector<int> > _packet_size;
+  vector<vector<int> > _packet_size_rate;
+  vector<int> _packet_size_max_val;
+
 protected:
   int _nodes;
   int _routers;
@@ -61,17 +68,6 @@ protected:
 
   vector<double> _load;
 
-  vector<int>    _packet_size;
-
-  /*false means all packet types are the same length "const_flits_per_packet"
-   *All packets uses all VCS
-   *packet types are generated randomly, essentially making it only 1 type
-   *of packet in the network
-   *
-   *True means only request packets are generated and replies are generated
-   *as a response to the requests, packets are now difference length, correspond
-   *to "read_request_size" etc. 
-   */
   vector<int> _use_read_write;
   vector<double> _write_fraction;
 
@@ -262,6 +258,9 @@ protected:
   virtual void _UpdateOverallStats();
 
   virtual string _OverallStatsCSV(int c = 0) const;
+
+  int _GetNextPacketSize(int cl) const;
+  double _GetAveragePacketSize(int cl) const;
 
 public:
 

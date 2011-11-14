@@ -61,7 +61,7 @@ internal_speedup  = 1.0;
 // Traffic
 
 traffic                = uniform;
-const_flits_per_packet = 20;
+packet_size = 20;
 
 // Simulation
 

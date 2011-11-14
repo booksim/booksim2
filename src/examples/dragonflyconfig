@@ -67,7 +67,7 @@ priority = none;
 traffic       = uniform; 
 
 injection_rate = 0.8;
-const_flits_per_packet = 10;
+packet_size = 10;
 injection_rate_uses_flits=1;
 
 topology = dragonflynew;
