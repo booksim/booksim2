@@ -130,37 +130,19 @@ double Configuration::GetFloat(string const & field) const
 vector<string> Configuration::GetStrArray(string const & field) const
 {
   string const param_str = GetStr(field);
-  return tokenize(param_str);
+  return tokenize_str(param_str);
 }
 
 vector<int> Configuration::GetIntArray(string const & field) const
 {
-  vector<string> param_tokens = GetStrArray(field);
-  vector<int> values;
-  assert(values.empty());
-  for(size_t i = 0; i < param_tokens.size(); ++i) {
-    char const * const token = param_tokens[i].c_str();
-    int const value = atoi(token);
-    values.push_back(value);
-    assert(values[i] == value);
-  }
-  assert(values.size() == param_tokens.size());
-  return values;
+  string const param_str = GetStr(field);
+  return tokenize_int(param_str);
 }
 
 vector<double> Configuration::GetFloatArray(string const & field) const
 {
-  vector<string> param_tokens = GetStrArray(field);
-  vector<double> values;
-  assert(values.empty());
-  for(size_t i = 0; i < param_tokens.size(); ++i) {
-    char const * const token = param_tokens[i].c_str();
-    double const value = atof(token);
-    values.push_back(value);
-    assert(values[i] == value);
-  }
-  assert(values.size() == param_tokens.size());
-  return values;
+  string const param_str = GetStr(field);
+  return tokenize_float(param_str);
 }
 
 void Configuration::ParseFile(string const & filename)
@@ -341,7 +323,7 @@ void Configuration::WriteMatlabFile(ostream * config_out) const {
 
 }
 
-vector<string> tokenize(string const & data)
+vector<string> tokenize_str(string const & data)
 {
   vector<string> values;
 
@@ -372,6 +354,88 @@ vector<string> tokenize(string const & data)
       if(curr > start) {
 	string token = data.substr(start, curr - start);
 	values.push_back(token);
+      }
+      start = curr + 1;
+    }
+    ++curr;
+  }
+  assert(!nested);
+
+  return values;
+}
+
+vector<int> tokenize_int(string const & data)
+{
+  vector<int> values;
+
+  // no elements, no braces --> empty list
+  if(data.empty()) {
+    return values;
+  }
+
+  // doesn't start with an opening brace --> treat as single element
+  // note that this element can potentially contain nested lists 
+  if(data[0] != '{') {
+    values.push_back(atoi(data.c_str()));
+    return values;
+  }
+
+  size_t start = 1;
+  int nested = 0;
+
+  size_t curr = start;
+
+  while(string::npos != (curr = data.find_first_of("{,}", curr))) {
+    
+    if(data[curr] == '{') {
+      ++nested;
+    } else if((data[curr] == '}') && nested) {
+      --nested;
+    } else if(!nested) {
+      if(curr > start) {
+	string token = data.substr(start, curr - start);
+	values.push_back(atoi(token.c_str()));
+      }
+      start = curr + 1;
+    }
+    ++curr;
+  }
+  assert(!nested);
+
+  return values;
+}
+
+vector<double> tokenize_float(string const & data)
+{
+  vector<double> values;
+
+  // no elements, no braces --> empty list
+  if(data.empty()) {
+    return values;
+  }
+
+  // doesn't start with an opening brace --> treat as single element
+  // note that this element can potentially contain nested lists 
+  if(data[0] != '{') {
+    values.push_back(atof(data.c_str()));
+    return values;
+  }
+
+  size_t start = 1;
+  int nested = 0;
+
+  size_t curr = start;
+
+  while(string::npos != (curr = data.find_first_of("{,}", curr))) {
+    
+    if(data[curr] == '{') {
+      ++nested;
+    } else if((data[curr] == '}') && nested) {
+      --nested;
+    } else if(!nested) {
+      if(curr > start) {
+	string token = data.substr(start, curr - start);
+	values.push_back(atof(token.c_str()));
       }
       start = curr + 1;
     }
