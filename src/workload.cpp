@@ -58,7 +58,7 @@ Workload * Workload::New(string const & workload, int nodes,
   } else {
     param_str = workload.substr(left+1, right-left-1);
   }
-  vector<string> params = tokenize(param_str);
+  vector<string> params = tokenize_str(param_str);
   
   Workload * result = NULL;
   if(workload_name == "synthetic") {
@@ -79,30 +79,20 @@ Workload * Workload::New(string const & workload, int nodes,
 	   << workload << endl;
       exit(-1);
     }
-    vector<string> filenames = tokenize(params[0]);
+    vector<string> filenames = tokenize_str(params[0]);
     filenames.resize(nodes, filenames.back());
-    vector<string> packet_sizes_str = tokenize(params[1]);
-    vector<int> packet_sizes(packet_sizes_str.size());
-    for(size_t i = 0; i < packet_sizes_str.size(); ++i) {
-      packet_sizes[i] = atoi(packet_sizes_str[i].c_str());
-    }
+    vector<int> packet_sizes = tokenize_int(params[1]);
     int limit = -1;
     vector<int> scales;
     vector<int> skips;
     if(params.size() > 2) {
       limit = atoi(params[2].c_str());
       if(params.size() > 3) {
-	vector<string> skips_str = tokenize(params[3]);
-	skips.resize(skips_str.size());
-	for(size_t i = 0; i < skips_str.size(); ++i) {
-	  skips[i] = atoi(skips_str[i].c_str());
-	}
+	skips = tokenize_int(params[3]);
+	skips.resize(nodes, skips.back());
 	if(params.size() > 4) {
-	  vector<string> scales_str = tokenize(params[4]);
-	  scales.resize(scales_str.size());
-	  for(size_t i = 0; i < scales_str.size(); ++i) {
-	    scales[i] = atoi(scales_str[i].c_str());
-	  }
+	  scales = tokenize_int(params[4]);
+	  scales.resize(nodes, scales.back());
 	}
       }
     }

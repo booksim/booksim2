@@ -71,7 +71,7 @@ InjectionProcess * InjectionProcess::New(string const & inject, int nodes,
       param_str = inject.substr(left+1, right-left-1);
     }
   }
-  vector<string> params = tokenize(param_str);
+  vector<string> params = tokenize_str(param_str);
 
   InjectionProcess * result = NULL;
   if(process_name == "bernoulli") {
@@ -117,11 +117,8 @@ InjectionProcess * InjectionProcess::New(string const & inject, int nodes,
     }
     vector<int> initial(nodes);
     if(params.size() > 3) {
-      vector<string> initial_str = tokenize(params[2]);
-      initial_str.resize(nodes, initial_str.back());
-      for(int n = 0; n < nodes; ++n) {
-	initial[n] = atoi(initial_str[n].c_str());
-      }
+      initial = tokenize_int(params[2]);
+      initial.resize(nodes, initial.back());
     } else {
       for(int n = 0; n < nodes; ++n) {
 	initial[n] = RandomInt(1);

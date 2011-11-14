@@ -61,7 +61,7 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes,
       param_str = pattern.substr(left+1, right-left-1);
     }
   }
-  vector<string> params = tokenize(param_str);
+  vector<string> params = tokenize_str(param_str);
   
   TrafficPattern * result = NULL;
   if(pattern_name == "bitcomp") {
@@ -88,11 +88,7 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes,
   } else if(pattern_name == "uniform") {
     result = new UniformRandomTrafficPattern(nodes);
   } else if(pattern_name == "background") {
-    vector<string> excludes_str = tokenize(params[0]);
-    vector<int> excludes(excludes_str.size());
-    for(size_t i = 0; i < excludes.size(); ++i) {
-      excludes[i] = atoi(excludes_str[i].c_str());
-    }
+    vector<int> excludes = tokenize_int(params[0]);
     result = new UniformBackgroundTrafficPattern(nodes, excludes);
   } else if(pattern_name == "diagonal") {
     result = new DiagonalTrafficPattern(nodes);
@@ -175,22 +171,18 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes,
     if(params.empty()) {
       params.push_back("-1");
     } 
-    vector<string> hotspots_str = tokenize(params[0]);
-    vector<int> hotspots(hotspots_str.size());
+    vector<int> hotspots = tokenize_int(params[0]);
     for(size_t i = 0; i < hotspots.size(); ++i) {
-      int hotspot = atoi(hotspots_str[i].c_str());
-      if(hotspot < 0) {
-	hotspot = RandomInt(nodes - 1);
+      if(hotspots[i] < 0) {
+	hotspots[i] = RandomInt(nodes - 1);
       }
-      hotspots[i] = hotspot;
     }
-    vector<int> rates(hotspots.size(), 1);
+    vector<int> rates;
     if(params.size() >= 2) {
-      vector<string> rates_str = tokenize(params[1]);
-      rates_str.resize(hotspots.size(), rates_str.back());
-      for(size_t i = 0; i < rates.size(); ++i) {
-	rates[i] = atoi(rates_str[i].c_str());
-      }
+      rates = tokenize_int(params[1]);
+      rates.resize(hotspots.size(), rates.back());
+    } else {
+      rates.resize(hotspots.size(), 1);
     }
     result = new HotSpotTrafficPattern(nodes, hotspots, rates);
   } else {
