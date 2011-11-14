@@ -161,12 +161,12 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["perm_seed"] = 0;         // seed value for random permuation trafficpattern generator
 
-  _float_map["injection_rate"]       = 0.1; //if 0.0 assumes it is batch mode
+  _float_map["injection_rate"]       = 0.1;
   AddStrField("injection_rate", ""); // workaraound to allow for vector specification
   
   _int_map["injection_rate_uses_flits"] = 0;
 
-  _int_map["const_flits_per_packet"] = 1; //use  read_request_size etc insted
+  _int_map["const_flits_per_packet"] = 1;
   AddStrField("const_flits_per_packet", ""); // workaraound to allow for vector specification
 
   AddStrField( "injection_process", "bernoulli" );
