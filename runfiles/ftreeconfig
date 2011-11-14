@@ -94,7 +94,7 @@ yr = 2;
 
 routing_function = nca;
 
-const_flits_per_packet = 1;
+packet_size = 1;
 
 traffic       = bitcomp;
 

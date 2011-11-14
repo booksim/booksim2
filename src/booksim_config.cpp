@@ -166,8 +166,13 @@ BookSimConfig::BookSimConfig( )
   
   _int_map["injection_rate_uses_flits"] = 0;
 
-  _int_map["const_flits_per_packet"] = 1;
-  AddStrField("const_flits_per_packet", ""); // workaraound to allow for vector specification
+  // number of flits per packet
+  _int_map["packet_size"] = 1;
+  AddStrField("packet_size", ""); // workaraound to allow for vector specification
+
+  // if multiple values are specified per class, set probabilities for each
+  _int_map["packet_size_rate"] = 1;
+  AddStrField("packet_size_rate", ""); // workaraound to allow for vector specification
 
   AddStrField( "injection_process", "bernoulli" );
 

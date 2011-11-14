@@ -105,7 +105,7 @@ limit = 0;
 
 use_read_write = 1;
 
-const_flits_per_packet = 1;
+packet_size = 1;
 
 read_reply_size = 1;
 read_request_size = 1;

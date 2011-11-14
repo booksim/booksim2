@@ -144,16 +144,53 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _write_reply_size.resize(_classes, _write_reply_size.back());
 
-  _packet_size = config.GetIntArray( "const_flits_per_packet" );
-  if(_packet_size.empty()) {
-    _packet_size.push_back(config.GetInt("const_flits_per_packet"));
+  string packet_size_str = config.GetStr("packet_size");
+  if(packet_size_str.empty()) {
+    _packet_size.push_back(vector<int>(1, config.GetInt("packet_size")));
+  } else {
+    vector<string> packet_size_strings = tokenize_str(packet_size_str);
+    for(size_t i = 0; i < packet_size_strings.size(); ++i) {
+      _packet_size.push_back(tokenize_int(packet_size_strings[i]));
+    }
   }
   _packet_size.resize(_classes, _packet_size.back());
+
+  string packet_size_rate_str = config.GetStr("packet_size_rate");
+  if(packet_size_rate_str.empty()) {
+    int rate = config.GetInt("packet_size_rate");
+    assert(rate >= 0);
+    for(int c = 0; c < _classes; ++c) {
+      int size = _packet_size[c].size();
+      _packet_size_rate.push_back(vector<int>(size, rate));
+      _packet_size_max_val.push_back(size * rate - 1);
+    }
+  } else {
+    vector<string> packet_size_rate_strings = tokenize_str(packet_size_rate_str);
+    packet_size_rate_strings.resize(_classes, packet_size_rate_strings.back());
+    for(int c = 0; c < _classes; ++c) {
+      vector<int> rates = tokenize_int(packet_size_rate_strings[c]);
+      rates.resize(_packet_size[c].size(), rates.back());
+      _packet_size_rate.push_back(rates);
+      int size = rates.size();
+      int max_val = -1;
+      for(int i = 0; i < size; ++i) {
+	int rate = rates[i];
+	assert(rate >= 0);
+	max_val += rate;
+      }
+      _packet_size_max_val.push_back(max_val);
+    }
+  }
   
-  for(int c = 0; c < _classes; ++c)
-    if(_use_read_write[c])
-      _packet_size[c] = (_read_request_size[c] + _read_reply_size[c] +
-			 _write_request_size[c] + _write_reply_size[c]) / 2;
+  for(int c = 0; c < _classes; ++c) {
+    if(_use_read_write[c]) {
+      _packet_size[c] = 
+	vector<int>(1, (_read_request_size[c] + _read_reply_size[c] +
+			_write_request_size[c] + _write_reply_size[c]) / 2);
+      _packet_size_rate[c] = vector<int>(1, 1);
+      _packet_size_max_val[c] = 0;
+    }
+  }
 
   _load = config.GetFloatArray("injection_rate"); 
   if(_load.empty()) {
@@ -163,7 +200,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   if(config.GetInt("injection_rate_uses_flits")) {
     for(int c = 0; c < _classes; ++c)
-      _load[c] /= (double)_packet_size[c];
+      _load[c] /= _GetAveragePacketSize(c);
   }
 
   _traffic = config.GetStrArray("traffic");
@@ -667,7 +704,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   assert(stype!=0);
 
   Flit::FlitType packet_type = Flit::ANY_TYPE;
-  int size = _packet_size[cl]; //input size 
+  int size = _GetNextPacketSize(cl); //input size 
   int ttime = time;
   int pid = _cur_pid++;
   assert(_cur_pid);
@@ -1750,7 +1787,7 @@ string TrafficManager::_OverallStatsCSV(int c) const
   ostringstream os;
   os << _traffic[c]
      << ',' << _use_read_write[c]
-     << ',' << _packet_size[c]
+     << ',' << _GetAveragePacketSize(c)
      << ',' << _load[c]
      << ',' << _overall_min_plat[c] / (double)_total_sims
      << ',' << _overall_avg_plat[c] / (double)_total_sims
@@ -1812,4 +1849,47 @@ void TrafficManager::_LoadWatchList(const string & filename){
   } else {
     Error("Unable to open flit watch file: " + filename);
   }
+}
+
+int TrafficManager::_GetNextPacketSize(int cl) const
+{
+  assert(cl >= 0 && cl < _classes);
+
+  vector<int> const & psize = _packet_size[cl];
+  int sizes = psize.size();
+
+  if(sizes == 1) {
+    return psize[0];
+  }
+
+  vector<int> const & prate = _packet_size_rate[cl];
+  int max_val = _packet_size_max_val[cl];
+
+  int pct = RandomInt(max_val);
+
+  for(int i = 0; i < (sizes - 1); ++i) {
+    int const limit = prate[i];
+    if(limit > pct) {
+      return psize[i];
+    } else {
+      pct -= limit;
+    }
+  }
+  assert(prate.back() > pct);
+  return psize.back();
+}
+
+double TrafficManager::_GetAveragePacketSize(int cl) const
+{
+  vector<int> const & psize = _packet_size[cl];
+  int sizes = psize.size();
+  if(sizes == 1) {
+    return (double)psize[0];
+  }
+  vector<int> const & prate = _packet_size_rate[cl];
+  int sum = 0;
+  for(int i = 0; i < sizes; ++i) {
+    sum += psize[i] * prate[i];
+  }
+  return (double)sum / (double)(_packet_size_max_val[cl] + 1);
 }

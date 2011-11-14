@@ -94,7 +94,7 @@ routing_function = ran_min;
 use_read_write = 0;
 
 //for injection mode
-const_flits_per_packet = 1;
+packet_size = 1;
 injection_rate = 0.1;
 
 //for batch mode
