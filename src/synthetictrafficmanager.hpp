@@ -36,12 +36,16 @@
 
 class SyntheticTrafficManager : public TrafficManager {
 
+private:
+
+  vector<vector<int> > _packet_size;
+  vector<vector<int> > _packet_size_rate;
+  vector<int> _packet_size_max_val;
+
 protected:
 
   vector<string> _traffic;
   vector<TrafficPattern *> _traffic_pattern;
-
-  vector<int> _packet_size;
 
   vector<int> _reply_class;
   vector<int> _request_class;
@@ -72,6 +76,9 @@ protected:
   virtual string _OverallClassStatsCSV(int c) const;
   virtual void _DisplayOverallClassStats(int c, ostream & os) const;
   virtual void _WriteClassStats(int c, ostream & os) const;
+
+  int _GetNextPacketSize(int cl) const;
+  double _GetAveragePacketSize(int cl) const;
 
   SyntheticTrafficManager( const Configuration &config, const vector<Network *> & net );
 

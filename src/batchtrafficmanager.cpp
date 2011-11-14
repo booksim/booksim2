@@ -82,7 +82,7 @@ bool BatchTrafficManager::_IssuePacket( int source, int cl )
       (_requests_outstanding[cl][source] < _max_outstanding[cl])) &&
      (_sent_packets[cl][source] < _batch_size[cl])) {
     int dest = _traffic_pattern[cl]->dest(source);
-    int size = _packet_size[cl];
+    int size = _GetNextPacketSize(cl);
     int time = ((_include_queuing == 1) ? _qtime[cl][source] : _time);
     _GeneratePacket(source, dest, size, cl, time, -1, time);
     return true;

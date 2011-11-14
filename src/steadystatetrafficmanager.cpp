@@ -40,8 +40,9 @@ SteadyStateTrafficManager::SteadyStateTrafficManager( const Configuration &confi
   _load.resize(_classes, _load.back());
 
   if(config.GetInt("injection_rate_uses_flits")) {
-    for(int c = 0; c < _classes; ++c)
-      _load[c] /= (double)_packet_size[c];
+    for(int c = 0; c < _classes; ++c) {
+      _load[c] /= _GetAveragePacketSize(c);
+    }
   }
 
   _injection = config.GetStrArray("injection_process");
@@ -100,7 +101,7 @@ bool SteadyStateTrafficManager::_IssuePacket( int source, int cl )
 {
   if(_injection_process[cl]->test(source)) {
     int dest = _traffic_pattern[cl]->dest(source);
-    int size = _packet_size[cl];
+    int size = _GetNextPacketSize(cl);
     int time = ((_include_queuing == 1) ? _qtime[cl][source] : _time);
     _GeneratePacket(source, dest, size, cl, time, -1, time);
     return true;

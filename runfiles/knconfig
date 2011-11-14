@@ -101,7 +101,7 @@ limit = 64;
 //
 routing_function = ugal;
 
-const_flits_per_packet = 8;
+packet_size = 8;
 
 traffic       = diagonal;
 

@@ -157,6 +157,10 @@ BookSimConfig::BookSimConfig( )
   _int_map["packet_size"] = 1;
   AddStrField("packet_size", ""); // workaraound to allow for vector specification
 
+  // if multiple values are specified per class, set probabilities for each
+  _int_map["packet_size_rate"] = 1;
+  AddStrField("packet_size_rate", ""); // workaraound to allow for vector specification
+
   // Control assignment of packets to VCs
   _int_map["start_vc"] = -1;
   AddStrField("start_vc", ""); // workaraound to allow for vector specification
