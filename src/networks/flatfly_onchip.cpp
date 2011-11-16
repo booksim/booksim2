@@ -1013,7 +1013,7 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     vcBegin = gWriteReplyBeginVC;
     vcEnd = gWriteReplyEndVC;
   }
-  assert((f->vc >= vcBegin) && (f->vc <= vcEnd));
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
   int out_port;
 
