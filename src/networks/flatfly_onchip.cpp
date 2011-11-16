@@ -1083,7 +1083,7 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     // derived from flattening an actual butterfly), gK and gC are the same!
     assert(gK == gC);
 
-    assert(f->ph == 1 || f->ph == 2);
+    assert(inject ? (f->ph == -1) : (f->ph == 1 || f->ph == 2));
 
     int next_coord = flatfly_transformation(f->dest);
     if(inject) {
