@@ -929,7 +929,7 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = gBeginVCs[f->cl];
   int vcEnd = gEndVCs[f->cl];
-  assert((f->vc >= vcBegin) && (f->vc <= vcEnd));
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
   int out_port;
 

@@ -619,7 +619,7 @@ void dim_order_pni_mesh( const Router *r, const Flit *f, int in_channel, OutputS
   
   int vcBegin = gBeginVCs[f->cl];
   int vcEnd = gEndVCs[f->cl];
-  assert((f->vc >= vcBegin) && (f->vc <= vcEnd));
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
   if(inject || (r->GetID() != f->dest)) {
     int next_coord = f->dest;
