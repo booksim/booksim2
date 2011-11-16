@@ -46,18 +46,18 @@
 //  $Id$
 // ----------------------------------------------------------------------
 FlitChannel::FlitChannel(Module * parent, string const & name, int classes)
-: Channel<Flit>(parent, name), _routerSource(-1), _routerSourcePort(-1), 
-   _routerSink(-1), _routerSinkPort(-1), _idle(0), _classes(classes) {
+: Channel<Flit>(parent, name), _routerSource(NULL), _routerSourcePort(-1), 
+  _routerSink(NULL), _routerSinkPort(-1), _idle(0), _classes(classes) {
   _active.resize(classes, 0);
 }
 
 void FlitChannel::SetSource(Router const * const router, int port) {
-  _routerSource = router ? router->GetID() : -1;
+  _routerSource = router;
   _routerSourcePort = port;
 }
 
 void FlitChannel::SetSink(Router const * const router, int port) {
-  _routerSink = router ? router->GetID() : -1;
+  _routerSink = router;
   _routerSinkPort = port;
 }
 
