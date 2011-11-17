@@ -137,7 +137,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
     const int degree_in  = 2 *_n + _c ;
     const int degree_out = 2 *_n + _c ;
 
-    name << "router_" << y_index << x_index;
+    name << "router_" << y_index << '_' << x_index;
     _routers[node] = Router::NewRouter( config, 
 					this, 
 					name.str(), 
