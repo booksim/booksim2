@@ -29,6 +29,7 @@
 #include <cstdlib>
 
 #include "workload.hpp"
+#include "random_utils.hpp"
 
 Workload::Workload(int nodes) : _nodes(nodes)
 {
@@ -62,17 +63,20 @@ Workload * Workload::New(string const & workload, int nodes,
   
   Workload * result = NULL;
   if(workload_name == "synthetic") {
-    if(params.size() < 4) {
+    bool missing_params = false;
+    if(params.size() < 2) {
       cout << "Error: Missing parameter in synthetic workload definition: "
 	   << workload << endl;
       exit(-1);
     }
-    double const load = atof(params[0].c_str());
-    int const size = atoi(params[1].c_str());
-    string const & injection = params[2];
-    string const & traffic = params[3];
-    result = new SyntheticWorkload(nodes, load, size, injection, traffic, 
-				   config);
+    double load = atof(params[0].c_str());
+    string traffic = params[1];
+    string injection = (params.size() > 2) ? params[2] : (config ? config->GetStr("injection_process") : "bernoulli");
+    vector<int> sizes = (params.size() > 3) ? tokenize_int(params[3]) : vector<int>(1, config ? config->GetInt("packet_size") : 1);
+    vector<int> rates = (params.size() > 4) ? tokenize_int(params[4]) : vector<int>(1, 1);
+    rates.resize(sizes.size(), rates.back());
+    result = new SyntheticWorkload(nodes, load, traffic, injection, sizes, 
+				   rates, config);
   } else if(workload_name == "trace") {
     if(params.size() < 2) {
       cout << "Error: Missing parameter in trace workload definition: "
@@ -111,15 +115,23 @@ void Workload::advanceTime()
   ++_time;
 }
 
-SyntheticWorkload::SyntheticWorkload(int nodes, double load, int size, 
+SyntheticWorkload::SyntheticWorkload(int nodes, double load, 
+				     string const & traffic, 
 				     string const & injection, 
-				     string const & traffic,
+				     vector<int> const & sizes, 
+				     vector<int> const & rates, 
 				     Configuration const * const config)
-  : Workload(nodes), _size(size)
+  : Workload(nodes), _sizes(sizes), _rates(rates), _max_val(-1)
 {
   _injection = InjectionProcess::New(injection, nodes, load, config);
   _traffic = TrafficPattern::New(traffic, nodes, config);
   _qtime.resize(nodes);
+  int size = rates.size();
+  for(int i = 0; i < size; ++i) {
+    int rate = rates[i];
+    assert(rate >= 0);
+    _max_val += rate;
+  }
 }
 
 SyntheticWorkload::~SyntheticWorkload()
@@ -206,7 +218,21 @@ int SyntheticWorkload::dest() const
 int SyntheticWorkload::size() const
 {
   assert(!empty());
-  return _size;
+  int num_sizes = _sizes.size();
+  if(num_sizes == 1) {
+    return _sizes[0];
+  }
+  int pct = RandomInt(_max_val);
+  for(int i = 0; i < (num_sizes - 1); ++i) {
+    int const limit = _rates[i];
+    if(limit > pct) {
+      return _sizes[i];
+    } else {
+      pct -= limit;
+    }
+  }
+  assert(_rates.back() > pct);
+  return _sizes.back();
 }
 
 int SyntheticWorkload::time() const

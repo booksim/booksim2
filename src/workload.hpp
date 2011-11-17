@@ -62,7 +62,9 @@ public:
 
 class SyntheticWorkload : public Workload {
 protected:
-  int const _size;
+  vector<int> _sizes;
+  vector<int> _rates;
+  int _max_val;
   InjectionProcess * _injection;
   TrafficPattern * _traffic;
   vector<int> _qtime;
@@ -70,8 +72,10 @@ protected:
   queue<int> _pending;
   queue<int> _deferred;
 public:
-  SyntheticWorkload(int nodes, double load, int size, string const & injection, 
-		    string const & traffic, 
+  SyntheticWorkload(int nodes, double load, string const & traffic, 
+		    string const & injection, 
+		    vector<int> const & sizes, 
+		    vector<int> const & rates, 
 		    Configuration const * const config = NULL);
   virtual ~SyntheticWorkload();
   virtual void reset();
