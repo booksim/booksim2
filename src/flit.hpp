@@ -32,6 +32,7 @@
 #include <stack>
 
 #include "booksim.hpp"
+#include "outputset.hpp"
 
 class Flit {
 
@@ -80,6 +81,9 @@ public:
 
   // Fields for arbitrary data
   void* data ;
+
+  // Lookahead route info
+  OutputSet la_route_set;
 
   void Reset();
 

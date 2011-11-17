@@ -87,6 +87,11 @@ public:
     return _vc[vc]->GetRouteSet( );
   }
 
+  inline void SetRouteSet( int vc, OutputSet * output_set )
+  {
+    _vc[vc]->SetRouteSet(output_set);
+  }
+
   inline void SetOutput( int vc, int out_port, int out_vc )
   {
     _vc[vc]->SetOutput(out_port, out_vc);

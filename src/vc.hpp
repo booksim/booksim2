@@ -68,6 +68,8 @@ private:
   int _last_id;
   int _last_pid;
 
+  bool _lookahead_routing;
+
 public:
   
   VC( const Configuration& config, int outputs,
@@ -97,6 +99,7 @@ public:
   void SetState( eVCState s );
 
   const OutputSet *GetRouteSet( ) const;
+  void SetRouteSet( OutputSet * output_set );
 
   void SetOutput( int port, int vc );
 
