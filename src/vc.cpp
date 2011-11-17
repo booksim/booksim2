@@ -51,7 +51,8 @@ VC::VC( const Configuration& config, int outputs,
     _state(idle), _out_port(-1), _out_vc(-1), _pri(0), _watched(false), 
     _expected_pid(-1), _last_id(-1), _last_pid(-1)
 {
-  _route_set = new OutputSet( );
+  _lookahead_routing = !config.GetInt("routing_delay");
+  _route_set = _lookahead_routing ? NULL : new OutputSet( );
 
   string priority = config.GetStr( "priority" );
   if ( priority == "local_age" ) {
@@ -71,7 +72,9 @@ VC::VC( const Configuration& config, int outputs,
 
 VC::~VC()
 {
-  delete _route_set;
+  if(!_lookahead_routing) {
+    delete _route_set;
+  }
 }
 
 void VC::AddFlit( Flit *f )
@@ -136,6 +139,13 @@ void VC::SetState( eVCState s )
 const OutputSet *VC::GetRouteSet( ) const
 {
   return _route_set;
+}
+
+void VC::SetRouteSet( OutputSet * output_set )
+{
+  _route_set = output_set;
+  _out_port = -1;
+  _out_vc = -1;
 }
 
 void VC::SetOutput( int port, int vc )
