@@ -76,6 +76,7 @@ protected:
   // ============ Routing ============ 
 
   tRoutingFunction _rf;
+  bool _lookahead_routing;
 
   // ============ Injection queues ============ 
 

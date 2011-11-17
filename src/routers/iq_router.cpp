@@ -373,12 +373,12 @@ void IQRouter::_InputQueuing( )
       } else {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		     << "Generating lookahead routing information for VC " << vc
+		     << "Using precomputed lookahead routing information for VC " << vc
 		     << " at input " << input
 		     << " (front: " << f->id
 		     << ")." << endl;
 	}
-	cur_buf->Route(vc, _rf, this, f, input);
+	cur_buf->SetRouteSet(vc, &f->la_route_set);
 	cur_buf->SetState(vc, VC::vc_alloc);
 	if(_speculative) {
 	  _sw_alloc_vcs.push_back(make_pair(-1, make_pair(make_pair(input, vc),
@@ -1002,6 +1002,22 @@ void IQRouter::_SWHoldUpdate( )
       f->hops++;
       f->vc = match_vc;
       
+      if(!_routing_delay && f->head) {
+	const FlitChannel * channel = _output_channels[output];
+	const Router * router = channel->GetSink();
+	int in_channel = channel->GetSinkPort();
+	if(router) {
+	  if(f->watch) {
+	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		       << "Updating lookahead routing information for flit " << f->id
+		       << "." << endl;
+	  }
+	  _rf(router, f, in_channel, &f->la_route_set, false);
+	} else {
+	  f->la_route_set.Clear();
+	}
+      }
+
       dest_buf->SendingFlit(f);
       
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
@@ -1027,7 +1043,7 @@ void IQRouter::_SWHoldUpdate( )
 	  cur_buf->SetState(vc, VC::idle);
 	}
       } else {
-	Flit const * const nf = cur_buf->FrontFlit(vc);
+	Flit * const nf = cur_buf->FrontFlit(vc);
 	assert(nf);
 	if(f->tail) {
 	  assert(nf->head);
@@ -1048,12 +1064,12 @@ void IQRouter::_SWHoldUpdate( )
 	  } else {
 	    if(nf->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-			 << "Generating lookahead routing information for VC " << vc
+			 << "Using precomputed lookahead routing information for VC " << vc
 			 << " at input " << input
 			 << " (front: " << nf->id
 			 << ")." << endl;
 	    }
-	    cur_buf->Route(vc, _rf, this, nf, input);
+	    cur_buf->SetRouteSet(vc, &nf->la_route_set);
 	    cur_buf->SetState(vc, VC::vc_alloc);
 	    if(_speculative) {
 	      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
@@ -1807,6 +1823,22 @@ void IQRouter::_SWAllocUpdate( )
       f->hops++;
       f->vc = match_vc;
 
+      if(!_routing_delay && f->head) {
+	const FlitChannel * channel = _output_channels[output];
+	const Router * router = channel->GetSink();
+	int in_channel = channel->GetSinkPort();
+	if(router) {
+	  if(f->watch) {
+	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		       << "Updating lookahead routing information for flit " << f->id
+		       << "." << endl;
+	  }
+	  _rf(router, f, in_channel, &f->la_route_set, false);
+	} else {
+	  f->la_route_set.Clear();
+	}
+      }
+
       dest_buf->SendingFlit(f);
 
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
@@ -1821,7 +1853,7 @@ void IQRouter::_SWAllocUpdate( )
 	  cur_buf->SetState(vc, VC::idle);
 	}
       } else {
-	Flit const * const nf = cur_buf->FrontFlit(vc);
+	Flit * const nf = cur_buf->FrontFlit(vc);
 	assert(nf);
 	if(f->tail) {
 	  assert(nf->head);
@@ -1831,12 +1863,12 @@ void IQRouter::_SWAllocUpdate( )
 	  } else {
 	    if(nf->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-			 << "Generating lookahead routing information for VC " << vc
+			 << "Using precomputed lookahead routing information for VC " << vc
 			 << " at input " << input
 			 << " (front: " << nf->id
 			 << ")." << endl;
 	    }
-	    cur_buf->Route(vc, _rf, this, nf, input);
+	    cur_buf->SetRouteSet(vc, &nf->la_route_set);
 	    cur_buf->SetState(vc, VC::vc_alloc);
 	    if(_speculative) {
 	      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,

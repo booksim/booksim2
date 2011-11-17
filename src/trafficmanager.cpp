@@ -98,6 +98,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     Error("Invalid routing function: " + rf);
   }
   _rf = rf_iter->second;
+  
+  _lookahead_routing = !config.GetInt("routing_delay");
+
 
   // ============ Traffic ============ 
 
@@ -698,6 +701,23 @@ void TrafficManager::_Step( )
 	int const c = f->cl;
 	
 	if(f->head) {
+	  
+	  if (_lookahead_routing) {
+	    const FlitChannel * inject = _net[subnet]->GetInject(n);
+	    const Router * router = inject->GetSink();
+	    assert(router);
+	    int in_channel = inject->GetSinkPort();
+	    _rf(router, f, in_channel, &f->la_route_set, false);
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | "
+			 << "node" << n << " | "
+			 << "Generating lookahead routing info for flit " << f->id
+			 << "." << endl;
+	    }
+	  } else {
+	    f->la_route_set.Clear();
+	  }
+
 	  dest_buf->TakeBuffer(f->vc);
 	  _last_vc[n][subnet][c] = f->vc;
 	}
