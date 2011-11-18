@@ -50,9 +50,12 @@ class LargeRoundRobinArbiter{
   int  _num_reqs ;
   
 public:
-
   // Constructors
   LargeRoundRobinArbiter(const string &name, int size ) ;
+
+  inline int NumReqs(){
+    return _num_reqs;
+  }
 
   // Print priority matrix to standard output
    void PrintState() const ;

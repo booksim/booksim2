@@ -55,6 +55,7 @@
 extern vector< Network * > net;
 extern TrafficManager * trafficManager;
 extern map<int, vector<int> > gDropStats;
+extern map<int, vector<int> > gChanDropStats;
 extern Stats* gStatDropLateness;
 
 extern bool RESERVATION_QUEUING_DROP;
@@ -155,7 +156,9 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
   gDropStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
   gDropStats[id].resize(inputs,0);
-  
+  gChanDropStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
+  gChanDropStats[id].resize(inputs,0);  
+
   _cut_through = (config.GetInt("cut_through")==1);
   _use_voq_size=(config.GetInt("use_voq_size")==1);
   _voq = (config.GetInt("voq") ==1);
@@ -497,7 +500,21 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
     bool drop = false;
     if(f->head){
       if(RESERVATION_QUEUING_DROP){
-       
+       	if(f->exptime<0){
+	  //send drop nack
+	  if(f->watch){
+	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		       << "drop flit " << f->id
+		       << " from channel at input " << input
+		       << "." << endl;
+	  }
+	  drop_f = trafficManager->DropPacket(input, f);
+	  drop_f->vc = f->vc;
+	  drop = true;
+	  dropped_pid[input][f->vc] = f->pid;
+	  gStatDropLateness->AddSample(-f->exptime);
+	  gChanDropStats[_id][input]++;
+	}
       } else { 
 	if(f->exptime<GetSimTime()){
 	  //send drop nack
@@ -507,12 +524,12 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
 		       << " from channel at input " << input
 		       << "." << endl;
 	  }
-	  gDropStats[_id][input]++;
 	  drop_f = trafficManager->DropPacket(input, f);
 	  drop_f->vc = f->vc;
 	  drop = true;
 	  dropped_pid[input][f->vc] = f->pid;
 	  gStatDropLateness->AddSample(GetSimTime()-f->exptime);
+	  gChanDropStats[_id][input]++;
 	}
       }
     } else {
@@ -544,8 +561,9 @@ bool IQRouter::_ReceiveFlits( )
       Flit * f;
       for(int vc = 0; vc< _real_vcs; vc++){
 	f = net[0]->GetSpecial( _input_channels[input],vc);
-	if(gReservation)
+	if(gReservation){
 	  f = _ExpirationCheck(f, input);
+	}
 	if(f){
 	  _in_queue_flits.insert(make_pair(input, f));
 	  activity = true;
@@ -910,7 +928,6 @@ void IQRouter::_VCAllocEvaluate( )
 	    _vc_allocator->AddRequest(input*_vcs + vc, out_port*_real_vcs + out_vc, 0, in_priority, out_priority);
 	  } else {
 #ifdef USE_LARGE_ARB
-
 	    _VOQArbs[out_port*_real_vcs + out_vc]->AddRequest(input*_vcs + vc,0,out_priority); 
 #else
 	    _vc_allocator->AddRequest(input*_vcs + vc, out_port*_real_vcs + out_vc, 0, in_priority, out_priority);
@@ -1349,8 +1366,9 @@ void IQRouter::_SWHoldUpdate( )
 		   << "." << endl;
       }
       
-      if(RESERVATION_QUEUING_DROP && f->type==RES_TYPE_SPEC && f->head)
+      if(RESERVATION_QUEUING_DROP && f->res_type==RES_TYPE_SPEC && f->head){
 	f->exptime-=(GetSimTime()-cur_buf->TimeStamp(vc));
+      }
       cur_buf->RemoveFlit(vc);
       --_stored_flits[input];
 
@@ -1671,9 +1689,8 @@ void IQRouter::_SWAllocEvaluate( )
       bool do_request;
       
       if(_spec_check_elig) {
-	
-	do_request = false;
-	
+	assert(false);
+	do_request = false;	
 	// for higher levels of speculation, check if at least one suitable VC 
 	// is available at the current output
 	
@@ -2131,7 +2148,9 @@ void IQRouter::_SWAllocUpdate( )
 		   << "." << endl;
       }
 
-
+      if(RESERVATION_QUEUING_DROP && f->res_type==RES_TYPE_SPEC && f->head){
+	f->exptime-=(GetSimTime()-cur_buf->TimeStamp(vc));
+      }
  
       cur_buf->RemoveFlit(vc);
       --_stored_flits[input];

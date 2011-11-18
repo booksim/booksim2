@@ -44,8 +44,16 @@
 
 //time benchmarks
 #include <sys/time.h>
-Stats* retired; 
-Stats* gStatResEarly;
+Stats* retired_s; 
+Stats* retired_n;
+
+Stats* gStatResEarly_POS;
+Stats* gStatResEarly_NEG;
+Stats* gStatReservationMismatch_POS;
+Stats* gStatReservationMismatch_NEG;
+
+deque<float>** gStatMonitorTransient;
+
 
 #define ENABLE_STATS
 
@@ -118,9 +126,10 @@ bool ECN_AIMD = false;
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 
 Stats* gStatDropLateness;
+Stats* gStatSurviveTTL;
 
 map<int, vector<int> > gDropStats;
-
+map<int, vector<int> > gChanDropStats;
 int gExpirationTime = 0;
 
 vector<int> gStatAckReceived;
@@ -138,8 +147,6 @@ Stats** gStatGrantTimeFuture;
 vector<int> gStatReservationReceived;
 Stats** gStatReservationTimeNow;
 Stats** gStatReservationTimeFuture;
-
-Stats* gStatReservationMismatch;
 
 vector<int> gStatSpecSent;
 vector<int> gStatSpecReceived;
@@ -330,10 +337,18 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   gStatReservationReceived.resize(_nodes,0);
 
+  gStatSurviveTTL = new  Stats(this, "spec drop too early", 1.0, gExpirationTime);
   gStatDropLateness = new  Stats(this, "spec drop too early", 10.0, 100);
-  gStatResEarly = new Stats(this, "reservation too early", 10.0, 100);
-  gStatReservationMismatch = new Stats(this, "res mismatch", 10.0, 100);
+  gStatResEarly_POS = new Stats(this, "reservation too early", 10.0, 100);
+  gStatResEarly_NEG = new Stats(this, "reservation too early", 10.0, 100);
+  gStatReservationMismatch_POS = new Stats(this, "res mismatch", 10.0, 100);
+  gStatReservationMismatch_NEG = new Stats(this, "res mismatch", 10.0, 100);
   
+  gStatMonitorTransient=new deque<float>* [6];
+  for(int i = 0; i<6; i++){
+    gStatMonitorTransient[i]=new deque<float>;
+  }
+
   gStatGrantTimeNow=new Stats*[_nodes];
   gStatGrantTimeFuture=new Stats*[_nodes];
   gStatReservationTimeNow=new Stats*[_nodes];
@@ -464,7 +479,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     gStatSpecNetworkLatency[c] =  new Stats( this, "spec_net_hist" , 1.0, 5000 );
     gStatPureNetworkLatency[c] =  new Stats( this, "net_hist" , 1.0, 5000 );
   }
-  retired =  new Stats( this, "r_hist" , 1.0, 5000 );
+  retired_s =  new Stats( this, "r_s_hist" , 1.0, 5000 );
+  retired_n =  new Stats( this, "r_n_hist" , 1.0, 5000 );
 
   _use_read_write = config.GetIntArray("use_read_write");
   if(_use_read_write.empty()) {
@@ -972,9 +988,12 @@ TrafficManager::~TrafficManager( )
  delete [] gStatPureNetworkLatency;
  delete [] gStatSpecNetworkLatency;
  
+ delete gStatSurviveTTL;
  delete gStatDropLateness;
- delete gStatResEarly;
- delete gStatReservationMismatch;
+ delete gStatResEarly_POS;
+ delete gStatResEarly_NEG;
+ delete gStatReservationMismatch_POS;
+ delete gStatReservationMismatch_NEG;
  for(int i = 0; i< _nodes; i++){
  delete  gStatGrantTimeNow[i];
  delete  gStatGrantTimeFuture[i];
@@ -1063,6 +1082,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 #endif
       receive_flow_buffer = _flow_buffer[dest][f->flbid];
       if( receive_flow_buffer!=NULL &&
+	  receive_flow_buffer->active() && 
 	  receive_flow_buffer->fl->flid == f->flid){
 #ifdef ENABLE_STATS
 	gStatAckEffective[dest]+= receive_flow_buffer->ack(f->sn)?1:0;
@@ -1124,6 +1144,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 #endif
     receive_flow_buffer = _flow_buffer[dest][f->flbid];
     if( receive_flow_buffer!=NULL &&
+	receive_flow_buffer->active() && 
 	receive_flow_buffer->fl->flid == f->flid){
       int temp = receive_flow_buffer->nack(f->sn)?1:0;
 #ifdef ENABLE_STATS
@@ -1140,8 +1161,10 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     gStatGrantReceived[dest]++;
 #endif
     receive_flow_buffer = _flow_buffer[dest][f->flbid];
+    assert(receive_flow_buffer->active());
     if( receive_flow_buffer!=NULL &&
 	receive_flow_buffer->fl->flid == f->flid){
+
 #ifdef ENABLE_STATS
       if(f->payload>_time){
 	gStatGrantTimeFuture[dest]->AddSample(f->payload-_time);
@@ -1149,7 +1172,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	gStatGrantTimeNow[dest]->AddSample(_time-f->payload);
       }
 #endif
-      receive_flow_buffer->grant(f->payload);
+      
+      receive_flow_buffer->grant(f->payload,
+				 int(ceil(RESERVATION_RTT*float(_time-f->ntime))));
     }
     f->Free();
     return;
@@ -1182,18 +1207,13 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       gStatReservationTimeNow[dest]->AddSample(_time-_reservation_schedule[dest]);
     }
 #endif
-    //the return time is offset by the reservation packet latency to prevent schedule fragmentation
+    //the return time is offset by the reservation packet latency 
+    //to prevent schedule fragmentation
     _reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
+    ff->payload  =_reservation_schedule[dest];
+    //this functionality has been moved tot he source
+    //-int(ceil(RESERVATION_RTT*float(_time-f->ntime)));
 
-    ff->payload  =_reservation_schedule[dest]-int(ceil(RESERVATION_RTT*float(_time-f->ntime)));
- 
-    if(dest ==-1){
-      cout<<_time <<" "
-	  <<_reservation_schedule[dest] <<" "
-	  <<(_time-f->ntime)<<" "
-	  <<ff->payload<<"\n";
-    }
-    
     _reservation_schedule[dest] += int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
 
     ff->res_type = RES_TYPE_GRANT;
@@ -1239,6 +1259,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       } else {
 	_sent_data_flits[f->cl][f->src]++;
 #ifdef ENABLE_STATS
+	if(f->head){
+	  gStatSurviveTTL->AddSample(f->exptime);
+	}
 	if(f->tail){
 	  gStatSpecLatency->AddSample(_time-f->time);
 	}
@@ -1283,7 +1306,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 #endif
       } else {
 	if(f->payload!=-1){
-	  gStatReservationMismatch->AddSample(_time-f->payload);
+	  if(_time-f->payload>=0){
+	    gStatReservationMismatch_POS->AddSample(_time-f->payload);
+	  } else {
+	    gStatReservationMismatch_NEG->AddSample(-(_time-f->payload));
+	  }
 	}
 	_sent_data_flits[f->cl][f->src]++;
 	if(f->tail){
@@ -1379,7 +1406,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   
 
   //Regular retire flit
-  retired->AddSample(f->atime - f->ntime);
+  if(f->res_type==RES_TYPE_SPEC){
+    retired_s->AddSample(f->atime - f->ntime);
+  } else {
+    retired_n->AddSample(f->atime - f->ntime);
+  }
   _accepted_data_flits[f->cl][dest]++;
   _deadlock_timer = 0;
   assert(_total_in_flight_flits[f->cl].count(f->id) > 0);
@@ -1989,6 +2020,8 @@ void TrafficManager::_Step( )
 	i++){
       FlowBuffer* flb = *i;
       flb->active_update();
+
+
       if(flb->_vc == -1 &&
 	 (flb->send_norm_ready())){
 	_FlowVC( flb);
@@ -2068,22 +2101,27 @@ void TrafficManager::_Step( )
 		i!=_reservation_set[source].end();
 		i++){
 	      FlowBuffer* flb = *i;
-	      assert(flb && flb->active() && flb->send_spec_ready());
-	      _reservation_arb[source]->AddRequest(flb->_dest, flb->_dest, 1);
+	      assert(flb && flb->active());
+	      //this can be false if post_wait is on
+	      if(flb->send_spec_ready() ) {
+		_reservation_arb[source]->AddRequest(flb->_dest, flb->_dest, 1);
+	      }
 	    }
-	    int id = _reservation_arb[source]->Arbitrate();
-	    
-	    _reservation_arb[source]->UpdateState() ;
-	    
-	    FlowBuffer* flb = _flow_buffer[source][id];
-	    Flit* rf =  _flow_buffer[source][id]->send();
-	    
-	    assert(rf->res_type==RES_TYPE_RES);
-	    dest_buf->SendingFlit(rf);
-	    rf->ntime = _time;
-	    _net[0]->WriteSpecialFlit(rf, source);
-	    _sent_flits[0][source]->AddSample(1);
-	    assert(_reservation_set[source].erase(flb));
+	    if(_reservation_arb[source]->NumReqs()>0){
+	      int id = _reservation_arb[source]->Arbitrate();
+	      
+	      _reservation_arb[source]->UpdateState() ;
+	      
+	      FlowBuffer* flb = _flow_buffer[source][id];
+	      Flit* rf =  _flow_buffer[source][id]->send();
+	      
+	      assert(rf->res_type==RES_TYPE_RES);
+	      dest_buf->SendingFlit(rf);
+	      rf->ntime = _time;
+	      _net[0]->WriteSpecialFlit(rf, source);
+	      _sent_flits[0][source]->AddSample(1);
+	      assert(_reservation_set[source].erase(flb));
+	    }
 	  }   
 	}
 	if(f->head){
@@ -2197,16 +2235,30 @@ void TrafficManager::_Step( )
   ++_time;
   if(_time%10000==0){
     
-    cout<<"Retired "<<retired->NumSamples()<<" lat "<<retired->Average()
-	<<" mismatch "<<gStatReservationMismatch->Average()<<"("<<gStatReservationMismatch->NumSamples()<<")"
-	<<" early "<<gStatResEarly->Average()<<"("<<gStatResEarly->NumSamples()<<")"<<endl;
-    gStatResEarly->Clear();
-    gStatReservationMismatch->Clear();
-    retired->Clear();
+    gStatMonitorTransient[0]->push_back(retired_s->NumSamples()+retired_n->NumSamples());
+    gStatMonitorTransient[1]->push_back(retired_s->Average());
+    gStatMonitorTransient[2]->push_back(retired_n->Average());
+    gStatMonitorTransient[3]->push_back(((gStatReservationMismatch_POS->Average()*gStatReservationMismatch_POS->NumSamples())-(gStatReservationMismatch_NEG->Average()*gStatReservationMismatch_NEG->NumSamples()))/(gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples()));
+    gStatMonitorTransient[4]->push_back(((gStatResEarly_POS->Average()*gStatResEarly_POS->NumSamples())-(gStatResEarly_NEG->Average()*gStatResEarly_NEG->NumSamples()))/(gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples()));
+    gStatMonitorTransient[5]->push_back(float(gStatSpecLatency->NumSamples())/_plat_stats[0]->NumSamples()*100);
+
+    cout<<" Retired "<<retired_s->NumSamples()+retired_n->NumSamples()
+	<<" spec_lat "<<retired_s->Average()
+	<<" norm_lat "<<retired_n->Average()
+	<<" ("<<float(retired_s->NumSamples())/retired_n->NumSamples()<<")"<<endl
+	<<" mismatch "<<((gStatReservationMismatch_POS->Average()*gStatReservationMismatch_POS->NumSamples())-(gStatReservationMismatch_NEG->Average()*gStatReservationMismatch_NEG->NumSamples()))/(gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples())<<"("<<gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples()<<")"
+	<<" early "<<((gStatResEarly_POS->Average()*gStatResEarly_POS->NumSamples())-(gStatResEarly_NEG->Average()*gStatResEarly_NEG->NumSamples()))/(gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples())<<"("<<gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples()<<")"<<endl;
+    cout<<"\t%spec "<<float(gStatSpecLatency->NumSamples())/_plat_stats[0]->NumSamples()*100<<endl; 
+    //gStatResEarly_POS->Clear();
+    //gStatResEarly_NEG->Clear();
+    //gStatReservationMismatch_POS->Clear();
+    //gStatReservationMismatch_NEG->Clear();
+    retired_s->Clear();
+    retired_n->Clear();
+    //gStatSpecLatency->Clear();
+    //_plat_stats[0]->Clear();
   }
 
-
-  //  cout<<"TIME "<<_time<<endl;
   assert(_time);
   if(gTrace){
     cout<<"TIME "<<_time<<endl;
@@ -2284,10 +2336,15 @@ void TrafficManager::_ClearStats( )
       gDropStats[i][j] = 0;
     }
   }
+  for(int i = 0; i<_routers; i++){
+    for(unsigned int j = 0; j<    gChanDropStats[i].size(); j++){
+      gChanDropStats[i][j] = 0;
+    }
+  }
 #ifdef ENABLE_STATS
 
   gStatDropLateness->Clear();
-
+  gStatSurviveTTL->Clear();
   gStatNodeReady.clear();
   gStatNodeReady.resize(_nodes,0);
 
@@ -3102,7 +3159,8 @@ void TrafficManager::_DisplayTedsShit(){
     
     *_stats_out<< "late_drop =["
 	       << *gStatDropLateness<<"];\n";
-
+    *_stats_out<< "ttl_remain =["
+	       << *gStatSurviveTTL<<"];\n";
     *_stats_out<< "ack_received = ["
 	       <<gStatAckReceived<<"];\n";
     *_stats_out<< "ack_eff = ["
@@ -3138,9 +3196,22 @@ void TrafficManager::_DisplayTedsShit(){
 
     *_stats_out<< "lost_flits = ["
 	       <<gStatLostPacket<<"];\n";
-    
-    *_stats_out<<"reservation_mismatch =["
-	       <<*gStatReservationMismatch <<"];\n";
+    *_stats_out<<"reservation_early_neg =["
+	       <<*gStatResEarly_NEG <<"];\n";
+    *_stats_out<<"reservation_early_pos =["
+	       <<*gStatResEarly_POS <<"];\n";
+    *_stats_out<<"reservation_mismatch_neg =["
+	       <<*gStatReservationMismatch_NEG <<"];\n";
+    *_stats_out<<"reservation_mismatch_pos =["
+	       <<*gStatReservationMismatch_POS <<"];\n";
+
+    for(int i = 0; i<6; i++){
+      *_stats_out<<"monitor_transient("<<i+1<<",:)=[";
+	for(size_t j = 0; j<gStatMonitorTransient[i]->size(); j++){
+	  *_stats_out<<(*gStatMonitorTransient[i])[j]<<"\t";
+	}
+      *_stats_out<<"];\n";
+    }
 
     for(int i = 0; i<_nodes; i++){
       *_stats_out<<"inject_vc_dist("<<i+1<<",:)=["
@@ -3320,6 +3391,12 @@ void TrafficManager::_DisplayTedsShit(){
     for(int i = 0; i<_routers; i++){
       *_stats_out <<"drop_router("<<i+1<<",:)=["
 		  <<gDropStats[i] ;
+      for(int ii=0; ii<max_outputs-rrr[i]->NumOutputs(); ii++)	 *_stats_out<<"0 ";
+      *_stats_out <<"];"<<endl;
+    }
+    for(int i = 0; i<_routers; i++){
+      *_stats_out <<"drop_channel("<<i+1<<",:)=["
+		  <<gChanDropStats[i] ;
       for(int ii=0; ii<max_outputs-rrr[i]->NumOutputs(); ii++)	 *_stats_out<<"0 ";
       *_stats_out <<"];"<<endl;
     }

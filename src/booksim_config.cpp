@@ -65,7 +65,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["reservation_packet_threshold"] = 64;
   _int_map["reservation_chunk_limit"] = 128;
   _int_map["fast_retransmit"] = 0;
-  _int_map["reservation_queuing_drop"]= 0;
+  _int_map["reservation_queuing_drop"]= 1;
   _int_map["reservation_post_wait"]= 0;
 
   _int_map["bystander_sender"] = 0;
@@ -74,7 +74,7 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["flow_merge"] = 1;
   _int_map["flow_buffer_capacity"] = 128; //not used
-  _int_map["flow_buffers"] = 8;
+  _int_map["flow_buffers"] = 0;
 
   _int_map["flow_size"] = 1;
   AddStrField("flow_size","");

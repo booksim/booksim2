@@ -85,8 +85,9 @@ VC::~VC()
 }
 
 bool VC::SubstituteFrontFlit( Flit *f ){
-  if(f->head)
+  if(f->head){
     _time_stamp.push_front(GetSimTime());
+  }
   _buffer.push_front(f);
   UpdatePriority();
   return true;

@@ -64,7 +64,7 @@ public:
 
   bool ack(int sn);
   bool nack(int sn);
-  void grant(int time);
+  void grant(int time, int lat);
 
   bool eligible();
   bool send_norm_ready();
@@ -98,6 +98,7 @@ public:
   flow* fl;
   Flit* _reservation_flit;
   int _reserved_time;
+  int _expected_latency;//deduct this amount fromt he reserved time 
   int _src;
   int _dest;
   int _id;
@@ -111,7 +112,7 @@ public:
   int _ready;
   bool _res_sent; //I meant res_sent
   int _vc;
-  int _reserved_slots;
+  int _reserved_slots; //this variable is needed because _readyonly reflect the number of packets generated, since I use lazy packet generation, I need to keep the numbers serparate
   int _total_reserved_slots;//none chunk limit multiple flows
   int _spec_outstanding;
   bool _res_outstanding;
@@ -130,7 +131,8 @@ public:
   bool _watch;
   long _total_wait;
   bool _reservation_check;
-
+  int _last_send_time;
+  int _last_nack_time;
 };
 
 #endif

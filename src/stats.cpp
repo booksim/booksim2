@@ -66,7 +66,10 @@ void Stats::Clear( )
 
 double Stats::Average( ) const
 {
-  return _sample_sum / (double)_num_samples;
+  if(_num_samples!=0)
+    return _sample_sum / (double)_num_samples;
+  else
+    return 0;
 }
 
 double Stats::Variance( ) const
