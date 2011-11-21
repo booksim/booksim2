@@ -83,10 +83,11 @@ private:
 
   bool _drop;
 
+  bool _special_vc;
 public:
   
   VC( const Configuration& config, int outputs,
-      Module *parent, const string& name );
+      Module *parent, const string& name , bool special=false);
   ~VC();
   
   bool SubstituteFrontFlit(Flit*f);

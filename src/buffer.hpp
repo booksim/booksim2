@@ -40,6 +40,7 @@ class Buffer : public Module {
   
 
 protected:
+  int _spec_vc_size;
   int _vc_size;
   int _shared_count;
   int _shared_size;

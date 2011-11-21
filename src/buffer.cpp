@@ -27,6 +27,7 @@
 
 #include <sstream>
 
+#include "reservation.hpp"
 #include "globals.hpp"
 #include "booksim.hpp"
 #include "buffer.hpp"
@@ -40,7 +41,10 @@ Buffer::Buffer( const Configuration& config, int outputs,
 		Module *parent, const string& name ) :
 Module( parent, name ), _shared_count(0)
 {
+
   _vc_size = config.GetInt( "vc_buf_size" );
+  _spec_vc_size = config.GetInt("reservation_spec_vc_size");
+  _spec_vc_size = (_spec_vc_size==0)?(_vc_size):(_spec_vc_size);
   _shared_size = config.GetInt( "shared_buf_size" );
 
   int num_vcs = config.GetInt( "num_vcs" );

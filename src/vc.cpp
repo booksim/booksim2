@@ -36,6 +36,7 @@
 #include <limits>
 #include <sstream>
 
+#include "reservation.hpp"
 #include "globals.hpp"
 #include "booksim.hpp"
 #include "vc.hpp"
@@ -53,13 +54,19 @@ VC::state_info_t VC::state_info[] = {{0},
 int VC::occupancy = 0;
 
 VC::VC( const Configuration& config, int outputs, 
-	Module *parent, const string& name )
+	Module *parent, const string& name, bool special )
   : Module( parent, name ), 
     _state(idle), _state_time(0), _out_port(-1), _out_vc(-1), _total_cycles(0),
     _vc_alloc_cycles(0), _active_cycles(0), _idle_cycles(0), _routing_cycles(0),
-    _pri(0), _watched(false), _expected_pid(-1), _last_id(-1), _last_pid(-1),_drop(false)
+    _pri(0), _watched(false), _expected_pid(-1), _last_id(-1), _last_pid(-1),_drop(false),_special_vc(special)
 {
-  _size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
+  if(_special_vc){
+    _size = config.GetInt("reservation_spec_vc_size");
+    if(_size==0)
+      _size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
+  } else {
+    _size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
+  }
 
   _route_set = new OutputSet( );
 

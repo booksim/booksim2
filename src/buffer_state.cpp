@@ -36,6 +36,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "reservation.hpp"
+#include "globals.hpp"
 #include "booksim.hpp"
 #include "buffer_state.hpp"
 #include "random_utils.hpp"
@@ -77,9 +79,12 @@ BufferState::BufferState( const Configuration& config,
 Module( parent, name ), _shared_occupied(0), _active_vcs(0)
 {
   _vc_buf_size     = config.GetInt( "vc_buf_size" );
+  _spec_vc_buf_size = config.GetInt("reservation_spec_vc_size");
+  _spec_vc_buf_size = (_spec_vc_buf_size==0)?_vc_buf_size:_spec_vc_buf_size;
   _shared_buf_size = config.GetInt( "shared_buf_size" );
   _vcs             = config.GetInt( "num_vcs" );
   
+  assert(_shared_buf_size==0);
   _sharing_policy = SharingPolicy::NewSharingPolicy(config, this);
 
   _wait_for_tail_credit = config.GetInt( "wait_for_tail_credit" );
@@ -188,6 +193,11 @@ void BufferState::TakeBuffer( int vc )
 bool BufferState::IsFullFor( int vc ) const
 {
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
+  if(gReservation){
+    if(vc==RES_RESERVED_VCS){
+      return (_cur_occupied[vc] >= _spec_vc_buf_size);
+    } 
+  }
   return ( ( _cur_occupied[vc] >= _vc_buf_size ) &&
 	   ( _shared_occupied >= _shared_buf_size ) );
 }
@@ -209,7 +219,7 @@ bool BufferState::IsAvailableFor( int vc ) const
       return true;
     else {
       if(_cut_through){
-	return _vc_buf_size - _cur_occupied[vc] >=16;
+	return !IsFullFor(vc);
       } else {
 	return !IsFullFor(vc);
       }
@@ -221,6 +231,11 @@ bool BufferState::IsAvailableFor( int vc ) const
 bool BufferState::HasCreditFor( int vc ) const
 {
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
+  if(gReservation){
+    if(vc==RES_RESERVED_VCS){
+      return (_cur_occupied[vc] < _spec_vc_buf_size);
+    } 
+  }
   return ( ( _cur_occupied[vc] < _vc_buf_size ) ||
 	   ( ( _shared_occupied < _shared_buf_size ) && 
 	     ( ( _cur_occupied[vc] - _vc_buf_size ) < 

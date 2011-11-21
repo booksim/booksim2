@@ -86,6 +86,7 @@ class BufferState : public Module {
   int  _wait_for_tail_credit;
   int  _vc_busy_when_full;
   int  _vc_buf_size;
+  int  _spec_vc_buf_size;
   int  _shared_buf_size;
   int  _shared_occupied;
   int  _vcs;
