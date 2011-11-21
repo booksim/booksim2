@@ -1,28 +1,28 @@
 // $Id$
 
 /*
- Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
- All rights reserved.
+  Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
+  All rights reserved.
 
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions are met:
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
 
- Redistributions of source code must retain the above copyright notice, this 
- list of conditions and the following disclaimer.
- Redistributions in binary form must reproduce the above copyright notice, this
- list of conditions and the following disclaimer in the documentation and/or
- other materials provided with the distribution.
+  Redistributions of source code must retain the above copyright notice, this 
+  list of conditions and the following disclaimer.
+  Redistributions in binary form must reproduce the above copyright notice, this
+  list of conditions and the following disclaimer in the documentation and/or
+  other materials provided with the distribution.
 
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
- DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
- ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+  ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "iq_router.hpp"
@@ -65,8 +65,14 @@ extern int ECN_CONGEST_THRESHOLD;
 extern int ECN_BUFFER_HYSTERESIS;
 extern int ECN_CREDIT_HYSTERESIS;
 
+extern bool RESERVATION_BUFFER_SIZE_DROP;
+extern int DEFAULT_CHANNEL_LATENCY;
+
 //improves large simulation performance
 #define USE_LARGE_ARB
+#define MAX(X,Y) ((X)>(Y)?(X):(Y))
+#define MIN(X,Y) ((X)<(Y)?(X):(Y))
+
 
 int IQRouter::real_vc(int vvc, int output){
   assert(_voq);
@@ -150,7 +156,7 @@ int IQRouter::voq_vc(int vc, int output){
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
-: Router( config, parent, name, id, inputs, outputs ), _active(false)
+  : Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
 
 
@@ -248,7 +254,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     if(_voq){
       _buf[i] = new VOQ_Buffer(config, _outputs, this, module_name.str( ) );
     } else {
-       _buf[i] = new Buffer(config, _outputs, this, module_name.str( ) );
+      _buf[i] = new Buffer(config, _outputs, this, module_name.str( ) );
     }
     module_name.str("");
   }
@@ -380,7 +386,7 @@ IQRouter::~IQRouter( )
   }
   delete _voq_init_route;
   for(int i = 0; i<_inputs; i++){
-     delete[] dropped_pid[i];
+    delete[] dropped_pid[i];
   }
   delete[] dropped_pid;
 
@@ -390,7 +396,7 @@ IQRouter::~IQRouter( )
   for(int j = 0; j < _outputs; ++j)
     delete _next_buf[j];
   if(!_voq){
-  delete _vc_allocator;
+    delete _vc_allocator;
   } else {
     for(int i = 0; i<_real_vcs*_outputs; i++){
       delete _VOQArbs[i];
@@ -433,7 +439,7 @@ void IQRouter::_InternalStep( )
 	_VOQArbs[i]->Clear();
       }
 #else
-   _vc_allocator->Clear();
+      _vc_allocator->Clear();
 #endif
     }
     if(!_vc_alloc_vcs.empty())
@@ -848,7 +854,7 @@ void IQRouter::_VCAllocEvaluate( )
     int const & vc = iter->second.first.second;
     assert((vc >= 0) && (vc < _vcs));
 
-    Buffer const * const cur_buf = _buf[input];
+    Buffer *cur_buf = _buf[input];
     assert(!cur_buf->Empty(vc));
     assert(cur_buf->GetState(vc) == VC::vc_alloc);
 
@@ -862,8 +868,9 @@ void IQRouter::_VCAllocEvaluate( )
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "about to drop flit " << f->id
 		     << " from input " << input <<" vc "<<vc
-		      << "." << endl;
+		     << "." << endl;
 	}
+	cur_buf->SetDrop(vc);
 	continue;
       }
     }
@@ -901,18 +908,39 @@ void IQRouter::_VCAllocEvaluate( )
       int const & out_port = iset->output_port;
       assert((out_port >= 0) && (out_port < _outputs));
 
-      BufferState const * const dest_buf = _next_buf[out_port];
+      BufferState *dest_buf = _next_buf[out_port];
 
       for(int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc) {
 	assert((out_vc >= 0) && (out_vc < _vcs));
 	assert( iset->vc_end-iset->vc_start==0 || !_voq);
 	int const & in_priority = iset->pri;
 
+
+	//speculative buffer check
+	if( RESERVATION_BUFFER_SIZE_DROP && VC_ALLOC_DROP && f && f->res_type == RES_TYPE_SPEC){
+	  int next_size = dest_buf->Size(out_vc)-DEFAULT_CHANNEL_LATENCY*2;
+	  next_size=MAX(next_size,0);
+
+	  if(( RESERVATION_QUEUING_DROP && f->exptime-next_size<GetSimTime()-cur_buf->TimeStamp(vc)) ||
+	     (!RESERVATION_QUEUING_DROP && f->exptime<GetSimTime()+next_size)){
+	    if(f->watch){
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "about to drop flit " << f->id
+			 << " from input " << input <<" vc "<<vc
+			 << "." << endl;
+	    }
+	    
+	    cur_buf->SetDrop(vc);
+	    continue;
+	  }
+	}
+
 	// On the input input side, a VC might request several output VCs. 
 	// These VCs can be prioritized by the routing function, and this is 
 	// reflected in "in_priority". On the output side, if multiple VCs are 
 	// requesting the same output VC, the priority of VCs is based on the 
 	// actual packet priorities, which is reflected in "out_priority".
+
 
 	if(dest_buf->IsAvailableFor(out_vc)) {
 	  if(f->watch){
@@ -1115,9 +1143,7 @@ void IQRouter::_VCAllocUpdate( )
     assert(f);
     assert(f->head);
    
-    if(VC_ALLOC_DROP && f->res_type == RES_TYPE_SPEC && 
-       (( RESERVATION_QUEUING_DROP &&  f->exptime<GetSimTime()-cur_buf->TimeStamp(vc))||
-	(!RESERVATION_QUEUING_DROP && f->exptime<GetSimTime())) ){
+    if(cur_buf->GetDrop(vc)){
       if(f->watch){
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "drop flit " << f->id
@@ -1633,13 +1659,13 @@ void IQRouter::_SWAllocEvaluate( )
       if( (gReservation||gECN) &&
 	  is_control_vc(dest_vc) && 
 	  (!dest_buf->HasCreditFor(dest_vc) || ( _output_buffer_size!=-1  && _output_control_buffer[dest_output].size()>=(size_t)(_output_buffer_size)))){
-	    if(f->watch) {
-	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-			 << "  VC control" << dest_vc 
-			 << " at output " << dest_output 
-			 << " is full." << endl;
-	    }
-	    continue;
+	if(f->watch) {
+	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		     << "  VC control" << dest_vc 
+		     << " at output " << dest_output 
+		     << " is full." << endl;
+	}
+	continue;
       }
       else if(!dest_buf->HasCreditFor(dest_vc) || ( _output_buffer_size!=-1  && _output_buffer[dest_output].size()>=(size_t)(_output_buffer_size))) {
 	if(f->watch) {
@@ -1664,7 +1690,7 @@ void IQRouter::_SWAllocEvaluate( )
     
     const OutputSet *route_set;
     if(_voq && is_voq_vc(vc)){
-     if(_res_voq_drop[input*_vcs+vc]){
+      if(_res_voq_drop[input*_vcs+vc]){
 	route_set = cur_buf->GetRouteSet(vc);
       } else {
 	route_set = _voq_route_set[input*_vcs+vc];
@@ -1704,7 +1730,7 @@ void IQRouter::_SWAllocEvaluate( )
 
 	    do_request = true;
 	    break;
-	       } else if(dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_buffer[dest_output].size()<(size_t)(_output_buffer_size))) {
+	  } else if(dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_buffer[dest_output].size()<(size_t)(_output_buffer_size))) {
 	    do_request = true;
 	    break;
 	  }
@@ -2425,9 +2451,9 @@ void IQRouter::_SendFlits( )
       ++_sent_flits[output];
       if(f->watch)
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		    << "Sending flit " << f->id
-		    << " to channel at output " << output
-		    << "." << endl;
+		   << "Sending flit " << f->id
+		   << " to channel at output " << output
+		   << "." << endl;
       if(gTrace) {
 	cout << "Outport " << output << endl << "Stop Mark" << endl;
       }

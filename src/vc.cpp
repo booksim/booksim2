@@ -57,7 +57,7 @@ VC::VC( const Configuration& config, int outputs,
   : Module( parent, name ), 
     _state(idle), _state_time(0), _out_port(-1), _out_vc(-1), _total_cycles(0),
     _vc_alloc_cycles(0), _active_cycles(0), _idle_cycles(0), _routing_cycles(0),
-    _pri(0), _watched(false), _expected_pid(-1), _last_id(-1), _last_pid(-1)
+    _pri(0), _watched(false), _expected_pid(-1), _last_id(-1), _last_pid(-1),_drop(false)
 {
   _size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
 
@@ -177,6 +177,7 @@ void VC::SetOutput( int port, int vc )
 
 void VC::UpdatePriority()
 {
+  _drop=false;
   if(_buffer.empty()) return;
   if(_pri_type == queue_length_based) {
     _pri = _buffer.size();

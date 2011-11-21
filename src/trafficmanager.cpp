@@ -100,6 +100,9 @@ bool RESERVATION_SPEC_OFF = false;
 //flow buffers dont start the next reseration until this reservation's time window
 //has passed
 bool RESERVATION_POST_WAIT = false;
+//use the next hop buffer occupancy to preemptively drop a speculative packet
+bool RESERVATION_BUFFER_SIZE_DROP=false;
+
 
 //expiration timer for IRD
 int IRD_RESET_TIMER=1000;
@@ -120,6 +123,10 @@ int ECN_BUFFER_HYSTERESIS=0;
 int ECN_CREDIT_HYSTERESIS=0;
 //ECN AIMD
 bool ECN_AIMD = false;
+
+
+
+int DEFAULT_CHANNEL_LATENCY;
 
 #define WATCH_FLID -1
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
@@ -200,7 +207,8 @@ map<int, int> gStatFlowSizes;
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
   : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0),_stat_time(0)
 {
-  cout<<"size of "<<sizeof(Flit)<<endl;
+  cout<<"size of ";
+  cout<<sizeof(Flit)<<endl;
 
   gStatFlowStats.resize(FLOW_STAT_LIFETIME+1+1,0);
 
@@ -244,7 +252,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _cur_flid = 0;
   gExpirationTime =  config.GetInt("expiration_time");
-
+  DEFAULT_CHANNEL_LATENCY = config.GetInt("default_channel_latency");
 
   TRANSIENT_BURST = (config.GetInt("transient_burst")==1);
   TRANSIENT_ENABLE = (config.GetInt("transient_enable")==1);
@@ -305,6 +313,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   
   RESERVATION_QUEUING_DROP=(config.GetInt("reservation_queuing_drop")==1);
   RESERVATION_POST_WAIT = (config.GetInt("reservation_post_wait")==1);
+  RESERVATION_BUFFER_SIZE_DROP=(config.GetInt("reservation_buffer_size_drop")==1);
 
   FLOW_DEST_MERGE= (config.GetInt("flow_merge")==1);
   FAST_RETRANSMIT_ENABLE = (config.GetInt("fast_retransmit")==1);

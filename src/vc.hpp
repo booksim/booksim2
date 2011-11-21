@@ -81,6 +81,8 @@ private:
   int _last_id;
   int _last_pid;
 
+  bool _drop;
+
 public:
   
   VC( const Configuration& config, int outputs,
@@ -156,6 +158,14 @@ public:
   inline int GetSize() const
   {
     return (int)_buffer.size();
+  }
+
+    
+  inline void SetDrop(){
+    _drop=true;
+  }
+  inline bool GetDrop(){
+    return _drop;
   }
 
   // ==== Debug functions ====

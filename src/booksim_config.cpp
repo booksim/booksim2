@@ -57,6 +57,8 @@ BookSimConfig::BookSimConfig( )
   _int_map["transient_finalize"]=0;;
   AddStrField("transient_data","");
 
+  _int_map["reservation_buffer_size_drop"] = 1;
+  _int_map["reservation_spec_vc_ize"]=0;
   _int_map["reservation_spec_off"] = 0;
   _int_map["reservation_always_succeed"] = 0;
   _float_map["reservation_rtt"] = 1.0;

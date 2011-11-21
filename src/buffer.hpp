@@ -151,6 +151,13 @@ public:
   {
     return _vc[vc]->GetSize( );
   }
+  
+  inline void SetDrop(int vc){
+    _vc[vc]->SetDrop();
+  }
+  inline bool GetDrop(int vc){
+    return _vc[vc]->GetDrop();
+  }
 
   void Display( ostream & os = cout ) const;
 };
