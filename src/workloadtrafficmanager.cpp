@@ -72,7 +72,7 @@ void WorkloadTrafficManager::_Inject( )
       if(_partial_packets[c][source].empty()) {
 	_IssuePacket(source, c);
 	++_requests_outstanding[c][source];
-	++_sent_packets[c][source];
+	++_packet_seq_no[c][source];
 	wl->inject();
       } else {
 	wl->defer();

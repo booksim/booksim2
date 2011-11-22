@@ -97,7 +97,7 @@ protected:
 
   // ============ request & replies ==========================
 
-  vector<vector<int> > _sent_packets;
+  vector<vector<int> > _packet_seq_no;
   vector<vector<int> > _requests_outstanding;
 
   // ============ Statistics ============

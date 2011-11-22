@@ -184,7 +184,7 @@ void SyntheticTrafficManager::_RetirePacket(Flit * head, Flit * tail, int dest)
     }
     
   } else {
-    _sent_packets[tail->cl][dest]++;
+    _packet_seq_no[tail->cl][dest]++;
     int size = _GetNextPacketSize(reply_class);
     _GeneratePacket( head->dest, head->src, size, reply_class, tail->atime + 1, 
 		     tail->tid, tail->ttime );
@@ -206,7 +206,7 @@ void SyntheticTrafficManager::_Inject( )
 	    ++_qtime[c][source];
 	    if(_IssuePacket(source, c)) { //generate a packet
 	      _requests_outstanding[c][source]++;
-	      _sent_packets[c][source]++;
+	      _packet_seq_no[c][source]++;
 	      break;
 	    }
 	  }

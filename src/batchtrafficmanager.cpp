@@ -80,7 +80,7 @@ bool BatchTrafficManager::_IssuePacket( int source, int cl )
 {
   if(((_max_outstanding[cl] <= 0) ||
       (_requests_outstanding[cl][source] < _max_outstanding[cl])) &&
-     (_sent_packets[cl][source] < _batch_size[cl])) {
+     (_packet_seq_no[cl][source] < _batch_size[cl])) {
     int dest = _traffic_pattern[cl]->dest(source);
     int size = _GetNextPacketSize(cl);
     int time = ((_include_queuing == 1) ? _qtime[cl][source] : _time);
@@ -101,7 +101,7 @@ bool BatchTrafficManager::_SingleSim( )
   int batch_index = 0;
   while(batch_index < _batch_count) {
     for (int c = 0; c < _classes; ++c) {
-      _sent_packets[c].assign(_nodes, 0);
+      _packet_seq_no[c].assign(_nodes, 0);
     }
     _last_id = -1;
     _last_pid = -1;
@@ -114,14 +114,14 @@ bool BatchTrafficManager::_SingleSim( )
       batch_complete = true;
       for(int source = 0; (source < _nodes) && batch_complete; ++source) {
 	for(int c = 0; c < _classes; ++c) {
-	  if(_sent_packets[c][source] < _batch_size[c]) {
+	  if(_packet_seq_no[c][source] < _batch_size[c]) {
 	    batch_complete = false;
 	    break;
 	  }
 	}
       }
       if(_sent_packets_out) {
-	*_sent_packets_out << _sent_packets << ";" << endl;
+	*_sent_packets_out << _packet_seq_no << ";" << endl;
       }
     } while(!batch_complete);
     cout << "Batch injected. Time used is " << _time - start_time << " cycles." << endl;

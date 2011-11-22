@@ -139,12 +139,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   // ============ Injection queues ============ 
 
   _partial_packets.resize(_classes);
-  _sent_packets.resize(_classes);
+  _packet_seq_no.resize(_classes);
   _requests_outstanding.resize(_classes);
 
   for ( int c = 0; c < _classes; ++c ) {
     _partial_packets[c].resize(_nodes);
-    _sent_packets[c].resize(_nodes);
+    _packet_seq_no[c].resize(_nodes);
     _requests_outstanding[c].resize(_nodes);
   }
 
@@ -550,7 +550,7 @@ void TrafficManager::_GeneratePacket( int source, int dest, int size,
       f->pri = numeric_limits<int>::max() - ttime;
       break;
     case sequence_based:
-      f->pri = numeric_limits<int>::max() - _sent_packets[cl][source];
+      f->pri = numeric_limits<int>::max() - _packet_seq_no[cl][source];
       break;
     default:
       f->pri = 0;
