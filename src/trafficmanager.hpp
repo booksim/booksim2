@@ -127,7 +127,7 @@ protected:
 
   // ============ request & replies ==========================
 
-  vector<int> _sent_packets;
+  vector<int> _packet_seq_no;
   vector<list<PacketReplyInfo*> > _repliesPending;
   vector<int> _requestsOutstanding;
   bool _replies_inherit_priority;

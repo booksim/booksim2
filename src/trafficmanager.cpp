@@ -261,7 +261,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _measured_in_flight_flits.resize(_classes);
   _retired_packets.resize(_classes);
 
-  _sent_packets.resize(_nodes);
+  _packet_seq_no.resize(_nodes);
   _repliesPending.resize(_nodes);
   _requestsOutstanding.resize(_nodes);
 
@@ -696,7 +696,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
     _requestsOutstanding[source]++;
   } 
   if(result != 0) {
-    _sent_packets[source]++;
+    _packet_seq_no[source]++;
   }
   return result;
 }
@@ -846,7 +846,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       assert(f->pri >= 0);
       break;
     case sequence_based:
-      f->pri = numeric_limits<int>::max() - _sent_packets[source];
+      f->pri = numeric_limits<int>::max() - _packet_seq_no[source];
       assert(f->pri >= 0);
       break;
     default:
