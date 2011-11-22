@@ -131,11 +131,19 @@ protected:
   vector<double> _overall_min_sent;
   vector<double> _overall_avg_sent;
   vector<double> _overall_max_sent;
+  vector<vector<int> > _sent_packets;
+  vector<double> _overall_min_sent_packets;
+  vector<double> _overall_avg_sent_packets;
+  vector<double> _overall_max_sent_packets;
   vector<vector<int> > _accepted_flits;
   vector<double> _overall_min_accepted;
   vector<double> _overall_avg_accepted;
   vector<double> _overall_max_accepted;
-  
+  vector<vector<int> > _accepted_packets;
+  vector<double> _overall_min_accepted_packets;
+  vector<double> _overall_avg_accepted_packets;
+  vector<double> _overall_max_accepted_packets;
+
 #ifdef TRACK_STALLS
   vector<int> _overall_buffer_busy_stalls;
   vector<int> _overall_buffer_conflict_stalls;

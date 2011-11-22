@@ -280,7 +280,6 @@ string SyntheticTrafficManager::_OverallStatsHeaderCSV() const
 {
   ostringstream os;
   os << "traffic"
-     << ',' << "psize"
      << ',' << TrafficManager::_OverallStatsHeaderCSV()
      << ',' << "min_tlat"
      << ',' << "avg_tlat"
@@ -292,7 +291,6 @@ string SyntheticTrafficManager::_OverallClassStatsCSV(int c) const
 {
   ostringstream os;
   os << _traffic[c] << ','
-     << _GetAveragePacketSize(c) << ','
      << TrafficManager::_OverallClassStatsCSV(c)
      << ',' << _overall_min_tlat[c] / (double)_total_sims
      << ',' << _overall_avg_tlat[c] / (double)_total_sims
