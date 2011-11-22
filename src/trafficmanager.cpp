@@ -1911,7 +1911,7 @@ string TrafficManager::_OverallStatsCSV(int c) const
   ostringstream os;
   os << _traffic[c]
      << ',' << _use_read_write[c]
-     << ',' << _GetAveragePacketSize(c)
+     << ',' << _overall_avg_accepted[c] / _overall_avg_accepted_packets[c]
      << ',' << _load[c]
      << ',' << _overall_min_plat[c] / (double)_total_sims
      << ',' << _overall_avg_plat[c] / (double)_total_sims
