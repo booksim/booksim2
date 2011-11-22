@@ -73,15 +73,25 @@ extern int DEFAULT_CHANNEL_LATENCY;
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 
-
-int IQRouter::real_vc(int vvc, int output){
+//voq label to real vc
+int IQRouter::voq2vc(int vvc, int output){
   assert(_voq);
   assert(output!=-1);
   if(gReservation){
-    if(vvc<RES_RESERVED_VCS+1){
-      return vvc;
-    } else { //data
-      return vvc-output;
+    if(_spec_voq){
+      if(vvc<RES_RESERVED_VCS){
+	return vvc;
+      } else if(vvc<RES_RESERVED_VCS+_outputs){ //spec
+	return vvc-output;
+      } else{ //data
+	return vvc-output-(_outputs-1);
+      }
+    } else {
+      if(vvc<RES_RESERVED_VCS+1){
+	return vvc;
+      } else { //data
+	return vvc-output;
+      }
     }
   } else if(gECN){
     if(vvc<ECN_RESERVED_VCS){
@@ -112,10 +122,18 @@ bool IQRouter::is_control_vc(int vc){
 bool IQRouter::is_voq_vc(int vc){
   assert(_voq);
   if(gReservation){
-    if(vc<RES_RESERVED_VCS+1){
-      return false;
-    } else { //data
-      return true;
+    if(_spec_voq){
+      if(vc<RES_RESERVED_VCS){
+	return false;
+      } else{ //data and spec
+	return true;
+      }
+    } else {
+      if(vc<RES_RESERVED_VCS+1){
+	return false;
+      } else { //data
+	return true;
+      }
     }
   } else if(gECN){
     if(vc<ECN_RESERVED_VCS){
@@ -127,16 +145,32 @@ bool IQRouter::is_voq_vc(int vc){
     return true;
   }
 }
-int IQRouter::voq_vc(int vc, int output){
+int IQRouter::vc2voq(int vc, int output){
   assert(_voq);
   if(gReservation){
-    if(vc<RES_RESERVED_VCS+1){
-      return vc;
-    } else { //data
-      if(output==-1)
-	return -1;
-      else 
-	return vc+output;
+    if(_spec_voq){
+      if(vc<RES_RESERVED_VCS){
+	return vc;
+      } else if(vc<RES_RESERVED_VCS+1){//spec
+	if(output==-1)
+	  return -1;
+	else 
+	  return vc+output;
+      } else { //data
+	if(output==-1)
+	  return -1;
+	else 
+	  return vc+output+(_outputs-1);
+      }
+    } else {
+      if(vc<RES_RESERVED_VCS+1){
+	return vc;
+      } else { //data
+	if(output==-1)
+	  return -1;
+	else 
+	  return vc+output;
+      }
     }
   } else if(gECN){
     if(vc<ECN_RESERVED_VCS){
@@ -149,6 +183,34 @@ int IQRouter::voq_vc(int vc, int output){
     }
   } else {
     return  output; 
+  }
+}
+int IQRouter::voqport(int vc){
+  assert(_voq);
+  if(gReservation){
+    if(_spec_voq){
+      if(vc<RES_RESERVED_VCS){
+	return -1;
+      } else if(vc<RES_RESERVED_VCS+_outputs){
+	return vc-(RES_RESERVED_VCS);
+      } else { 
+	return vc-(RES_RESERVED_VCS)-_outputs;
+      }
+    } else {
+      if(vc<RES_RESERVED_VCS+1){
+	return -1;
+      } else { 
+	return vc-(RES_RESERVED_VCS+1);
+      }
+    }
+  } else if(gECN){
+    if(vc<ECN_RESERVED_VCS){
+      return -1;
+    } else {//data
+      return vc-ECN_RESERVED_VCS;
+    }
+  } else {
+    return vc;
   }
 }
 
@@ -168,6 +230,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _cut_through = (config.GetInt("cut_through")==1);
   _use_voq_size=(config.GetInt("use_voq_size")==1);
   _voq = (config.GetInt("voq") ==1);
+  _spec_voq=(config.GetInt("reservation_spec_voq") ==1);
   _real_vcs         = config.GetInt( "num_vcs" );
 
   if(_voq){
@@ -182,6 +245,9 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     }
     //add the voq vcs
     _vcs+=outputs-1;
+    if(gReservation && _spec_voq){
+      _vcs+=outputs-1;
+    }
     _voq_init_route = new OutputSet();
     _voq_pid.resize(inputs*_real_vcs);
     _voq_route_set.resize(inputs*_vcs);
@@ -190,13 +256,12 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     for(int i = 0; i<inputs; i++){
       for(int j = 0; j<_vcs; j++){
 	int index = i*_vcs+j;
-	int real_vc  = 0;
-	if(gReservation)
-	  real_vc=4;
-	else if(gECN)
-	  real_vc=1;
 	_voq_route_set[index] = new OutputSet();
-	_voq_route_set[index]->Add(j-real_vc,real_vc);
+	if(is_voq_vc(j)){
+	  int port = voqport(j);
+	  assert(port!=-1);
+	  _voq_route_set[index]->Add(port,voq2vc(j,port));
+	}
       }
     }
   } else {
@@ -633,7 +698,7 @@ void IQRouter::_InputQueuing( )
 
     Buffer * const cur_buf = _buf[input];
 
-    if(_voq && voq_vc(vc)==-1){
+    if(_voq && vc2voq(vc)==-1){
       if(f->head){
 	int old_vc = f->vc;
 	
@@ -645,7 +710,7 @@ void IQRouter::_InputQueuing( )
 	  
 	  int  out_port = iset->output_port;
 	  f->vc = old_vc;
-	  vc = voq_vc(f->vc, out_port);
+	  vc = vc2voq(f->vc, out_port);
 	  _voq_pid[input*_real_vcs+f->vc]=pair<int, int>(f->pid, vc);
 	}
       } else {
@@ -1415,7 +1480,7 @@ void IQRouter::_SWHoldUpdate( )
       if(_voq){
 	int rvc = vc;
 	int o = output;
-	int vvc = real_vc(rvc,o);
+	int vvc = voq2vc(rvc,o);
 	_out_queue_credits.find(input)->second->id=777;
 	_out_queue_credits.find(input)->second->vc.push_back(vvc);
       } else {
@@ -2199,7 +2264,7 @@ void IQRouter::_SWAllocUpdate( )
       if(_voq){
 	int rvc = vc;
 	int o = output;
-	int vvc = real_vc(rvc,o);
+	int vvc = voq2vc(rvc,o);
 	_out_queue_credits.find(input)->second->id=777;
 	_out_queue_credits.find(input)->second->vc.push_back(vvc);
       } else {
@@ -2392,7 +2457,7 @@ void IQRouter::_SendFlits( )
       if(_voq && _use_voq_size){
 	int voq_size =0;
 	for(int j = 0;  j<_inputs; j++){
-	  voq_size+=_buf[j]->GetSize(voq_vc(ECN_RESERVED_VCS,i));
+	  voq_size+=_buf[j]->GetSize(vc2voq(ECN_RESERVED_VCS,i));
 	}	
 	if(_output_hysteresis[i]){
 	  _output_hysteresis[i] = (voq_size >=((size_t)ECN_CONGEST_THRESHOLD-ECN_BUFFER_HYSTERESIS));

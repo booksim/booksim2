@@ -26,14 +26,26 @@ VOQ_Buffer::VOQ_Buffer(const Configuration& config, int outputs,
   }
   //add the voq vcs, 1 is already included in vcs
   num_vcs+=outputs-1;
+  //add voq vcs for spec channels
+  if(config.GetInt("reservation_spec_voq") ==1){
+    num_vcs+=outputs-1;
+  }
   _vc.resize(num_vcs);
 
   for(int i = 0; i < num_vcs; ++i) {
     if(gReservation){
-      if(i==RES_RESERVED_VCS){
-	_vc[i] = new VC(config, outputs, this,"",true);
-      } else { 
-	_vc[i] = new VC(config, outputs, this,"" );
+      if(config.GetInt("reservation_spec_voq") ==1){
+	if(i>=RES_RESERVED_VCS && i<RES_RESERVED_VCS+outputs){
+	  _vc[i] = new VC(config, outputs, this,"",true);
+	} else { 
+	  _vc[i] = new VC(config, outputs, this,"" );
+	}
+      } else {
+	if(i==RES_RESERVED_VCS){
+	  _vc[i] = new VC(config, outputs, this,"",true);
+	} else { 
+	  _vc[i] = new VC(config, outputs, this,"" );
+	}
       }
     }else {
       _vc[i] = new VC(config, outputs, this,"" );

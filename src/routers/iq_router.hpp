@@ -53,6 +53,7 @@ class IQRouter : public Router {
   bool _cut_through;
   bool _use_voq_size;
   bool _voq;
+  bool _spec_voq;
   vector<pair<int,int> > _voq_pid;
   //this is dynamic for arriving packets
   OutputSet* _voq_init_route;
@@ -147,9 +148,10 @@ class IQRouter : public Router {
   // helper function for voq
   bool is_control_vc(int vc);
   bool is_voq_vc(int vc);
-  int voq_vc(int vc, int output=-1);
-  int real_vc(int vvc, int output);
-  
+  int vc2voq(int vc, int output=-1);
+  int voq2vc(int vvc, int output);
+  int voqport(int vc);  
+
   // ----------------------------------------
   //
   //   Router Power Modellingyes
