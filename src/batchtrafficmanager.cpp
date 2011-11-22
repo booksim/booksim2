@@ -80,7 +80,7 @@ int BatchTrafficManager::_IssuePacket( int source, int cl )
 	result = -1;
       }
     } else {
-      if((_sent_packets[source] < _batch_size) && 
+      if((_packet_seq_no[source] < _batch_size) && 
 	 ((_max_outstanding <= 0) || 
 	  (_requestsOutstanding[source] < _max_outstanding))) {
 	
@@ -91,7 +91,7 @@ int BatchTrafficManager::_IssuePacket( int source, int cl )
       }
     }
   } else { //normal
-    if((_sent_packets[source] < _batch_size) && 
+    if((_packet_seq_no[source] < _batch_size) && 
        ((_max_outstanding <= 0) || 
 	(_requestsOutstanding[source] < _max_outstanding))) {
       result = _GetNextPacketSize(cl);
@@ -99,7 +99,7 @@ int BatchTrafficManager::_IssuePacket( int source, int cl )
     }
   }
   if(result != 0) {
-    _sent_packets[source]++;
+    _packet_seq_no[source]++;
   }
   return result;
 }
@@ -114,7 +114,7 @@ bool BatchTrafficManager::_SingleSim( )
 {
   int batch_index = 0;
   while(batch_index < _batch_count) {
-    _sent_packets.assign(_nodes, 0);
+    _packet_seq_no.assign(_nodes, 0);
     _last_id = -1;
     _last_pid = -1;
     _sim_state = running;
@@ -125,13 +125,13 @@ bool BatchTrafficManager::_SingleSim( )
       _Step();
       batch_complete = true;
       for(int i = 0; i < _nodes; ++i) {
-	if(_sent_packets[i] < _batch_size) {
+	if(_packet_seq_no[i] < _batch_size) {
 	  batch_complete = false;
 	  break;
 	}
       }
       if(_sent_packets_out) {
-	*_sent_packets_out << _sent_packets << ";" << endl;
+	*_sent_packets_out << _packet_seq_no << ";" << endl;
       }
     } while(!batch_complete);
     cout << "Batch injected. Time used is " << _time - start_time << " cycles." << endl;
