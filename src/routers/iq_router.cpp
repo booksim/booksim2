@@ -707,7 +707,7 @@ void IQRouter::_InputQueuing( )
 	for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
 	    iset != setlist.end();
 	    ++iset) {
-	  
+	   
 	  int  out_port = iset->output_port;
 	  f->vc = old_vc;
 	  vc = vc2voq(f->vc, out_port);
@@ -1254,7 +1254,7 @@ void IQRouter::_VCAllocUpdate( )
 
    
       if(!tail_dropped){ //mark the vc entrace to drop futher flits
-	dropped_pid[input][vc]=pid_drop;
+	dropped_pid[input][f->vc]=pid_drop;
       }
    
       //send drop nack
@@ -2265,6 +2265,10 @@ void IQRouter::_SWAllocUpdate( )
 	int rvc = vc;
 	int o = output;
 	int vvc = voq2vc(rvc,o);
+	//is the head flit of a spec is replaced by nack
+	if(f->res_type==RES_TYPE_NACK && !is_control_vc(vc)){
+	  vvc=RES_RESERVED_VCS;
+	}
 	_out_queue_credits.find(input)->second->id=777;
 	_out_queue_credits.find(input)->second->vc.push_back(vvc);
       } else {
