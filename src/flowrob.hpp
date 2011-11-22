@@ -9,7 +9,7 @@
 class FlowROB{
 
 public:
-  FlowROB();
+  FlowROB(int flow_size);
   ~FlowROB();
 
   Flit* insert(Flit* f);
@@ -19,7 +19,7 @@ public:
 
   int _flow_creation_time;
   int _max_reorder;
-  int _flow_size;
+  int _flow_size; //this is the max
   int _flid;
   int _status;
   set<int> _pid;

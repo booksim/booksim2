@@ -399,7 +399,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   gStatROBRange =  new Stats( this, "rob_range" , 1.0, 300 );
   
   gStatFlowSenderLatency =  new Stats( this, "flow_sender_latency" , 5.0, 1000 );
-  gStatFlowLatency=  new Stats( this, "flow_latency" , 1.0, 5000 );
+  gStatFlowLatency=  new Stats( this, "flow_latency" , 10.0, 5000 );
   gStatActiveFlowBuffers=  new Stats( this, "sender_active_flows" , 1.0, 10 );
   gStatReadyFlowBuffers=  new Stats( this, "sender_ready_flows" , 1.0, 10 );
   gStatResponseBuffer=  new Stats( this, "response_range" , 1.0, 10 );
@@ -1195,15 +1195,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     gStatReservationReceived[dest]++;
 #endif
     //find or create a reorder buffer
-    if(_rob[dest].count(f->flid)==0){
-      receive_rob = new FlowROB();
-      _rob[dest].insert(pair<int, FlowROB*>(f->flid, receive_rob));
-    } else {
-      receive_rob = _rob[dest][f->flid];
-    }
-    
+    //this maybe error IF spec shows up before reservaiton and frees the rob
+    assert(_rob[dest].count(f->flid)!=0);    
+    receive_rob = _rob[dest][f->flid];
+
     f = receive_rob->insert(f);
-    
+
     ff = IssueSpecial(dest,f);
     if(f->flid == WATCH_FLID){
       cout<<"Reservation received"<<endl;
@@ -1238,7 +1235,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     //for very large flows sometimes spec packets can jump infront of res packet
     //in these cases robs can mistakenly retire flits that are associated with the
     //next reservation
-    if(_rob[dest].count(f->flid)==0 || (_rob[dest].count(f->flid)!=0 && !_rob[dest][f->flid]->sn_check(f->sn))){
+
+    if(_rob[dest].count(f->flid)==0 || !_rob[dest][f->flid]->sn_check(f->sn)){
       if(f->flid == WATCH_FLID){
 	cout<<"spec destination nack sn "<<f->sn<<"\n";
       }
@@ -1368,11 +1366,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       //walk in flits passes last if but fails here
       if(receive_rob!=NULL){
 #ifdef ENABLE_STATS
-	gStatROBRange->AddSample(receive_rob->range());
+	//gStatROBRange->AddSample(receive_rob->range());
 #endif
-	if(receive_rob->done()){ //entire flow has been received
+	if(receive_rob->done()){ //entire reservation chunk(s) has been received
 #ifdef ENABLE_STATS
-	  gStatFlowLatency->AddSample(_time-receive_rob->_flow_creation_time);
+	  gStatFlowLatency->AddSample(GetSimTime()-receive_rob-> _flow_creation_time);
 #endif
 	  delete _rob[dest][f->flid];
 	  _rob[dest].erase(f->flid); 
@@ -2093,6 +2091,10 @@ void TrafficManager::_Step( )
 	  dest_buf->TakeBuffer(0); 
 	  dest_buf->SendingFlit(f);
 	  assert(_reservation_set[source].erase(ready_flow_buffer));
+	  //create rob at the destiantion
+	  if(f->sn==0){
+	    _rob[f->dest].insert(pair<int, FlowROB*>(f->flid, new FlowROB(ready_flow_buffer->fl->flow_size)));
+	  }
 	} else {
 	  f = NULL;
 	}
@@ -2122,9 +2124,11 @@ void TrafficManager::_Step( )
 	      _reservation_arb[source]->UpdateState() ;
 	      
 	      FlowBuffer* flb = _flow_buffer[source][id];
-	      Flit* rf =  _flow_buffer[source][id]->send();
-	      
+	      Flit* rf =  flb->send();
 	      assert(rf->res_type==RES_TYPE_RES);
+	      if(rf->sn==0){
+		_rob[rf->dest].insert(pair<int, FlowROB*>(rf->flid, new FlowROB(flb->fl->flow_size)));
+	      }
 	      dest_buf->SendingFlit(rf);
 	      rf->ntime = _time;
 	      _net[0]->WriteSpecialFlit(rf, source);

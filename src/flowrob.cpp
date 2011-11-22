@@ -1,10 +1,10 @@
 #include "flowrob.hpp"
 
-FlowROB::FlowROB(){
+FlowROB::FlowROB(int flow_size){
 
  _status = RES_STATUS_NONE;
   _flid = -1;
-  _flow_size = -1;
+  _flow_size = flow_size;
   _max_reorder = 0;
   _flow_creation_time=-1;
 
@@ -30,7 +30,6 @@ Flit* FlowROB::insert(Flit* f){
   case RES_STATUS_NONE:
     assert(f->res_type == RES_TYPE_RES);
     _sn_ceiling = f->sn+f->payload;
-    _flow_size = f->payload;
     _status = RES_STATUS_ASSIGNED;
     _flid = f->flid;
     rf = f;
@@ -40,7 +39,6 @@ Flit* FlowROB::insert(Flit* f){
   case RES_STATUS_ASSIGNED:
     //second res for this flow
     if(f->res_type == RES_TYPE_RES){
-      _flow_size += f->payload;
       _sn_ceiling = f->sn+f->payload;
       rf = f;
       break;
@@ -90,7 +88,6 @@ Flit* FlowROB::insert(Flit* f){
 
 bool FlowROB::done(){
   //reservation has not arrived yet, I don't knwo the flow size
-
   return ((int)_rob.size() == _flow_size);
 }
 
