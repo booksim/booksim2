@@ -48,7 +48,7 @@ public:
   virtual ~Workload();
   static Workload * New(string const & workload, int nodes, 
 			Configuration const * const config = NULL);
-  virtual void reset() = 0;
+  virtual void reset();
   virtual void advanceTime();
   virtual bool empty() const = 0;
   virtual bool completed() const = 0;
