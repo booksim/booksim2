@@ -60,6 +60,19 @@ public:
   virtual void defer() = 0;
 };
 
+class NullWorkload : public Workload {
+public:
+  NullWorkload(int nodes) : Workload(nodes) {}
+  virtual bool empty() const {return true;}
+  virtual bool completed() const {return true;}
+  virtual int source() const {return -1;}
+  virtual int dest() const {return -1;}
+  virtual int size() const {return -1;}
+  virtual int time() const {return -1;}
+  virtual void inject() {}
+  virtual void defer() {}
+};
+
 class SyntheticWorkload : public Workload {
 protected:
   vector<int> _sizes;
