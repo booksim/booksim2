@@ -72,8 +72,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _pri_type = class_based;
   } else if ( priority == "age" ) {
     _pri_type = age_based;
-  } else if ( priority == "trans_age" ) {
-    _pri_type = trans_age_based;
   } else if ( priority == "network_age" ) {
     _pri_type = network_age_based;
   } else if ( priority == "local_age" ) {
@@ -545,9 +543,6 @@ void TrafficManager::_GeneratePacket( int source, int dest, int size,
       break;
     case age_based:
       f->pri = numeric_limits<int>::max() - time;
-      break;
-    case trans_age_based:
-      f->pri = numeric_limits<int>::max() - ttime;
       break;
     case sequence_based:
       f->pri = numeric_limits<int>::max() - _packet_seq_no[cl][source];

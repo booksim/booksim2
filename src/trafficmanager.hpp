@@ -64,7 +64,7 @@ protected:
 
   // ============ Message priorities ============ 
 
-  enum ePriority { class_based, age_based, trans_age_based, network_age_based, local_age_based, queue_length_based, hop_count_based, sequence_based, none };
+  enum ePriority { class_based, age_based, network_age_based, local_age_based, queue_length_based, hop_count_based, sequence_based, none };
 
   ePriority _pri_type;
 
