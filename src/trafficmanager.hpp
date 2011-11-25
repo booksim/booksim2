@@ -130,7 +130,6 @@ protected:
   vector<int> _packet_seq_no;
   vector<list<PacketReplyInfo*> > _repliesPending;
   vector<int> _requestsOutstanding;
-  bool _replies_inherit_priority;
 
   // ============ Statistics ============
 

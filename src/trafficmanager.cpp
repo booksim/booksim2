@@ -93,8 +93,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     Error( "Unkown priority value: " + priority );
   }
 
-  _replies_inherit_priority = config.GetInt("replies_inherit_priority");
-
   // ============ Routing ============ 
 
   string rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
@@ -618,7 +616,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       PacketReplyInfo* rinfo = PacketReplyInfo::New();
       rinfo->source = f->src;
       rinfo->time = f->atime;
-      rinfo->ttime = f->ttime;
       rinfo->record = f->record;
       rinfo->type = f->type;
       _repliesPending[dest].push_back(rinfo);
@@ -700,7 +697,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 
   Flit::FlitType packet_type = Flit::ANY_TYPE;
   int size = _GetNextPacketSize(cl); //input size 
-  int ttime = time;
   int pid = _cur_pid++;
   assert(_cur_pid);
   int packet_destination = _traffic_pattern[cl]->dest(source);
@@ -734,7 +730,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       }
       packet_destination = rinfo->source;
       time = rinfo->time;
-      ttime = rinfo->ttime;
       record = rinfo->record;
       _repliesPending[source].pop_front();
       rinfo->Free();
@@ -774,7 +769,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     f->subnetwork = subnetwork;
     f->src    = source;
     f->ctime  = time;
-    f->ttime  = ttime;
     f->record = record;
     f->cl     = cl;
 
@@ -802,7 +796,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       assert(f->pri >= 0);
       break;
     case age_based:
-      f->pri = numeric_limits<int>::max() - (_replies_inherit_priority ? ttime : time);
+      f->pri = numeric_limits<int>::max() - time;
       assert(f->pri >= 0);
       break;
     case sequence_based:

@@ -48,7 +48,7 @@ ostream& operator<<( ostream& os, const Flit& f )
      << " Head: " << f.head
      << " Tail: " << f.tail << endl;
   os << "  Source: " << f.src << "  Dest: " << f.dest << " Intm: "<<f.intm<<endl;
-  os << "  Creation time: " << f.ctime << " Transaction creation time: " << f.ttime << " Injection time: " << f.itime << " Arrival time: " << f.atime << " Phase: "<<f.ph<< endl;
+  os << "  Creation time: " << f.ctime << " Injection time: " << f.itime << " Arrival time: " << f.atime << " Phase: "<<f.ph<< endl;
   os << "  VC: " << f.vc << endl;
   return os;
 }
@@ -67,7 +67,6 @@ void Flit::Reset()
   tail      = false ;
   ctime     = -1 ;
   itime     = -1 ;
-  ttime     = -1 ;
   atime     = -1 ;
   id        = -1 ;
   pid       = -1 ;
