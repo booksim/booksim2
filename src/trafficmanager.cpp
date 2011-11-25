@@ -1217,7 +1217,8 @@ void TrafficManager::_ClearStats( )
     _plat_stats[c]->Clear( );
     _tlat_stats[c]->Clear( );
     _frag_stats[c]->Clear( );
-  
+    _nlat_stats[c]->Clear( );
+
     _sent_flits[c].assign(_nodes, 0);
     _sent_packets[c].assign(_nodes, 0);
     _accepted_flits[c].assign(_nodes, 0);
@@ -1227,6 +1228,7 @@ void TrafficManager::_ClearStats( )
       for ( int j = 0; j < _nodes; ++j ) {
 	_pair_plat[c][i*_nodes+j]->Clear( );
 	_pair_tlat[c][i*_nodes+j]->Clear( );
+	_pair_nlat[c][i*_nodes+j]->Clear( );
       }
     }
 
