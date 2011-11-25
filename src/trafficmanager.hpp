@@ -123,10 +123,6 @@ protected:
   vector<Stats *> _hop_stats;
   vector<double> _overall_hop_stats;
 
-  vector<vector<int> > _offered_flits;
-  vector<double> _overall_min_offered;
-  vector<double> _overall_avg_offered;
-  vector<double> _overall_max_offered;
   vector<vector<int> > _sent_flits;
   vector<double> _overall_min_sent;
   vector<double> _overall_avg_sent;
