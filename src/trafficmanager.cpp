@@ -1711,10 +1711,10 @@ void TrafficManager::DisplayStats(ostream & os) const {
     cout << "Minimum packet latency = " << _plat_stats[c]->Min() << endl
 	 << "Average packet latency = " << _plat_stats[c]->Average() << endl
 	 << "Maximum packet latency = " << _plat_stats[c]->Max() << endl
-	 << "Slowest packet = " << _slowest_packet[c] << endl
 	 << "Minimum network latency = " << _nlat_stats[c]->Min() << endl
 	 << "Average network latency = " << _nlat_stats[c]->Average() << endl
 	 << "Maximum network latency = " << _nlat_stats[c]->Max() << endl
+	 << "Slowest packet = " << _slowest_packet[c] << endl
 	 << "Minimum flit latency = " << _flat_stats[c]->Min() << endl
 	 << "Average flit latency = " << _flat_stats[c]->Average() << endl
 	 << "Maximum flit latency = " << _flat_stats[c]->Max() << endl
