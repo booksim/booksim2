@@ -279,15 +279,15 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_avg_tlat.resize(_classes, 0.0);
   _overall_max_tlat.resize(_classes, 0.0);
 
-  _frag_stats.resize(_classes);
-  _overall_min_frag.resize(_classes, 0.0);
-  _overall_avg_frag.resize(_classes, 0.0);
-  _overall_max_frag.resize(_classes, 0.0);
-
   _nlat_stats.resize(_classes);
   _overall_min_nlat.resize(_classes, 0.0);
   _overall_avg_nlat.resize(_classes, 0.0);
   _overall_max_nlat.resize(_classes, 0.0);
+
+  _frag_stats.resize(_classes);
+  _overall_min_frag.resize(_classes, 0.0);
+  _overall_avg_frag.resize(_classes, 0.0);
+  _overall_max_frag.resize(_classes, 0.0);
 
   _pair_plat.resize(_classes);
   _pair_tlat.resize(_classes);
@@ -335,14 +335,14 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _stats[tmp_name.str()] = _tlat_stats[c];
     tmp_name.str("");
 
-    tmp_name << "frag_stat_" << c;
-    _frag_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
-    _stats[tmp_name.str()] = _frag_stats[c];
-    tmp_name.str("");
-
     tmp_name << "nlat_stat_" << c;
     _nlat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _nlat_stats[c];
+    tmp_name.str("");
+
+    tmp_name << "frag_stat_" << c;
+    _frag_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
+    _stats[tmp_name.str()] = _frag_stats[c];
     tmp_name.str("");
 
     tmp_name << "hop_stat_" << c;
@@ -524,8 +524,8 @@ TrafficManager::~TrafficManager( )
   for ( int c = 0; c < _classes; ++c ) {
     delete _plat_stats[c];
     delete _tlat_stats[c];
-    delete _frag_stats[c];
     delete _nlat_stats[c];
+    delete _frag_stats[c];
     delete _hop_stats[c];
 
     delete _traffic_pattern[c];
@@ -1216,6 +1216,8 @@ void TrafficManager::_ClearStats( )
 
     _plat_stats[c]->Clear( );
     _tlat_stats[c]->Clear( );
+    _nlat_stats[c]->Clear( );
+
     _frag_stats[c]->Clear( );
     _nlat_stats[c]->Clear( );
 
@@ -1607,13 +1609,14 @@ void TrafficManager::_UpdateOverallStats() {
     _overall_min_tlat[c] += _tlat_stats[c]->Min();
     _overall_avg_tlat[c] += _tlat_stats[c]->Average();
     _overall_max_tlat[c] += _tlat_stats[c]->Max();
-    _overall_min_frag[c] += _frag_stats[c]->Min();
-    _overall_avg_frag[c] += _frag_stats[c]->Average();
-    _overall_max_frag[c] += _frag_stats[c]->Max();
     _overall_min_nlat[c] += _nlat_stats[c]->Min();
     _overall_avg_nlat[c] += _nlat_stats[c]->Average();
     _overall_max_nlat[c] += _nlat_stats[c]->Max();
     
+    _overall_min_frag[c] += _frag_stats[c]->Min();
+    _overall_avg_frag[c] += _frag_stats[c]->Average();
+    _overall_max_frag[c] += _frag_stats[c]->Max();
+
     _overall_hop_stats[c] += _hop_stats[c]->Average();
 
     int count_min, count_sum, count_max;
@@ -1755,13 +1758,13 @@ void TrafficManager::DisplayStats(ostream & os) const {
 	 << "Average packet latency = " << _plat_stats[c]->Average() << endl
 	 << "Maximum packet latency = " << _plat_stats[c]->Max() << endl
 	 << "Slowest packet = " << _slowest_packet[c] << endl
-	 << "Minimum fragmentation = " << _frag_stats[c]->Min() << endl
-	 << "Average fragmentation = " << _frag_stats[c]->Average() << endl
-	 << "Maximum fragmentation = " << _frag_stats[c]->Max() << endl
 	 << "Minimum network latency = " << _nlat_stats[c]->Min() << endl
 	 << "Average network latency = " << _nlat_stats[c]->Average() << endl
 	 << "Maximum network latency = " << _nlat_stats[c]->Max() << endl
-	 << "Slowest flit = " << _slowest_flit[c] << endl;
+	 << "Slowest flit = " << _slowest_flit[c] << endl
+	 << "Minimum fragmentation = " << _frag_stats[c]->Min() << endl
+	 << "Average fragmentation = " << _frag_stats[c]->Average() << endl
+	 << "Maximum fragmentation = " << _frag_stats[c]->Max() << endl;
     
     int count_sum, count_min, count_max;
     double rate_sum, rate_min, rate_max;
@@ -1845,18 +1848,18 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
     os << "Overall maximum transaction latency = " << _overall_max_tlat[c] / (double)_total_sims
        << " (" << _total_sims << " samples)" << endl;
     
-    os << "Overall minimum fragmentation = " << _overall_min_frag[c] / (double)_total_sims
-       << " (" << _total_sims << " samples)" << endl;
-    os << "Overall average fragmentation = " << _overall_avg_frag[c] / (double)_total_sims
-       << " (" << _total_sims << " samples)" << endl;
-    os << "Overall maximum fragmentation = " << _overall_max_frag[c] / (double)_total_sims
-       << " (" << _total_sims << " samples)" << endl;
-
     os << "Overall minimum network latency = " << _overall_min_nlat[c] / (double)_total_sims
        << " (" << _total_sims << " samples)" << endl;
     os << "Overall average network latency = " << _overall_avg_nlat[c] / (double)_total_sims
        << " (" << _total_sims << " samples)" << endl;
     os << "Overall maximum network latency = " << _overall_max_nlat[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+
+    os << "Overall minimum fragmentation = " << _overall_min_frag[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall average fragmentation = " << _overall_avg_frag[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall maximum fragmentation = " << _overall_max_frag[c] / (double)_total_sims
        << " (" << _total_sims << " samples)" << endl;
 
     os << "Overall minimum flit sent rate = " << _overall_min_sent[c] / (double)_total_sims
@@ -1921,12 +1924,12 @@ string TrafficManager::_OverallStatsCSV(int c) const
      << ',' << _overall_min_tlat[c] / (double)_total_sims
      << ',' << _overall_avg_tlat[c] / (double)_total_sims
      << ',' << _overall_max_tlat[c] / (double)_total_sims
-     << ',' << _overall_min_frag[c] / (double)_total_sims
-     << ',' << _overall_avg_frag[c] / (double)_total_sims
-     << ',' << _overall_max_frag[c] / (double)_total_sims
      << ',' << _overall_min_nlat[c] / (double)_total_sims
      << ',' << _overall_avg_nlat[c] / (double)_total_sims
      << ',' << _overall_max_nlat[c] / (double)_total_sims
+     << ',' << _overall_min_frag[c] / (double)_total_sims
+     << ',' << _overall_avg_frag[c] / (double)_total_sims
+     << ',' << _overall_max_frag[c] / (double)_total_sims
      << ',' << _overall_min_sent[c] / (double)_total_sims
      << ',' << _overall_avg_sent[c] / (double)_total_sims
      << ',' << _overall_max_sent[c] / (double)_total_sims
