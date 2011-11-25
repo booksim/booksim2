@@ -144,15 +144,15 @@ protected:
   vector<double> _overall_avg_tlat;  
   vector<double> _overall_max_tlat;  
 
-  vector<Stats *> _frag_stats;
-  vector<double> _overall_min_frag;
-  vector<double> _overall_avg_frag;
-  vector<double> _overall_max_frag;
-
   vector<Stats *> _nlat_stats;     
   vector<double> _overall_min_nlat;  
   vector<double> _overall_avg_nlat;  
   vector<double> _overall_max_nlat;  
+
+  vector<Stats *> _frag_stats;
+  vector<double> _overall_min_frag;
+  vector<double> _overall_avg_frag;
+  vector<double> _overall_max_frag;
 
   vector<vector<Stats *> > _pair_plat;
   vector<vector<Stats *> > _pair_tlat;
