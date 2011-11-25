@@ -134,11 +134,6 @@ protected:
 
   // ============ Statistics ============
 
-  vector<Stats *> _tlat_stats;     
-  vector<double> _overall_min_tlat;  
-  vector<double> _overall_avg_tlat;  
-  vector<double> _overall_max_tlat;  
-
   vector<Stats *> _plat_stats;     
   vector<double> _overall_min_plat;  
   vector<double> _overall_avg_plat;  
@@ -159,7 +154,6 @@ protected:
   vector<double> _overall_avg_frag;
   vector<double> _overall_max_frag;
 
-  vector<vector<Stats *> > _pair_tlat;
   vector<vector<Stats *> > _pair_plat;
   vector<vector<Stats *> > _pair_nlat;
   vector<vector<Stats *> > _pair_flat;
@@ -226,12 +220,10 @@ protected:
 
   int _cur_id;
   int _cur_pid;
-  int _cur_tid;
   int _time;
 
   set<int> _flits_to_watch;
   set<int> _packets_to_watch;
-  set<int> _transactions_to_watch;
 
   bool _print_csv_results;
 

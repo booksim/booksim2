@@ -55,7 +55,7 @@ TrafficManager * TrafficManager::New(Configuration const & config,
 }
 
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
-  : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _reset_time(0), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
+  : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _reset_time(0), _drain_time(-1), _cur_id(0), _cur_pid(0), _time(0)
 {
 
   _nodes = _net[0]->NumNodes( );
@@ -269,11 +269,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   // ============ Statistics ============ 
 
-  _tlat_stats.resize(_classes);
-  _overall_min_tlat.resize(_classes, 0.0);
-  _overall_avg_tlat.resize(_classes, 0.0);
-  _overall_max_tlat.resize(_classes, 0.0);
-
   _plat_stats.resize(_classes);
   _overall_min_plat.resize(_classes, 0.0);
   _overall_avg_plat.resize(_classes, 0.0);
@@ -294,7 +289,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_avg_frag.resize(_classes, 0.0);
   _overall_max_frag.resize(_classes, 0.0);
 
-  _pair_tlat.resize(_classes);
   _pair_plat.resize(_classes);
   _pair_nlat.resize(_classes);
   _pair_flat.resize(_classes);
@@ -331,11 +325,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   for ( int c = 0; c < _classes; ++c ) {
     ostringstream tmp_name;
 
-    tmp_name << "tlat_stat_" << c;
-    _tlat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _tlat_stats[c];
-    tmp_name.str("");
-
     tmp_name << "plat_stat_" << c;
     _plat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _plat_stats[c];
@@ -361,7 +350,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _stats[tmp_name.str()] = _hop_stats[c];
     tmp_name.str("");
 
-    _pair_tlat[c].resize(_nodes*_nodes);
     _pair_plat[c].resize(_nodes*_nodes);
     _pair_nlat[c].resize(_nodes*_nodes);
     _pair_flat[c].resize(_nodes*_nodes);
@@ -373,11 +361,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
     for ( int i = 0; i < _nodes; ++i ) {
       for ( int j = 0; j < _nodes; ++j ) {
-	tmp_name << "pair_tlat_stat_" << c << "_" << i << "_" << j;
-	_pair_tlat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-	_stats[tmp_name.str()] = _pair_tlat[c][i*_nodes+j];
-	tmp_name.str("");
-	
 	tmp_name << "pair_plat_stat_" << c << "_" << i << "_" << j;
 	_pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
 	_stats[tmp_name.str()] = _pair_plat[c][i*_nodes+j];
@@ -473,11 +456,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _packets_to_watch.insert(watch_packets[i]);
   }
 
-  vector<int> watch_transactions = config.GetIntArray("watch_transactions");
-  for(size_t i = 0; i < watch_transactions.size(); ++i) {
-    _transactions_to_watch.insert(watch_transactions[i]);
-  }
-
   string stats_out_file = config.GetStr( "stats_out" );
   if(stats_out_file == "") {
     _stats_out = NULL;
@@ -539,7 +517,6 @@ TrafficManager::~TrafficManager( )
   }
   
   for ( int c = 0; c < _classes; ++c ) {
-    delete _tlat_stats[c];
     delete _plat_stats[c];
     delete _nlat_stats[c];
     delete _flat_stats[c];
@@ -551,7 +528,6 @@ TrafficManager::~TrafficManager( )
 
     for ( int i = 0; i < _nodes; ++i ) {
       for ( int j = 0; j < _nodes; ++j ) {
-	delete _pair_tlat[c][i*_nodes+j];
 	delete _pair_plat[c][i*_nodes+j];
 	delete _pair_nlat[c][i*_nodes+j];
 	delete _pair_flat[c][i*_nodes+j];
@@ -641,22 +617,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     if (f->type == Flit::READ_REQUEST || f->type == Flit::WRITE_REQUEST) {
       PacketReplyInfo* rinfo = PacketReplyInfo::New();
       rinfo->source = f->src;
-      rinfo->tid = f->tid;
       rinfo->time = f->atime;
       rinfo->ttime = f->ttime;
       rinfo->record = f->record;
       rinfo->type = f->type;
       _repliesPending[dest].push_back(rinfo);
     } else {
-      if ( f->watch ) { 
-	*gWatchOut << GetSimTime() << " | "
-		   << "node" << dest << " | "
-		   << "Completing transation " << f->tid
-		   << " (tlat = " << f->atime - head->ttime
-		   << ", src = " << head->src 
-		   << ", dest = " << head->dest
-		   << ")." << endl;
-      }
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY  ){
 	_requestsOutstanding[dest]--;
       } else if(f->type == Flit::ANY_TYPE) {
@@ -677,15 +643,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       _plat_stats[f->cl]->AddSample( f->atime - head->ctime);
       _nlat_stats[f->cl]->AddSample( f->atime - head->itime);
       _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
-      if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
-	_tlat_stats[f->cl]->AddSample( f->atime - head->ttime );
    
       _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->ctime );
       _pair_nlat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->itime );
-      if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY)
-	_pair_tlat[f->cl][dest*_nodes+f->src]->AddSample( f->atime - head->ttime );
-      else if(f->type == Flit::ANY_TYPE)
-	_pair_tlat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->ttime );
       
     }
     
@@ -743,7 +703,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
   int ttime = time;
   int pid = _cur_pid++;
   assert(_cur_pid);
-  int tid = _cur_tid;
   int packet_destination = _traffic_pattern[cl]->dest(source);
   bool record = false;
   bool watch = gWatchOut && (_packets_to_watch.count(pid) > 0);
@@ -760,16 +719,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 	err << "Invalid packet type: " << packet_type;
 	Error( err.str( ) );
       }
-      watch = watch || (gWatchOut && (_transactions_to_watch.count(tid) > 0));
-      if ( watch ) { 
-	*gWatchOut << GetSimTime() << " | "
-		   << "node" << source << " | "
-		   << "Beginning transaction " << tid
-		   << " at time " << time
-		   << "." << endl;
-      }
-      ++_cur_tid;
-      assert(_cur_tid);
     } else {
       PacketReplyInfo* rinfo = _repliesPending[source].front();
       if (rinfo->type == Flit::READ_REQUEST) {//read reply
@@ -784,32 +733,12 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 	Error( err.str( ) );
       }
       packet_destination = rinfo->source;
-      tid = rinfo->tid;
       time = rinfo->time;
       ttime = rinfo->ttime;
       record = rinfo->record;
       _repliesPending[source].pop_front();
       rinfo->Free();
-      watch = watch || (gWatchOut && (_transactions_to_watch.count(tid) > 0));
-      if ( watch ) { 
-	*gWatchOut << GetSimTime() << " | "
-		   << "node" << source << " | "
-		   << "Continuing transaction " << tid
-		   << " at time " << time
-		   << "." << endl;
-      }
     }
-  } else {
-    watch = watch || (gWatchOut && (_transactions_to_watch.count(tid) > 0));
-    if ( watch ) { 
-      *gWatchOut << GetSimTime() << " | "
-		 << "node" << source << " | "
-		 << "Beginning transaction " << tid
-		 << " at time " << time
-		 << "." << endl;
-    }
-    ++_cur_tid;
-    assert(_cur_tid);
   }
 
   if ((packet_destination <0) || (packet_destination >= _nodes)) {
@@ -841,7 +770,6 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     f->id     = _cur_id++;
     assert(_cur_id);
     f->pid    = pid;
-    f->tid    = tid;
     f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
     f->subnetwork = subnetwork;
     f->src    = source;
@@ -1236,7 +1164,6 @@ void TrafficManager::_ClearStats( )
 
   for ( int c = 0; c < _classes; ++c ) {
 
-    _tlat_stats[c]->Clear( );
     _plat_stats[c]->Clear( );
     _nlat_stats[c]->Clear( );
     _flat_stats[c]->Clear( );
@@ -1250,7 +1177,6 @@ void TrafficManager::_ClearStats( )
 
     for ( int i = 0; i < _nodes; ++i ) {
       for ( int j = 0; j < _nodes; ++j ) {
-	_pair_tlat[c][i*_nodes+j]->Clear( );
 	_pair_plat[c][i*_nodes+j]->Clear( );
 	_pair_nlat[c][i*_nodes+j]->Clear( );
 	_pair_flat[c][i*_nodes+j]->Clear( );
@@ -1626,9 +1552,6 @@ void TrafficManager::_UpdateOverallStats() {
       continue;
     }
     
-    _overall_min_tlat[c] += _tlat_stats[c]->Min();
-    _overall_avg_tlat[c] += _tlat_stats[c]->Average();
-    _overall_max_tlat[c] += _tlat_stats[c]->Max();
     _overall_min_plat[c] += _plat_stats[c]->Min();
     _overall_avg_plat[c] += _plat_stats[c]->Average();
     _overall_max_plat[c] += _plat_stats[c]->Max();
@@ -1717,13 +1640,6 @@ void TrafficManager::WriteStats(ostream & os) const {
     for(int i = 0; i < _nodes; ++i) {
       for(int j = 0; j < _nodes; ++j) {
 	os << _pair_plat[c][i*_nodes+j]->NumSamples() << " ";
-      }
-    }
-    os << "];" << endl
-       << "pair_tlat(" << c+1 << ",:) = [ ";
-    for(int i = 0; i < _nodes; ++i) {
-      for(int j = 0; j < _nodes; ++j) {
-	os << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";
       }
     }
     os << "];" << endl
@@ -1873,13 +1789,6 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
 
     os << "====== Traffic class " << c << " ======" << endl;
     
-    os << "Overall minimum transaction latency = " << _overall_min_tlat[c] / (double)_total_sims
-       << " (" << _total_sims << " samples)" << endl;
-    os << "Overall average transaction latency = " << _overall_avg_tlat[c] / (double)_total_sims
-       << " (" << _total_sims << " samples)" << endl;
-    os << "Overall maximum transaction latency = " << _overall_max_tlat[c] / (double)_total_sims
-       << " (" << _total_sims << " samples)" << endl;
-    
     os << "Overall minimum packet latency = " << _overall_min_plat[c] / (double)_total_sims
        << " (" << _total_sims << " samples)" << endl;
     os << "Overall average packet latency = " << _overall_avg_plat[c] / (double)_total_sims
@@ -1963,9 +1872,6 @@ string TrafficManager::_OverallStatsCSV(int c) const
   os << _traffic[c]
      << ',' << _use_read_write[c]
      << ',' << _load[c]
-     << ',' << _overall_min_tlat[c] / (double)_total_sims
-     << ',' << _overall_avg_tlat[c] / (double)_total_sims
-     << ',' << _overall_max_tlat[c] / (double)_total_sims
      << ',' << _overall_min_plat[c] / (double)_total_sims
      << ',' << _overall_avg_plat[c] / (double)_total_sims
      << ',' << _overall_max_plat[c] / (double)_total_sims
@@ -2023,8 +1929,6 @@ void TrafficManager::_LoadWatchList(const string & filename){
       if(line != "") {
 	if(line[0] == 'p') {
 	  _packets_to_watch.insert(atoi(line.c_str()+1));
-	} else if(line[0] == 't') {
-	  _transactions_to_watch.insert(atoi(line.c_str()+1));
 	} else {
 	  _flits_to_watch.insert(atoi(line.c_str()));
 	}

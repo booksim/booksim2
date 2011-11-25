@@ -60,7 +60,6 @@ public:
 
   int  id;
   int  pid;
-  int  tid;
 
   bool record;
 
