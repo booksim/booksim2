@@ -144,6 +144,11 @@ protected:
   vector<double> _overall_avg_plat;  
   vector<double> _overall_max_plat;  
 
+  vector<Stats *> _nlat_stats;     
+  vector<double> _overall_min_nlat;  
+  vector<double> _overall_avg_nlat;  
+  vector<double> _overall_max_nlat;  
+
   vector<Stats *> _flat_stats;     
   vector<double> _overall_min_flat;  
   vector<double> _overall_avg_flat;  
@@ -156,6 +161,7 @@ protected:
 
   vector<vector<Stats *> > _pair_tlat;
   vector<vector<Stats *> > _pair_plat;
+  vector<vector<Stats *> > _pair_nlat;
   vector<vector<Stats *> > _pair_flat;
 
   vector<Stats *> _hop_stats;

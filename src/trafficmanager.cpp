@@ -279,6 +279,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_avg_plat.resize(_classes, 0.0);
   _overall_max_plat.resize(_classes, 0.0);
 
+  _nlat_stats.resize(_classes);
+  _overall_min_nlat.resize(_classes, 0.0);
+  _overall_avg_nlat.resize(_classes, 0.0);
+  _overall_max_nlat.resize(_classes, 0.0);
+
   _flat_stats.resize(_classes);
   _overall_min_flat.resize(_classes, 0.0);
   _overall_avg_flat.resize(_classes, 0.0);
@@ -291,6 +296,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _pair_tlat.resize(_classes);
   _pair_plat.resize(_classes);
+  _pair_nlat.resize(_classes);
   _pair_flat.resize(_classes);
   
   _hop_stats.resize(_classes);
@@ -335,6 +341,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _stats[tmp_name.str()] = _plat_stats[c];
     tmp_name.str("");
 
+    tmp_name << "nlat_stat_" << c;
+    _nlat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _nlat_stats[c];
+    tmp_name.str("");
+
     tmp_name << "flat_stat_" << c;
     _flat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
     _stats[tmp_name.str()] = _flat_stats[c];
@@ -352,6 +363,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
     _pair_tlat[c].resize(_nodes*_nodes);
     _pair_plat[c].resize(_nodes*_nodes);
+    _pair_nlat[c].resize(_nodes*_nodes);
     _pair_flat[c].resize(_nodes*_nodes);
 
     _sent_packets[c].resize(_nodes, 0);
@@ -371,6 +383,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 	_stats[tmp_name.str()] = _pair_plat[c][i*_nodes+j];
 	tmp_name.str("");
 	
+	tmp_name << "pair_nlat_stat_" << c << "_" << i << "_" << j;
+	_pair_nlat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+	_stats[tmp_name.str()] = _pair_nlat[c][i*_nodes+j];
+	tmp_name.str("");
+
 	tmp_name << "pair_flat_stat_" << c << "_" << i << "_" << j;
 	_pair_flat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
 	_stats[tmp_name.str()] = _pair_flat[c][i*_nodes+j];
@@ -524,6 +541,7 @@ TrafficManager::~TrafficManager( )
   for ( int c = 0; c < _classes; ++c ) {
     delete _tlat_stats[c];
     delete _plat_stats[c];
+    delete _nlat_stats[c];
     delete _flat_stats[c];
     delete _frag_stats[c];
     delete _hop_stats[c];
@@ -535,6 +553,7 @@ TrafficManager::~TrafficManager( )
       for ( int j = 0; j < _nodes; ++j ) {
 	delete _pair_tlat[c][i*_nodes+j];
 	delete _pair_plat[c][i*_nodes+j];
+	delete _pair_nlat[c][i*_nodes+j];
 	delete _pair_flat[c][i*_nodes+j];
       }
     }
@@ -611,6 +630,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 		 << "node" << dest << " | "
 		 << "Retiring packet " << f->pid 
 		 << " (plat = " << f->atime - head->ctime
+		 << ", nlat = " << f->atime - head->itime
 		 << ", frag = " << (f->atime - head->atime) - (f->id - head->id) // NB: In the spirit of solving problems using ugly hacks, we compute the packet length by taking advantage of the fact that the IDs of flits within a packet are contiguous.
 		 << ", src = " << head->src 
 		 << ", dest = " << head->dest
@@ -652,14 +672,16 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       _hop_stats[f->cl]->AddSample( f->hops );
 
       if((_slowest_packet[f->cl] < 0) ||
-	 (_plat_stats[f->cl]->Max() < (f->atime - head->ctime)))
+	 (_plat_stats[f->cl]->Max() < (f->atime - head->itime)))
 	_slowest_packet[f->cl] = f->pid;
       _plat_stats[f->cl]->AddSample( f->atime - head->ctime);
+      _nlat_stats[f->cl]->AddSample( f->atime - head->itime);
       _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
 	_tlat_stats[f->cl]->AddSample( f->atime - head->ttime );
    
       _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->ctime );
+      _pair_nlat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->itime );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY)
 	_pair_tlat[f->cl][dest*_nodes+f->src]->AddSample( f->atime - head->ttime );
       else if(f->type == Flit::ANY_TYPE)
@@ -1216,6 +1238,7 @@ void TrafficManager::_ClearStats( )
 
     _tlat_stats[c]->Clear( );
     _plat_stats[c]->Clear( );
+    _nlat_stats[c]->Clear( );
     _flat_stats[c]->Clear( );
 
     _frag_stats[c]->Clear( );
@@ -1229,6 +1252,7 @@ void TrafficManager::_ClearStats( )
       for ( int j = 0; j < _nodes; ++j ) {
 	_pair_tlat[c][i*_nodes+j]->Clear( );
 	_pair_plat[c][i*_nodes+j]->Clear( );
+	_pair_nlat[c][i*_nodes+j]->Clear( );
 	_pair_flat[c][i*_nodes+j]->Clear( );
       }
     }
@@ -1608,6 +1632,9 @@ void TrafficManager::_UpdateOverallStats() {
     _overall_min_plat[c] += _plat_stats[c]->Min();
     _overall_avg_plat[c] += _plat_stats[c]->Average();
     _overall_max_plat[c] += _plat_stats[c]->Max();
+    _overall_min_nlat[c] += _nlat_stats[c]->Min();
+    _overall_avg_nlat[c] += _nlat_stats[c]->Average();
+    _overall_max_nlat[c] += _nlat_stats[c]->Max();
     _overall_min_flat[c] += _flat_stats[c]->Min();
     _overall_avg_flat[c] += _flat_stats[c]->Average();
     _overall_max_flat[c] += _flat_stats[c]->Max();
@@ -1764,6 +1791,9 @@ void TrafficManager::DisplayStats(ostream & os) const {
 	 << "Average packet latency = " << _plat_stats[c]->Average() << endl
 	 << "Maximum packet latency = " << _plat_stats[c]->Max() << endl
 	 << "Slowest packet = " << _slowest_packet[c] << endl
+	 << "Minimum network latency = " << _nlat_stats[c]->Min() << endl
+	 << "Average network latency = " << _nlat_stats[c]->Average() << endl
+	 << "Maximum network latency = " << _nlat_stats[c]->Max() << endl
 	 << "Minimum flit latency = " << _flat_stats[c]->Min() << endl
 	 << "Average flit latency = " << _flat_stats[c]->Average() << endl
 	 << "Maximum flit latency = " << _flat_stats[c]->Max() << endl
@@ -1857,6 +1887,13 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
     os << "Overall maximum packet latency = " << _overall_max_plat[c] / (double)_total_sims
        << " (" << _total_sims << " samples)" << endl;
 
+    os << "Overall minimum network latency = " << _overall_min_nlat[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall average network latency = " << _overall_avg_nlat[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+    os << "Overall maximum network latency = " << _overall_max_nlat[c] / (double)_total_sims
+       << " (" << _total_sims << " samples)" << endl;
+
     os << "Overall minimum flit latency = " << _overall_min_flat[c] / (double)_total_sims
        << " (" << _total_sims << " samples)" << endl;
     os << "Overall average flit latency = " << _overall_avg_flat[c] / (double)_total_sims
@@ -1932,6 +1969,9 @@ string TrafficManager::_OverallStatsCSV(int c) const
      << ',' << _overall_min_plat[c] / (double)_total_sims
      << ',' << _overall_avg_plat[c] / (double)_total_sims
      << ',' << _overall_max_plat[c] / (double)_total_sims
+     << ',' << _overall_min_nlat[c] / (double)_total_sims
+     << ',' << _overall_avg_nlat[c] / (double)_total_sims
+     << ',' << _overall_max_nlat[c] / (double)_total_sims
      << ',' << _overall_min_flat[c] / (double)_total_sims
      << ',' << _overall_avg_flat[c] / (double)_total_sims
      << ',' << _overall_max_flat[c] / (double)_total_sims
