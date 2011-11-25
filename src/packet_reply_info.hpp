@@ -38,7 +38,6 @@ class PacketReplyInfo {
 public:
   int source;
   int time;
-  int ttime;
   bool record;
   Flit::FlitType type;
 
