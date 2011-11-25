@@ -654,16 +654,16 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       if((_slowest_packet[f->cl] < 0) ||
 	 (_plat_stats[f->cl]->Max() < (f->atime - f->ctime)))
 	_slowest_packet[f->cl] = f->pid;
-      _plat_stats[f->cl]->AddSample( f->atime - f->ctime);
+      _plat_stats[f->cl]->AddSample( f->atime - head->ctime);
       _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
-	_tlat_stats[f->cl]->AddSample( f->atime - f->ttime );
+	_tlat_stats[f->cl]->AddSample( f->atime - head->ttime );
    
-      _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->ctime );
+      _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->ctime );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY)
-	_pair_tlat[f->cl][dest*_nodes+f->src]->AddSample( f->atime - f->ttime );
+	_pair_tlat[f->cl][dest*_nodes+f->src]->AddSample( f->atime - head->ttime );
       else if(f->type == Flit::ANY_TYPE)
-	_pair_tlat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->ttime );
+	_pair_tlat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->ttime );
       
     }
     
