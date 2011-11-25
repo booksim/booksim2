@@ -1626,8 +1626,12 @@ void TrafficManager::WriteStats(ostream & os) const {
     }
     
     //c+1 due to matlab array starting at 1
-    os << "lat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
-       << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
+    os << "plat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
+       << "plat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
+       << "nlat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
+       << "nlat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
+       << "flat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
+       << "flat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
        << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
        << "hops(" << c+1 << ",:) = " << *_hop_stats[c] << ";" << endl
        << "pair_sent(" << c+1 << ",:) = [ ";
@@ -1641,6 +1645,13 @@ void TrafficManager::WriteStats(ostream & os) const {
     for(int i = 0; i < _nodes; ++i) {
       for(int j = 0; j < _nodes; ++j) {
 	os << _pair_plat[c][i*_nodes+j]->Average( ) << " ";
+      }
+    }
+    os << "];" << endl
+       << "pair_nlat(" << c+1 << ",:) = [ ";
+    for(int i = 0; i < _nodes; ++i) {
+      for(int j = 0; j < _nodes; ++j) {
+	os << _pair_nlat[c][i*_nodes+j]->Average( ) << " ";
       }
     }
     os << "];" << endl
