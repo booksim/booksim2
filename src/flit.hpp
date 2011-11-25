@@ -47,12 +47,10 @@ public:
   
   int  ctime;
   int  itime;
-  int  ttime;
   int  atime;
 
   int  id;
   int  pid;
-  int  tid;
 
   bool record;
 

@@ -107,45 +107,12 @@ SyntheticTrafficManager::SyntheticTrafficManager( const Configuration &config, c
     _qdrained[c].resize(_nodes);
   }
 
-  // ============ Statistics ============ 
-
-  _tlat_stats.resize(_classes);
-  _overall_min_tlat.resize(_classes, 0.0);
-  _overall_avg_tlat.resize(_classes, 0.0);
-  _overall_max_tlat.resize(_classes, 0.0);
-
-  _pair_tlat.resize(_classes);
-
-  for ( int c = 0; c < _classes; ++c ) {
-    ostringstream tmp_name;
-
-    tmp_name << "tlat_stat_" << c;
-    _tlat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _tlat_stats[c];
-    tmp_name.str("");
-
-    _pair_tlat[c].resize(_nodes*_nodes);
-    for ( int i = 0; i < _nodes; ++i ) {
-      for ( int j = 0; j < _nodes; ++j ) {
-	tmp_name << "pair_tlat_stat_" << c << "_" << i << "_" << j;
-	_pair_tlat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-	_stats[tmp_name.str()] = _pair_tlat[c][i*_nodes+j];
-	tmp_name.str("");
-      }
-    }
-  }
 }
 
 SyntheticTrafficManager::~SyntheticTrafficManager( )
 {
   for ( int c = 0; c < _classes; ++c ) {
     delete _traffic_pattern[c];
-    delete _tlat_stats[c];
-    for ( int source = 0; source < _nodes; ++source ) {
-      for ( int dest = 0; dest < _nodes; ++dest ) {
-	delete _pair_tlat[c][source*_nodes+dest];
-      }
-    }
   }
 }
 
@@ -155,15 +122,6 @@ void SyntheticTrafficManager::_RetirePacket(Flit * head, Flit * tail, int dest)
   assert(reply_class < _classes);
   
   if (reply_class < 0) {
-    if ( tail->watch ) { 
-      *gWatchOut << GetSimTime() << " | "
-		 << "node" << dest << " | "
-		 << "Completing transation " << tail->tid
-		 << " (lat = " << tail->atime - head->ttime
-		 << ", src = " << head->src 
-		 << ", dest = " << head->dest
-		 << ")." << endl;
-    }
     int const request_class = _request_class[tail->cl];
     assert(request_class < _classes);
     if(request_class < 0) {
@@ -175,19 +133,10 @@ void SyntheticTrafficManager::_RetirePacket(Flit * head, Flit * tail, int dest)
       _requests_outstanding[request_class][dest]--;
     }
     
-    // Only record statistics once per packet (at tail)
-    // and based on the simulation state
-    if ( ( _sim_state == warming_up ) || tail->record ) {
-      int const cl = (request_class < 0) ? tail->cl : request_class;
-      _tlat_stats[cl]->AddSample( tail->atime - tail->ttime );
-      _pair_tlat[cl][dest*_nodes+tail->src]->AddSample( tail->atime - tail->ttime );
-    }
-    
   } else {
     _packet_seq_no[tail->cl][dest]++;
     int size = _GetNextPacketSize(reply_class);
-    _GeneratePacket( head->dest, head->src, size, reply_class, tail->atime + 1, 
-		     tail->tid, tail->ttime );
+    _GeneratePacket(head->dest, head->src, size, reply_class, tail->atime + 1);
   }
 }
 
@@ -249,41 +198,11 @@ void SyntheticTrafficManager::_ResetSim( )
   }
 }
 
-void SyntheticTrafficManager::_ClearStats( )
-{
-  for ( int c = 0; c < _classes; ++c ) {
-    _tlat_stats[c]->Clear( );
-    for ( int i = 0; i < _nodes; ++i ) {
-      for ( int j = 0; j < _nodes; ++j ) {
-	_pair_tlat[c][i*_nodes+j]->Clear( );
-      }
-    }
-  }
-  TrafficManager::_ClearStats( );
-}
-
-void SyntheticTrafficManager::_UpdateOverallStats( )
-{
-  TrafficManager::_UpdateOverallStats();
-  for ( int c = 0; c < _classes; ++c ) {
-    if(_measure_stats[c] == 0) {
-      continue;
-    }
-    assert(_tlat_stats[c]->NumSamples() > 0);
-    _overall_min_tlat[c] += _tlat_stats[c]->Min();
-    _overall_avg_tlat[c] += _tlat_stats[c]->Average();
-    _overall_max_tlat[c] += _tlat_stats[c]->Max();
-  }
-}
-
 string SyntheticTrafficManager::_OverallStatsHeaderCSV() const
 {
   ostringstream os;
   os << "traffic"
-     << ',' << TrafficManager::_OverallStatsHeaderCSV()
-     << ',' << "min_tlat"
-     << ',' << "avg_tlat"
-     << ',' << "max_tlat";
+     << ',' << TrafficManager::_OverallStatsHeaderCSV();
   return os.str();
 }
 
@@ -291,34 +210,8 @@ string SyntheticTrafficManager::_OverallClassStatsCSV(int c) const
 {
   ostringstream os;
   os << _traffic[c] << ','
-     << TrafficManager::_OverallClassStatsCSV(c)
-     << ',' << _overall_min_tlat[c] / (double)_total_sims
-     << ',' << _overall_avg_tlat[c] / (double)_total_sims
-     << ',' << _overall_max_tlat[c] / (double)_total_sims;
+     << TrafficManager::_OverallClassStatsCSV(c);
   return os.str();
-}
-
-void SyntheticTrafficManager::_WriteClassStats(int c, ostream & os) const
-{
-  TrafficManager::_WriteClassStats(c, os);
-  os << "pair_tlat(" << c+1 << ",:) = [ ";
-  for(int i = 0; i < _nodes; ++i) {
-    for(int j = 0; j < _nodes; ++j) {
-      os << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";
-    }
-  }
-  os << "];" << endl;
-}
-
-void SyntheticTrafficManager::_DisplayOverallClassStats(int c, ostream & os) const
-{
-  TrafficManager::_DisplayOverallClassStats(c, os);
-  os << "Overall minimum transaction latency = " << _overall_min_tlat[c] / (double)_total_sims
-     << " (" << _total_sims << " samples)" << endl
-     << "Overall average transaction latency = " << _overall_avg_tlat[c] / (double)_total_sims
-     << " (" << _total_sims << " samples)" << endl
-     << "Overall maximum transaction latency = " << _overall_max_tlat[c] / (double)_total_sims
-     << " (" << _total_sims << " samples)" << endl;
 }
 
 int SyntheticTrafficManager::_GetNextPacketSize(int cl) const

@@ -107,38 +107,44 @@ protected:
   vector<double> _overall_avg_plat;  
   vector<double> _overall_max_plat;  
 
-  vector<Stats *> _frag_stats;
-  vector<double> _overall_min_frag;
-  vector<double> _overall_avg_frag;
-  vector<double> _overall_max_frag;
-
   vector<Stats *> _nlat_stats;     
   vector<double> _overall_min_nlat;  
   vector<double> _overall_avg_nlat;  
   vector<double> _overall_max_nlat;  
 
+  vector<Stats *> _flat_stats;     
+  vector<double> _overall_min_flat;  
+  vector<double> _overall_avg_flat;  
+  vector<double> _overall_max_flat;  
+
+  vector<Stats *> _frag_stats;
+  vector<double> _overall_min_frag;
+  vector<double> _overall_avg_frag;
+  vector<double> _overall_max_frag;
+
   vector<vector<Stats *> > _pair_plat;
   vector<vector<Stats *> > _pair_nlat;
+  vector<vector<Stats *> > _pair_flat;
 
   vector<Stats *> _hop_stats;
   vector<double> _overall_hop_stats;
 
-  vector<vector<int> > _sent_flits;
-  vector<double> _overall_min_sent;
-  vector<double> _overall_avg_sent;
-  vector<double> _overall_max_sent;
   vector<vector<int> > _sent_packets;
   vector<double> _overall_min_sent_packets;
   vector<double> _overall_avg_sent_packets;
   vector<double> _overall_max_sent_packets;
-  vector<vector<int> > _accepted_flits;
-  vector<double> _overall_min_accepted;
-  vector<double> _overall_avg_accepted;
-  vector<double> _overall_max_accepted;
   vector<vector<int> > _accepted_packets;
   vector<double> _overall_min_accepted_packets;
   vector<double> _overall_avg_accepted_packets;
   vector<double> _overall_max_accepted_packets;
+  vector<vector<int> > _sent_flits;
+  vector<double> _overall_min_sent;
+  vector<double> _overall_avg_sent;
+  vector<double> _overall_max_sent;
+  vector<vector<int> > _accepted_flits;
+  vector<double> _overall_min_accepted;
+  vector<double> _overall_avg_accepted;
+  vector<double> _overall_max_accepted;
 
 #ifdef TRACK_STALLS
   vector<int> _overall_buffer_busy_stalls;
@@ -148,8 +154,8 @@ protected:
   vector<int> _overall_crossbar_conflict_stalls;
 #endif
 
-  vector<int> _slowest_flit;
   vector<int> _slowest_packet;
+  vector<int> _slowest_flit;
 
   map<string, Stats *> _stats;
 
@@ -169,12 +175,10 @@ protected:
 
   int _cur_id;
   int _cur_pid;
-  int _cur_tid;
   int _time;
 
   set<int> _flits_to_watch;
   set<int> _packets_to_watch;
-  set<int> _transactions_to_watch;
 
   bool _print_csv_results;
 
@@ -202,7 +206,7 @@ protected:
   
   virtual bool _IssuePacket( int source, int cl ) = 0;
 
-  void _GeneratePacket( int source, int dest, int size, int cl, int time, int tid = -1, int ttime = -1 );
+  void _GeneratePacket( int source, int dest, int size, int cl, int time );
 
   virtual void _ResetSim( );
 

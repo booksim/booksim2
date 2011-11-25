@@ -68,14 +68,8 @@ protected:
 
   virtual void _ResetSim( );
 
-  virtual void _ClearStats( );
-
-  virtual void _UpdateOverallStats( );
-  
   virtual string _OverallStatsHeaderCSV() const;
   virtual string _OverallClassStatsCSV(int c) const;
-  virtual void _DisplayOverallClassStats(int c, ostream & os) const;
-  virtual void _WriteClassStats(int c, ostream & os) const;
 
   int _GetNextPacketSize(int cl) const;
   double _GetAveragePacketSize(int cl) const;

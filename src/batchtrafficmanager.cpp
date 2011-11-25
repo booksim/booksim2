@@ -84,7 +84,7 @@ bool BatchTrafficManager::_IssuePacket( int source, int cl )
     int dest = _traffic_pattern[cl]->dest(source);
     int size = _GetNextPacketSize(cl);
     int time = ((_include_queuing == 1) ? _qtime[cl][source] : _time);
-    _GeneratePacket(source, dest, size, cl, time, -1, time);
+    _GeneratePacket(source, dest, size, cl, time);
     return true;
   }
   return false;
