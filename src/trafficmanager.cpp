@@ -1692,7 +1692,7 @@ void TrafficManager::WriteStats(ostream & os) const {
     os << "];" << endl
        << "accepted_packet_size(" << c+1 << ",:) = [ ";
     for ( int d = 0; d < _nodes; ++d ) {
-      os << (double)_accepted_flits[c][d] / _accepted_packets[c][d] << " ";
+      os << (double)_accepted_flits[c][d] / (double)_accepted_packets[c][d] << " ";
     }
     os << "];" << endl;
   }
