@@ -1246,34 +1246,34 @@ void TrafficManager::_WriteClassStats(int c, ostream & os) const {
   double time_delta = (double)(_time - _reset_time);
 
   os << "];" << endl
-     << "sent_flits(" << c+1 << ",:) = [ ";
-  for ( int d = 0; d < _nodes; ++d ) {
-    os << _sent_flits[c][d] / time_delta << " ";
-  }
-  os << "];" << endl
      << "sent_packets(" << c+1 << ",:) = [ ";
   for ( int d = 0; d < _nodes; ++d ) {
-    os << _sent_packets[c][d] / time_delta << " ";
-  }
-  os << "];" << endl
-     << "sent_packet_size(" << c+1 << ",:) = [ ";
-  for ( int d = 0; d < _nodes; ++d ) {
-    os << _sent_flits[c][d] / _sent_packets[c][d] << " ";
-  }
-  os << "];" << endl
-     << "accepted_flits(" << c+1 << ",:) = [ ";
-  for ( int d = 0; d < _nodes; ++d ) {
-    os << _accepted_flits[c][d] / time_delta << " ";
+    os << (double)_sent_packets[c][d] / time_delta << " ";
   }
   os << "];" << endl
      << "accepted_packets(" << c+1 << ",:) = [ ";
   for ( int d = 0; d < _nodes; ++d ) {
-    os << _accepted_packets[c][d] / time_delta << " ";
+    os << (double)_accepted_packets[c][d] / time_delta << " ";
+  }
+  os << "];" << endl
+     << "sent_flits(" << c+1 << ",:) = [ ";
+  for ( int d = 0; d < _nodes; ++d ) {
+    os << (double)_sent_flits[c][d] / time_delta << " ";
+  }
+  os << "];" << endl
+     << "accepted_flits(" << c+1 << ",:) = [ ";
+  for ( int d = 0; d < _nodes; ++d ) {
+    os << (double)_accepted_flits[c][d] / time_delta << " ";
+  }
+  os << "];" << endl
+     << "sent_packet_size(" << c+1 << ",:) = [ ";
+  for ( int d = 0; d < _nodes; ++d ) {
+    os << (double)_sent_flits[c][d] / (double)_sent_packets[c][d] << " ";
   }
   os << "];" << endl
      << "accepted_packet_size(" << c+1 << ",:) = [ ";
   for ( int d = 0; d < _nodes; ++d ) {
-    os << _accepted_flits[c][d] / _accepted_packets[c][d] << " ";
+    os << (double)_accepted_flits[c][d] / (double)_accepted_packets[c][d] << " ";
   }
   os << "];" << endl;
 }
