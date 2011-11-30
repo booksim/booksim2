@@ -98,6 +98,7 @@ public:
   flow* fl;
   Flit* _reservation_flit;
   int _reserved_time;
+  int _future_reserved_time;//reservation_tail_reserve=on;
   int _expected_latency;//deduct this amount fromt he reserved time 
   int _src;
   int _dest;

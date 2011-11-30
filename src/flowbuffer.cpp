@@ -17,6 +17,7 @@ extern bool ECN_AIMD;
 extern vector<Stats*> gStatIRD;
 extern bool RESERVATION_SPEC_OFF;
 extern bool RESERVATION_POST_WAIT;
+extern bool RESERVATION_TAIL_RESERVE;
 
 extern Stats* gStatResEarly_POS;
 extern Stats* gStatResEarly_NEG;
@@ -80,6 +81,7 @@ void FlowBuffer::Init( flow* f){
 
   _dest = f->dest;
   _reserved_time = -1;
+  _future_reserved_time=-1;
   _expected_latency=0;
   _reservation_check = false;
   _vc = -1;
@@ -125,7 +127,6 @@ void FlowBuffer::Init( flow* f){
   fl->buffer=new  queue<Flit*>;
   int deduction =   parent->_GeneratePacket(fl,fl->data_to_generate);
   fl->data_to_generate-=deduction;
-  //fl->buffer->front()->payload = fl->flow_size;  
   while(!fl->buffer->empty()){
     Flit *ff = fl->buffer->front();
     assert(ff);
@@ -247,39 +248,54 @@ void FlowBuffer::active_update(){
 	gStatResEarly_NEG->AddSample(-sample);  
       }
 
-      _reservation_flit  = Flit::New();
-      _reservation_flit ->src = _src;
-      _reservation_flit ->dest = fl->dest;
-      _reservation_flit->flid = fl->flid;
-      _reservation_flit->flbid = _id;
-      _reservation_flit->sn = _total_reserved_slots;
-      _reservation_flit->id = -1;
-      _reservation_flit->subnetwork = 0;
-      _reservation_flit->cl = 0;
-      _reservation_flit->type = Flit::ANY_TYPE;
-      _reservation_flit->head = true;
-      _reservation_flit->tail = true;
-      _reservation_flit->vc = 0;
-      _reservation_flit->res_type = RES_TYPE_RES;
-      _reservation_flit->pri = FLIT_PRI_RES;
 
-      _status= FLOW_STATUS_SPEC;
-      _res_sent = false;
-      _res_outstanding=false;
       if(fl->flow_size-_total_reserved_slots<RESERVATION_CHUNK_LIMIT){
 	_reserved_slots = fl->flow_size-_total_reserved_slots;
-	_reservation_flit->payload = fl->flow_size-_total_reserved_slots;
       } else {
 	_reserved_slots = RESERVATION_CHUNK_LIMIT; 
-	_reservation_flit->payload = RESERVATION_CHUNK_LIMIT; 
       }
 
+      if(!RESERVATION_TAIL_RESERVE){
+	_reservation_flit  = Flit::New();
+	_reservation_flit ->src = _src;
+	_reservation_flit ->dest = fl->dest;
+	_reservation_flit->flid = fl->flid;
+	_reservation_flit->flbid = _id;
+	_reservation_flit->sn = _total_reserved_slots;
+	_reservation_flit->id = -1;
+	_reservation_flit->subnetwork = 0;
+	_reservation_flit->cl = 0;
+	_reservation_flit->type = Flit::ANY_TYPE;
+	_reservation_flit->head = true;
+	_reservation_flit->tail = true;
+	_reservation_flit->vc = 0;
+	_reservation_flit->res_type = RES_TYPE_RES;
+	_reservation_flit->pri = FLIT_PRI_RES;
+
+	_res_sent = false;
+	_res_outstanding=false;
+	if(fl->flow_size-_total_reserved_slots<RESERVATION_CHUNK_LIMIT){
+	  _reservation_flit->payload = fl->flow_size-_total_reserved_slots;
+	} else {
+	  _reservation_flit->payload = RESERVATION_CHUNK_LIMIT; 
+	}
+
+      } else {
+	_res_sent = true;
+	_res_outstanding=false;
+      }
+      _status= FLOW_STATUS_SPEC;
       _last_sn = _total_reserved_slots-1;
       _total_reserved_slots+=_reserved_slots; 
       _vc = -1;
       _reserved_time=-1;
-      _expected_latency=0;
       _reservation_check = false;
+      if(_future_reserved_time!=-1){
+	_reserved_time = _future_reserved_time;
+	_reservation_check = true;
+	_status = FLOW_STATUS_WAIT;
+      }
+      _future_reserved_time=-1;
     }
   }
 }
@@ -418,16 +434,20 @@ void FlowBuffer::grant(int time,int lat){
     cout<<"flow "<<fl->flid
 	<<" received grant at time "<<time<<endl;
   }
-  assert(_reserved_time == -1);
-  _reserved_time = time;
-  _expected_latency=lat;
-  _reservation_check = true;
-  _res_outstanding=false;
-  if(_tail_sent){
-    _vc=-1;
-    _status = FLOW_STATUS_WAIT;
+  assert(RESERVATION_TAIL_RESERVE || _reserved_time == -1);
+  if( _reserved_time == -1){
+    _reserved_time = time;
+    _expected_latency=lat;
+    _reservation_check = true;
+    _res_outstanding=false;
+    if(_tail_sent){
+      _vc=-1;
+      _status = FLOW_STATUS_WAIT;
+    } else {
+      _status = FLOW_STATUS_GRANT_TRANSITION;
+    }
   } else {
-    _status = FLOW_STATUS_GRANT_TRANSITION;
+    _future_reserved_time=time;
   }
 }
 
@@ -547,9 +567,20 @@ Flit* FlowBuffer::send(){
       _flit_status.erase(f->sn);
       f->res_type = RES_TYPE_NORM;
       f->pri = FLIT_PRI_NORM;
-      if(_mode == RES_MODE && _reservation_check){
+      if(_mode == RES_MODE && _reservation_check && !f->head){
 	f->payload = _reserved_time;
 	_reservation_check=false;
+      }
+      if(RESERVATION_TAIL_RESERVE && f->head){
+	if(f->sn+32 ==  _total_reserved_slots){
+	  if(fl->flow_size-_total_reserved_slots==0){
+	  }else if(fl->flow_size-_total_reserved_slots<RESERVATION_CHUNK_LIMIT){
+	    cout<<fl->flow_size-_total_reserved_slots<<endl;
+	    f->payload = fl->flow_size-_total_reserved_slots;
+	  } else {
+	    f->payload = RESERVATION_CHUNK_LIMIT; 
+	  }
+	}
       }
       _ready--;
       _reserved_slots--;

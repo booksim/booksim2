@@ -102,6 +102,9 @@ bool RESERVATION_SPEC_OFF = false;
 bool RESERVATION_POST_WAIT = false;
 //use the next hop buffer occupancy to preemptively drop a speculative packet
 bool RESERVATION_BUFFER_SIZE_DROP=false;
+//send the reservation to the next segment with the last packet
+bool RESERVATION_TAIL_RESERVE=false;
+
 
 
 //expiration timer for IRD
@@ -314,6 +317,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   RESERVATION_QUEUING_DROP=(config.GetInt("reservation_queuing_drop")==1);
   RESERVATION_POST_WAIT = (config.GetInt("reservation_post_wait")==1);
   RESERVATION_BUFFER_SIZE_DROP=(config.GetInt("reservation_buffer_size_drop")==1);
+  RESERVATION_TAIL_RESERVE=(config.GetInt("reservation_tail_reserve")==1);
 
   FLOW_DEST_MERGE= (config.GetInt("flow_merge")==1);
   FAST_RETRANSMIT_ENABLE = (config.GetInt("fast_retransmit")==1);
@@ -665,7 +669,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_avg_tlat.resize(_classes);
   _overall_max_tlat.resize(_classes);
 
+
   _frag_stats.resize(_classes);
+  _spec_frag_stats.resize(_classes);
   _overall_min_frag.resize(_classes);
   _overall_avg_frag.resize(_classes);
   _overall_max_frag.resize(_classes);
@@ -724,6 +730,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     tmp_name << "frag_stat_" << c;
     _frag_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
     _stats[tmp_name.str()] = _frag_stats[c];
+    tmp_name.str("");
+    tmp_name << "spec_frag_stat_" << c;
+    _spec_frag_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
+    _stats[tmp_name.str()] = _spec_frag_stats[c];
     tmp_name.str("");
     tmp_name << "overall_min_frag_stat_" << c;
     _overall_min_frag[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
@@ -947,6 +957,7 @@ TrafficManager::~TrafficManager( )
     delete _overall_max_tlat[c];
 
     delete _frag_stats[c];
+    delete _spec_frag_stats[c];
     delete _overall_min_frag[c];
     delete _overall_avg_frag[c];
     delete _overall_max_frag[c];
@@ -1200,32 +1211,34 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     receive_rob = _rob[dest][f->flid];
 
     f = receive_rob->insert(f);
-
-    ff = IssueSpecial(dest,f);
-    if(f->flid == WATCH_FLID){
-      cout<<"Reservation received"<<endl;
-      ff->watch = true;
-    }
+    if(f){
+      ff = IssueSpecial(dest,f);
+      ff->id=999;
+      if(f->flid == WATCH_FLID){
+	cout<<"Reservation received"<<endl;
+	ff->watch = true;
+      }
 #ifdef ENABLE_STATS
-    if(_reservation_schedule[dest]>_time){
-      gStatReservationTimeFuture[dest]->AddSample(_reservation_schedule[dest]-_time);
-    } else {
-      gStatReservationTimeNow[dest]->AddSample(_time-_reservation_schedule[dest]);
-    }
+      if(_reservation_schedule[dest]>_time){
+	gStatReservationTimeFuture[dest]->AddSample(_reservation_schedule[dest]-_time);
+      } else {
+	gStatReservationTimeNow[dest]->AddSample(_time-_reservation_schedule[dest]);
+      }
 #endif
-    //the return time is offset by the reservation packet latency 
-    //to prevent schedule fragmentation
-    _reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
-    ff->payload  =_reservation_schedule[dest];
-    //this functionality has been moved tot he source
-    //-int(ceil(RESERVATION_RTT*float(_time-f->ntime)));
+      //the return time is offset by the reservation packet latency 
+      //to prevent schedule fragmentation
+      _reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
+      ff->payload  =_reservation_schedule[dest];
+      //this functionality has been moved tot he source
+      //-int(ceil(RESERVATION_RTT*float(_time-f->ntime)));
 
-    _reservation_schedule[dest] += int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
+      _reservation_schedule[dest] += int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
 
-    ff->res_type = RES_TYPE_GRANT;
-    ff->pri = FLIT_PRI_GRANT;
-    ff->vc = GRANT_PACKET_VC;
-    _response_packets[dest].push_back(ff);
+      ff->res_type = RES_TYPE_GRANT;
+      ff->pri = FLIT_PRI_GRANT;
+      ff->vc = GRANT_PACKET_VC;
+      _response_packets[dest].push_back(ff);
+    }
     break;
 
   case RES_TYPE_SPEC:
@@ -1312,12 +1325,39 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	gStatNormDuplicate[dest]++;
 #endif
       } else {
-	if(f->payload!=-1){
+	if(!f->head && f->payload!=-1){
 	  if(_time-f->payload>=0){
 	    gStatReservationMismatch_POS->AddSample(_time-f->payload);
 	  } else {
 	    gStatReservationMismatch_NEG->AddSample(-(_time-f->payload));
 	  }
+	} else 	if(f->head && f->payload!=-1 && RESERVATION_TAIL_RESERVE){
+	  ff = IssueSpecial(dest,f);
+	  ff->id=666;
+	  if(f->flid == WATCH_FLID){
+	    cout<<"End rservation Reservation received"<<endl;
+	    ff->watch = true;
+	  }
+#ifdef ENABLE_STATS
+	  if(_reservation_schedule[dest]>_time){
+	    gStatReservationTimeFuture[dest]->AddSample(_reservation_schedule[dest]-_time);
+	  } else {
+	    gStatReservationTimeNow[dest]->AddSample(_time-_reservation_schedule[dest]);
+	  }
+#endif
+	  //the return time is offset by the reservation packet latency 
+	  //to prevent schedule fragmentation
+	  _reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
+	  ff->payload  =_reservation_schedule[dest];
+	  //this functionality has been moved tot he source
+	  //-int(ceil(RESERVATION_RTT*float(_time-f->ntime)));
+
+	  _reservation_schedule[dest] += int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
+
+	  ff->res_type = RES_TYPE_GRANT;
+	  ff->pri = FLIT_PRI_GRANT;
+	  ff->vc = GRANT_PACKET_VC;
+	  _response_packets[dest].push_back(ff);
 	}
 	_sent_data_flits[f->cl][f->src]++;
 	if(f->tail){
@@ -1535,7 +1575,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       
       gStatPureNetworkLatency[f->cl]->AddSample( f->atime - head->ntime);
 #endif
-      _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
+      if(f->res_type==RES_TYPE_SPEC){
+	_spec_frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
+      } else {
+	_frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
+      }
       //      if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
 	//	_tlat_stats[f->cl]->AddSample( f->atime - f->ttime );
    
@@ -2036,7 +2080,9 @@ void TrafficManager::_Step( )
       if(flb->_vc == -1 &&
 	 flb->send_spec_ready()){
 	_FlowVC( flb);
-	_reservation_set[source].insert(flb);
+	if(!RESERVATION_TAIL_RESERVE){
+	  _reservation_set[source].insert(flb);
+	}
       }
       if(gECN){
 	flb->ecn_update();
@@ -2321,6 +2367,7 @@ void TrafficManager::_ClearStats( )
     _plat_stats[c]->Clear( );
     _tlat_stats[c]->Clear( );
     _frag_stats[c]->Clear( );
+    _spec_frag_stats[c]->Clear( );
 #ifdef ENABLE_STATS
     gStatPureNetworkLatency[c]->Clear();
     gStatSpecNetworkLatency[c]->Clear();
@@ -2557,6 +2604,8 @@ bool TrafficManager::_SingleSim( )
 	  cout << "Average latency = " << cur_latency << endl;
 	  cout << "Maximum latency = " << _plat_stats[c]->Max( ) << endl;
 	  cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
+	  cout << "\tAverage spec fragmentation = " << _spec_frag_stats[c]->Average( ) << endl;
+	  
 	  cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 
 	  cout << "Total in-flight flits = " << _total_in_flight_flits[c].size() << " (" << _measured_in_flight_flits[c].size() << " measured)" << endl;
@@ -2565,7 +2614,7 @@ bool TrafficManager::_SingleSim( )
 	  if(_stats_out)
 	    *_stats_out << "lat(" << c+1 << ") = " << cur_latency << ";" << endl
 			<< "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
-			<< "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl;
+			<< "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" 			<< "spec_frag_hist(" << c+1 << ",:) = " << *_spec_frag_stats[c] << ";" << endl;
 	} 
       }
     }
@@ -2640,6 +2689,7 @@ bool TrafficManager::_SingleSim( )
       cout << "Average latency = " << cur_latency << endl;
       cout << "Maximum latency = " << _plat_stats[0]->Max( ) << endl;
       cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
+      cout << "\tAverage spec fragmentation = " << _spec_frag_stats[0]->Average( ) << endl;
       cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
       if(_stats_out) {
 	*_stats_out << "batch_time(" << total_phases + 1 << ") = " << _time << ";" << endl
@@ -2647,7 +2697,9 @@ bool TrafficManager::_SingleSim( )
 		    << "lat_hist(" << total_phases + 1 << ",:) = "
 		    << *_plat_stats[0] << ";" << endl
 		    << "frag_hist(" << total_phases + 1 << ",:) = "
-		    << *_frag_stats[0] << ";" << endl;
+		    << *_frag_stats[0] << ";" 
+		    << "spec_frag_hist(" << total_phases + 1 << ",:) = "
+		    << *_spec_frag_stats[0] << ";" << endl;
 
 	//		    << "pair_sent(" << total_phases + 1 << ",:) = [ ";
 	for(int i = 0; i < _nodes; ++i) {
@@ -2733,13 +2785,15 @@ bool TrafficManager::_SingleSim( )
 	cout << "Average latency = " << cur_latency << endl;
 	cout << "Maximum latency = " << _plat_stats[c]->Max( ) << endl;
 	cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
+	cout << "\tAverage spec fragmentation = " << _spec_frag_stats[c]->Average( ) << endl;
 	cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 	cout << "Total in-flight flits = " << _total_in_flight_flits[c].size() << " (" << _measured_in_flight_flits[c].size() << " measured)" << endl;
 	//c+1 due to matlab array starting at 1
 	if(_stats_out) {
 	  *_stats_out << "lat(" << c+1 << ") = " << cur_latency << ";" << endl
 		      << "lat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
-		      << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl;
+		      << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";"
+		      << "spec_frag_hist(" << c+1 << ",:) = " << *_spec_frag_stats[c] << ";" << endl;
 	    //		      << "pair_sent(" << c+1 << ",:) = [ ";
 	  for(int i = 0; i < _nodes; ++i) {
 	    for(int j = 0; j < _nodes; ++j) {

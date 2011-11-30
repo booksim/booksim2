@@ -199,6 +199,7 @@ protected:
   vector<Stats *> _overall_max_tlat;  
 
   vector<Stats *> _frag_stats;
+  vector<Stats *> _spec_frag_stats;
   vector<Stats *> _overall_min_frag;
   vector<Stats *> _overall_avg_frag;
   vector<Stats *> _overall_max_frag;

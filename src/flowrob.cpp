@@ -39,17 +39,30 @@ Flit* FlowROB::insert(Flit* f){
   case RES_STATUS_ASSIGNED:
     //second res for this flow
     if(f->res_type == RES_TYPE_RES){
+      //this is possible when reservation comes with the last packet
+      if(_sn_ceiling>f->sn){
+	f->Free();
+	rf = NULL;
+	break;
+      }
       _sn_ceiling = f->sn+f->payload;
       rf = f;
       break;
     }
-
     //is it a duplicate
     if(_rob.count(f->sn)!=0){
       f->Free();
       rf = NULL;
     } else {
       if(f->head){
+	//this is possible when reservation comes with the last packet
+	if(f->res_type== RES_TYPE_NORM && f->payload!=-1){
+	  if(_sn_ceiling == f->sn+f->payload+32){
+	    f->payload=-1;
+	  } else {
+	    _sn_ceiling = f->sn+f->payload+32;
+	  }
+	}
 	_pid.insert(f->pid);
 	if(!_rob.empty()){
 	  if(f->sn > (*_rob.rbegin())+1){

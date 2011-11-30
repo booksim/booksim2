@@ -70,6 +70,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["reservation_queuing_drop"]= 1;
   _int_map["reservation_post_wait"]= 0;
   _int_map["reservation_spec_voq"] = 0;
+  _int_map["reservation_tail_reserve"]=0;
 
   _int_map["bystander_sender"] = 0;
   _int_map["bystander_receiver"] = 0;
