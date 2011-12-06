@@ -101,7 +101,6 @@ class BufferState : public Module {
   vector<int> _last_id;
   vector<int> _last_pid;
 
-
 public:
 
   BufferState( const Configuration& config, 
@@ -116,6 +115,7 @@ public:
 
   bool IsFullFor( int vc = 0 ) const;
   bool IsEmptyFor( int vc = 0 ) const;
+  bool IsAvailableFor( int vc,int size) const;
   bool IsAvailableFor( int vc = 0 ) const;
   bool HasCreditFor( int vc = 0 ) const;
   

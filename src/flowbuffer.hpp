@@ -24,13 +24,13 @@ class TrafficManager;
 
 struct flow{
   int flid;
-  char vc;
+  short vc;
   int flow_size;
   int create_time;
   int data_to_generate;
   short src;
   short dest;
-  char cl;
+  short cl;
 
   int sn;
   flow(){

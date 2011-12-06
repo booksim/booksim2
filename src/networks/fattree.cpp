@@ -146,10 +146,10 @@ void FatTree::_BuildNet( const Configuration& config )
 					    _inject_cred[link]);
       _Router( _n-1, pos)->AddOutputChannel( _eject[link],
 					     _eject_cred[link]);
-      _inject[link]->SetLatency( 1 );
-      _inject_cred[link]->SetLatency( 1 );
-      _eject[link]->SetLatency( 1 );
-      _eject_cred[link]->SetLatency( 1 );
+      _inject[link]->SetLatency( 5 );
+      _inject_cred[link]->SetLatency( 5 );
+      _eject[link]->SetLatency( 5  );
+      _eject_cred[link]->SetLatency( 5 );
     }
   }
 

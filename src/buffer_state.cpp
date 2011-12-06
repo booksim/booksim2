@@ -96,6 +96,7 @@ Module( parent, name ), _shared_occupied(0), _active_vcs(0)
   _cur_occupied.resize(_vcs, 0);
   _last_id.resize(_vcs, -1);
   _last_pid.resize(_vcs, -1);
+
 }
 
 BufferState::~BufferState()
@@ -207,6 +208,27 @@ bool BufferState::IsEmptyFor( int vc  ) const
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
   return ( _cur_occupied[vc] == 0 );
 }
+
+bool BufferState::IsAvailableFor( int vc,int size) const
+{
+  assert(size!=-1);
+  assert( ( vc >= 0 ) && ( vc < _vcs ) );
+  assert(_vc_busy_when_full);
+  assert(_cut_through);
+  if(_in_use[vc]){
+    return false;
+  } else {
+    //duplicate isfullfir with minor  chanles
+    if(gReservation){
+      if(vc==RES_RESERVED_VCS){
+	return (_cur_occupied[vc]+size <= _spec_vc_buf_size);
+      } 
+    }
+    return( _cur_occupied[vc]+size <= _vc_buf_size ) ;
+  }
+
+}
+
 
 bool BufferState::IsAvailableFor( int vc ) const
 {

@@ -110,6 +110,7 @@ protected:
 
   // ============ Injection VC states  ============ 
 
+  bool _cut_through;
   vector<vector<BufferState *> > _buf_states;
   vector<vector<vector<int> > > _last_vc;
   vector<vector<vector<int> > > _last_interm;

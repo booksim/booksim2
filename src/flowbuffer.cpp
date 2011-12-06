@@ -90,8 +90,9 @@ void FlowBuffer::Init( flow* f){
   _guarantee_sent = 0;
   if(_mode == RES_MODE && fl->flow_size>=RESERVATION_PACKET_THRESHOLD){
     _reservation_flit  = Flit::New();
-    _reservation_flit ->src = _src;
-    _reservation_flit ->dest = fl->dest;
+    _reservation_flit->packet_size=1;
+    _reservation_flit->src = _src;
+    _reservation_flit->dest = fl->dest;
     _reservation_flit->flid = fl->flid;
     _reservation_flit->flbid = _id;
     _reservation_flit->sn = 0;
@@ -257,8 +258,9 @@ void FlowBuffer::active_update(){
 
       if(!RESERVATION_TAIL_RESERVE){
 	_reservation_flit  = Flit::New();
-	_reservation_flit ->src = _src;
-	_reservation_flit ->dest = fl->dest;
+	_reservation_flit->packet_size=1;
+	_reservation_flit->src = _src;
+	_reservation_flit->dest = fl->dest;
 	_reservation_flit->flid = fl->flid;
 	_reservation_flit->flbid = _id;
 	_reservation_flit->sn = _total_reserved_slots;

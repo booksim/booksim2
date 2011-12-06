@@ -51,6 +51,7 @@ public:
   int  sn;
   int flid;
   int payload;
+  short packet_size;
   int head_sn;
 
   int flbid;

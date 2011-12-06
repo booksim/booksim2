@@ -98,6 +98,7 @@ void Flit::Reset()
   //ring_par = -1;
   //data = 0;
   payload = -1;
+  packet_size=-1;
 }  
 
 Flit * Flit::New() {

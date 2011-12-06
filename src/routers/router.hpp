@@ -87,6 +87,8 @@ public:
   vector<int> _input_grant;
   vector<long> _vc_congested_sum;
   vector<int> _vc_activity;
+  int _holds;
+  int _hold_cancels;
 
 public:
   Router( const Configuration& config,

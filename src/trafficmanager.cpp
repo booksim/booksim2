@@ -623,7 +623,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
 
   // ============ Injection VC states  ============ 
-
+  _cut_through = (config.GetInt("cut_through")==1);
   _buf_states.resize(_nodes);
   for ( int source = 0; source < _nodes; ++source ) {
     _buf_states[source].resize(_subnets);
@@ -1058,6 +1058,7 @@ TrafficManager::~TrafficManager( )
 
 Flit* TrafficManager::IssueSpecial(int src, Flit* ff){
   Flit * f  = Flit::New();
+  f->packet_size=1;
   f->flid = ff->flid;
   f->sn = ff->sn;
   f->id = _cur_id++;
@@ -1762,6 +1763,7 @@ int TrafficManager::_GeneratePacket( flow* fl, int n)
 	f->head = true;
 	//packets are only generated to nodes smaller or equal to limit
 	f->dest = fl->dest;
+	f->packet_size=size;
       } else {
 	f->head = false;
 	f->dest = -1;
@@ -2023,7 +2025,8 @@ void TrafficManager::_Step( )
 	Flit* f = _response_packets[source].front();
 	assert(f);
 	assert(f->head);//only heads
-	if(dest_buf->IsAvailableFor(f->vc) &&
+	if(((!_cut_through && dest_buf->IsAvailableFor(f->vc)) || 
+	    ( _cut_through && dest_buf->IsAvailableFor(f->vc,f->packet_size))) &&
 	   dest_buf->HasCreditFor(f->vc)){
 	  dest_buf->TakeBuffer(f->vc); 
 	  dest_buf->SendingFlit(f);
@@ -2090,7 +2093,8 @@ void TrafficManager::_Step( )
       node_ready = 	node_ready || flb->eligible();
       if(ready_flow_buffer==NULL){
 	if(flb->eligible() &&
-	   (dest_buf->IsAvailableFor(flb->_vc)||!flb->_tail_sent)&&
+	   (((!_cut_through && dest_buf->IsAvailableFor(flb->_vc))||
+	     ( _cut_through && dest_buf->IsAvailableFor(flb->_vc, _packet_size[flb->fl->cl])))|| !flb->_tail_sent)&&
 	   dest_buf->HasCreditFor(flb->_vc)){
 	  _flow_buffer_arb[source]->AddRequest(flb->_dest, flb->_dest, flb->priority());
 	  flow_bids++;
@@ -3449,6 +3453,17 @@ void TrafficManager::_DisplayTedsShit(){
 	max_outputs=rrr[i]->NumOutputs();
       }
     }
+    *_stats_out <<"router_hold=[";
+    for(int i = 0; i<_routers; i++){
+      *_stats_out <<rrr[i]->_holds<<" ";
+    }
+    *_stats_out <<"];"<<endl;
+    *_stats_out <<"router_hold_cancel=[";
+    for(int i = 0; i<_routers; i++){
+      *_stats_out <<rrr[i]->_hold_cancels<<" ";
+    }
+    *_stats_out <<"];"<<endl;
+
     for(int i = 0; i<_routers; i++){
       *_stats_out <<"router_"<<i<<"_activity=["
 		  <<rrr[i]->_vc_activity;

@@ -114,6 +114,8 @@ class IQRouter : public Router {
   vector<queue<Credit *> > _credit_buffer;
 
   bool _hold_switch_for_packet;
+  vector<bool> _switch_hold_in_skip;
+  vector<bool> _switch_hold_out_skip;
   vector<int> _switch_hold_in;
   vector<int> _switch_hold_out;
   vector<int> _switch_hold_vc;
