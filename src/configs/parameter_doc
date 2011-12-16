@@ -1,0 +1,42 @@
+General network parameters
+default_channel_latency: channel latency of all channels for the fat tree topology
+Injection/ejection port of the fattree has been set at 5 cycles. 
+voq: Enable VOQ for routers
+cut_through: use virtual cut-through instead of the default wormhole router
+flow_size: traffic are created as "flows" or messages, this specifies the number of packets in each message. 1 to inf. 
+
+ECN parameters
+ECN: enable ECN
+ird_reset_timer: number of cycles before increasing injection rate
+ecn_buffer_threshold: threshold indicating the congestion of the next buffer
+ecn_congestion_threshold:  threshold to indicate the congestion of the current buffer
+ird_scaling_factor: inject rate increment
+ecn_ird_increase: injection rate decrement (scaled by ird_scaling_factor)
+ecn_ird_limit: 1/Minimum injection rate threshold
+
+
+
+
+SRP paramters
+hotspot_reservation: turn on SRP
+expiration_time: TTL
+res_vcs: number of speculative VCs
+reservation_buffer_size_drop: if the down stream VC looks full, go ahead and drop the packet at the current router
+reservation_spec_vc_size: Input buffer size of the speculative VC can be set independently
+reservation_spec_off: Turn off speculative packets
+reservation_always_succeed: grant packets always return starting time of -1
+reservation_rtt: the reservaiton starting time is adjusted by the control packet latency
+reservation_overhead_factor: \epsilon in the paper
+fast_reservation_transmit: send the reservation ASAP when multiple flows are competing for injectinon
+reservation_packet_threshold: minimum reservation flow size from the paper
+reservation_chunk_limit: reservation granularity from the paper
+fast_retransmit: Retransmit outstanding speculative packet once starting time has reached
+reservation_queuing_drop: use only queuing delay when computing the TTL
+reservation_spec_voq: enable VOQ for the speculative VC as well
+reservation_tail_reserve: reservation for the next chunk in a large message is sent with the last packet instead of using another reservation packet
+
+
+A lot of constants are listed in reservation.hpp
+
+Sample test run takes about 2 minutes:
+./booksim configs/resfast_config configs/ftree256 configs/uniform_config flow_size=4 injection_rate=0.5 sample_period=10000

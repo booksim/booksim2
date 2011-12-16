@@ -65,7 +65,7 @@ BookSimConfig::BookSimConfig( )
   _float_map["reservation_overhead_factor"] = 1.05;
   _int_map["fast_reservation_transmit"] = 0;
   _int_map["reservation_packet_threshold"] = 64;
-  _int_map["reservation_chunk_limit"] = 128;
+  _int_map["reservation_chunk_limit"] = 256;
   _int_map["fast_retransmit"] = 0;
   _int_map["reservation_queuing_drop"]= 1;
   _int_map["reservation_post_wait"]= 0;
@@ -101,10 +101,8 @@ BookSimConfig::BookSimConfig( )
   _int_map["ecn_ird_increase"] = 4;
   _int_map["ecn_buffer_hysteresis"] = 0;
   _int_map["ecn_credit_hysteresis"] = 0;
-  _int_map["ecn_ird_limit"]=10000000;
   _int_map["ecn_aimd"] = 0;;
   _int_map["ecn_ird_limit"]=1000;
-  _int_map["ecn_aimd"] = 0;
   //========================================================
   // Network options
   //========================================================
