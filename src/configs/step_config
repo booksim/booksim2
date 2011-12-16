@@ -1,0 +1,23 @@
+
+
+classes=2;
+
+flow_size = {8,8};
+transient_burst = 0;
+transient_enable = 1;
+transient_duration=150000;
+transient_granularity=30;
+transient_stat_size=6666;
+
+injection_rate = {0.4,1.0};
+injection_process={bernoulli,hotspot_test};
+traffic       = {background_uniform,noself_hotspot};
+hotspot_nodes={32};
+hotspot_rates={1};
+
+const_flits_per_packet = 32;
+sample_period=250000;
+
+sim_count=1;
+max_samples=1;
+drain_measured_only=1;

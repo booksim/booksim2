@@ -1,0 +1,36 @@
+vc_allocator = separable_input_first;
+sw_allocator = separable_input_first;
+alloc_iters  = 1;
+
+
+
+priority = other;
+
+output_buffer_size=64;
+internal_speedup=2.0;
+vc_buf_size = 512;
+
+num_vcs     = 2;
+voq=1;
+use_voq_size=1;
+ECN = 1;
+
+
+ecn_timer_only =1;
+ecn_buffer_threshold=64;
+ird_reset_timer=600;
+ecn_ird_limit=640;
+ird_scaling_factor=16;
+ecn_ird_increase = 16;
+ecn_congestion_threshold=500;
+
+ecn_buffer_hysteresis=0;
+ecn_credit_hysteresis=8;
+
+
+seed = 54321;
+
+vc_busy_when_full=1;
+hold_switch_for_packet=1;
+cut_through=1;
+deadlock_warn_timeout=99999999;

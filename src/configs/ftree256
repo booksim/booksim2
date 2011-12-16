@@ -1,0 +1,5 @@
+topology = fattree;
+k  = 16;
+n  = 2;
+routing_function = nca;
+default_channel_latency=5;

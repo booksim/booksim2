@@ -1,0 +1,14 @@
+create_permanent_flows=0;
+flow_size = 16;
+const_flits_per_packet = 16;
+
+injection_rate = 1.0;
+injection_process=hotspot_test;
+traffic       = noself_hotspot;
+hotspot_nodes = {32};
+hotspot_rates = {1};
+hotspot_senders = {71,75,185,15,50,138,127,144,20,8,152,180,134,240,249,228,135,123,56,87};
+
+//{166,57,152,116,182,182,17,117,90,121,246,189,19,132,71,106,230,170,24,12,214,124,243,27,150,66,100,243,186,206,109,129,210,217,211,227,21,165,180,230};
+
+//{178,118,59,214,71,140,165,11};

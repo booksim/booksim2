@@ -1,0 +1,9 @@
+create_permanent_flows=1;
+flow_size = 9999999;
+const_flits_per_packet = 16;
+
+injection_rate = 1.0;
+injection_process=hotspot_test;
+traffic       = noself_hotspot;
+hotspot_nodes = {0};
+hotspot_rates = {1};
