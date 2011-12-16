@@ -486,8 +486,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   // ============ Traffic ============ 
 
   _classes = config.GetInt("classes");
-  gStatPureNetworkLatency = new Stats*[2];
-  gStatSpecNetworkLatency = new Stats*[2];
+  gStatPureNetworkLatency = new Stats*[_classes];
+  gStatSpecNetworkLatency = new Stats*[_classes];
   for(int c = 0; c < _classes; ++c) {
     gStatSpecNetworkLatency[c] =  new Stats( this, "spec_net_hist" , 1.0, 5000 );
     gStatPureNetworkLatency[c] =  new Stats( this, "net_hist" , 1.0, 5000 );
@@ -620,6 +620,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
       Error("Invalid injection process: " + inject[c]);
     }
     _injection_process.push_back(iter->second);
+  }
+  if(TRANSIENT_BURST){
+    _burst_process = gInjectionProcessMap["burst"];
   }
 
   // ============ Injection VC states  ============ 
@@ -1327,6 +1330,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 #endif
       } else {
 	if(!f->head && f->payload!=-1){
+	  //this should almost always be positive, unless the expected_latency
+	  //was over estimated
 	  if(_time-f->payload>=0){
 	    gStatReservationMismatch_POS->AddSample(_time-f->payload);
 	  } else {
@@ -1683,7 +1688,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
       }
       if(TRANSIENT_ENABLE && TRANSIENT_BURST && transient_started && cl == transient_class){
 	cout<<"burst"<<endl;
-	return 1;
+	return _burst_process( source, _load[cl] ) ? 1 : 0;
       } else {
 	return _injection_process[cl]( source, _load[cl] ) ? 1 : 0;
       }
@@ -2250,6 +2255,9 @@ void TrafficManager::_Step( )
 	  }
 	  gStatFlowSenderLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
 	  gStatFastRetransmit->AddSample(ready_flow_buffer->_fast_retransmit);
+	  if(!gReservation){
+	    gStatFlowLatency->AddSample(GetSimTime()-_flow_buffer[source][f->flbid]->fl->create_time);
+	  }
 #endif
 	  if(flow_done_status==FLOW_DONE_DONE){
 	    _flow_buffer[source][f->flbid]->Deactivate();

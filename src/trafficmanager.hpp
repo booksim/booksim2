@@ -101,6 +101,7 @@ protected:
 
   vector<tTrafficFunction> _traffic_function;
   vector<tInjectionProcess> _injection_process;
+  tInjectionProcess _burst_process;
 
   // ============ Message priorities ============ 
 

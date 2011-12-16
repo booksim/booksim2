@@ -55,6 +55,7 @@ void FlowBuffer::Activate(int src, int id,  int mode, flow* f){
 void FlowBuffer::Deactivate(){
   //  gStatResEarly->AddSample(_reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size)-1-GetSimTime());
   int sample = _reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size)-1-_last_send_time;
+  //negative early means late
   if(sample>=0){
     gStatResEarly_POS->AddSample(sample);  
   } else {

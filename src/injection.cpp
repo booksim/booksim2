@@ -48,6 +48,21 @@
 
 map<string, tInjectionProcess> gInjectionProcessMap;
 bool permanent_flow;
+extern set<int> hs_lookup;
+map<int, double> congestion_rate_lookup;
+extern int bystander_sender;
+extern bool hs_send_all;
+extern set<int> hs_senders;
+
+bool background( int source, double rate )
+{
+
+  if(hs_senders.count(source)!=0 || hs_lookup.count(source)!=0){
+    return false;
+  } else {
+    return (RandomFloat( ) < rate);
+  }
+}
 //=============================================================
 
 
@@ -106,11 +121,6 @@ bool on_off( int source, double rate )
 }
 
 
-extern set<int> hs_lookup;
-map<int, double> congestion_rate_lookup;
-extern int bystander_sender;
-extern bool hs_send_all;
-extern set<int> hs_senders;
 
 //special injection function fo congestion test, the rate argumetn does nothing
 //rate is overloaded onthe "hotspot"rate option
@@ -120,6 +130,15 @@ bool injection_congestion_test( int source, double rate ){
   } else if(source == bystander_sender){
     return bernoulli( source, rate );
   }else {
+    return false;
+  }
+}
+
+
+bool injection_burst(int source, double rate){
+  if(hs_senders.count(source)!=0){
+    return true;
+  } else {
     return false;
   }
 }
@@ -149,8 +168,10 @@ void InitializeInjectionMap( const Configuration & config )
 
   gInjectionProcessMap["bernoulli"] = &bernoulli;
   gInjectionProcessMap["on_off"]    = &on_off;
+  gInjectionProcessMap["burst"] = &injection_burst;
   gInjectionProcessMap["congestion_test"]    = &injection_congestion_test;
   gInjectionProcessMap["hotspot_test"]    = &injection_hotspot_test;
+  gInjectionProcessMap["background"]    = &background;
 
   permanent_flow = (config.GetInt("create_permanent_flows")==1);
   vector<int> hotspot_senders = config.GetIntArray("hotspot_senders");
