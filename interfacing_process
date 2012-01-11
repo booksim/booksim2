@@ -18,7 +18,8 @@ lex and yacc not working yet
 
 dont' for get a put a blank line at the end of Makefile.include
 
-comment out all the garnet/orion, you can keep the simple network, make sure Network::createNetwork still exist somwhere
+comment out all the garnet/orion, you can keep the simple network, make sure Network::createNetwork still exist somwhere. This is because garnet calls their router Router lol
+
 
 create a global variable for booksim in ruby/config/config.include
 
