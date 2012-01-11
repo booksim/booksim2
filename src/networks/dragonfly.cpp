@@ -785,9 +785,9 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	  nonmin_queue_size = MAX(r->GetUsedCredit(nonmin_router_output,0,0),0);
 	  nonmin_roc = r->GetROC(nonmin_router_output,0,0);	  
 	} else {	  
-	  min_queue_size = MAX(r->GetUsedCredit(min_router_output),0) ; 
+	  min_queue_size = MAX(r->GetUsedCredit(min_router_output,1,1),0) ; 
 	  min_roc = r->GetROC(min_router_output);
-	  nonmin_queue_size = MAX(r->GetUsedCredit(nonmin_router_output),0);
+	  nonmin_queue_size = MAX(r->GetUsedCredit(nonmin_router_output,0,0),0);
 	  nonmin_roc = r->GetROC(nonmin_router_output);
 	}
 
