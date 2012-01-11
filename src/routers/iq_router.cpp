@@ -51,7 +51,26 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 		    string const & name, int id, int inputs, int outputs )
 : Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
-  _vcs         = config.GetInt( "num_vcs" );
+  _real_vcs         = config.GetInt( "num_vcs" );
+  _voq = (config.GetInt("voq")==1);
+  if(_voq){
+    _vcs = config.GetInt( "num_vcs" )*outputs ;
+
+    _voq_init_route = new OutputSet();
+    _voq_pid.resize(outputs*_real_vcs);
+    _voq_route_set.resize(outputs*_vcs);
+    for(int i = 0; i<outputs; i++){
+      for(int j = 0; j<_vcs; j++){
+	int index = i*_vcs+j;
+	int real_vc  = j/outputs;
+	_voq_route_set[index] = new OutputSet();
+	_voq_route_set[index]->Add(i,real_vc);
+      }
+    }
+  } else {
+    _vcs = _real_vcs;
+  }
+
   _classes     = config.GetInt( "classes" );
   _speculative = (config.GetInt("speculative") > 0);
   _spec_check_elig = (config.GetInt("spec_check_elig") > 0);
@@ -107,11 +126,19 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     arb_type = config.GetStr( "vc_alloc_arb_type" );
     iters = config.GetInt( "vc_alloc_iters" );
     if(iters == 0) iters = config.GetInt("alloc_iters");
-    _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
-					     alloc_type,
-					     _vcs*_inputs, 
-					     _vcs*_outputs,
-					     iters, arb_type );
+    if(_voq){
+      _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
+					       alloc_type,
+					       _vcs*_inputs, 
+					       _real_vcs*_outputs,
+					       iters, arb_type );
+    } else {
+      _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
+					       alloc_type,
+					       _vcs*_inputs, 
+					       _vcs*_outputs,
+					       iters, arb_type );
+    }
 
     if ( !_vc_allocator ) {
       Error("Unknown vc_allocator type: " + alloc_type);
@@ -297,10 +324,30 @@ void IQRouter::_InputQueuing( )
     Flit * const & f = iter->second;
     assert(f);
 
-    int const & vc = f->vc;
-    assert((vc >= 0) && (vc < _vcs));
+    int vc = f->vc;
+    assert((vc >= 0) && (vc < _real_vcs));
 
     Buffer * const cur_buf = _buf[input];
+
+    if(_voq){
+      if(f->head){
+	int old_vc = f->vc;
+	_rf(this, f, input, _voq_init_route, false);
+	set<OutputSet::sSetElement> const setlist = _voq_init_route->GetSet();
+	for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
+	    iset != setlist.end();
+	    ++iset) {
+	  
+	  int  out_port = iset->output_port;
+	  f->vc = old_vc;
+	  vc =  old_vc*_outputs + out_port;
+	  _voq_pid[input*_real_vcs+f->vc]=pair<int, int>(f->pid, vc);
+	}
+      } else {
+	assert(_voq_pid[input*_real_vcs+f->vc].first==f->pid);
+	vc = _voq_pid[input*_real_vcs+f->vc].second;
+      }
+    }
 
     if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -336,7 +383,9 @@ void IQRouter::_InputQueuing( )
 		     << " (front: " << f->id
 		     << ")." << endl;
 	}
-	cur_buf->Route(vc, _rf, this, f, input);
+	if(!_voq){
+	  cur_buf->Route(vc, _rf, this, f, input);
+	}
 	cur_buf->SetState(vc, VC::vc_alloc);
 	if(_speculative) {
 	  _sw_alloc_vcs.push_back(make_pair(-1, make_pair(make_pair(input, vc),
@@ -455,8 +504,8 @@ void IQRouter::_RouteUpdate( )
 		 << " (front: " << f->id
 		 << ")." << endl;
     }
-
-    cur_buf->Route(vc, _rf, this, f, input);
+    if(!_voq)
+      cur_buf->Route(vc, _rf, this, f, input);
     cur_buf->SetState(vc, VC::vc_alloc);
     if(_speculative) {
       _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second, -1)));
@@ -514,7 +563,12 @@ void IQRouter::_VCAllocEvaluate( )
 		 << ")." << endl;
     }
     
-    OutputSet const * const route_set = cur_buf->GetRouteSet(vc);
+    const OutputSet *              route_set;
+    if(_voq){
+      route_set = _voq_route_set[input*_vcs+vc];
+    } else {
+      route_set = cur_buf->GetRouteSet(vc);
+    }
     assert(route_set);
 
     int const out_priority = cur_buf->GetPriority(vc);
@@ -550,7 +604,7 @@ void IQRouter::_VCAllocEvaluate( )
 		       << ")." << endl;
 	    watched = true;
 	  }
-	  _vc_allocator->AddRequest(input*_vcs + vc, out_port*_vcs + out_vc, 0, 
+	  _vc_allocator->AddRequest(input*_vcs + vc, out_port*_real_vcs + out_vc, 0, 
 				    in_priority, out_priority);
 	} else {
 	  if(f->watch)
@@ -595,10 +649,10 @@ void IQRouter::_VCAllocEvaluate( )
 
     if(output_and_vc >= 0) {
 
-      int const match_output = output_and_vc / _vcs;
+      int const match_output = output_and_vc / _real_vcs;
       assert((match_output >= 0) && (match_output < _outputs));
-      int const match_vc = output_and_vc % _vcs;
-      assert((match_vc >= 0) && (match_vc < _vcs));
+      int const match_vc = output_and_vc % _real_vcs;
+      assert((match_vc >= 0) && (match_vc < _real_vcs));
 
       Buffer const * const cur_buf = _buf[input];
       assert(!cur_buf->Empty(vc));
@@ -637,10 +691,10 @@ void IQRouter::_VCAllocEvaluate( )
     
     if(output_and_vc >= 0) {
       
-      int const match_output = output_and_vc / _vcs;
+      int const match_output = output_and_vc / _real_vcs;
       assert((match_output >= 0) && (match_output < _outputs));
-      int const match_vc = output_and_vc % _vcs;
-      assert((match_vc >= 0) && (match_vc < _vcs));
+      int const match_vc = output_and_vc % _real_vcs;
+      assert((match_vc >= 0) && (match_vc < _real_vcs));
       
       BufferState const * const dest_buf = _next_buf[match_output];
       
@@ -710,10 +764,10 @@ void IQRouter::_VCAllocUpdate( )
     
     if(output_and_vc >= 0) {
       
-      int const match_output = output_and_vc / _vcs;
+      int const match_output = output_and_vc / _real_vcs;
       assert((match_output >= 0) && (match_output < _outputs));
-      int const match_vc = output_and_vc % _vcs;
-      assert((match_vc >= 0) && (match_vc < _vcs));
+      int const match_vc = output_and_vc % _real_vcs;
+      assert((match_vc >= 0) && (match_vc < _real_vcs));
       
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -984,7 +1038,14 @@ void IQRouter::_SWAllocEvaluate( )
     // will also speculatively bid for the switch regardless of whether the VC  
     // allocation succeeds.
     
-    OutputSet const * const route_set = cur_buf->GetRouteSet(vc);
+
+	const OutputSet *route_set;
+	if(_voq){
+	  route_set = _voq_route_set[input*_vcs+vc];
+	} else {
+	  route_set = cur_buf->GetRouteSet(vc);
+	}
+
     assert(route_set);
     
     set<OutputSet::sSetElement> const setlist = route_set->GetSet();
@@ -1228,7 +1289,7 @@ void IQRouter::_SWAllocEvaluate( )
 			 << " due to misspeculation." << endl;
 	    }
 	    iter->second.second = -1;
-	  } else if((output_and_vc / _vcs) != output) {
+	  } else if((output_and_vc / _real_vcs) != output) {
 	    if(f->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 			 << "Discarding grant from input " << input
@@ -1238,7 +1299,7 @@ void IQRouter::_SWAllocEvaluate( )
 			 << " due to port mismatch between VC and switch allocator." << endl;
 	    }
 	    iter->second.second = -1;
-	  } else if(!dest_buf->HasCreditFor((output_and_vc % _vcs))) {
+	  } else if(!dest_buf->HasCreditFor((output_and_vc % _real_vcs))) {
 	    if(f->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 			 << "Discarding grant from input " << input
@@ -1252,7 +1313,14 @@ void IQRouter::_SWAllocEvaluate( )
 
 	} else { // VC allocation is piggybacked onto switch allocation
 
-	  OutputSet const * const route_set = cur_buf->GetRouteSet(vc);
+
+	const OutputSet *route_set;
+	if(_voq){
+	  route_set = _voq_route_set[input*_vcs+vc];
+	} else {
+	  route_set = cur_buf->GetRouteSet(vc);
+	}
+
 	  assert(route_set);
 
 	  set<OutputSet::sSetElement> const setlist = route_set ->GetSet();
@@ -1390,8 +1458,13 @@ void IQRouter::_SWAllocUpdate( )
 	if(_out_queue_credits.count(input) == 0) {
 	  _out_queue_credits.insert(make_pair(input, Credit::New()));
 	}
-	_out_queue_credits.find(input)->second->vc.insert(vc);
-	
+	if(_voq){
+	  int vvc = vc%_vcs;
+	  vvc = vvc/_outputs;
+	  _out_queue_credits.find(input)->second->vc.insert(vvc);
+	} else {
+	  _out_queue_credits.find(input)->second->vc.insert(vc);
+	}
 	if(cur_buf->Empty(vc)) {
 	  if(f->watch) {
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -1434,7 +1507,8 @@ void IQRouter::_SWAllocUpdate( )
 			   << " (front: " << nf->id
 			   << ")." << endl;
 	      }
-	      cur_buf->Route(vc, _rf, this, nf, input);
+	      if(!_voq)
+		cur_buf->Route(vc, _rf, this, nf, input);
 	      cur_buf->SetState(vc, VC::vc_alloc);
 	      if(_speculative) {
 		_sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
@@ -1530,7 +1604,13 @@ void IQRouter::_SWAllocUpdate( )
 	match_vc = -1;
 	int match_prio = numeric_limits<int>::min();
 
-	const OutputSet * route_set = cur_buf->GetRouteSet(vc);
+	const OutputSet *route_set;
+	if(_voq){
+	  route_set = _voq_route_set[input*_vcs+vc];
+	} else {
+	  route_set = cur_buf->GetRouteSet(vc);
+	}
+
 	set<OutputSet::sSetElement> const setlist = route_set->GetSet();
 
 	for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
@@ -1546,7 +1626,7 @@ void IQRouter::_SWAllocUpdate( )
 		 ((match_vc < 0) || 
 		  RoundRobinArbiter::Supersedes(out_vc, iset->pri, 
 						match_vc, match_prio, 
-						vc_offset, _vcs))) {
+						vc_offset, _real_vcs))) {
 		match_vc = out_vc;
 		match_prio = iset->pri;
 	      }
@@ -1566,7 +1646,7 @@ void IQRouter::_SWAllocUpdate( )
 	cur_buf->SetOutput(vc, output, match_vc);
 	dest_buf->TakeBuffer(match_vc);
 
-	_vc_rr_offset[output*_classes+cl] = (match_vc + 1) % _vcs;
+	_vc_rr_offset[output*_classes+cl] = (match_vc + 1) % _real_vcs;
 
       } else {
 
@@ -1600,7 +1680,13 @@ void IQRouter::_SWAllocUpdate( )
       if(_out_queue_credits.count(input) == 0) {
 	_out_queue_credits.insert(make_pair(input, Credit::New()));
       }
-      _out_queue_credits.find(input)->second->vc.insert(vc);
+      if(_voq){
+	int vvc = vc%_vcs;
+	vvc = vvc/_outputs;
+	_out_queue_credits.find(input)->second->vc.insert(vvc);
+      } else {
+	_out_queue_credits.find(input)->second->vc.insert(vc);
+      }
 
       if(cur_buf->Empty(vc)) {
 	if(f->tail) {
@@ -1622,7 +1708,8 @@ void IQRouter::_SWAllocUpdate( )
 			 << " (front: " << nf->id
 			 << ")." << endl;
 	    }
-	    cur_buf->Route(vc, _rf, this, nf, input);
+	    if(!_voq)
+	      cur_buf->Route(vc, _rf, this, nf, input);
 	    cur_buf->SetState(vc, VC::vc_alloc);
 	    if(_speculative) {
 	      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,

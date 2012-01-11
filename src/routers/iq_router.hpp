@@ -50,7 +50,15 @@ class BufferMonitor;
 
 class IQRouter : public Router {
 
+  bool _voq;
+  vector<pair<int,int> > _voq_pid;
+  //this is dynamic for arriving packets
+  OutputSet* _voq_init_route;
+  //this is static for a VOQ VC
+  vector<OutputSet*> _voq_route_set;
+
   int _vcs;
+  int _real_vcs;
   int _classes;
 
   bool _speculative;

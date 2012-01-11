@@ -36,7 +36,7 @@ QUANT  = /usr/bin/quantify
 DEFINE =
 DEFINE_TEST = -DUSE_GUI
 INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
-CPPFLAGS = -Wall -O3  -ggdb $(INCPATH) $(DEFINE) 
+CPPFLAGS = -Wall -O0  -ggdb $(INCPATH) $(DEFINE) 
 LFLAGS =  
 
 
@@ -44,7 +44,7 @@ OBJDIR := obj
 PROG   := booksim
 
 # simulator source files
-CPP_SRCS = main.cpp \
+CPP_SRCS = booksim_main.cpp \
    config_utils.cpp \
    booksim_config.cpp \
    module.cpp \

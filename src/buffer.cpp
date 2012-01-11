@@ -38,8 +38,13 @@ Module( parent, name ), _shared_count(0)
   _vc_size = config.GetInt( "vc_buf_size" );
   _shared_size = config.GetInt( "shared_buf_size" );
 
-  int num_vcs = config.GetInt( "num_vcs" );
-
+  
+  int num_vcs ;
+  if(config.GetInt("voq")==1){
+    num_vcs= config.GetInt( "num_vcs" )*outputs;
+  } else {
+    num_vcs= config.GetInt( "num_vcs" );
+  }
   _vc.resize(num_vcs);
 
   for(int i = 0; i < num_vcs; ++i) {

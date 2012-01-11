@@ -6,6 +6,8 @@
 ***systemsim virtual channel is stored as "msg->VirtualChannel" should we implement multiple network VC per systemsim VC? Currently VC assignment is not implemented, any packet go anywhere it please
 ***If VCs are set, routing algorithm need to be changed to preserve VC between each hop. 
 
+**At somepoint systemsim starts to delete buffers, network statistic collection should end here
+
 **synchronize how systemsim and booksim number the nodes.
 
 **The throughput stats is computed based on network time which is always less than system time since network time only advance when there are packets in flight.

@@ -37,7 +37,7 @@
 
 BookSimConfig::BookSimConfig( )
 { 
-
+  _int_map["voq"] = 0;
   _int_map["perfect_network"] = 0;
   _int_map["perfect_latency"] = 1;
   //========================================================
