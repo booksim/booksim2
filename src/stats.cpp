@@ -36,7 +36,7 @@
 #include "booksim.hpp"
 #include <math.h>
 #include <iostream>
-
+#include <stdio.h>
 #include "stats.hpp"
 
 Stats::Stats( Module *parent, const string &name,

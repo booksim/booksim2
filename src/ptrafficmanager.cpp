@@ -503,9 +503,9 @@ void PTrafficManager::_StepP( int tid)
     //}
 
   thread_time[tid]++;
-
+  
   if(tid == 0){
-    //    cout<<_time<<endl;
+    cout<<"Heart beat "<<_time<<endl;
     ++_time;
     if(_time%_sample_period == 0){
       pthread_mutex_lock(&master_lock);

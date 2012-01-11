@@ -220,13 +220,15 @@ bool AllocatorSim( const Configuration& config )
   double total_time; /* Amount of time we've run */
   struct timeval start_time, end_time; /* Time before/after user code */
   total_time = 0.0;
-  gettimeofday(&start_time, NULL);
+  /*
+    gettimeofday(&start_time, NULL);
+*/
   bool result = trafficManager->Run() ;
-
+  /*
   gettimeofday(&end_time, NULL);
   total_time = ((double)(end_time.tv_sec) + (double)(end_time.tv_usec)/1000000.0)
             - ((double)(start_time.tv_sec) + (double)(start_time.tv_usec)/1000000.0);
-
+  */
   cout<<"Total run time "<<total_time<<endl;
 
   ///Power analysis
