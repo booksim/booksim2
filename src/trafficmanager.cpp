@@ -135,6 +135,8 @@ int DEFAULT_CHANNEL_LATENCY;
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 
+int TOTAL_SPEC_BUFFER=0;
+Stats* gStatSpecCount;
 Stats* gStatDropLateness;
 Stats* gStatSurviveTTL;
 
@@ -335,6 +337,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
 #ifdef ENABLE_STATS
 
+  gStatSpecCount= new Stats(this,"spec count",1.0, 1);
   gStatNodeReady.resize(_nodes,0);
   
   gStatAckReceived.resize(_nodes,0);
@@ -2304,6 +2307,7 @@ void TrafficManager::_Step( )
 
   ++_stat_time;
   ++_time;
+    gStatSpecCount->AddSample(TOTAL_SPEC_BUFFER);
   if(_time%10000==0){
     
     gStatMonitorTransient[0]->push_back(retired_s->NumSamples()+retired_n->NumSamples());
@@ -2313,7 +2317,9 @@ void TrafficManager::_Step( )
     gStatMonitorTransient[4]->push_back(((gStatResEarly_POS->Average()*gStatResEarly_POS->NumSamples())-(gStatResEarly_NEG->Average()*gStatResEarly_NEG->NumSamples()))/(gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples()));
     gStatMonitorTransient[5]->push_back(float(gStatSpecLatency->NumSamples())/_plat_stats[0]->NumSamples()*100);
 
+
     cout<<" Retired "<<retired_s->NumSamples()+retired_n->NumSamples()
+	<<" Spec Out "<<TOTAL_SPEC_BUFFER
 	<<" spec_lat "<<retired_s->Average()
 	<<" norm_lat "<<retired_n->Average()
 	<<" ("<<float(retired_s->NumSamples())/retired_n->NumSamples()<<")"<<endl
@@ -2414,7 +2420,7 @@ void TrafficManager::_ClearStats( )
     }
   }
 #ifdef ENABLE_STATS
-
+  gStatSpecCount->Clear();
   gStatDropLateness->Clear();
   gStatSurviveTTL->Clear();
   gStatNodeReady.clear();
@@ -3378,7 +3384,7 @@ void TrafficManager::_DisplayTedsShit(){
 	       <<gStatFlowStats[FLOW_STAT_LIFETIME+1]<<";\n";
     *_stats_out<<"node_ready=["
 	       <<gStatNodeReady<<"];\n"<<endl;
-
+    *_stats_out<<"spec_count="<<gStatSpecCount->Average()<<";\n";
     for(int i = 0; i<_nodes; i++){
       *_stats_out<< "ird_stat(:,"<<i+1<<")=" 
 		 <<*gStatIRD[i]<<";\n";

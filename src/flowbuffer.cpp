@@ -22,6 +22,7 @@ extern bool RESERVATION_TAIL_RESERVE;
 extern Stats* gStatResEarly_POS;
 extern Stats* gStatResEarly_NEG;
 
+extern int TOTAL_SPEC_BUFFER;
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 
@@ -348,6 +349,7 @@ bool FlowBuffer::ack(int sn){
       bool tail = _flit_buffer[i]->tail;
       _guarantee_sent++;
       _spec_outstanding--;
+      TOTAL_SPEC_BUFFER--;
       _flit_buffer[i]->Free();
       _flit_buffer.erase(i);
       _flit_status.erase(i);
@@ -410,6 +412,7 @@ bool FlowBuffer::nack(int sn){
       _ready++;
       _reserved_slots++;
       _spec_outstanding--;
+      TOTAL_SPEC_BUFFER--;
       if(tail)
 	break;
     }
@@ -544,6 +547,7 @@ Flit* FlowBuffer::send(){
 	  _ready++;
 	  _reserved_slots++;
 	  _spec_outstanding--;
+	  TOTAL_SPEC_BUFFER--;
 	  i->second = FLIT_NORMAL;
 	  if(_flit_buffer[i->first]->tail)
 	    break;
@@ -619,6 +623,7 @@ Flit* FlowBuffer::send(){
 	_ready--;
 	_reserved_slots--;
 	_spec_outstanding++;
+	TOTAL_SPEC_BUFFER++;
 	_last_sn = f->sn;
 	_tail_sent = f->tail;
       } else {
