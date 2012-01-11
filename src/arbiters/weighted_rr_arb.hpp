@@ -45,12 +45,17 @@ class WeightedRRArbiter : public Arbiter {
   int  _pointer ;
 
   vector<int> _share;
+  
+  vector<int> _position;
+  vector<int> _req;
+  vector<int> _total_pri;
+  vector<int> _total_share;
 
 public:
 
   // Constructors
   WeightedRRArbiter( Module *parent, const string &name, int size ) ;
-
+  ~WeightedRRArbiter();
   // Print priority matrix to standard output
   virtual void PrintState() const ;
   

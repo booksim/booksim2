@@ -46,6 +46,32 @@ WeightedRRArbiter::WeightedRRArbiter( Module *parent, const string &name,
 				      int size ) 
   : Arbiter( parent, name, size ), _pointer( 0 ) {
   _share.resize(size,0);
+  _position.resize(size,0);
+  _req.resize(size,0);
+  _total_pri.resize(size,0);
+  _total_share.resize(size,0);
+}
+
+WeightedRRArbiter::~WeightedRRArbiter(){
+  /*
+  cout<<FullName()<<endl;
+  for(int i = 0; i<_size; i++){
+    cout<<_req[i]<<"\t";
+  }
+  cout<<endl;
+  for(int i = 0; i<_size; i++){
+    cout<<_total_pri[i]<<"\t";
+  }
+  cout<<endl;
+  for(int i = 0; i<_size; i++){
+    cout<<_total_share[i]<<"\t";
+  }
+  cout<<endl;
+  for(int i = 0; i<_size; i++){
+    cout<<_position[i]<<"\t";
+  }
+  cout<<endl;
+  */
 }
 
 void WeightedRRArbiter::PrintState() const  {
@@ -62,9 +88,12 @@ void WeightedRRArbiter::UpdateState() {
     if(_share[_selected]==0){
       _pointer = ( _selected + 1 ) % _size ;
     } else {
+      //this is wrong......
       _pointer =  _selected;
     }
   }
+  
+  _position[_pointer]++;
 }
 
 void WeightedRRArbiter::AddRequest( int input, int id, int pri )
@@ -75,7 +104,10 @@ void WeightedRRArbiter::AddRequest( int input, int id, int pri )
   if(_share[input] == 0){
     _share[input] = pri;
   }
-  
+  _req[input]++;
+  _total_pri[input]+=pri;
+  _total_share[input]+=_share[input];
+
   if(!_request[input].valid || (_request[input].pri < pri)) {
     if(_num_reqs == 0) {
       _highest_pri = pri;

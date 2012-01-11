@@ -39,7 +39,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim_config.hpp"
 
 BookSimConfig::BookSimConfig( )
-{ 
+{
+
+  _int_map["disable_input_prio"] = 0;
+  _int_map["disable_output_prio"] = 0;
+
   _int_map["notification_time_threshold"] = 10;
   _int_map["queuing_age"] = 1;
   _int_map["hop_offset"]= 4;

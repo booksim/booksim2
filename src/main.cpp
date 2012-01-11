@@ -158,9 +158,13 @@ bool Simulate( BookSimConfig const & config )
   return result;
 }
 
+void test();
 
 int main( int argc, char **argv )
 {
+
+  //  test();exit(0);
+
 
   BookSimConfig config;
 
@@ -225,4 +229,68 @@ int main( int argc, char **argv )
 
   bool result = Simulate( config );
   return result ? -1 : 0;
+}
+
+
+#include "weighted_rr_arb.hpp"
+void test(){
+
+  int ports = 10;
+  int trials = 100000;
+  float rates[] = {
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.3,
+    0.3,
+    0.3,
+    0.2,
+    0.2,
+    0.2
+  };
+  int pri[] = {
+    1,
+    1,
+    1,
+    1,
+    3,
+    3,
+    3,
+    5,
+    5,
+    5
+  };
+  int* buffer = new int[ports];
+  int* results = new int[ports];
+  WeightedRRArbiter * wrr = new WeightedRRArbiter(NULL, "lol",ports);
+
+  for(int j = 0; j<ports; j++){
+    results[j]=0;
+    buffer[j]=0;
+  }
+  for(int i = 0; i<trials; i++){
+    int req = 0;
+    for(int j = 0; j<ports; j++){
+      if(RandomFloat()<rates[j]/3.6){
+	buffer[j]++;
+      }
+      if(buffer[j]>0){
+	wrr->AddRequest(j,0,pri[j]);
+	req++;
+      }
+    }
+    if(req>0){
+      int result = wrr->Arbitrate();
+      wrr->UpdateState();
+      wrr->Clear();
+      results[result]++;
+      buffer[result]--;
+    }
+  }
+
+  for(int j = 0; j<ports; j++){
+    cout<<float(results[j])/trials*100<<"\t";
+  }
+  cout<<"\n";
 }

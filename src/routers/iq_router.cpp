@@ -50,9 +50,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "switch_monitor.hpp"
 #include "buffer_monitor.hpp"
 
+#define MAX(X,Y) ((X)>(Y)?(X):(Y))
 
  //forward notification
 bool ENABLE_NOTE = false;
+bool DISABLE_INPUT_PRIO = false;
+bool DISABLE_OUTPUT_PRIO = false;
 
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
@@ -60,6 +63,9 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 : Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
   ENABLE_NOTE = (config.GetStr("priority")=="notification");
+  DISABLE_INPUT_PRIO =  (config.GetInt("disable_input_prio")==1);
+  DISABLE_OUTPUT_PRIO = (config.GetInt("disable_output_prio")==1);
+  
   if(ENABLE_NOTE){
     _output_notifications.clear();
     _output_notifications.resize(inputs*outputs, 0);
@@ -173,6 +179,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 					     iters, 
 					     config.GetStr( "sw_alloc_input_arb_type" ), 
 					     config.GetStr( "sw_alloc_output_arb_type" ));
+
   }
 
   if ( !_sw_allocator ) {
@@ -229,11 +236,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
 IQRouter::~IQRouter( )
 {
-  cout<<FullName()<<endl;
-  cout<<_inj_request<<endl;
-  cout<<"\t"<<_inj_grant<<endl;
-  cout<<_cross_request<<endl;
-  cout<<"\t"<<_cross_grant<<endl;
 
   if(gPrintActivity) {
     cout << Name() << ".bufferMonitor:" << endl ; 
@@ -651,7 +653,7 @@ void IQRouter::_VCAllocEvaluate( )
 	  }
 	  if(ENABLE_NOTE && _vc_allocator!=NULL){
 	    _output_notifications[input*_outputs+out_port]=
-	      _output_notifications[input*_outputs+out_port]>cur_buf->GetNotification(vc)?
+	      (_output_notifications[input*_outputs+out_port]>cur_buf->GetNotification(vc))?
 	      _output_notifications[input*_outputs+out_port]:
 	      cur_buf->GetNotification(vc);
 	  }
@@ -1130,21 +1132,26 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
     
     Allocator * allocator = _sw_allocator;
     int prio = cur_buf->GetPriority(vc);
-    
+    int in_prio = prio;
+    if(DISABLE_INPUT_PRIO)
+      in_prio=1;
+    int out_prio = prio;
+    if(DISABLE_OUTPUT_PRIO)   
+      out_prio=1;
     
     if(_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)) {
       if(_spec_sw_allocator) {
 	allocator = _spec_sw_allocator;
       } else {
+	//adding MIN will message up the WRR
 	assert(false);
 	prio += numeric_limits<int>::min();
       }
     }
-    
     Allocator::sRequest req;
     
     if(allocator->ReadRequest(req, expanded_input, expanded_output)) {
-      if(RoundRobinArbiter::Supersedes(vc, prio, req.label, req.in_pri, 
+      if(RoundRobinArbiter::Supersedes(vc, in_prio, req.label, req.in_pri, 
 				       _sw_rr_offset[expanded_input], _vcs)) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -1155,7 +1162,7 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 		     << " (" << ((cur_buf->GetState(vc) == VC::active) ? 
 				 "non-spec" : 
 				 "spec")
-		     << ", pri: " << prio
+		     << ", pri: " << in_prio
 		     << ")." << endl;
 	}
   
@@ -1163,14 +1170,11 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 
 	if(ENABLE_NOTE && _vc_allocator==NULL){
 	  _output_notifications[expanded_input*_outputs+expanded_output]=
-	    cur_buf->GetNotification(vc);
+	    MAX(cur_buf->GetNotification(vc),_output_notifications[expanded_input*_outputs+expanded_output]);
 	}
-     // if(GetID() == 6 && expanded_output==1 && f->head){
-     //   cout<<"rr\t"<<allocator<<"\t"<<f->src<<"\t"<<expanded_output<<endl;
-     //  }
 	_input_request_stat[input]++;
 	allocator->AddRequest(expanded_input, expanded_output, vc, 
-			      prio, prio);
+			      in_prio, out_prio);
 	return true;
       }
 
@@ -1180,7 +1184,7 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 		   << "." << (expanded_output % _output_speedup)
 		   << " was already requested by VC " << req.label
 		   << " with priority " << req.in_pri
-		   << " (pri: " << prio
+		   << " (pri: " << in_prio
 		   << ")." << endl;
       }
       return false;
@@ -1192,20 +1196,17 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 		 << " (" << ((cur_buf->GetState(vc) == VC::active) ? 
 			     "non-spec" : 
 			     "spec")
-		 << ", pri: " << prio
+		 << ", pri: " << in_prio
 		 << ")." << endl;
     }
 
     if(ENABLE_NOTE && _vc_allocator==NULL){
       _output_notifications[expanded_input*_outputs+expanded_output]=
-	cur_buf->GetNotification(vc);
+	MAX(cur_buf->GetNotification(vc),_output_notifications[expanded_input*_outputs+expanded_output]);
     }
-  // if(GetID() == 6 && expanded_output==1 && f->head){
-  //   cout<<"r\t"<<allocator<<"\t"<<f->src<<"\t"<<expanded_output<<endl;
-  //     }
     _input_request_stat[input]++;	  
     allocator->AddRequest(expanded_input, expanded_output, vc, 
-			  prio, prio);
+			  in_prio, out_prio);
     return true;
   }
   if(f->watch) {
