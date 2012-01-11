@@ -1161,6 +1161,8 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 	if(ENABLE_NOTE && _vc_allocator==NULL){
 	  _output_notifications[expanded_input*_outputs+expanded_output]=
 	    cur_buf->GetNotification(vc);
+
+	    
 	}
      // if(GetID() == 6 && expanded_output==1 && f->head){
      //   cout<<"rr\t"<<allocator<<"\t"<<f->src<<"\t"<<expanded_output<<endl;

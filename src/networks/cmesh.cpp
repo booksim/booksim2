@@ -281,8 +281,8 @@ void CMesh::_BuildNet( const Configuration& config ) {
 	_chan[nx_out]->SetLatency( shortLatency  );
 	_chan_cred[nx_out]->SetLatency( shortLatency  );
       } else {
-	_chan[nx_out]->SetLatency( 0  );
-	_chan_cred[nx_out]->SetLatency( 0  );
+	_chan[nx_out]->SetLatency( 1  );
+	_chan_cred[nx_out]->SetLatency( 1  );
       }
     }
     _routers[node]->AddOutputChannel( _chan[nx_out], _chan_cred[nx_out] );

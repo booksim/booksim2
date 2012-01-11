@@ -47,6 +47,7 @@ int NOTIFICATION_TIME_THRESHOLD=0;
 TrafficManager * TrafficManager::NewTrafficManager(Configuration const & config,
 						   vector<Network *> const & net)
 {
+cout<<"size of "<<sizeof(Flit)<<endl;
   TrafficManager * result = NULL;
   string sim_type = config.GetStr("sim_type");
   if((sim_type == "latency") || (sim_type == "throughput")) {
