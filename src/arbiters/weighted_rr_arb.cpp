@@ -88,7 +88,6 @@ void WeightedRRArbiter::UpdateState() {
     if(_share[_selected]==0){
       _pointer = ( _selected + 1 ) % _size ;
     } else {
-      //this is wrong......
       _pointer =  _selected;
     }
   }
@@ -101,6 +100,9 @@ void WeightedRRArbiter::AddRequest( int input, int id, int pri )
 
   assert(pri>0);
   //update weight
+  //updating out here is not a problem, because this is just for sw allocator
+  //sw allocator in iq_router has code that ensures a single entry per input
+  //so the the weight here is only updated by a single request
   if(_share[input] == 0){
     _share[input] = pri;
   }

@@ -69,6 +69,8 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   if(ENABLE_NOTE){
     _output_notifications.clear();
     _output_notifications.resize(inputs*outputs, 0);
+    _output_share.clear();
+    _output_share.resize(inputs*outputs, 0);
   }
 
   _input_grant_stat.resize(inputs,0);
@@ -1170,7 +1172,8 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 
 	if(ENABLE_NOTE && _vc_allocator==NULL){
 	  _output_notifications[expanded_input*_outputs+expanded_output]=
-	    MAX(cur_buf->GetNotification(vc),_output_notifications[expanded_input*_outputs+expanded_output]);
+	    //MAX( cur_buf->GetNotification(vc),_output_notifications[expanded_input*_outputs+expanded_output] );
+	    cur_buf->GetNotification(vc);
 	}
 	_input_request_stat[input]++;
 	allocator->AddRequest(expanded_input, expanded_output, vc, 
@@ -1202,7 +1205,8 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 
     if(ENABLE_NOTE && _vc_allocator==NULL){
       _output_notifications[expanded_input*_outputs+expanded_output]=
-	MAX(cur_buf->GetNotification(vc),_output_notifications[expanded_input*_outputs+expanded_output]);
+	//MAX( cur_buf->GetNotification(vc),_output_notifications[expanded_input*_outputs+expanded_output] );
+      	cur_buf->GetNotification(vc);
     }
     _input_request_stat[input]++;	  
     allocator->AddRequest(expanded_input, expanded_output, vc, 
@@ -1775,6 +1779,7 @@ void IQRouter::_SWAllocUpdate( )
 	}
 	assert(f->notification<= sum);
 	cur_buf->FrontFlit(vc)->next_notification = sum;
+	_output_share[input*_outputs+expanded_output]--;
       }
 
       _input_grant_stat[input]++;
@@ -1787,15 +1792,7 @@ void IQRouter::_SWAllocUpdate( )
       f->hops++;
       f->vc = match_vc;
       
-      // if(GetID() == 6 && expanded_output==1){
-      // 	if(ENABLE_NOTE){
-      // 	  cout<<"notes ";
-      // 	  for(int i = 0; i<_inputs; i++){
-      // 	    cout<<_output_notifications[i*_outputs+expanded_output]<<"\t";
-      // 	  }
-      // 	}
-      // 	cout<<endl<<"g\t"<<f->src<<"\t"<<f->next_notification<<endl;
-      // }
+   
       dest_buf->SendingFlit(f);
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
 

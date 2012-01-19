@@ -87,6 +87,7 @@ class IQRouter : public Router {
   map<int, Credit *> _out_queue_credits;
 
   vector< int> _output_notifications;
+  vector< int> _output_share;
   vector<Buffer *> _buf;
   vector<BufferState *> _next_buf;
 

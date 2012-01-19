@@ -1047,11 +1047,7 @@ void TrafficManager::_Step( )
 	    dest_buf->TakeBuffer(f->vc);
 	    //retarded congestion inidcator
 	    if(_pri_type == forward_note  && (_qtime[source][c]<=_time-NOTIFICATION_TIME_THRESHOLD || NOTIFICATION_TIME_THRESHOLD==0)){
-	        f->next_notification = 1;
-	      if(source==7)
-		f->next_notification = 2;
-	      if(source==4)
-		f->next_notification = 2;
+	      f->next_notification = 1;
 	    }	     
 	    _last_vc[source][subnet][c] = f->vc - vc_start;
 	  }
