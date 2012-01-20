@@ -69,11 +69,11 @@ then
     no_addint=0
 fi
 
-inj_rate="0"`echo "scale=4; ${zero_load_inj} / ${scale}" | bc`
+inj_rate="`awk "BEGIN{ print ${zero_load_inj} / ${scale} }"`"
 
 echo "SWEEP: Determining zero-load latency..."
 ${sim} $* print_csv_results=1 injection_rate=${inj_rate} | tee ${sim}.${HOSTNAME}.${$}.log
-lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 6`
+lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 5`
 rm ${sim}.${HOSTNAME}.${$}.log
 if [ "${lat}" = "" ]
 then
@@ -91,12 +91,12 @@ ref_delta="unset"
 inj=${step}
 last_fail=${scale}
 
-step_size="0"`echo "scale=4; ${step} / ${scale}" | bc`
+step_size="`awk "BEGIN{ print ${step} / ${scale} }"`"
 echo "SWEEP: Sweeping with initial step size ${step_size}"
 
 while true
 do
-    inj_rate="0"`echo "scale=4; ${inj} / ${scale}" | bc`
+    inj_rate="`awk "BEGIN{ print ${inj} / ${scale} }"`"
     if [ ${inj} -ge ${last_fail} ]
     then
 	echo "SWEEP: Already failed for injection rate ${inj_rate} before."
@@ -105,7 +105,7 @@ do
     else
 	echo "SWEEP: Simulating for injection rate ${inj_rate}..."
 	${sim} $* print_csv_results=1 injection_rate=${inj_rate} | tee ${sim}.${HOSTNAME}.${$}.log
-	lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 6`
+	lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 5`
 	rm ${sim}.${HOSTNAME}.${$}.log
     fi
     if [ "${lat}" = "" ]
@@ -123,7 +123,7 @@ do
 	    break
 	fi
 	last_fail=${inj}
-	step_size="0"`echo "scale=4; ${step} / ${scale}" | bc`
+	step_size="`awk "BEGIN{ print ${step} / ${scale} }"`"
 	echo "SWEEP: New step size is ${step_size}."
 	inj=$[${old_inj} + ${step}]
 	continue
@@ -132,14 +132,14 @@ do
     echo "SWEEP: Latency is ${lat}."
     if [ ${no_addint} -eq 0 ]
     then
-	delta=`echo "scale=4; sqrt((20*(${lat} - ${old_lat}))^2+(${inj} - ${old_inj})^2)" | bc`
+	delta="`awk "BEGIN{ print sqrt((20*(${lat} - ${old_lat}))^2+(${inj} - ${old_inj})^2) }"`"
 	if [ "${ref_delta}" = "unset" ]
 	then
 	    ref_delta=${delta}
 	    echo "SWEEP: Setting reference distance to ${delta}."
 	else
 	    echo "SWEEP: Distance was ${delta}."
-	    ratio=`echo "scale=4; ${delta} / (1.5 * ${ref_delta})" | bc`
+	    ratio="`awk "BEGIN{ print ${delta} / (1.5 * ${ref_delta}) }"`"
 	    steps=`printf "%1.0f" ${ratio}`
 	    if [ ${steps} -gt 1 ]
 	    then
@@ -148,19 +148,19 @@ do
 		if [ ${ref_step} -gt 0 ]
 		then
 #		    step=${ref_step}
-#		    step_size="0"`echo "scale=4; ${step} / ${scale}" | bc`
-		    step_size="0"`echo "scale=4; ${ref_step} / ${scale}" | bc`
+#		    step_size="`awk "BEGIN{ print ${step} / ${scale} }"`"
+		    step_size="`awk "BEGIN{ print ${ref_step} / ${scale} }"`"
 #		    echo "SWEEP: New step size is 
 		    echo "SWEEP: Intermediate step size is ${step_size}."
 #		    ref_inj=$[${old_inj} + ${step}]
 		    ref_inj=$[${old_inj} + ${ref_step}]
 		    while [ ${ref_inj} -lt ${inj} ]
 		    do
-			inj_rate="0"`echo "scale=4; ${ref_inj} / ${scale}" | bc`
+			inj_rate="`awk "BEGIN{ print ${ref_inj} / ${scale} }"`"
 			echo "SWEEP: Simulating for injection rate ${inj_rate}..."
 			ref_inj=$[${ref_inj} + ${ref_step}]
 			${sim} $* print_csv_results=1 injection_rate=${inj_rate} | tee ${sim}.${HOSTNAME}.${$}.log
-			intm_lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 6`
+			intm_lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 5`
 			rm ${sim}.${HOSTNAME}.${$}.log
 			if [ "${intm_lat}" = "" ]
 			then
