@@ -39,7 +39,7 @@
 # start with "results:"; miscellaneous status information for the script 
 # itself is printed out in lines that begin with "SWEEP: ".
 
-if [ "${1}" == "" ]
+if [ "${1}" = "" ]
 then
     echo "SWEEP: Please specify a simulator executable as the first parameter."
     exit
@@ -48,23 +48,23 @@ fi
 sim=${1}
 shift
 
-if [ "${initial_step}" == "" ]
+if [ "${initial_step}" = "" ]
 then
     initial_step=500
 fi
-if [ "${scale}" == "" ]
+if [ "${scale}" = "" ]
 then
     scale=10000
 fi
-if [ "${zero_load_inj}" == "" ]
+if [ "${zero_load_inj}" = "" ]
 then
     zero_load_inj=10
 fi
-if [ "${no_backtrack}" == "" ]
+if [ "${no_backtrack}" = "" ]
 then
     no_backtrack=0
 fi
-if [ "${no_addint}" == "" ]
+if [ "${no_addint}" = "" ]
 then
     no_addint=0
 fi
