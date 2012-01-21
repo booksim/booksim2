@@ -116,7 +116,7 @@ do
 	    break
 	fi
 	echo "SWEEP: Reducing step size."
-	step=$[${step}/2]
+	step="`awk "BEGIN{ print ${step} / 2 }"`"
 	if [ ${step} -eq 0 ]
 	then
 	    echo "SWEEP: Step size too small."
@@ -125,7 +125,7 @@ do
 	last_fail=${inj}
 	step_size="`awk "BEGIN{ print ${step} / ${scale} }"`"
 	echo "SWEEP: New step size is ${step_size}."
-	inj=$[${old_inj} + ${step}]
+	inj="`awk "BEGIN{ print ${old_inj} + ${step} }"`"
 	continue
     fi
     echo "SWEEP: Simulation run succeeded."
@@ -144,7 +144,7 @@ do
 	    if [ ${steps} -gt 1 ]
 	    then
 		echo "SWEEP: Adding ${steps} intermediate steps..."
-		ref_step=$[${step} / ${steps}]
+		ref_step="`awk "BEGIN{ print ${step} / ${steps} }"`"
 		if [ ${ref_step} -gt 0 ]
 		then
 #		    step=${ref_step}
@@ -152,13 +152,13 @@ do
 		    step_size="`awk "BEGIN{ print ${ref_step} / ${scale} }"`"
 #		    echo "SWEEP: New step size is 
 		    echo "SWEEP: Intermediate step size is ${step_size}."
-#		    ref_inj=$[${old_inj} + ${step}]
-		    ref_inj=$[${old_inj} + ${ref_step}]
+#		    ref_inj="`awk "BEGIN{ print ${old_inj} + ${step} }"`"
+		    ref_inj="`awk "BEGIN{ print ${old_inj} + ${ref_step} }"`"
 		    while [ ${ref_inj} -lt ${inj} ]
 		    do
 			inj_rate="`awk "BEGIN{ print ${ref_inj} / ${scale} }"`"
 			echo "SWEEP: Simulating for injection rate ${inj_rate}..."
-			ref_inj=$[${ref_inj} + ${ref_step}]
+			ref_inj="`awk "BEGIN{ print ${ref_inj} + ${ref_step} }"`"
 			${sim} $* print_csv_results=1 injection_rate=${inj_rate} | tee ${sim}.${HOSTNAME}.${$}.log
 			intm_lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 5`
 			rm ${sim}.${HOSTNAME}.${$}.log
@@ -180,7 +180,7 @@ do
 
     old_inj=${inj}
     old_lat=${lat}
-    inj=$[${inj}+${step}]
+    inj="`awk "BEGIN{ print ${inj}+${step} }"`"
 
 done
 
