@@ -206,15 +206,17 @@ bool SyntheticWorkload::completed() const
 int SyntheticWorkload::source() const
 {
   assert(!empty());
-  int const & source = _pending.front();
+  int const source = _pending.front();
+  assert((source >= 0) && (source < _nodes));
   return source;
 }
 
 int SyntheticWorkload::dest() const
 {
   assert(!empty());
-  int const & source = _pending.front();
-  return _traffic->dest(source);
+  int const dest = _traffic->dest(source());
+  assert((dest >= 0) && (dest < _nodes));
+  return dest;
 }
 
 int SyntheticWorkload::size() const
@@ -377,13 +379,17 @@ bool TraceWorkload::completed() const
 int TraceWorkload::source() const
 {
   assert(!empty());
-  return _ready_iter->source;
+  int const source = _ready_iter->source;
+  assert((source >= 0) && (source < _nodes));
+  return source;
 }
 
 int TraceWorkload::dest() const
 {
   assert(!empty());
-  return _ready_iter->dest;
+  int const dest = _ready_iter->dest;
+  assert((dest >= 0) && (dest < _nodes));
+  return dest;
 }
 
 int TraceWorkload::size() const
