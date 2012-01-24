@@ -500,7 +500,7 @@ int HotSpotTrafficPattern::dest(int source)
   assert((source >= 0) && (source < _nodes));
 
   if(_hotspots.size() == 1) {
-    return _hotspots[1];
+    return _hotspots[0];
   }
 
   int pct = RandomInt(_max_val);
