@@ -481,6 +481,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
 void val_dragonflynew( const Router *r, const Flit *f, int in_channel, 
 			OutputSet *outputs, bool inject )
 {
+  assert(gNumVCs==4);
   outputs->Clear( );
   if(inject) {
     int inject_vc= RandomInt(gNumVCs-1);
@@ -533,14 +534,16 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
   }
 
   //transition from nonminimal phase to minimal
-  if(f->ph==0){
+  if(f->ph==0 || f->ph==3){
     intm_rID= (int)(f->intm/gP);
+    intm_grp_ID = (int)(f->intm/_grp_num_nodes);
     if( rID == intm_rID){
       f->ph = 1;
     }
+
   }
   //port assignement based on the phase
-  if(f->ph == 0){
+  if(f->ph == 0 || f->ph==3){
     assert(f->minimal!=1);
     out_port = dragonfly_port(rID, f->src, f->intm);
   } else if(f->ph == 1){
@@ -555,6 +558,11 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
   if (f->ph == 1 && out_port >=gP + (gA-1)) {
     f->ph = 2;
   }  
+
+ //optical dateline
+  if (f->ph == 0 && out_port >=gP + (gA-1)) {
+    f->ph = 3;
+  }  
  
   out_vc = f->ph;
   outputs->AddRange( out_port, out_vc, out_vc );
@@ -565,9 +573,9 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
 void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel, 
 			OutputSet *outputs, bool inject )
 {
-  //need 3 VCs for deadlock freedom
+  //need 4 VCs for deadlock freedom
 
-  assert(gNumVCs==3);
+  assert(gNumVCs==4);
   outputs->Clear( );
   if(inject) {
     int inject_vc= RandomInt(gNumVCs-1);
@@ -686,7 +694,7 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
   }
   
   //transition from nonminimal phase to minimal
-  if(f->ph==0){
+  if(f->ph==0  || f->ph==3){
     intm_rID= (int)(f->intm/gP);
     if( rID == intm_rID){
       f->ph = 1;
@@ -694,7 +702,7 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
   }
 
   //port assignement based on the phase
-  if(f->ph == 0){
+  if(f->ph == 0|| f->ph==3){
     assert(f->minimal!=1);
     out_port = dragonfly_port(rID, f->src, f->intm);
   } else if(f->ph == 1){
@@ -709,6 +717,10 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
   if (f->ph == 1 && out_port >=gP + (gA-1)) {
     f->ph = 2;
   }  
+  //optical dateline
+  if (f->ph == 0 && out_port >=gP + (gA-1)) {
+    f->ph = 3;
+  }  
 
   //vc assignemnt based on phase
   out_vc = f->ph;
@@ -721,6 +733,7 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel, 
 			OutputSet *outputs, bool inject )
 {
+  assert(gNumVCs==5);
   outputs->Clear( );
   if(inject) {
     int inject_vc= RandomInt(gNumVCs-1);
@@ -797,7 +810,7 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
 	  if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {	  
 	    if (debug)  cout << " MINIMAL routing " << endl;
-	    f->ph = 1;
+	    f->ph = 4;
 	    f->minimal = 1;
 	  } else {
 	    f->ph = 0;
@@ -808,7 +821,7 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	  
 	  if (min_roc<= 0 || min_roc <= 2*nonmin_roc) {	  
 	    if (debug)  cout << " MINIMAL routing " << endl;
-	    f->ph = 1;
+	    f->ph = 4;
 	    f->minimal = 1;
 	  } else {
 	    f->ph = 0;
@@ -818,7 +831,7 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	case 2:
 	  if (min_roc<= 0 || ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold )) {	  
 	    if (debug)  cout << " MINIMAL routing " << endl;
-	    f->ph = 1;
+	    f->ph = 4;
 	    f->minimal = 1;
 	  } else {
 	    f->ph = 0;
@@ -831,7 +844,7 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	}
       }
     }
-  } else if(f->ph == 1 && f->minimal==1){ //progressive
+  } else if(f->ph == 4 && f->minimal==1){ //progressive
     assert(in_channel<gP + gA-1);
     //select a random node
     f->intm =RandomInt(_network_size - 1);
@@ -859,7 +872,7 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
 	if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {
 	} else {
-	  f->ph = 3;
+	  f->ph = 0;
 	  f->minimal = 2;
 	}
 	break;
@@ -867,7 +880,7 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	  
 	if (min_roc<= 0 || min_roc <= 2*nonmin_roc) {	  
 	} else {
-	  f->ph = 3;
+	  f->ph = 0;
 	  f->minimal = 2;
 	}
 	break;
@@ -875,7 +888,7 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	if (min_roc<= 0 || ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold )) {	  
 	} else {
 
-	  f->ph = 3;
+	  f->ph = 0;
 	  f->minimal = 2;
 	}
 	break;
@@ -899,7 +912,7 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
   if(f->ph == 0 || f->ph == 3){
     assert(f->minimal!=1);
     out_port = dragonfly_port(rID, f->src, f->intm);
-  } else if(f->ph == 1){
+  } else if(f->ph == 1 || f->ph == 4 ){
     out_port = dragonfly_port(rID, f->src, f->dest);
   } else if(f->ph == 2){
     out_port = dragonfly_port(rID, f->src, f->dest);
@@ -908,8 +921,11 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
   }
 
   //optical dateline
-  if (f->ph == 1 && out_port >=gP + gA-1) {
+  if ((f->ph == 1||f->ph == 4) && out_port >=gP + gA-1) {
     f->ph = 2;
+  }  
+  if (f->ph == 0 && out_port >=gP + gA-1) {
+    f->ph = 3;
   }  
  
   out_vc = f->ph;
