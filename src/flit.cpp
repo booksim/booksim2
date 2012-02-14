@@ -35,6 +35,7 @@
  */
 
 #include "booksim.hpp"
+#include "globals.hpp"
 #include "flit.hpp"
 
 stack<Flit *> Flit::_all;
@@ -106,6 +107,10 @@ Flit * Flit::New() {
   if(_free.empty()) {
     f = new Flit;
     _all.push(f);
+    if(_all.size()>1000000){
+      cerr<<"Simulation time "<<GetSimTime()<<" flit allocation exceeds "<<_all.size()<<endl;
+      assert(false);
+    }
   } else {
     f = _free.top();
     assert(!f->inuse);

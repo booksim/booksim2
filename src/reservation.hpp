@@ -28,11 +28,9 @@
 #define FLIT_PRI_NORM 1
 #define FLIT_PRI_SPEC 0
 
-#define RES_RESERVED_VCS 3
+#define RES_RESERVED_VCS 2
 #define ECN_RESERVED_VCS 1
 
-#define RES_PACKET_VC 0
-#define GRANT_PACKET_VC 1
 
 #define FLIT_NACKED 2
 #define FLIT_NORMAL 1

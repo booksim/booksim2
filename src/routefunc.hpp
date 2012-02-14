@@ -39,8 +39,11 @@ void InitializeRoutingMap( const Configuration & config );
 
 extern map<string, tRoutingFunction> gRoutingFunctionMap;
 
+extern int gAuxVCs;
+extern int gAdaptVCs;
 extern int gNumVCs;
 extern int gResVCs;
+
 extern int gReadReqBeginVC, gReadReqEndVC;
 extern int gWriteReqBeginVC, gWriteReqEndVC;
 extern int gReadReplyBeginVC, gReadReplyEndVC;

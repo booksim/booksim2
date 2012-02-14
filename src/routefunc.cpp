@@ -55,7 +55,8 @@
 map<string, tRoutingFunction> gRoutingFunctionMap;
 
 /* Global information used by routing functions */
-
+int gAuxVCs;
+int gAdaptVCs;
 int gNumVCs;
 int gResVCs;
 
@@ -291,6 +292,7 @@ void tree4_nca( const Router *r, const Flit *f,
 
 
 
+
 // ============================================================
 //  FATTREE: Nearest Common Ancestor w/ Random  Routing Up
 // ===
@@ -317,12 +319,12 @@ void fattree_nca( const Router *r, const Flit *f,
 	vcBegin = RES_RESERVED_VCS;
 	vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
       } else {
-	vcBegin = RES_PACKET_VC;
-	vcEnd = RES_PACKET_VC;
+	vcBegin =0;
+	vcEnd = 0;
       }
     } else if(f->res_type == RES_TYPE_GRANT){
-      vcBegin = GRANT_PACKET_VC;
-      vcEnd = GRANT_PACKET_VC;
+      vcBegin = 1;
+      vcEnd = 1;
     } else if(f->res_type == RES_TYPE_NORM){ //normal packets
       vcBegin = (RES_RESERVED_VCS+gResVCs);
       vcEnd = (gNumVCs-1);
@@ -424,12 +426,12 @@ void fattree_anca( const Router *r, const Flit *f,
 	vcBegin = RES_RESERVED_VCS;
 	vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
       } else {
-	vcBegin = RES_PACKET_VC;
-	vcEnd = RES_PACKET_VC;
+	vcBegin = 0;
+	vcEnd =0 ;
       }
     } else if(f->res_type == RES_TYPE_GRANT){
-      vcBegin = GRANT_PACKET_VC;
-      vcEnd = GRANT_PACKET_VC;
+      vcBegin = 1;
+      vcEnd = 1;
     } else if(f->res_type == RES_TYPE_NORM){ //normal packets
       vcBegin = (RES_RESERVED_VCS+gResVCs);
       vcEnd = (gNumVCs-1);
@@ -1887,6 +1889,8 @@ void chaos_mesh( const Router *r, const Flit *f,
 void InitializeRoutingMap( const Configuration & config )
 {
 
+  gAdaptVCs = config.GetInt("adapt_vc");
+  gAuxVCs = config.GetInt("aux_vc");
   gNumVCs = config.GetInt( "num_vcs" );
   gResVCs = config.GetInt( "res_vcs" );
   if(config.GetInt("hotspot_reservation")==1){

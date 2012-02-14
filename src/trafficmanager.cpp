@@ -171,6 +171,7 @@ vector<int> gStatNormDuplicate;
 vector<int> gStatLostPacket;
 
 vector<vector<int> > gStatInjectVCDist;
+vector<vector<int> > gStatEjectVCDist;
 vector<int> gStatInjectVCBlock;
 vector<int> gStatInjectVCMiss;
 
@@ -398,6 +399,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   gStatInjectVCDist.resize(_nodes);
   for(int i = 0; i<_nodes; i++){
     gStatInjectVCDist[i].resize(_num_vcs,0);
+  }
+  gStatEjectVCDist.resize(_nodes);
+  for(int i = 0; i<_nodes; i++){
+    gStatEjectVCDist[i].resize(_num_vcs,0);
   }
   gStatInjectVCBlock.resize(_nodes,0);
   gStatInjectVCMiss.resize(_nodes,0);
@@ -665,6 +670,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   // ============ Statistics ============ 
 
+
   _plat_stats.resize(_classes);
   _overall_min_plat.resize(_classes);
   _overall_avg_plat.resize(_classes);
@@ -695,6 +701,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_accepted.resize(_classes);
   _overall_accepted_min.resize(_classes);
 
+  _min_plat_stats=new Stats( this, "", 1.0, 5000 );
+  _nonmin_plat_stats=new Stats( this, "", 1.0, 5000 );
   for ( int c = 0; c < _classes; ++c ) {
     ostringstream tmp_name;
     tmp_name << "plat_stat_" << c;
@@ -940,6 +948,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
 TrafficManager::~TrafficManager( )
 {
+  delete gStatSpecCount;
+  delete  retired_s ;
+  delete  retired_n ;
 
   for(int i = 0; i<_nodes; i++){
     delete _flow_buffer_arb[i];
@@ -951,6 +962,8 @@ TrafficManager::~TrafficManager( )
     }
   }
   
+  delete _min_plat_stats;
+  delete _nonmin_plat_stats;
   for ( int c = 0; c < _classes; ++c ) {
     delete _plat_stats[c];
     delete _overall_min_plat[c];
@@ -1078,6 +1091,7 @@ Flit* TrafficManager::IssueSpecial(int src, Flit* ff){
   f->tail = true;
   f->vc = 0;
   f->flbid = ff->flbid;
+  f->ph = 0;
   return f;
 }
 
@@ -1085,7 +1099,7 @@ Flit* TrafficManager::DropPacket(int src, Flit* f){
   Flit* ff = IssueSpecial(f->src, f);
   ff->res_type = RES_TYPE_NACK;
   ff->pri = FLIT_PRI_NACK;
-  ff->vc = RES_RESERVED_VCS-1;
+  ff->vc = 1+gAuxVCs;
   if(f->watch){
     ff->watch=true;
   }
@@ -1207,7 +1221,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     return;
     break;
   case RES_TYPE_RES:
-    assert(f->vc==RES_PACKET_VC);
+    //assert(f->vc==RES_PACKET_VC);
 #ifdef ENABLE_STATS
     gStatResLatency->AddSample(_time-f->time);
     gStatReservationReceived[dest]++;
@@ -1243,7 +1257,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
       ff->res_type = RES_TYPE_GRANT;
       ff->pri = FLIT_PRI_GRANT;
-      ff->vc = GRANT_PACKET_VC;
+      ff->vc = 1+gAuxVCs;
       _response_packets[dest].push_back(ff);
     }
     break;
@@ -1268,7 +1282,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	ff = IssueSpecial(dest,f);
 	ff->res_type = RES_TYPE_NACK;
 	ff->pri = FLIT_PRI_NACK;
-	ff->vc = RES_RESERVED_VCS-1;
+	ff->vc = 1+gAuxVCs;
 	_response_packets[dest].push_back(ff);
       } 
       f->Free();
@@ -1303,7 +1317,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	ff->sn = f->head_sn;
 	ff->res_type = RES_TYPE_ACK;
 	ff->pri  = FLIT_PRI_ACK;
-	ff->vc =  RES_RESERVED_VCS-1;
+	ff->vc =  1+gAuxVCs;;
 	_response_packets[dest].push_back(ff);
       }
     }
@@ -1365,7 +1379,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
 	  ff->res_type = RES_TYPE_GRANT;
 	  ff->pri = FLIT_PRI_GRANT;
-	  ff->vc = GRANT_PACKET_VC;
+	  ff->vc = 1+gAuxVCs;;
 	  _response_packets[dest].push_back(ff);
 	}
 	_sent_data_flits[f->cl][f->src]++;
@@ -1399,7 +1413,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	ff->sn = f->head_sn;
 	ff->res_type = RES_TYPE_ACK;
 	ff->pri  = FLIT_PRI_ACK;
-	ff->vc =  ECN_RESERVED_VCS-1;
+	ff->vc =  0;
 	ff->becn = f->fecn;
 	_response_packets[dest].push_back(ff);
       }
@@ -1467,6 +1481,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   } else {
     retired_n->AddSample(f->atime - f->ntime);
   }
+
+  gStatEjectVCDist[f->src][f->vc]++;
   _accepted_data_flits[f->cl][dest]++;
   _deadlock_timer = 0;
   assert(_total_in_flight_flits[f->cl].count(f->id) > 0);
@@ -1578,6 +1594,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
 
       _plat_stats[f->cl]->AddSample( f->atime - f->time);
+      if(head->minimal == 1){
+	_min_plat_stats->AddSample( f->atime - f->time);
+      } else {
+	_nonmin_plat_stats->AddSample( f->atime - f->time);
+
+      }
 #ifdef ENABLE_STATS
       if(head->res_type==RES_TYPE_SPEC)
 	gStatSpecNetworkLatency[f->cl]->AddSample( f->atime - head->ntime);
@@ -2380,6 +2402,8 @@ void TrafficManager::_ClearStats( )
 
   gStatFlowSizes.clear();
 
+  _nonmin_plat_stats->Clear( );
+  _min_plat_stats->Clear( );
   for ( int c = 0; c < _classes; ++c ) {
 
     _plat_stats[c]->Clear( );
@@ -2474,6 +2498,11 @@ void TrafficManager::_ClearStats( )
   gStatInjectVCDist.resize(_nodes);
   for(int i= 0; i<_nodes; i++){
     gStatInjectVCDist[i].resize(_num_vcs,0);
+  }
+  gStatEjectVCDist.clear();
+  gStatEjectVCDist.resize(_nodes);
+  for(int i= 0; i<_nodes; i++){
+    gStatEjectVCDist[i].resize(_num_vcs,0);
   }
   gStatInjectVCBlock.clear();
   gStatInjectVCBlock.resize(_nodes,0);
@@ -2620,6 +2649,8 @@ bool TrafficManager::_SingleSim( )
 	  cout << "Class " << c << ":" << endl;
 	  cout << "Minimum latency = " << _plat_stats[c]->Min( ) << endl;
 	  cout << "Average latency = " << cur_latency << endl;
+	  cout << "\tMin latency = " << _min_plat_stats->Average( ) << endl;	  
+	  cout << "\tNonmin latency = " << _nonmin_plat_stats->Average( ) << endl;
 	  cout << "Maximum latency = " << _plat_stats[c]->Max( ) << endl;
 	  cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
 	  cout << "\tAverage spec fragmentation = " << _spec_frag_stats[c]->Average( ) << endl;
@@ -2705,6 +2736,9 @@ bool TrafficManager::_SingleSim( )
       cout << "Batch duration = " << _time - start_time << endl;
       cout << "Minimum latency = " << _plat_stats[0]->Min( ) << endl;
       cout << "Average latency = " << cur_latency << endl;
+      
+      cout << "\tMin latency = " << _min_plat_stats->Average( ) << endl;	  
+      cout << "\tNonmin latency = " << _nonmin_plat_stats->Average( ) << endl;
       cout << "Maximum latency = " << _plat_stats[0]->Max( ) << endl;
       cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
       cout << "\tAverage spec fragmentation = " << _spec_frag_stats[0]->Average( ) << endl;
@@ -2801,6 +2835,9 @@ bool TrafficManager::_SingleSim( )
 	cout<<"Flits allocated "<<Flit::Allocated()<<endl;
 	cout << "Minimum latency = " << _plat_stats[c]->Min( ) << endl;
 	cout << "Average latency = " << cur_latency << endl;
+
+	  cout << "\tMin latency = " << _min_plat_stats->Average( ) << endl;	  
+	  cout << "\tNonmin latency = " << _nonmin_plat_stats->Average( ) << endl;
 	cout << "Maximum latency = " << _plat_stats[c]->Max( ) << endl;
 	cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
 	cout << "\tAverage spec fragmentation = " << _spec_frag_stats[c]->Average( ) << endl;
@@ -3208,6 +3245,7 @@ void TrafficManager::DisplayStats( ostream & os ) {
     }
     os<<"ECN ratio "<<ecn_sum/ecn_num<<endl;
     os<<"Flows created "<<_cur_flid<<endl;
+    os<<"Adaptive Raitio "<<float(_nonmin_plat_stats->NumSamples())/(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples())<<endl;
     _DisplayTedsShit();    
 #endif
   }
@@ -3301,6 +3339,8 @@ void TrafficManager::_DisplayTedsShit(){
     for(int i = 0; i<_nodes; i++){
       *_stats_out<<"inject_vc_dist("<<i+1<<",:)=["
 		 <<gStatInjectVCDist[i] <<"];\n";
+      *_stats_out<<"eject_vc_dist("<<i+1<<",:)=["
+		 <<gStatEjectVCDist[i] <<"];\n";
       *_stats_out<<"grant_now ("<<i+1<<",:)=["
 		 <<*gStatGrantTimeNow[i] <<"];\n";
       *_stats_out<<"grant_future ("<<i+1<<",:)=["

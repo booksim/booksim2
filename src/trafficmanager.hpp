@@ -188,7 +188,8 @@ protected:
   vector< multimap<int, FlowBuffer*> > _sleep_set;
 
   // ============ Statistics ============
-
+  Stats * _min_plat_stats;     
+  Stats * _nonmin_plat_stats;     
   vector<Stats *> _plat_stats;     
   vector<Stats *> _overall_min_plat;  
   vector<Stats *> _overall_avg_plat;  

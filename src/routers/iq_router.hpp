@@ -50,10 +50,17 @@ class BufferMonitor;
 
 class IQRouter : public Router {
 
+  int _packet_size;
+  bool _remove_credit_rtt;
+  bool _track_routing_commitment;
+  vector<int> _current_bandwidth_commitment;
+  vector<int> _next_bandwidth_commitment;
+
+
   bool _cut_through;
   bool _use_voq_size;
   bool _voq;
-  bool _spec_voq;
+//  bool _spec_voq;
   vector<pair<int,int> > _voq_pid;
   //this is dynamic for arriving packets
   OutputSet* _voq_init_route;
@@ -62,8 +69,12 @@ class IQRouter : public Router {
   vector<OutputSet*> _voq_route_set;
   vector<bool> _res_voq_drop;
 
-  int _real_vcs; //problem when voq is used
-  int _vcs;
+
+  //(_ctrl_vcs<special_vcs + data_vcs) * voq = _vcs
+  int _ctrl_vcs;
+  int _special_vcs;
+  int _data_vcs; //problem when voq is used
+  int _vcs; //voq included
   int _classes;
 
   bool _speculative;
@@ -147,6 +158,8 @@ class IQRouter : public Router {
   void _SendFlits( );
   void _SendCredits( );
 
+  
+  void _UpdateCommitment(int input, int vc, const Flit* f, Buffer* cur_buf);
   // helper function for voq
   bool is_control_vc(int vc);
   bool is_voq_vc(int vc);
@@ -176,7 +189,7 @@ public:
   
   void Display( ostream & os = cout ) const;
 
-  virtual int GetCredit(int out, int vc_begin, int vc_end ) const;
+  virtual int GetCredit(int out, int vc_begin=-1, int vc_end=-1 ) const;
   virtual int GetBuffer(int i = -1) const;
   virtual vector<int> GetBuffers(int i = -1) const;
 

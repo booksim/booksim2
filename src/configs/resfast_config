@@ -9,7 +9,7 @@ vc_buf_size = 512;
 	
 priority = other;
 
-num_vcs     = 5;
+num_vcs     = 4;
 res_vcs = 1;
 expiration_time = 200;
 reservation_packet_threshold=0;
