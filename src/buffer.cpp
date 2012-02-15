@@ -65,14 +65,14 @@ Buffer::~Buffer()
   }
 }
 
-bool Buffer::AddFlit( int vc, Flit *f )
+bool Buffer::AddFlit( int vc, Flit *f, OutputSet* o)
 {
   VC * v = _vc[vc];
   if(v->GetSize() < _vc_size) {
-    return v->AddFlit(f);
+    return v->AddFlit(f, o);
   } else if(_shared_count < _shared_size) {
     _shared_count++;
-    return v->AddFlit(f);
+    return v->AddFlit(f,o);
   }
   return false;
 }

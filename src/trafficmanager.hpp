@@ -175,6 +175,7 @@ protected:
   //sender
   vector<flow*> _pending_flow;
   int _max_flow_buffers;
+  OutputSet* _flow_route_set;
   vector< vector< FlowBuffer*> > _flow_buffer;
   vector< LargeRoundRobinArbiter*> _flow_buffer_arb;
   vector< LargeRoundRobinArbiter*> _reservation_arb;

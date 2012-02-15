@@ -60,13 +60,13 @@ class IQRouter : public Router {
   bool _cut_through;
   bool _use_voq_size;
   bool _voq;
-//  bool _spec_voq;
+  //  bool _spec_voq;
   vector<pair<int,int> > _voq_pid;
   //this is dynamic for arriving packets
-  OutputSet* _voq_init_route;
+
 
   //this is static for a VOQ VC
-  vector<OutputSet*> _voq_route_set;
+
   vector<bool> _res_voq_drop;
 
 
@@ -82,6 +82,8 @@ class IQRouter : public Router {
   bool _spec_mask_by_reqs;
   
   bool _active;
+
+  int _dead_lock;
 
   int _routing_delay;
   int _vc_alloc_delay;
@@ -159,7 +161,7 @@ class IQRouter : public Router {
   void _SendCredits( );
 
   
-  void _UpdateCommitment(int input, int vc, const Flit* f, Buffer* cur_buf);
+  void _UpdateCommitment(int input, int vc, const Flit* f, const OutputSet * route_set);
   // helper function for voq
   bool is_control_vc(int vc);
   bool is_voq_vc(int vc);

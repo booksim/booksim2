@@ -234,10 +234,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _sleep_set.resize(_nodes);
   
 
-
+  _flow_route_set = OutputSet::New();
   _pending_flow.resize(_nodes,NULL);
   _flow_buffer_arb.resize(_nodes);
   _reservation_arb.resize(_nodes);
+
   for(int i = 0; i<_nodes; i++){
     _flow_buffer[i].resize(_max_flow_buffers,NULL);
     //_flow_buffer_arb[i] = new RoundRobinArbiter(this, "inject_arb",_max_flow_buffers);
@@ -251,7 +252,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
 
 
-
+  
   _rob.resize(_nodes);
   _reservation_schedule.resize(_nodes, 0);
   _response_packets.resize(_nodes);
@@ -1888,11 +1889,8 @@ void TrafficManager::_FlowVC(FlowBuffer* flb){
   Flit* f = flb->front();
   assert(f);
   assert(f->head);
-  OutputSet route_set;
-  _rf(NULL, f, 0, &route_set, true);
-  set<OutputSet::sSetElement> const & os = route_set.GetSet();
-  assert(os.size() == 1);
-  OutputSet::sSetElement const & se = *os.begin();
+  _rf(NULL, f, 0, _flow_route_set, true);
+  OutputSet::sSetElement se = _flow_route_set->GetSet();
   assert(se.output_port == 0);
   int const & vc_start = se.vc_start;
   int const & vc_end = se.vc_end;
@@ -2003,7 +2001,8 @@ void TrafficManager::_Step( )
   }
   if(flits_in_flight && (_deadlock_timer++ >= _deadlock_warn_timeout)){
     _deadlock_timer = 0;
-    cout << "WARNING: Possible network deadlock.\n";
+    cerr << "WARNING: Possible network deadlock.\n";
+    exit(-1);
   }
   //process credit
   for ( int source = 0; source < _nodes; ++source ) {

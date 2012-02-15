@@ -45,15 +45,28 @@ public:
   static const char * const VCSTATE[];
   
 private:
+
+  class VCData{
+  public:
+    deque<int> _time_stamp;
+    deque<Flit *> _flit;
+    deque<OutputSet *> _route_set;
+    static VC::VCData * New();
+    void Free();
+  private:
+    VCData() {}
+    ~VCData() {}
+    static stack<VC::VCData *> _all;
+    static stack<VC::VCData *> _free;
+  };
+
   int _size;
 
-  deque<int> _time_stamp;
-  deque<Flit *> _buffer;
+  VCData* _buffer;
   
   eVCState _state;
   int      _state_time;
   
-  OutputSet *_route_set;
   int _out_port, _out_vc;
 
   int _total_cycles;
@@ -92,10 +105,10 @@ public:
   
   bool SubstituteFrontFlit(Flit*f);
 
-  bool AddFlit( Flit *f );
+  bool AddFlit( Flit *f , OutputSet* o);
   inline Flit *FrontFlit( ) const
   {
-    return _buffer.empty() ? NULL : _buffer.front();
+    return (_buffer==NULL||_buffer->_flit.empty()) ? NULL : _buffer->_flit.front();
   }
   
   Flit *RemoveFlit( );
@@ -105,17 +118,17 @@ public:
   }
   
   inline int TimeStamp() const{
-    return _time_stamp.front();
+    return _buffer->_time_stamp.front();
   }
 
   inline bool Empty( ) const
   {
-    return _buffer.empty( );
+    return _buffer==NULL||_buffer->_flit.empty( );
   }
 
   inline bool Full( ) const
   {
-    return (int)_buffer.size( ) == _size;
+    return _buffer==NULL?false: (int)_buffer->_flit.size( ) == _size;
   }
 
   inline VC::eVCState GetState( ) const
@@ -158,7 +171,7 @@ public:
 
   inline int GetSize() const
   {
-    return (int)_buffer.size();
+    return _buffer==NULL?0:(int)_buffer->_flit.size();
   }
 
     

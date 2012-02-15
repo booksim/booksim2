@@ -38,6 +38,7 @@
 #include "globals.hpp"
 #include "flit.hpp"
 
+
 stack<Flit *> Flit::_all;
 stack<Flit *> Flit::_free;
 
@@ -107,9 +108,9 @@ Flit * Flit::New() {
   if(_free.empty()) {
     f = new Flit;
     _all.push(f);
-    if(_all.size()>1000000){
+    if(_all.size()>10000000){
       cerr<<"Simulation time "<<GetSimTime()<<" flit allocation exceeds "<<_all.size()<<endl;
-      assert(false);
+      exit(-1);
     }
   } else {
     f = _free.top();

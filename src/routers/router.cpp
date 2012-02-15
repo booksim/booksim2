@@ -45,8 +45,6 @@
 
 //////////////////Sub router types//////////////////////
 #include "iq_router.hpp"
-#include "event_router.hpp"
-#include "chaos_router.hpp"
 ///////////////////////////////////////////////////////
 
 Router::Router( const Configuration& config,
@@ -111,10 +109,6 @@ Router *Router::NewRouter( const Configuration& config,
   Router *r = NULL;
   if ( type == "iq" ) {
     r = new IQRouter( config, parent, name, id, inputs, outputs );
-  } else if ( type == "event" ) {
-    r = new EventRouter( config, parent, name, id, inputs, outputs );
-  } else if ( type == "chaos" ) {
-    r = new ChaosRouter( config, parent, name, id, inputs, outputs );
   } else {
     cerr << "Unknown router type: " << type << endl;
   }

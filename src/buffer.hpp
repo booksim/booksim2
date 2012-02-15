@@ -58,7 +58,7 @@ public:
     
   }
 
-  bool AddFlit( int vc, Flit *f );
+  bool AddFlit( int vc, Flit *f,  OutputSet* o);
 
   Flit *RemoveFlit( int vc );
   

@@ -104,13 +104,13 @@ bool IQRouter::is_control_vc(int vc){
 }
 bool IQRouter::is_voq_vc(int vc){
   assert(_voq);
-    /*if(_spec_voq){
-      if(vc<RES_RESERVED_VCS){
-	return false;
-      } else{ //data and spec
-	return true;
-      }
-      } else*/
+  /*if(_spec_voq){
+    if(vc<RES_RESERVED_VCS){
+    return false;
+    } else{ //data and spec
+    return true;
+    }
+    } else*/
   if(vc<_special_vcs){
     return false;
   } else { //data
@@ -207,21 +207,10 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
     _vcs = _special_vcs + outputs*_data_vcs;
 
-    _voq_init_route = new OutputSet();
+
     _voq_pid.resize(inputs*(_special_vcs+_data_vcs));
-    _voq_route_set.resize(inputs*_vcs);
     _res_voq_drop.resize(inputs*_vcs, false);
-    for(int i = 0; i<inputs; i++){
-      for(int j = 0; j<_vcs; j++){
-	int index = i*_vcs+j;
-	_voq_route_set[index] = new OutputSet();
-	if(is_voq_vc(j)){
-	  int port = voqport(j);
-	  assert(port!=-1);
-	  _voq_route_set[index]->Add(port,voq2vc(j,outputs));
-	}
-      }
-    }
+
   } else {
     _vcs         = config.GetInt( "num_vcs" );
   }
@@ -405,13 +394,7 @@ IQRouter::~IQRouter( )
     cout << "Outputs=" << _outputs ;
     cout << *_switchMonitor << endl ;
   }
-  for(int i = 0; i<_inputs; i++){
-    for(int j = 0; j<_vcs; j++){
-      int index = i*_vcs+j;
-      delete _voq_route_set[index];
-    }
-  }
-  delete _voq_init_route;
+
   for(int i = 0; i<_inputs; i++){
     delete[] dropped_pid[i];
   }
@@ -440,10 +423,10 @@ IQRouter::~IQRouter( )
   
 void IQRouter::ReadInputs( )
 {
- for(int i =0; i<_outputs; ++i){
-   _current_bandwidth_commitment[i] = 
-     _next_bandwidth_commitment[i];
- }
+  for(int i =0; i<_outputs; ++i){
+    _current_bandwidth_commitment[i] = 
+      _next_bandwidth_commitment[i];
+  }
  
   bool have_flits = _ReceiveFlits( );
   bool have_credits = _ReceiveCredits( );
@@ -507,6 +490,7 @@ void IQRouter::_InternalStep( )
     _SWAllocUpdate( );
     activity = activity || !_sw_alloc_vcs.empty();
   }
+  bool switch_active = !_crossbar_flits.empty() ;
   if(!_crossbar_flits.empty()) {
     _SwitchUpdate( );
     activity = activity || !_crossbar_flits.empty();
@@ -519,6 +503,17 @@ void IQRouter::_InternalStep( )
 
   _bufferMonitor->cycle( );
   _switchMonitor->cycle( );
+
+  if(_active && !switch_active){
+    _dead_lock++;
+    if(_dead_lock>100){
+      cout<<"Router "<<FullName()<<" deadlock"<<endl;
+      _dead_lock = 0;
+    }
+  } else {
+    _dead_lock = 0;
+  }
+
 }
 
 void IQRouter::WriteOutputs( )
@@ -664,22 +659,20 @@ void IQRouter::_InputQueuing( )
     assert((vc >= 0) && (vc < (_special_vcs+_data_vcs)));
 
     Buffer * const cur_buf = _buf[input];
-
+    OutputSet * o = NULL;
+    if(f->head){
+      o = OutputSet::New();
+    }
     if(_voq && vc2voq(vc)==-1){
       if(f->head){
 	int old_vc = f->vc;
-	
-	_rf(this, f, input, _voq_init_route, false);
-	set<OutputSet::sSetElement> const setlist = _voq_init_route->GetSet();
-	for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
-	    iset != setlist.end();
-	    ++iset) {
-	   
-	  int  out_port = iset->output_port;
-	  f->vc = old_vc;
-	  vc = vc2voq(f->vc, out_port);
-	  _voq_pid[input*(_special_vcs+_data_vcs)+f->vc]=pair<int, int>(f->pid, vc);
-	}
+	_rf(this, f, input, o, false);
+	const OutputSet::sSetElement iset = o->GetSet();
+	int  out_port = iset.output_port;
+	f->vc = old_vc;
+	vc = vc2voq(f->vc, out_port);
+	_UpdateCommitment(input, vc, f, o);
+	_voq_pid[input*(_special_vcs+_data_vcs)+f->vc]=pair<int, int>(f->pid, vc);
       } else {
 	assert(_voq_pid[input*(_special_vcs+_data_vcs)+f->vc].first==f->pid);
 	vc = _voq_pid[input*(_special_vcs+_data_vcs)+f->vc].second;
@@ -701,7 +694,7 @@ void IQRouter::_InputQueuing( )
       }
       *gWatchOut << ")." << endl;
     }
-    if(!cur_buf->AddFlit(vc, f)) {
+    if(!cur_buf->AddFlit(vc, f,o)) {
       Error( "VC buffer overflow" );
     }
     ++_stored_flits[input];
@@ -727,8 +720,8 @@ void IQRouter::_InputQueuing( )
 	  _res_voq_drop[input*_vcs+vc] = false;
 	} else {
 	  cur_buf->Route(vc, _rf, this, f, input);
+	  _UpdateCommitment(input, vc, f, cur_buf->GetRouteSet(vc));
 	}
-	_UpdateCommitment(input, vc, f, cur_buf);
 	cur_buf->SetState(vc, VC::vc_alloc);
 	if(_speculative) {
 	  _sw_alloc_vcs.push_back(make_pair(-1, make_pair(make_pair(input, vc),
@@ -851,8 +844,8 @@ void IQRouter::_RouteUpdate( )
       _res_voq_drop[input*_vcs+vc] = false;
     } else {
       cur_buf->Route(vc, _rf, this, f, input);
+      _UpdateCommitment(input, vc, f, cur_buf->GetRouteSet(vc));
     }
-    _UpdateCommitment(input, vc, f, cur_buf);
     cur_buf->SetState(vc, VC::vc_alloc);
     if(_speculative) {
       _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second, -1)));
@@ -921,89 +914,78 @@ void IQRouter::_VCAllocEvaluate( )
     }
     
     const OutputSet *              route_set;
-    if(_voq && is_voq_vc(vc)){
-      if(_res_voq_drop[input*_vcs+vc]){ //nack
-	route_set = cur_buf->GetRouteSet(vc);
-      } else {
-	route_set = _voq_route_set[input*_vcs+vc];
-      }
-    } else {
-      route_set = cur_buf->GetRouteSet(vc);
-    }
+
+    route_set = cur_buf->GetRouteSet(vc);
     assert(route_set);
 
     int const out_priority = cur_buf->GetPriority(vc);
-    set<OutputSet::sSetElement> const setlist = route_set->GetSet();
+    const OutputSet::sSetElement  iset = route_set->GetSet();
 
-    for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
-	iset != setlist.end();
-	++iset) {
+    int const & out_port = iset.output_port;
+    assert((out_port >= 0) && (out_port < _outputs));
 
-      int const & out_port = iset->output_port;
-      assert((out_port >= 0) && (out_port < _outputs));
+    BufferState *dest_buf = _next_buf[out_port];
 
-      BufferState *dest_buf = _next_buf[out_port];
-
-      for(int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc) {
-	assert((out_vc >= 0) && (out_vc < _vcs));
-	assert( iset->vc_end-iset->vc_start==0 || !_voq);
-	int const & in_priority = iset->pri;
+    for(int out_vc = iset.vc_start; out_vc <= iset.vc_end; ++out_vc) {
+      assert((out_vc >= 0) && (out_vc < _vcs));
+      assert( iset.vc_end-iset.vc_start==0 || !_voq);
+      int const & in_priority = iset.pri;
 
 
-	//speculative buffer check
-	if( RESERVATION_BUFFER_SIZE_DROP && VC_ALLOC_DROP && f && f->res_type == RES_TYPE_SPEC){
-	  int next_size = dest_buf->Size(out_vc)-DEFAULT_CHANNEL_LATENCY*2;
-	  next_size=MAX(next_size,0);
+      //speculative buffer check
+      if( RESERVATION_BUFFER_SIZE_DROP && VC_ALLOC_DROP && f && f->res_type == RES_TYPE_SPEC){
+	int next_size = dest_buf->Size(out_vc)-DEFAULT_CHANNEL_LATENCY*2;
+	next_size=MAX(next_size,0);
 
-	  if(( RESERVATION_QUEUING_DROP && f->exptime-next_size<GetSimTime()-cur_buf->TimeStamp(vc)) ||
-	     (!RESERVATION_QUEUING_DROP && f->exptime<GetSimTime()+next_size)){
-	    if(f->watch){
-	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-			 << "about to drop flit " << f->id
-			 << " from input " << input <<" vc "<<vc
-			 << "." << endl;
-	    }
-	    
-	    cur_buf->SetDrop(vc);
-	    continue;
-	  }
-	}
-
-	// On the input input side, a VC might request several output VCs. 
-	// These VCs can be prioritized by the routing function, and this is 
-	// reflected in "in_priority". On the output side, if multiple VCs are 
-	// requesting the same output VC, the priority of VCs is based on the 
-	// actual packet priorities, which is reflected in "out_priority".
-
-
-	if(( _cut_through && dest_buf->IsAvailableFor(out_vc,cur_buf->FrontFlit(vc)->packet_size))||
-	   (!_cut_through && dest_buf->IsAvailableFor(out_vc))) {
+	if(( RESERVATION_QUEUING_DROP && f->exptime-next_size<GetSimTime()-cur_buf->TimeStamp(vc)) ||
+	   (!RESERVATION_QUEUING_DROP && f->exptime<GetSimTime()+next_size)){
 	  if(f->watch){
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		       << "  Requesting VC " << out_vc
-		       << " at output " << out_port 
-		       << " (in_pri: " << in_priority
-		       << ", out_pri: " << out_priority
-		       << ")." << endl;
-	    watched = true;
+		       << "about to drop flit " << f->id
+		       << " from input " << input <<" vc "<<vc
+		       << "." << endl;
 	  }
-	  if(!_voq){
-	    _vc_allocator->AddRequest(input*_vcs + vc, out_port*(_special_vcs+_data_vcs) + out_vc, 0, in_priority, out_priority);
-	  } else {
-#ifdef USE_LARGE_ARB
-	    _VOQArbs[out_port*(_special_vcs+_data_vcs) + out_vc]->AddRequest(input*_vcs + vc,0,out_priority); 
-#else
-	    _vc_allocator->AddRequest(input*_vcs + vc, out_port*(_special_vcs+_data_vcs) + out_vc, 0, in_priority, out_priority);
-#endif
-	  }
-	} else {
-	  if(f->watch)
-	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		       << "  VC " << out_vc 
-		       << " at output " << out_port 
-		       << " is busy." << endl;
+	    
+	  cur_buf->SetDrop(vc);
+	  continue;
 	}
       }
+
+      // On the input input side, a VC might request several output VCs. 
+      // These VCs can be prioritized by the routing function, and this is 
+      // reflected in "in_priority". On the output side, if multiple VCs are 
+      // requesting the same output VC, the priority of VCs is based on the 
+      // actual packet priorities, which is reflected in "out_priority".
+
+
+      if(( _cut_through && dest_buf->IsAvailableFor(out_vc,cur_buf->FrontFlit(vc)->packet_size))||
+	 (!_cut_through && dest_buf->IsAvailableFor(out_vc))) {
+	if(f->watch){
+	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		     << "  Requesting VC " << out_vc
+		     << " at output " << out_port 
+		     << " (in_pri: " << in_priority
+		     << ", out_pri: " << out_priority
+		     << ")." << endl;
+	  watched = true;
+	}
+	if(!_voq){
+	  _vc_allocator->AddRequest(input*_vcs + vc, out_port*(_special_vcs+_data_vcs) + out_vc, 0, in_priority, out_priority);
+	} else {
+#ifdef USE_LARGE_ARB
+	  _VOQArbs[out_port*(_special_vcs+_data_vcs) + out_vc]->AddRequest(input*_vcs + vc,0,out_priority); 
+#else
+	  _vc_allocator->AddRequest(input*_vcs + vc, out_port*(_special_vcs+_data_vcs) + out_vc, 0, in_priority, out_priority);
+#endif
+	}
+      } else {
+	if(f->watch)
+	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		     << "  VC " << out_vc 
+		     << " at output " << out_port 
+		     << " is busy." << endl;
+      }
+      
     }
   }
 
@@ -1046,19 +1028,11 @@ void IQRouter::_VCAllocEvaluate( )
 #ifdef USE_LARGE_ARB      
       Buffer * const cur_buf = _buf[input];
       const OutputSet *route_set;
-      if(_voq && is_voq_vc(vc)){
-	if(_res_voq_drop[input*_vcs+vc]){//nack
-	  route_set = cur_buf->GetRouteSet(vc);
-	} else {
-	  route_set = _voq_route_set[input*_vcs+vc];
-	}
-      } else {
-	route_set = cur_buf->GetRouteSet(vc);
-      }
-      set<OutputSet::sSetElement> const setlist = route_set->GetSet();
-      set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
-      int out_port = iset->output_port;
-      int out_vc = iset->vc_start;
+      route_set = cur_buf->GetRouteSet(vc);
+      assert(route_set);
+      const OutputSet::sSetElement  iset = route_set->GetSet();
+      int out_port = iset.output_port;
+      int out_vc = iset.vc_start;
       if(_VOQArbs[ (_special_vcs+_data_vcs)*out_port+ out_vc]->Arbitrate()!=input * _vcs + vc){
 	output_and_vc = -1;
       } else {
@@ -1190,7 +1164,7 @@ void IQRouter::_VCAllocUpdate( )
     
       Flit* drop_f = NULL;
       gDropStats[_id][input]++;
-      _next_bandwidth_commitment[(cur_buf->GetRouteSet(vc)->GetSet().begin()->output_port)]-=f->packet_size;
+      _next_bandwidth_commitment[(cur_buf->GetRouteSet(vc)->GetSet().output_port)]-=f->packet_size;
       drop_f = trafficManager->DropPacket(input, f);
       drop_f->vc = f->vc;
 
@@ -1234,7 +1208,7 @@ void IQRouter::_VCAllocUpdate( )
 	_res_voq_drop[input*_vcs+vc] = true;
       }
       cur_buf->Route(vc, _rf, this, drop_f, input);
-      _UpdateCommitment(input, vc, drop_f, cur_buf);
+      _UpdateCommitment(input, vc, drop_f, cur_buf->GetRouteSet(vc));
       cur_buf->ResetExpected(vc);
       _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first, -1)));
       _vc_alloc_vcs.pop_front();
@@ -1411,16 +1385,16 @@ void IQRouter::_SWHoldUpdate( )
     }
     int const & expanded_output = item.second.second;
     if(expanded_output >= 0  && _switch_hold_out_skip[expanded_output]){
-     skip = true;
+      skip = true;
     }    
-   if(skip){   
-     _switch_hold_in_skip[expanded_input]=false;
-     _switch_hold_out_skip[expanded_output]=false;
-     _sw_hold_vcs.push_back(make_pair(-1, make_pair(item.second.first,
-						    -1)));
-     _sw_hold_vcs.pop_front();
-     continue;
-   }
+    if(skip){   
+      _switch_hold_in_skip[expanded_input]=false;
+      _switch_hold_out_skip[expanded_output]=false;
+      _sw_hold_vcs.push_back(make_pair(-1, make_pair(item.second.first,
+						     -1)));
+      _sw_hold_vcs.pop_front();
+      continue;
+    }
 
     if(expanded_output >= 0  && ( _output_buffer_size==-1 || _output_buffer[expanded_output].size()<size_t(_output_buffer_size))) {
 
@@ -1529,8 +1503,8 @@ void IQRouter::_SWHoldUpdate( )
 	      _res_voq_drop[input*_vcs+vc] = false;
 	    } else {
 	      cur_buf->Route(vc, _rf, this, nf, input);
+	      _UpdateCommitment(input, vc, nf, cur_buf->GetRouteSet(vc));
 	    }
-	    _UpdateCommitment(input, vc, nf, cur_buf);
 	    cur_buf->SetState(vc, VC::vc_alloc);
 	    if(_speculative) {
 	      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
@@ -1759,67 +1733,57 @@ void IQRouter::_SWAllocEvaluate( )
     // allocation succeeds.
     
     const OutputSet *route_set;
-    if(_voq && is_voq_vc(vc)){
-      if(_res_voq_drop[input*_vcs+vc]){
-	route_set = cur_buf->GetRouteSet(vc);
-      } else {
-	route_set = _voq_route_set[input*_vcs+vc];
-      }
-    } else {
-      route_set = cur_buf->GetRouteSet(vc);
-    }
+
+    route_set = cur_buf->GetRouteSet(vc);
     assert(route_set);
     
-    set<OutputSet::sSetElement> const setlist = route_set->GetSet();
-    
-    for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
-	iset != setlist.end();
-	++iset) {
+    const OutputSet::sSetElement  iset = route_set->GetSet();
+  
       
-      int const & dest_output = iset->output_port;
-      assert((dest_output >= 0) && (dest_output < _outputs));
+    int const & dest_output = iset.output_port;
+    assert((dest_output >= 0) && (dest_output < _outputs));
       
-      // for lower levels of speculation, ignore credit availability and always 
-      // issue requests for all output ports in route set
+    // for lower levels of speculation, ignore credit availability and always 
+    // issue requests for all output ports in route set
       
-      bool do_request;
+    bool do_request;
       
-      if(_spec_check_elig) {
-	assert(false);
-	do_request = false;	
-	// for higher levels of speculation, check if at least one suitable VC 
-	// is available at the current output
+    if(_spec_check_elig) {
+      assert(false);
+      do_request = false;	
+      // for higher levels of speculation, check if at least one suitable VC 
+      // is available at the current output
 	
-	BufferState const * const dest_buf = _next_buf[dest_output];
+      BufferState const * const dest_buf = _next_buf[dest_output];
 	
-	for(int dest_vc = iset->vc_start; dest_vc <= iset->vc_end; ++dest_vc) {
-	  assert((dest_vc >= 0) && (dest_vc < (_special_vcs+_data_vcs)));
-	  if( (gReservation||gECN) &&
-	      is_control_vc(dest_vc) && 
-	      (dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_control_buffer[dest_output].size()<(size_t)(_output_buffer_size))) ){
+      for(int dest_vc = iset.vc_start; dest_vc <= iset.vc_end; ++dest_vc) {
+	assert((dest_vc >= 0) && (dest_vc < (_special_vcs+_data_vcs)));
+	if( (gReservation||gECN) &&
+	    is_control_vc(dest_vc) && 
+	    (dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_control_buffer[dest_output].size()<(size_t)(_output_buffer_size))) ){
 
-	    do_request = true;
-	    break;
-	  } else if(dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_buffer[dest_output].size()<(size_t)(_output_buffer_size))) {
-	    do_request = true;
-	    break;
-	  }
+	  do_request = true;
+	  break;
+	} else if(dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_buffer[dest_output].size()<(size_t)(_output_buffer_size))) {
+	  do_request = true;
+	  break;
 	}
-      } else {
-	do_request = true;
       }
+    } else {
+      do_request = true;
+    }
       
-      if(do_request) { 
-	bool const requested = _SWAllocAddReq(input, vc, dest_output);
-	watched |= requested && f->watch;
-      } else {
-	if(f->watch) {
-	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		     << "  Output " << dest_output 
-		     << " has no suitable VCs available." << endl;
-	}
+    if(do_request) { 
+      bool const requested = _SWAllocAddReq(input, vc, dest_output);
+      watched |= requested && f->watch;
+    } else {
+      if(f->watch) {
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		   << "  Output " << dest_output 
+		   << " has no suitable VCs available." << endl;
       }
     }
+    
   }
   
   if(watched) {
@@ -2042,41 +2006,29 @@ void IQRouter::_SWAllocEvaluate( )
 	} else { // VC allocation is piggybacked onto switch allocation
 
 	  const OutputSet * route_set;
-	  if(_voq && is_voq_vc(vc)){
-	    if(_res_voq_drop[input*_vcs+vc]){
-	      route_set = cur_buf->GetRouteSet(vc);
-	    } else {
-	      route_set = _voq_route_set[input*_vcs+vc];
-	    }
-	  } else {
-	    route_set = cur_buf->GetRouteSet(vc);
-	  }
 
+	  route_set = cur_buf->GetRouteSet(vc);
 	  assert(route_set);
 
-	  set<OutputSet::sSetElement> const setlist = route_set ->GetSet();
+	  const OutputSet::sSetElement iset = route_set ->GetSet();
 
 	  bool found_vc = false;
-
-	  for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
-	      iset != setlist.end();
-	      ++iset) {
-	    if(iset->output_port == output) {
-	      for(int out_vc = iset->vc_start; 
-		  out_vc <= iset->vc_end; 
-		  ++out_vc) {
-		assert((out_vc >= 0) && (out_vc < (_special_vcs+_data_vcs)));
-		if(dest_buf->IsAvailableFor(out_vc) && 
-		   dest_buf->HasCreditFor(out_vc)) {
-		  found_vc = true;
-		  break;
-		}
-		if(found_vc) {
-		  break;
-		}
+	  if(iset.output_port == output) {
+	    for(int out_vc = iset.vc_start; 
+		out_vc <= iset.vc_end; 
+		++out_vc) {
+	      assert((out_vc >= 0) && (out_vc < (_special_vcs+_data_vcs)));
+	      if(dest_buf->IsAvailableFor(out_vc) && 
+		 dest_buf->HasCreditFor(out_vc)) {
+		found_vc = true;
+		break;
+	      }
+	      if(found_vc) {
+		break;
 	      }
 	    }
 	  }
+	  
 
 	  if(!found_vc) {
 	    if(f->watch) {
@@ -2182,42 +2134,32 @@ void IQRouter::_SWAllocUpdate( )
 	int match_prio = numeric_limits<int>::min();
 
 	const OutputSet *route_set;
-	if(_voq && is_voq_vc(vc)){
-	  if(_res_voq_drop[input*_vcs+vc]){
-	    route_set = cur_buf->GetRouteSet(vc);
-	  } else {
-	    route_set = _voq_route_set[input*_vcs+vc];
-	  }
-	} else {
-	  route_set = cur_buf->GetRouteSet(vc);
-	}
+	route_set = cur_buf->GetRouteSet(vc);
+	assert(route_set);
+	const OutputSet::sSetElement iset = route_set->GetSet();
 
-	set<OutputSet::sSetElement> const setlist = route_set->GetSet();
 
-	for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
-	    iset != setlist.end();
-	    ++iset) {
-	  if(iset->output_port == output) {
-	    for(int out_vc = iset->vc_start; 
-		out_vc <= iset->vc_end; 
-		++out_vc) {
-	      assert((out_vc >= 0) && (out_vc < (_special_vcs+_data_vcs)));
+	if(iset.output_port == output) {
+	  for(int out_vc = iset.vc_start; 
+	      out_vc <= iset.vc_end; 
+	      ++out_vc) {
+	    assert((out_vc >= 0) && (out_vc < (_special_vcs+_data_vcs)));
 	      
-	      // FIXME: This check should probably be performed in Evaluate(), 
-	      // not Update(), as the latter can cause the outcome to depend on 
-	      // the order of evaluation!
-	      if(dest_buf->IsAvailableFor(out_vc) && 
-		 dest_buf->HasCreditFor(out_vc) &&
-		 ((match_vc < 0) || 
-		  RoundRobinArbiter::Supersedes(out_vc, iset->pri, 
-						match_vc, match_prio, 
-						vc_offset, (_special_vcs+_data_vcs)))) {
-		match_vc = out_vc;
-		match_prio = iset->pri;
-	      }
-	    }	
-	  }
+	    // FIXME: This check should probably be performed in Evaluate(), 
+	    // not Update(), as the latter can cause the outcome to depend on 
+	    // the order of evaluation!
+	    if(dest_buf->IsAvailableFor(out_vc) && 
+	       dest_buf->HasCreditFor(out_vc) &&
+	       ((match_vc < 0) || 
+		RoundRobinArbiter::Supersedes(out_vc, iset.pri, 
+					      match_vc, match_prio, 
+					      vc_offset, (_special_vcs+_data_vcs)))) {
+	      match_vc = out_vc;
+	      match_prio = iset.pri;
+	    }
+	  }	
 	}
+	
 	assert(match_vc >= 0);
 
 	if(f->watch) {
@@ -2281,8 +2223,8 @@ void IQRouter::_SWAllocUpdate( )
 	int vvc = voq2vc(rvc,_outputs);
 	//is the head flit of a spec is replaced by nack
 	/*	if(f->res_type==RES_TYPE_NACK && !is_control_vc(vc)){
-	  vvc=RES_RESERVED_VCS;
-	  }*/
+		vvc=RES_RESERVED_VCS;
+		}*/
 	_out_queue_credits.find(input)->second->id=777;
 	_out_queue_credits.find(input)->second->vc.push_back(vvc);
       } else {
@@ -2312,8 +2254,8 @@ void IQRouter::_SWAllocUpdate( )
 	      _res_voq_drop[input*_vcs+vc] = false;
 	    } else {
 	      cur_buf->Route(vc, _rf, this, nf, input);
+	      _UpdateCommitment(input, vc, nf, cur_buf->GetRouteSet(vc));
 	    }
-	    _UpdateCommitment(input, vc, nf, cur_buf);
 	    cur_buf->SetState(vc, VC::vc_alloc);
 	    if(_speculative) {
 	      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
@@ -2629,19 +2571,9 @@ vector<int> IQRouter::GetBuffers(int i) const {
 }
 
 
-void IQRouter::_UpdateCommitment(int input, int vc, const Flit* f, Buffer* cur_buf){
+void IQRouter::_UpdateCommitment(int input, int vc, const Flit* f, const OutputSet * route_set){
   assert(f->head);
-  const OutputSet *              route_set;
-  if(_voq && is_voq_vc(vc)){
-      if(_res_voq_drop[input*_vcs+vc]){ //nack
-	route_set = cur_buf->GetRouteSet(vc);
-      } else {
-	route_set = _voq_route_set[input*_vcs+vc];
-      }
-    } else {
-      route_set = cur_buf->GetRouteSet(vc);
-    }
-  int output =  route_set->GetSet().begin()->output_port;
+  int output =  route_set->GetSet().output_port;
   _next_bandwidth_commitment[output]+=f->packet_size;
 
 }

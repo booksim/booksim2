@@ -38,6 +38,9 @@
 
 int gP, gA, gG;
 
+int g_grp_num_routers=0;
+int g_grp_num_nodes=0;
+int g_network_size = 0;
 
 #define MAX(X,Y) ((X>Y)?(X):(Y))
 
@@ -51,11 +54,9 @@ int dragonflynew_hopcnt(int src, int dest)
   int grp_output, dest_grp_output;
   int grp_output_RID;
 
-  int _grp_num_routers= gA;
-  int _grp_num_nodes =_grp_num_routers*gP;
   
-  dest_grp_ID = int(dest/_grp_num_nodes);
-  src_grp_ID = int(src / _grp_num_nodes);
+  dest_grp_ID = int(dest/g_grp_num_nodes);
+  src_grp_ID = int(src / g_grp_num_nodes);
   
   //source and dest are in the same group, either 0-1 hop
   if (dest_grp_ID == src_grp_ID) {
@@ -76,10 +77,10 @@ int dragonflynew_hopcnt(int src, int dest)
       grp_output = dest_grp_ID - 1;
       dest_grp_output = src_grp_ID;
     }
-    grp_output_RID = ((int) (grp_output / (gP))) + src_grp_ID * _grp_num_routers;
+    grp_output_RID = ((int) (grp_output / (gP))) + src_grp_ID * g_grp_num_routers;
     src_intm = grp_output_RID * gP;
 
-    grp_output_RID = ((int) (dest_grp_output / (gP))) + dest_grp_ID * _grp_num_routers;
+    grp_output_RID = ((int) (dest_grp_output / (gP))) + dest_grp_ID * g_grp_num_routers;
     dest_intm = grp_output_RID * gP;
 
     //hop count in source group
@@ -105,12 +106,10 @@ int dragonflynew_hopcnt(int src, int dest)
 
 //packet output port based on the source, destination and current location
 int dragonfly_port(int rID, int source, int dest){
-  int _grp_num_routers= gA;
-  int _grp_num_nodes =_grp_num_routers*gP;
 
   int out_port = -1;
-  int grp_ID = int(rID / _grp_num_routers); 
-  int dest_grp_ID = int(dest/_grp_num_nodes);
+  int grp_ID = int(rID / g_grp_num_routers); 
+  int dest_grp_ID = int(dest/g_grp_num_nodes);
   int grp_output=-1;
   int grp_RID=-1;
   int group_dest=-1;
@@ -124,7 +123,7 @@ int dragonfly_port(int rID, int source, int dest){
     } else {
       grp_output = dest_grp_ID - 1;
     }
-    grp_RID = int(grp_output /gP) + grp_ID * _grp_num_routers;
+    grp_RID = int(grp_output /gP) + grp_ID * g_grp_num_routers;
     group_dest = grp_RID * gP;
   }
 
@@ -139,9 +138,9 @@ int dragonfly_port(int rID, int source, int dest){
     assert(grp_RID!=-1);
 
     if (rID < grp_RID){
-      out_port = (grp_RID % _grp_num_routers) - 1 + gP;
+      out_port = (grp_RID % g_grp_num_routers) - 1 + gP;
     }else{
-      out_port = (grp_RID % _grp_num_routers) + gP;
+      out_port = (grp_RID % g_grp_num_routers) + gP;
     }
   }  
  
@@ -216,9 +215,13 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
   gG = _g;
   gP = _p;
   gA = _a;
+
   _grp_num_routers = gA;
   _grp_num_nodes =_grp_num_routers*gP;
 
+  g_grp_num_routers = gA;
+  g_grp_num_nodes =_grp_num_routers*gP;
+  g_network_size = _nodes;
 }
 
 void DragonFlyNew::_BuildNet( const Configuration &config )
@@ -466,26 +469,24 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
 		       OutputSet *outputs, bool inject )
 {
   outputs->Clear( );
-
   if(inject) {
     int inject_vc= SRP_VC_CONVERTER(0,f->res_type == RES_TYPE_RES?RES_TYPE_SPEC:f->res_type);
     outputs->AddRange(0,inject_vc, inject_vc);
     return;
   }
 
-  int _grp_num_routers= gA;
 
   int dest  = f->dest;
   int rID =  r->GetID(); 
-
-  int grp_ID = int(rID / _grp_num_routers); 
+  int grp_ID = int(rID / g_grp_num_routers); 
+  int dest_grp_ID = int(dest/g_grp_num_nodes);
   int debug = f->watch;
   int out_port = -1;
   int out_vc = 0;
-  int dest_grp_ID=-1;
+
+
 
   if ( in_channel < gP ) {
-    out_vc = 0;
     f->ph = 0;
     if (dest_grp_ID == grp_ID) {
       f->ph = 1;
@@ -527,15 +528,11 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
     return;
   }
 
-  int _grp_num_routers= gA;
-  int _grp_num_nodes =_grp_num_routers*gP;
-  int _network_size =  gA * gP * gG;
-
  
   int dest  = f->dest;
   int rID =  r->GetID(); 
-  int grp_ID = (int) (rID / _grp_num_routers);
-  int dest_grp_ID = int(dest/_grp_num_nodes);
+  int grp_ID = (int) (rID / g_grp_num_routers);
+  int dest_grp_ID = int(dest/g_grp_num_nodes);
 
   int debug = f->watch;
   int out_port = -1;
@@ -553,8 +550,8 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
       f->minimal = 1;
     } else {
       //select a random node
-      f->intm =RandomInt(_network_size - 1);
-      intm_grp_ID = (int)(f->intm/_grp_num_nodes);
+      f->intm =RandomInt(g_network_size - 1);
+      intm_grp_ID = (int)(f->intm/g_grp_num_nodes);
       if (debug){
 	cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
       }
@@ -574,7 +571,7 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
   //transition from nonminimal phase to minimal
   if(f->ph==2 || f->ph==3){
     intm_rID= (int)(f->intm/gP);
-    intm_grp_ID = (int)(f->intm/_grp_num_nodes);
+    intm_grp_ID = (int)(f->intm/g_grp_num_nodes);
     if( rID == intm_rID){
       f->ph = 0;
     }
@@ -627,16 +624,11 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
   //this constant biases the adaptive decision toward minimum routing
   //negative value woudl biases it towards nonminimum routing
   int adaptive_threshold = 30;
-
-  int _grp_num_routers= gA;
-  int _grp_num_nodes =_grp_num_routers*gP;
-  int _network_size =  gA * gP * gG;
-
  
   int dest  = f->dest;
   int rID =  r->GetID(); 
-  int grp_ID = (int) (rID / _grp_num_routers);
-  int dest_grp_ID = int(dest/_grp_num_nodes);
+  int grp_ID = (int) (rID / g_grp_num_routers);
+  int dest_grp_ID = int(dest/g_grp_num_nodes);
 
   int debug = f->watch;
   int out_port = -1;
@@ -659,8 +651,8 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
       f->minimal = 1;
     } else {
       //select a random node
-      f->intm =RandomInt(_network_size - 1);
-      intm_grp_ID = (int)(f->intm/_grp_num_nodes);
+      f->intm =RandomInt(g_network_size - 1);
+      intm_grp_ID = (int)(f->intm/g_grp_num_nodes);
       if (debug){
 	cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
       }
@@ -755,16 +747,13 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
     return;
   }
 
-  int adaptive_threshold = 3;
-  int _grp_num_routers= gA;
-  int _grp_num_nodes =_grp_num_routers*gP;
-  int _network_size =  gA * gP * gG;
+  int adaptive_threshold = f->packet_size*2;
 
  
   int dest  = f->dest;
   int rID =  r->GetID(); 
-  int grp_ID = (int) (rID / _grp_num_routers);
-  int dest_grp_ID = int(dest/_grp_num_nodes);
+  int grp_ID = (int) (rID / g_grp_num_routers);
+  int dest_grp_ID = int(dest/g_grp_num_nodes);
 
   int debug = f->watch;
   int out_port = -1;
@@ -786,8 +775,8 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
       f->minimal = 1;
     } else {
       //select a random node
-      f->intm =RandomInt(_network_size - 1);
-      intm_grp_ID = (int)(f->intm/_grp_num_nodes);
+      f->intm =RandomInt(g_network_size - 1);
+      intm_grp_ID = (int)(f->intm/g_grp_num_nodes);
       if (debug){
 	cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
       }
@@ -827,8 +816,8 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
   } else if(f->ph == 4 && f->minimal==1){ //progressive
     assert(in_channel<gP + gA-1);
     //select a random node
-    f->intm =RandomInt(_network_size - 1);
-    intm_grp_ID = (int)(f->intm/_grp_num_nodes);
+    f->intm =RandomInt(g_network_size - 1);
+    intm_grp_ID = (int)(f->intm/g_grp_num_nodes);
     if (debug){
       cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
     }

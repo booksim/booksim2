@@ -326,7 +326,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["print_csv_results"] = 0;
   _int_map["print_vc_stats"] = 0;
 
-  _int_map["deadlock_warn_timeout"] = 256;
+  _int_map["deadlock_warn_timeout"] = 1024;
 
   _int_map["drain_measured_only"] = 0;
 
