@@ -77,16 +77,16 @@ int VC::occupancy = 0;
 VC::VC( const Configuration& config, int outputs, 
 	Module *parent, const string& name, bool special )
   : Module( parent, name ), 
-    _buffer(NULL),_state(idle), _state_time(0), _out_port(-1), _out_vc(-1), _total_cycles(0),
+    _cur_size(0),_buffer(NULL),_state(idle), _state_time(0), _out_port(-1), _out_vc(-1), _total_cycles(0),
     _vc_alloc_cycles(0), _active_cycles(0), _idle_cycles(0), _routing_cycles(0),
     _pri(0), _watched(false), _expected_pid(-1), _last_id(-1), _last_pid(-1),_drop(false),_special_vc(special)
 {
   if(_special_vc){
-    _size = config.GetInt("reservation_spec_vc_size");
-    if(_size==0)
-      _size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
+    _max_size = config.GetInt("reservation_spec_vc_size");
+    if(_max_size==0)
+      _max_size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
   } else {
-    _size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
+    _max_size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
   }
 
 
@@ -118,6 +118,7 @@ bool VC::SubstituteFrontFlit( Flit *f ){
     _buffer->_route_set.push_front(OutputSet::New());
     _buffer->_time_stamp.push_front(GetSimTime());
   }
+  _cur_size++;
   _buffer->_flit.push_front(f);
   UpdatePriority();
   return true;
@@ -144,7 +145,7 @@ bool VC::AddFlit( Flit *f , OutputSet* o)
   if(_buffer==NULL){
     _buffer = VCData::New();
   }
-  if((int)_buffer->_flit.size() >= _size) {
+  if((int)_cur_size >= _max_size) {
     Error("Flit buffer overflow.");
     return false;
   }
@@ -162,8 +163,22 @@ bool VC::AddFlit( Flit *f , OutputSet* o)
     assert(o);
     _buffer->_time_stamp.push_back(GetSimTime());
     _buffer->_route_set.push_back(o);
+  } 
+  _cur_size++;
+  if(!f->head && !f->tail && ! _buffer->_flit.empty()){
+    assert(f->packet_size==0);
+    Flit* last = _buffer->_flit.back();
+    if(last && !last->head){//compress body packets in a flit
+      last->packet_size++;
+      //Free is ok here because it is single threaded
+      //f still holds the correct value and is no gone until next Flit::new() call
+      f->Free();
+    } else {
+      _buffer->_flit.push_back(f);
+    }
+  } else {
+    _buffer->_flit.push_back(f);
   }
-  _buffer->_flit.push_back(f);
   UpdatePriority();
   return true;
 }
@@ -172,12 +187,16 @@ Flit *VC::RemoveFlit( )
 {
   Flit *f = NULL;
   if ( !_buffer->_flit.empty( ) ) {
+    _cur_size--;
     f = _buffer->_flit.front( );
     _buffer->_flit.pop_front( );
     if(f->head){
       _buffer->_time_stamp.pop_front();
       _buffer->_route_set.front()->Free();
       _buffer->_route_set.pop_front();
+    } else if(!f->head && !f->tail && f->packet_size!=0){
+      assert(_cur_size);
+      _buffer->_flit.push_front(Flit::Replicate(f));
     }
     _last_id = f->id;
     _last_pid = f->pid;
@@ -228,12 +247,12 @@ void VC::UpdatePriority()
   _drop=false;
   if(_buffer==NULL || _buffer->_flit.empty()) return;
   if(_pri_type == queue_length_based) {
-    _pri = _buffer->_flit.size();
+    _pri = _cur_size;
   } else if(_pri_type != none) {
     Flit * f = _buffer->_flit.front();
     if((_pri_type != local_age_based) && _priority_donation) {
       Flit * df = f;
-      for(size_t i = 1; i < _buffer->_flit.size(); ++i) {
+      for(int i = 1; i < _cur_size; ++i) {
 	Flit * bf = _buffer->_flit[i];
 	if(bf->pri > df->pri) df = bf;
       }
@@ -277,7 +296,7 @@ void VC::AdvanceTime( )
   case routing       : _routing_cycles++; break;
   }
   state_info[_state].cycles++;
-  occupancy += _buffer->_flit.size();
+  occupancy += _cur_size;
 }
 
 // ==== Debug functions ====
@@ -301,7 +320,7 @@ void VC::Display( ostream & os ) const
       os << " out_port: " << _out_port
 	 << " out_vc: " << _out_vc;
     }
-    os << " fill: " << _buffer->_flit.size();
+    os << " fill: " << _cur_size;
     if(!_buffer->_flit.empty()) {
       os << " front: " << _buffer->_flit.front()->id;
     }

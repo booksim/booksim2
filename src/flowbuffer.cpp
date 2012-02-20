@@ -27,7 +27,6 @@ extern int TOTAL_SPEC_BUFFER;
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 
 FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id,int mode, flow* f){
-
   parent = p;
   _dest=-1;
   _IRD = 0; 
@@ -129,20 +128,24 @@ void FlowBuffer::Init( flow* f){
   
   fl->buffer=new  queue<Flit*>;
   int deduction =   parent->_GeneratePacket(fl,fl->data_to_generate);
+  int packet_size = fl->buffer->front()->packet_size;
+  int sn_start =  fl->buffer->front()->sn;
   fl->data_to_generate-=deduction;
-  while(!fl->buffer->empty()){
+  //the flit buffer copy is complicated because of body flit compression
+  for(int i = sn_start; i<sn_start+packet_size; i++){
     Flit *ff = fl->buffer->front();
-    assert(ff);
-    fl->buffer->pop();
-    ff->flbid = _id;
-    if(fl->flow_size>=RESERVATION_PACKET_THRESHOLD)
-      ff->walkin = false;
-    _flit_status[ff->sn]=FLIT_NORMAL;
-    _flit_buffer[ff->sn]=ff;
+    if(i == ff->sn){
+      fl->buffer->pop();
+      ff->flbid = _id;
+      if(fl->flow_size>=RESERVATION_PACKET_THRESHOLD)
+	ff->walkin = false;
+      _flit_buffer[i]=ff;
+    } else {
+      _flit_buffer[i]=NULL;
+    }
+    _flit_status[i]=FLIT_NORMAL;
     _ready++;
   }
-
-
 
 
   _watch = false;
@@ -222,19 +225,27 @@ void FlowBuffer::active_update(){
   ///////////////////////
   //update the rest
   if(_ready<4 && fl->data_to_generate!=0){
-    int deduction = parent->_GeneratePacket(fl, fl->data_to_generate);
-    fl->data_to_generate-= deduction;
-    while(!fl->buffer->empty()){
+
+    int deduction =   parent->_GeneratePacket(fl,fl->data_to_generate);
+    int packet_size = fl->buffer->front()->packet_size;
+    int sn_start =  fl->buffer->front()->sn;
+    fl->data_to_generate-=deduction;
+    //the flit buffer copy is complicated because of body flit compression
+    for(int i = sn_start; i<sn_start+packet_size; i++){
       Flit *ff = fl->buffer->front();
-      assert(ff);
-      fl->buffer->pop();
-      ff->flbid = _id;
-      if(fl->flow_size>=RESERVATION_PACKET_THRESHOLD)
-	ff->walkin = false;
-      _flit_status[ff->sn]=FLIT_NORMAL;
-      _flit_buffer[ff->sn]=ff;
+      if(i == ff->sn){
+	fl->buffer->pop();
+	ff->flbid = _id;
+	if(fl->flow_size>=RESERVATION_PACKET_THRESHOLD)
+	  ff->walkin = false;
+	_flit_buffer[i]=ff;
+      } else {
+	_flit_buffer[i]=NULL;
+      }
+      _flit_status[i]=FLIT_NORMAL;
       _ready++;
     }
+
   }
 
   //for large flows, reset and rereserve
@@ -407,7 +418,7 @@ bool FlowBuffer::nack(int sn){
 	cout<<"\tnack flit "<<i<<endl;
       }
     
-      bool tail = _flit_buffer[i]->tail;
+      bool tail = (_flit_buffer[i]==NULL)?false:_flit_buffer[i]->tail;
       _flit_status[i] = FLIT_NACKED;
       _ready++;
       _reserved_slots++;
@@ -568,6 +579,11 @@ Flit* FlowBuffer::send(){
       //in the middle of a packet, pickup where last left off
       assert(_flit_buffer.count(_last_sn+1)!=0);
       f = _flit_buffer[_last_sn+1];
+      if(!f->tail && _flit_buffer[_last_sn+2] ==NULL){
+	_flit_buffer[_last_sn+2]  = Flit::Replicate(f);//body flit decompression
+      } else {
+	assert(f->packet_size ==0);
+      }
     }
     if(f){
       _flit_buffer.erase(f->sn);
@@ -615,8 +631,12 @@ Flit* FlowBuffer::send(){
       _res_outstanding=true;
     } else {
       if(_flit_buffer.count(_last_sn+1)!=0){
+	Flit* original = _flit_buffer[_last_sn+1];
+	if( !original->tail && _flit_buffer[_last_sn+2] ==NULL){
+	  _flit_buffer[_last_sn+2]  = Flit::Replicate(original);//body flit decompression
+	}
 	f = Flit::New();
-	memcpy(f,_flit_buffer[_last_sn+1], sizeof(Flit));
+	memcpy(f,original, sizeof(Flit));
 	_flit_status[_last_sn+1] = FLIT_SPEC;
 	f->res_type = RES_TYPE_SPEC;
 	f->pri = FLIT_PRI_SPEC;
@@ -626,6 +646,9 @@ Flit* FlowBuffer::send(){
 	TOTAL_SPEC_BUFFER++;
 	_last_sn = f->sn;
 	_tail_sent = f->tail;
+
+
+
       } else {
 	assert(false);
       }
@@ -637,7 +660,6 @@ Flit* FlowBuffer::send(){
   }
 
   if(f){
-    
     assert(f->res_type == RES_TYPE_RES || _vc!=-1);
     if(_watch){
       cout<<"flow "<<fl->flid

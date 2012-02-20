@@ -60,8 +60,9 @@ private:
     static stack<VC::VCData *> _free;
   };
 
-  int _size;
-
+  int _max_size;
+  int _cur_size;
+  
   VCData* _buffer;
   
   eVCState _state;
@@ -128,7 +129,7 @@ public:
 
   inline bool Full( ) const
   {
-    return _buffer==NULL?false: (int)_buffer->_flit.size( ) == _size;
+    return _buffer==NULL?false: (int)_buffer->_flit.size( ) == _max_size;
   }
 
   inline VC::eVCState GetState( ) const

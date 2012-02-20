@@ -56,6 +56,7 @@ ostream& operator<<( ostream& os, const Flit& f )
   return os;
 }
 
+
 Flit::Flit() 
 {  
   Reset();
@@ -100,8 +101,38 @@ void Flit::Reset()
   //ring_par = -1;
   //data = 0;
   payload = -1;
-  packet_size=-1;
+  packet_size=0;
 }  
+
+Flit * Flit::Replicate(Flit* f){
+  Flit* r = New();
+
+  r->flid  = f->flid;  
+  r->id    = f->id+1;
+  r->pid   = f->pid;
+  assert(f->packet_size>0);
+  r->packet_size = f->packet_size-1;
+  f->packet_size = 0;
+
+  r->watch = f->watch;
+  r->subnetwork = f->subnetwork;
+  r->src    = f->src;
+  r->time   = f->time;
+
+  r->record = f->record;
+  r->cl     = f->cl;
+  r->sn     = f->sn+1;
+
+  
+  r->type   = f->type;
+  r->pri    = f->pri;
+  r->head_sn  = f->head_sn;
+  r->res_type = f->res_type;
+  r->walkin = f->walkin;
+
+  r->vc = f->vc;
+  return r;
+}
 
 Flit * Flit::New() {
   Flit * f;

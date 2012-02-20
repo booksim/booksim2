@@ -747,7 +747,7 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
     return;
   }
 
-  int adaptive_threshold = f->packet_size*2;
+  int adaptive_threshold = f->packet_size*3;
 
  
   int dest  = f->dest;

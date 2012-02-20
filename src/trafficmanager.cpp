@@ -1477,10 +1477,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   
 
   //Regular retire flit
-  if(f->res_type==RES_TYPE_SPEC){
+  if(f->head){
+  if( f->res_type==RES_TYPE_SPEC){
     retired_s->AddSample(f->atime - f->ntime);
   } else {
     retired_n->AddSample(f->atime - f->ntime);
+  }
   }
 
   gStatEjectVCDist[f->src][f->vc]++;
@@ -1632,7 +1634,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   if(f->head && !f->tail) {
     _retired_packets[f->cl].insert(make_pair(f->pid, f));
   } else {
-
     f->Free();  
   }
 }
@@ -1723,7 +1724,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
   return result;
 }
 
-#define NMAX 4
+#define NMAX 1
 int TrafficManager::_GeneratePacket( flow* fl, int n)
 {
   int generate  = MIN(n,NMAX);
@@ -1738,11 +1739,6 @@ int TrafficManager::_GeneratePacket( flow* fl, int n)
     bool watch = gWatchOut && ((_packets_to_watch.count(pid) > 0) ||
 			       (_transactions_to_watch.count(tid) > 0));
   
-    //    ++_cur_tid;
-    //    assert(_cur_tid);
-  
-  
-
     if ( ( _sim_state == running ) ||
 	 ( ( _sim_state == draining ) && ( fl->create_time < _drain_time ) ) ) {
       record = _measure_stats[fl->cl];
@@ -1759,20 +1755,32 @@ int TrafficManager::_GeneratePacket( flow* fl, int n)
 		 << " at time " << fl->create_time
 		 << "." << endl;
     }
-  
-
+    
+    
     for ( int i = 0; i < size; ++i ) {
+      //body flit compression
+      if(i>1 && i<size-1){
+	Flit * last = fl->buffer->back();
+	last->packet_size++;
+	fl->sn++;
+	//modify global state changes
+	int id = _cur_id++;
+	_total_in_flight_flits[last->cl].insert(id);
+	if(record) {
+	  _measured_in_flight_flits[last->cl].insert(id);
+	}
+	continue;
+      }
+      
       Flit * f  = Flit::New();
-      f ->flid = fl->flid;
       f->id     = _cur_id++;
+      f ->flid = fl->flid;
       assert(_cur_id);
       f->pid    = pid;
-      //      f->tid    = tid;
       f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
       f->subnetwork = subnetwork;
       f->src    = fl->src;
       f->time   = fl->create_time;
-      //      f->ttime  = ttime;
       f->record = record;
       f->cl     = fl->cl;
       f->sn = fl->sn++;
@@ -1780,9 +1788,9 @@ int TrafficManager::_GeneratePacket( flow* fl, int n)
       if(f->id == -1){
 	f->watch=true;;
       }
-      _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
+      _total_in_flight_flits[f->cl].insert(f->id);
       if(record) {
-	_measured_in_flight_flits[f->cl].insert(make_pair(f->id, f));
+	_measured_in_flight_flits[f->cl].insert(f->id);
       }
     
       if(gTrace){
@@ -1795,10 +1803,11 @@ int TrafficManager::_GeneratePacket( flow* fl, int n)
 	//packets are only generated to nodes smaller or equal to limit
 	f->dest = fl->dest;
 	f->packet_size=size;
-      } else {
+      } else { 
 	f->head = false;
 	f->dest = -1;
-      }
+      } 
+
       switch( _pri_type ) {
       case class_based:
 	f->pri = _class_priority[fl->cl];
@@ -2330,7 +2339,9 @@ void TrafficManager::_Step( )
   ++_time;
     gStatSpecCount->AddSample(TOTAL_SPEC_BUFFER);
   if(_time%10000==0){
-    
+
+
+
     gStatMonitorTransient[0]->push_back(retired_s->NumSamples()+retired_n->NumSamples());
     gStatMonitorTransient[1]->push_back(retired_s->Average());
     gStatMonitorTransient[2]->push_back(retired_n->Average());
@@ -2568,7 +2579,7 @@ void TrafficManager::_DisplayRemaining( ostream & os ) const
 {
   for(int c = 0; c < _classes; ++c) {
 
-    map<int, Flit *>::const_iterator iter;
+    set<int>::const_iterator iter;
     int i;
 
     os << "Class " << c << ":" << endl;
@@ -2577,7 +2588,7 @@ void TrafficManager::_DisplayRemaining( ostream & os ) const
     for ( iter = _total_in_flight_flits[c].begin( ), i = 0;
 	  ( iter != _total_in_flight_flits[c].end( ) ) && ( i < 10 );
 	  iter++, i++ ) {
-      os << iter->first << " ";
+      os << *iter << " ";
     }
     if(_total_in_flight_flits[c].size() > 10)
       os << "[...] ";
@@ -2588,7 +2599,7 @@ void TrafficManager::_DisplayRemaining( ostream & os ) const
     for ( iter = _measured_in_flight_flits[c].begin( ), i = 0;
 	  ( iter != _measured_in_flight_flits[c].end( ) ) && ( i < 10 );
 	  iter++, i++ ) {
-      os << iter->first << " ";
+      os << *iter<< " ";
     }
     if(_measured_in_flight_flits[c].size() > 10)
       os << "[...] ";
@@ -2903,7 +2914,7 @@ bool TrafficManager::_SingleSim( )
 	
 	double latency = (double)_plat_stats[c]->Sum();
 	double count = (double)_plat_stats[c]->NumSamples();
-	  
+	/*	  
 	map<int, Flit *>::const_iterator iter;
 	for(iter = _total_in_flight_flits[c].begin(); 
 	    iter != _total_in_flight_flits[c].end(); 
@@ -2911,6 +2922,7 @@ bool TrafficManager::_SingleSim( )
 	  latency += (double)(_time - iter->second->time);
 	  count++;
 	}
+	*/
 	
 	if((_sim_state != warming_up || !_forced_warmup) &&
 	   (lat_exc_class < 0) &&
@@ -3006,6 +3018,7 @@ bool TrafficManager::_SingleSim( )
 	      double acc_latency = _plat_stats[c]->Sum();
 	      double acc_count = (double)_plat_stats[c]->NumSamples();
 
+	      /*
 	      map<int, Flit *>::const_iterator iter;
 	      for(iter = _total_in_flight_flits[c].begin(); 
 		  iter != _total_in_flight_flits[c].end(); 
@@ -3013,7 +3026,7 @@ bool TrafficManager::_SingleSim( )
 		acc_latency += (double)(_time - iter->second->time);
 		acc_count++;
 	      }
-	      
+	      */
 	      if((acc_latency / acc_count) > threshold) {
 		lat_exc_class = c;
 		break;

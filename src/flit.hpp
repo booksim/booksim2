@@ -50,8 +50,16 @@ public:
   int exptime;
   int  sn;
   int flid;
-  int payload;
+  int payload; 
+  //res = reservation size
+  //grant = time
+  //tail = tail reservation
+  //body = expected arrival time
+
   short packet_size;
+  //head: packet valid
+  //body: compression 
+
   int head_sn;
 
   int flbid;
@@ -104,6 +112,7 @@ public:
 
   void Reset();
 
+  static Flit * Replicate( Flit *);
   static Flit * New();
   void Free();
   static void FreeAll();

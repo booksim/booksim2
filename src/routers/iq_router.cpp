@@ -385,6 +385,16 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 IQRouter::~IQRouter( )
 {
 
+  int sum=0; 
+  int max=0;
+  /*
+  for(size_t i = 0; i<_next_bandwidth_commitment.size(); i++){
+    if(_next_bandwidth_commitment[i] > max)
+      max = _next_bandwidth_commitment[i];
+    sum+=_next_bandwidth_commitment[i];
+  }
+  cout<<Name()<<"\t"<<max<<"\t"<<sum/_outputs<<endl;
+  */
   if(gPrintActivity) {
     cout << Name() << ".bufferMonitor:" << endl ; 
     cout << *_bufferMonitor << endl ;
@@ -507,7 +517,7 @@ void IQRouter::_InternalStep( )
   if(_active && !switch_active){
     _dead_lock++;
     if(_dead_lock>100){
-      cout<<"Router "<<FullName()<<" deadlock"<<endl;
+      //      cout<<"Router "<<FullName()<<" deadlock"<<endl;
       _dead_lock = 0;
     }
   } else {
@@ -1190,8 +1200,8 @@ void IQRouter::_VCAllocUpdate( )
 	  _out_queue_credits.find(input)->second->id=888;
 	  _out_queue_credits.find(input)->second->vc.push_back(f->vc);
 	}
-	f->Free();
 	cur_buf->RemoveFlit(vc);
+	f->Free();
 	if(tail_dropped){
 	  break;
 	}
@@ -1709,9 +1719,7 @@ void IQRouter::_SWAllocEvaluate( )
 		     << " is full." << endl;
 	}
 	continue;
-      }
-      else if(!dest_buf->HasCreditFor(dest_vc) || ( _output_buffer_size!=-1  && _output_buffer[dest_output].size()>=(size_t)(_output_buffer_size))) {
-
+      } else if(!dest_buf->HasCreditFor(dest_vc) || ( _output_buffer_size!=-1  && _output_buffer[dest_output].size()>=(size_t)(_output_buffer_size))) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  VC " << dest_vc 
