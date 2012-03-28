@@ -38,7 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 #include <list>
 
-class AnyNet : public Network {
+class AnyNet : public Booksim_Network {
 
   string file_name;
   //associtation between  nodes and routers

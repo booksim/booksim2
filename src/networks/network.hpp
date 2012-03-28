@@ -48,7 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 typedef Channel<Credit> CreditChannel;
 
 
-class Network : public TimedModule {
+class Booksim_Network : public TimedModule {
 protected:
 
   int _size;
@@ -75,10 +75,10 @@ protected:
   void _Alloc( );
 
 public:
-  Network( const Configuration &config, const string & name );
-  virtual ~Network( );
+  Booksim_Network( const Configuration &config, const string & name );
+  virtual ~Booksim_Network( );
 
-  static Network *NewNetwork( const Configuration &config, const string & name );
+  static Booksim_Network *NewNetwork( const Configuration &config, const string & name );
 
   virtual void WriteFlit( Flit *f, int source );
   virtual Flit *ReadFlit( int dest );

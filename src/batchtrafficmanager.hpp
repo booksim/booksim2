@@ -56,13 +56,13 @@ protected:
   virtual bool _SingleSim( );
 
   virtual void _UpdateOverallStats( );
-
 public:
+  virtual void printPartialStats(int t , int i){}
 
-  BatchTrafficManager( const Configuration &config, const vector<Network *> & net );
+  BatchTrafficManager( const Configuration &config, const vector<Booksim_Network *> & net );
   virtual ~BatchTrafficManager( );
 
-  virtual void DisplayStats( ostream & os = cout ) const;
+  virtual void DisplayStats( ostream & os = cout );
   virtual void DisplayOverallStats( ostream & os = cout ) const;
 
 };

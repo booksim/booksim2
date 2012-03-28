@@ -37,7 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cassert>
 
 
-class FlatFlyOnChip : public Network {
+class FlatFlyOnChip : public Booksim_Network {
 
   int _m;
   int _n;

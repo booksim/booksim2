@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "network.hpp"
 
-class KNFly : public Network {
+class KNFly : public Booksim_Network {
 
   int _k;
   int _n;

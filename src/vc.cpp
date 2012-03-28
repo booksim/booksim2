@@ -172,9 +172,9 @@ void VC::UpdatePriority()
     if(f->head){
      
        _pri= (f->notification == 0)?1:f->notification;
-       _pri= (_pri>_pri_cap && _pri_cap!=-1)?_pri_cap:_pri;
-       
-      _note = f->notification;
+       _pri= (_pri_cap!=-1 && _pri>_pri_cap )?_pri_cap:_pri;
+       _note = f->notification;
+
       if(f->watch)
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "Flit " << f->id

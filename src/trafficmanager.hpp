@@ -55,7 +55,7 @@ protected:
   int _nodes;
   int _routers;
 
-  vector<Network *> _net;
+  vector<Booksim_Network *> _net;
   vector<vector<Router *> > _router;
 
   // ============ Traffic ============ 
@@ -221,7 +221,14 @@ protected:
   ostream * _sent_flits_out;
   ostream * _stored_flits_out;
 
+
+
+  int NOTIFICATION_TIME_THRESHOLD;
+
+
   // ============ Internal methods ============ 
+
+
 protected:
 
   virtual void _RetireFlit( Flit *f, int dest );
@@ -232,7 +239,7 @@ protected:
   bool _PacketsOutstanding( ) const;
   
   virtual int  _IssuePacket( int source, int cl );
-  void _GeneratePacket( int source, int size, int cl, int time );
+  virtual void _GeneratePacket( int source, int size, int cl, int time );
 
   void _ClearStats( );
 
@@ -245,18 +252,18 @@ protected:
   void _LoadWatchList(const string & filename);
 
   virtual void _UpdateOverallStats();
-
 public:
+  virtual void printPartialStats(int t , int i){};
 
   static TrafficManager * NewTrafficManager(Configuration const & config, 
-					    vector<Network *> const & net);
+					    vector<Booksim_Network *> const & net);
 
-  TrafficManager( const Configuration &config, const vector<Network *> & net );
+  TrafficManager( const Configuration &config, const vector<Booksim_Network *> & net );
   virtual ~TrafficManager( );
 
   bool Run( );
 
-  virtual void DisplayStats( ostream & os = cout ) const ;
+  virtual void DisplayStats( ostream & os = cout );
   virtual void DisplayOverallStats( ostream & os = cout ) const ;
   virtual void DisplayOverallStatsCSV( ostream & os = cout ) const ;
 

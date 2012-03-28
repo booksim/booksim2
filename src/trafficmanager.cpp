@@ -43,12 +43,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "packet_reply_info.hpp"
 
 
-int NOTIFICATION_TIME_THRESHOLD=0;
+
 
 
 
 TrafficManager * TrafficManager::NewTrafficManager(Configuration const & config,
-						   vector<Network *> const & net)
+						   vector<Booksim_Network *> const & net)
 {
   TrafficManager * result = NULL;
   string sim_type = config.GetStr("sim_type");
@@ -62,7 +62,7 @@ TrafficManager * TrafficManager::NewTrafficManager(Configuration const & config,
   return result;
 }
 
-TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
+TrafficManager::TrafficManager( const Configuration &config, const vector<Booksim_Network *> & net )
 : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
 
@@ -680,7 +680,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       }
 
       _plat_stats[f->cl]->AddSample( f->atime - f->time);
-      _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
+      if(f->tail)
+	_frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
 	_tlat_stats[f->cl]->AddSample( f->atime - f->ttime );
    
@@ -1566,7 +1567,7 @@ void TrafficManager::_UpdateOverallStats() {
   }
 }
 
-void TrafficManager::DisplayStats(ostream & os) const {
+void TrafficManager::DisplayStats(ostream & os) {
   
   for(int c = 0; c < _classes; ++c) {
     

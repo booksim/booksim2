@@ -51,7 +51,7 @@ class Power_Module : public Module {
 
 protected:
   //network undersimulation
-  Network * net;
+  Booksim_Network * net;
   int classes;
   //all channels are this width
   double channel_width;
@@ -179,7 +179,7 @@ protected:
   double areaOutputModule(double Outputs);
 
 public:
-  Power_Module(Network * net, const Configuration &config);
+  Power_Module(Booksim_Network * net, const Configuration &config);
   ~Power_Module();
 
   void run();

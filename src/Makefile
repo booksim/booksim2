@@ -36,11 +36,11 @@ YACC   = /usr/bin/bison -d
 LEX    = /usr/bin/flex
 PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
-DEFINE =
+DEFINE = -DBOOKSIM_STANDALONE
 DEFINE_TEST = -DUSE_GUI
-INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
+INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower 
 CPPFLAGS = -Wall -O3  -ggdb $(INCPATH) $(DEFINE) 
-LFLAGS =  
+LFLAGS = 
 
 
 OBJDIR := obj

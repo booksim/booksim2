@@ -56,7 +56,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "misc_utils.hpp"
 
 Tree4::Tree4( const Configuration& config, const string & name )
-: Network ( config, name )
+: Booksim_Network ( config, name )
 {
   _ComputeSize( config );
   _Alloc( );

@@ -47,7 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "network.hpp"
 #include "routefunc.hpp"
 
-class CMesh : public Network {
+class CMesh : public Booksim_Network {
 public:
   CMesh( const Configuration &config, const string & name );
   int GetN() const;

@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "batchtrafficmanager.hpp"
 
 BatchTrafficManager::BatchTrafficManager( const Configuration &config, 
-					  const vector<Network *> & net )
+					  const vector<Booksim_Network *> & net )
 : TrafficManager(config, net), _last_batch_time(-1), _last_id(-1), _last_pid(-1)
 {
 
@@ -181,7 +181,7 @@ void BatchTrafficManager::_UpdateOverallStats() {
   _overall_batch_time->AddSample(_batch_time->Sum( ));
 }
   
-void BatchTrafficManager::DisplayStats(ostream & os) const {
+void BatchTrafficManager::DisplayStats(ostream & os) {
   os << "Batch duration = " << _last_batch_time << endl;
   TrafficManager::DisplayStats();
 }

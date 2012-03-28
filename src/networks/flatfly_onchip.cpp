@@ -69,7 +69,7 @@ static int _xrouter;
 static int _yrouter;
 
 FlatFlyOnChip::FlatFlyOnChip( const Configuration &config, const string & name ) :
-  Network( config, name )
+  Booksim_Network( config, name )
 {
 
   _ComputeSize( config );

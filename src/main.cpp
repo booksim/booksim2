@@ -104,7 +104,7 @@ bool gGUIMode = false;
 
 bool Simulate( BookSimConfig const & config )
 {
-  vector<Network *> net;
+  vector<Booksim_Network *> net;
 
   int subnets = config.GetInt("subnets");
   /*To include a new network, must register the network here
@@ -114,7 +114,7 @@ bool Simulate( BookSimConfig const & config )
   for (int i = 0; i < subnets; ++i) {
     ostringstream name;
     name << "network_" << i;
-    net[i] = Network::NewNetwork( config, name.str() );
+    net[i] = Booksim_Network::NewNetwork( config, name.str() );
   }
 
   /*tcc and characterize are legacy
@@ -160,6 +160,7 @@ bool Simulate( BookSimConfig const & config )
 
 void test();
 
+#ifdef BOOKSIM_STANDALONE
 int main( int argc, char **argv )
 {
 
@@ -294,3 +295,4 @@ void test(){
   }
   cout<<"\n";
 }
+#endif

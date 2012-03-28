@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "network.hpp"
 #include "routefunc.hpp"
 
-class DragonFlyNew : public Network {
+class DragonFlyNew : public Booksim_Network {
 
   int _m;
   int _n;

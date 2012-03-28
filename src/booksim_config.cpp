@@ -41,6 +41,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 BookSimConfig::BookSimConfig( )
 {
 
+  _int_map["perfect_network"] = 0;
+  _int_map["perfect_latency"] = 1;
+
   _int_map["disable_input_prio"] = 0;
   _int_map["disable_output_prio"] = 0;
 
@@ -289,7 +292,8 @@ BookSimConfig::BookSimConfig( )
   AddStrField("received_flits_out", "");
   AddStrField("sent_flits_out", "");
   AddStrField("stored_flits_out", "");
-  
+  AddStrField("trace_out","");
+
   //==================Power model params=====================
   _int_map["sim_power"] = 0;
   AddStrField("power_output_file","pwr_tmp");

@@ -43,7 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 map<int, int>* global_routing_table;
 
 AnyNet::AnyNet( const Configuration &config, const string & name )
-  :  Network( config, name ){
+  :  Booksim_Network( config, name ){
 
   _ComputeSize( config );
   _Alloc( );
