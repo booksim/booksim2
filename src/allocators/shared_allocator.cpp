@@ -30,55 +30,56 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // ----------------------------------------------------------------------
 //
-//  RoundRobin: RoundRobin Arbiter
+//  SeparableInputFirstAllocator: Separable Input-First Allocator
 //
 // ----------------------------------------------------------------------
 
-#include "roundrobin_arb.hpp"
+#include "shared_allocator.hpp"
+
+#include "booksim.hpp"
+#include "arbiter.hpp"
+
+#include <vector>
 #include <iostream>
-#include <limits>
+#include <cstring>
 
-using namespace std ;
-
-RoundRobinArbiter::RoundRobinArbiter( Module *parent, const string &name,
-				      int size ) 
-  : Arbiter( parent, name, size ){
-  _pointer = 0;
-}
-
-void RoundRobinArbiter::PrintState() const  {
-  cout << "Round Robin Priority Pointer: " << endl ;
-  cout << "  _pointer = " << _pointer << endl ;
-}
-
-void RoundRobinArbiter::UpdateState() {
-  // update priority matrix using last grant
-  if ( _selected > -1 ) 
-    _pointer = ( _selected + 1 ) % _size ;
-}
-
-void RoundRobinArbiter::AddRequest( int input, int id, int pri )
+SharedAllocator::
+SharedAllocator( Module* parent, 
+		 const string& name, 
+		 int inputs,int outputs, const string& in_arb_type
+		 , const string& out_arb_type)
 {
-  if(!_request[input].valid || (_request[input].pri < pri)) {
-    if((_num_reqs == 0) || 
-       Supersedes(input, pri, _best_input, _highest_pri, _pointer,_size )) {
-      _highest_pri = pri;
-      _best_input = input;
-    }
-  }
-  Arbiter::AddRequest(input, id, pri);
+  
+  nonspec = new SeparableInputFirstAllocator( parent, name,
+					      inputs, 
+					      outputs, 
+					      in_arb_type , 
+					      out_arb_type);
+  spec =  new SeparableInputFirstAllocator( parent, name,
+					    inputs, 
+					    outputs, 
+					    in_arb_type , 
+					    out_arb_type);
 }
 
-int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
-  
-  _selected = _best_input;
-  
-  return Arbiter::Arbitrate(id, pri);
+void SharedAllocator::Clear(){
+  nonspec->Clear();
+  spec->Clear();
 }
 
-void RoundRobinArbiter::Clear()
-{
-  _highest_pri = numeric_limits<int>::min();
-  _best_input = -1;
-  Arbiter::Clear();
+void SharedAllocator::Allocate(){
+  nonspec->Allocate();
+  spec->Allocate();
+}
+void SharedAllocator::UpdateNonSpec(int input, int output){
+
+  nonspec->_input_arb[input]->UpdateState();
+  nonspec->_output_arb[output]->UpdateState();
+
+}
+
+
+void SharedAllocator::UpdateSpec(int input, int output){
+  spec->_input_arb[input]->UpdateState();
+  spec->_output_arb[output]->UpdateState();
 }

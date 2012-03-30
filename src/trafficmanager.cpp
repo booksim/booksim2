@@ -680,8 +680,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       }
 
       _plat_stats[f->cl]->AddSample( f->atime - f->time);
-      if(f->tail)
-	_frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
+      _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
       if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY || f->type == Flit::ANY_TYPE)
 	_tlat_stats[f->cl]->AddSample( f->atime - f->ttime );
    
@@ -1637,32 +1636,6 @@ void TrafficManager::DisplayStats(ostream & os) {
       //statstat
       vector<Router *> rrr = _net[0]->GetRouters();
 
-      for(int i = 0; i<rrr.size(); i++){
-	*_stats_out<<"input_grant(:,"<<i+1<<")=[";
-	*_stats_out<<rrr[i]->_input_grant_stat;
-	*_stats_out<<"];\n";
-      }
-      for(int i = 0; i<rrr.size(); i++){
-	*_stats_out<<"input_request(:,"<<i+1<<")=[";
-	*_stats_out<<rrr[i]->_input_request_stat;
-	*_stats_out<<"];\n";
-      }
-      for(int i = 0; i<rrr.size(); i++){
-	*_stats_out<<"input_vc_grant(:,"<<i+1<<")=[";
-	*_stats_out<<rrr[i]->_input_vc_grant_stat;
-	*_stats_out<<"];\n";
-      }
-      for(int i = 0; i<rrr.size(); i++){
-	*_stats_out<<"input_vc_request(:,"<<i+1<<")=[";
-	*_stats_out<<rrr[i]->_input_vc_request_stat;
-	*_stats_out<<"];\n";
-      }
-      for(int i = 0; i<rrr.size(); i++){
-	*_stats_out<<"output_grant(:,"<<i+1<<")=[";
-	*_stats_out<<rrr[i]->_output_grant_stat;
-	*_stats_out<<"];\n";
-      }
-
       if(_pri_type == forward_note){
 	for(int i = 0; i<_nodes; i++){
 	  *_stats_out<<"forward_note_source (:,"<<i+1<<")=[";
@@ -1683,13 +1656,11 @@ void TrafficManager::DisplayStats(ostream & os) {
 }
 
 void TrafficManager::DisplayOverallStats( ostream & os ) const {
-
   for ( int c = 0; c < _classes; ++c ) {
 
     if(_measure_stats[c] == 0) {
       continue;
     }
-
     os << "====== Traffic class " << c << " ======" << endl;
     
     os << "Overall minimum latency = " << _overall_min_plat[c]->Average( )
@@ -1726,8 +1697,6 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
   }
   //this is a rough approximate  from updatepriority()
   cout<<"inversion "<<double(VC::invert_cycles)/VC::total_cycles<<endl;
- 
-  
 }
 
 void TrafficManager::DisplayOverallStatsCSV(ostream & os) const {

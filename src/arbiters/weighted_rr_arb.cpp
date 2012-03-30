@@ -44,7 +44,8 @@ using namespace std ;
 
 WeightedRRArbiter::WeightedRRArbiter( Module *parent, const string &name,
 				      int size ) 
-  : Arbiter( parent, name, size ), _pointer( 0 ) {
+  : Arbiter( parent, name, size ) {
+  _pointer = 0;
   _share.resize(size,0);
   _position.resize(size,0);
   _req.resize(size,0);

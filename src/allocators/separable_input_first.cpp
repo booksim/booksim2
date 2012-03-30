@@ -98,8 +98,9 @@ void SeparableInputFirstAllocator::Allocate() {
 
       _inmatch[input] = output ;
       _outmatch[output] = input ;
-      _input_arb[input]->UpdateState() ;
-      _output_arb[output]->UpdateState() ;
+      //this update is called by shared allocator
+      //_input_arb[input]->UpdateState() ;
+      //_output_arb[output]->UpdateState() ;
     }
 
     ++port_iter;

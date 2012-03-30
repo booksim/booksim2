@@ -50,6 +50,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "switch_monitor.hpp"
 #include "buffer_monitor.hpp"
 
+#include "shared_allocator.hpp"
+
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 
  //forward notification
@@ -57,6 +59,7 @@ bool ENABLE_NOTE = false;
 bool DISABLE_INPUT_PRIO = false;
 bool DISABLE_OUTPUT_PRIO = false;
 
+bool SHARED_ALLOCATOR=false;
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
@@ -73,13 +76,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     _output_share.resize(inputs*outputs, 0);
   }
 
-  _input_grant_stat.resize(inputs,0);
-  _input_request_stat.resize(inputs,0);
-  _input_vc_grant_stat.resize(inputs*config.GetInt( "num_vcs" ),0);
-  _input_vc_request_stat.resize(inputs*config.GetInt( "num_vcs" ),0);
-  _output_grant_stat.resize(outputs,0);
-  _output_request_stat.resize(outputs,0);
-  
 
   _vcs         = config.GetInt( "num_vcs" );
   _classes     = config.GetInt( "classes" );
@@ -125,93 +121,80 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
   // Alloc allocators
   string alloc_type = config.GetStr( "vc_allocator" );
-  string arb_type;
+  string in_arb_type;
+  string out_arb_type;
   int iters;
-  if(alloc_type == "piggyback") {
+  SHARED_ALLOCATOR = (alloc_type == "piggyback");
+  if( (alloc_type == "piggyback")) {
     if(!_speculative) {
       Error("Piggyback VC allocation requires speculative switch allocation to be enabled.");
     }
     _vc_allocator = NULL;
     _vc_rr_offset.resize(_outputs*_classes, -1);
   } else {
-    arb_type = config.GetStr( "vc_alloc_arb_type" );
     iters = config.GetInt( "vc_alloc_iters" );
     if(iters == 0) iters = config.GetInt("alloc_iters");
-    if(config.GetStr( "vc_alloc_input_arb_type" )=="" ||
-       config.GetStr( "vc_alloc_output_arb_type" )==""){
-       
-      _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
-					       alloc_type,
-					       _vcs*_inputs, 
-					       _vcs*_outputs,
-					       iters, arb_type, arb_type );
-    } else {
-      cout<<"_";
-      _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
-					       alloc_type,
-					       _vcs*_inputs, 
-					       _vcs*_outputs,
-					       iters, 
-					       config.GetStr( "vc_alloc_input_arb_type" ), 
-					       config.GetStr( "vc_alloc_output_arb_type" ) );
-    }
-
+    
+    in_arb_type = (config.GetStr( "vc_alloc_input_arb_type" )=="")?
+      config.GetStr( "vc_alloc_arb_type"):
+      config.GetStr( "vc_alloc_input_arb_type");
+    out_arb_type = (config.GetStr( "vc_alloc_output_arb_type" )=="")?
+      config.GetStr( "vc_alloc_arb_type"):
+      config.GetStr( "vc_alloc_output_arb_type");
+    
+    _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
+					     alloc_type,
+					     _vcs*_inputs, 
+					     _vcs*_outputs,
+					     iters, in_arb_type, out_arb_type );
     if ( !_vc_allocator ) {
       Error("Unknown vc_allocator type: " + alloc_type);
     }
   }
   
   alloc_type = config.GetStr( "sw_allocator" );
-  arb_type = config.GetStr( "sw_alloc_arb_type" );
   iters = config.GetInt("sw_alloc_iters");
   if(iters == 0) iters = config.GetInt("alloc_iters");
-  if(config.GetStr( "sw_alloc_input_arb_type" )=="" ||
-     config.GetStr( "sw_alloc_output_arb_type" )==""){
-    _sw_allocator = Allocator::NewAllocator( this, "sw_allocator",
-					     alloc_type,
-					     _inputs*_input_speedup, 
-					     _outputs*_output_speedup,
-					     iters, arb_type , arb_type);
-  } else {
-    cout<<"*";
-    _sw_allocator = Allocator::NewAllocator( this, "sw_allocator",
-					     alloc_type,
-					     _inputs*_input_speedup, 
-					     _outputs*_output_speedup,
-					     iters, 
-					     config.GetStr( "sw_alloc_input_arb_type" ), 
-					     config.GetStr( "sw_alloc_output_arb_type" ));
-
-  }
-
-  if ( !_sw_allocator ) {
-    Error("Unknown sw_allocator type: " + alloc_type);
-  }
+  in_arb_type = (config.GetStr( "sw_alloc_input_arb_type" )=="")?
+    config.GetStr( "sw_alloc_arb_type"):
+    config.GetStr( "sw_alloc_input_arb_type");
+  out_arb_type = (config.GetStr( "sw_alloc_output_arb_type" )=="")?
+    config.GetStr( "sw_alloc_arb_type"):
+    config.GetStr( "sw_alloc_output_arb_type");
   
-  if ( _speculative && ( config.GetInt("spec_use_prio") == 0 ) ) {    
-    if(config.GetStr( "sw_alloc_input_arb_type" )=="" ||
-       config.GetStr( "sw_alloc_output_arb_type" )==""){
-      _spec_sw_allocator = Allocator::NewAllocator( this, "spec_sw_allocator",
-						    alloc_type,
-						    _inputs*_input_speedup, 
-						    _outputs*_output_speedup,
-						    iters, arb_type, arb_type );
-    } else {
-      cout<<"=";
-      _spec_sw_allocator = Allocator::NewAllocator( this, "spec_sw_allocator",
-						    alloc_type,
-						    _inputs*_input_speedup, 
-						    _outputs*_output_speedup,
-						    iters, 
-						    config.GetStr( "sw_alloc_input_arb_type" ), 
-						    config.GetStr( "sw_alloc_output_arb_type" ));
-						    
-    }
-    if ( !_spec_sw_allocator ) {
-      Error("Unknown spec_sw_allocator type: " + alloc_type);
-    }
-  } else {
+  if(SHARED_ALLOCATOR){
+    shared_sw_allocator = new SharedAllocator(this, "shared_allocator",
+					      _inputs*_input_speedup, 
+					      _outputs*_output_speedup,in_arb_type , 
+					      out_arb_type);
+    _sw_allocator= NULL;
     _spec_sw_allocator = NULL;
+  } else {
+    _sw_allocator = Allocator::NewAllocator( this, "sw_allocator",
+					     alloc_type,
+					     _inputs*_input_speedup, 
+					     _outputs*_output_speedup,
+					     iters, in_arb_type , 
+					     out_arb_type);
+  
+    if ( !_sw_allocator ) {
+      Error("Unknown sw_allocator type: " + alloc_type);
+    }
+  
+    if ( _speculative && ( config.GetInt("spec_use_prio") == 0 ) ) {    
+      _spec_sw_allocator = Allocator::NewAllocator( this, "spec_sw_allocator",
+						    alloc_type,
+						    _inputs*_input_speedup, 
+						    _outputs*_output_speedup,
+						    iters, in_arb_type, 
+						    out_arb_type );
+    
+      if ( !_spec_sw_allocator ) {
+	Error("Unknown spec_sw_allocator type: " + alloc_type);
+      }
+    } else {
+      _spec_sw_allocator = NULL;
+    }
   }
 
   _sw_rr_offset.resize(_inputs*_input_speedup);
@@ -248,17 +231,20 @@ IQRouter::~IQRouter( )
     cout << "Outputs=" << _outputs ;
     cout << *_switchMonitor << endl ;
   }
-
   for(int i = 0; i < _inputs; ++i)
     delete _buf[i];
   
   for(int j = 0; j < _outputs; ++j)
     delete _next_buf[j];
 
-  delete _vc_allocator;
-  delete _sw_allocator;
+  if(_vc_allocator)
+    delete _vc_allocator;
+  if(_sw_allocator)
+    delete _sw_allocator;
   if(_spec_sw_allocator)
     delete _spec_sw_allocator;
+  if(shared_sw_allocator)
+    delete shared_sw_allocator;
 
   delete _bufferMonitor;
   delete _switchMonitor;
@@ -296,7 +282,10 @@ void IQRouter::_InternalStep( )
     if(!_sw_hold_vcs.empty())
       _SWHoldEvaluate( );
   }
-  _sw_allocator->Clear();
+  if(shared_sw_allocator)
+    shared_sw_allocator->Clear();
+  if(_sw_allocator)
+    _sw_allocator->Clear();
   if(_spec_sw_allocator)
     _spec_sw_allocator->Clear();
   if(!_sw_alloc_vcs.empty())
@@ -657,7 +646,7 @@ void IQRouter::_VCAllocEvaluate( )
 		       << ")." << endl;
 	    watched = true;
 	  }
-	  _input_vc_request_stat[input*_vcs + vc]++;
+
 	  _vc_allocator->AddRequest(input*_vcs + vc, out_port*_vcs + out_vc, 0, 
 				    in_priority, out_priority);
 	} else {
@@ -715,7 +704,7 @@ void IQRouter::_VCAllocEvaluate( )
       Flit const * const f = cur_buf->FrontFlit(vc);
       assert(f);
       assert(f->head);
-      _input_vc_grant_stat[input * _vcs + vc]++;
+
 	
 
       if(f->watch) {
@@ -1124,7 +1113,13 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
   if((_switch_hold_in[expanded_input] < 0) && 
      (_switch_hold_out[expanded_output] < 0)) {
     
-    Allocator * allocator = _sw_allocator;
+    
+    Allocator * allocator;
+    if(SHARED_ALLOCATOR){
+      allocator = shared_sw_allocator->GetNonSpec();
+    } else {
+      allocator = _sw_allocator;
+    }
     int prio = cur_buf->GetPriority(vc);
     int in_prio = prio;
     if(DISABLE_INPUT_PRIO)
@@ -1134,8 +1129,12 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
       out_prio=1;
     
     if(_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)) {
-      if(_spec_sw_allocator) {
-	allocator = _spec_sw_allocator;
+      if(_spec_sw_allocator||SHARED_ALLOCATOR) {
+	if(SHARED_ALLOCATOR){
+	  allocator = shared_sw_allocator->GetSpec();
+	} else {
+	  allocator = _spec_sw_allocator;
+	}
       } else {
 	//adding MIN will message up the WRR
 	assert(false);
@@ -1161,7 +1160,7 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 	}
   
 	allocator->RemoveRequest(expanded_input, expanded_output, req.label);
-	_input_request_stat[input]++;
+
 	allocator->AddRequest(expanded_input, expanded_output, vc, 
 			      in_prio, out_prio);
 	return true;
@@ -1188,7 +1187,7 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 		 << ", pri: " << in_prio
 		 << ")." << endl;
     }
-    _input_request_stat[input]++;	  
+
     allocator->AddRequest(expanded_input, expanded_output, vc, 
 			  in_prio, out_prio);
     return true;
@@ -1359,11 +1358,14 @@ void IQRouter::_SWAllocEvaluate( )
       _spec_sw_allocator->PrintRequests(gWatchOut);
     }
   }
-  
-  _sw_allocator->Allocate();
-  if(_spec_sw_allocator)
-    _spec_sw_allocator->Allocate();
-  
+  if(SHARED_ALLOCATOR){
+    shared_sw_allocator->Allocate();
+  } else {
+    _sw_allocator->Allocate();
+    if(_spec_sw_allocator)
+      _spec_sw_allocator->Allocate();
+  }
+
   if(watched) {
     *gWatchOut << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
     _sw_allocator->PrintGrants(gWatchOut);
@@ -1402,62 +1404,14 @@ void IQRouter::_SWAllocEvaluate( )
     int const expanded_input = input * _input_speedup + vc % _input_speedup;
 
     int & expanded_output = iter->second.second;
-    expanded_output = _sw_allocator->OutputAssigned(expanded_input);
 
-    if(expanded_output >= 0) {
+    
 
-      assert((expanded_output % _output_speedup) == (input % _output_speedup));
-      if(_sw_allocator->ReadRequest(expanded_input, expanded_output) == vc) {
-	if(f->watch) {
-	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		     << "Assigning output " << (expanded_output / _output_speedup)
-		     << "." << (expanded_output % _output_speedup)
-		     << " to VC " << vc
-		     << " at input " << input
-		     << "." << (vc % _input_speedup)
-		     << "." << endl;
-	}
-	if(_input_channels[expanded_input]->IsIO()){
-	  _inj_grant++;
-	} else {
-	  _cross_grant++;
-	}
-	_sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
-      } else {
-	expanded_output = -1;
-      }
-    } else if(_spec_sw_allocator) {
-      matched= true;
-      expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
+    if(SHARED_ALLOCATOR){
+      expanded_output = shared_sw_allocator->GetNonSpec()->OutputAssigned(expanded_input);
       if(expanded_output >= 0) {
 	assert((expanded_output % _output_speedup) == (input % _output_speedup));
-
-	if(_spec_mask_by_reqs && 
-	   _sw_allocator->OutputHasRequests(expanded_output)) {
-	  if(f->watch) {
-	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		       << "Discarding speculative grant for VC " << vc
-		       << " at input " << input
-		       << "." << (vc % _input_speedup)
-		       << " because output " << (expanded_output / _output_speedup)
-		       << "." << (expanded_output % _output_speedup)
-		       << " has non-speculative requests." << endl;
-	  }
-	  expanded_output = -1;
-	} else if(!_spec_mask_by_reqs &&
-		  (_sw_allocator->InputAssigned(expanded_output) >= 0)) {
-	  if(f->watch) {
-	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		       << "Discarding speculative grant for VC " << vc
-		       << " at input " << input
-		       << "." << (vc % _input_speedup)
-		       << " because output " << (expanded_output / _output_speedup)
-		       << "." << (expanded_output % _output_speedup)
-		       << " has a non-speculative grant." << endl;
-	  }
-	  expanded_output = -1;
-	} else if(_spec_sw_allocator->ReadRequest(expanded_input, 
-						  expanded_output) == vc) {
+	if(shared_sw_allocator->GetNonSpec()->ReadRequest(expanded_input, expanded_output) == vc) {
 	  if(f->watch) {
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		       << "Assigning output " << (expanded_output / _output_speedup)
@@ -1467,15 +1421,142 @@ void IQRouter::_SWAllocEvaluate( )
 		       << "." << (vc % _input_speedup)
 		       << "." << endl;
 	  }
+	  shared_sw_allocator->UpdateNonSpec(input, expanded_output);
+	  if(_input_channels[expanded_input]->IsIO()){
+	    _inj_grant++;
+	  } else {
+	    _cross_grant++;
+	  }
 	  _sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
 	} else {
 	  expanded_output = -1;
 	}
+      } else {
+	matched= true;
+	expanded_output = shared_sw_allocator->GetSpec()->OutputAssigned(expanded_input);
+	if(expanded_output >= 0) {
+	  assert((expanded_output % _output_speedup) == (input % _output_speedup));
+	  if(_spec_mask_by_reqs && 
+	     shared_sw_allocator->GetNonSpec()->OutputHasRequests(expanded_output)) {
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Discarding speculative grant for VC " << vc
+			 << " at input " << input
+			 << "." << (vc % _input_speedup)
+			 << " because output " << (expanded_output / _output_speedup)
+			 << "." << (expanded_output % _output_speedup)
+			 << " has non-speculative requests." << endl;
+	    }
+	    expanded_output = -1;
+	  } else if(!_spec_mask_by_reqs &&
+		    (shared_sw_allocator->GetNonSpec()->InputAssigned(expanded_output) >= 0)) {
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Discarding speculative grant for VC " << vc
+			 << " at input " << input
+			 << "." << (vc % _input_speedup)
+			 << " because output " << (expanded_output / _output_speedup)
+			 << "." << (expanded_output % _output_speedup)
+			 << " has a non-speculative grant." << endl;
+	    }
+	    expanded_output = -1;
+	  } else if(shared_sw_allocator->GetSpec()->ReadRequest(expanded_input, 
+						    expanded_output) == vc) {
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Assigning output " << (expanded_output / _output_speedup)
+			 << "." << (expanded_output % _output_speedup)
+			 << " to VC " << vc
+			 << " at input " << input
+			 << "." << (vc % _input_speedup)
+			 << "." << endl;
+	    }
 
+	    shared_sw_allocator->UpdateSpec(input, expanded_output);
+	    _sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
+	  } else {
+	    expanded_output = -1;
+	  }
+
+	}
       }
-    }
+    }  //shared allocator
+    else {
+      expanded_output = _sw_allocator->OutputAssigned(expanded_input);
+      if(expanded_output >= 0) {
+
+	assert((expanded_output % _output_speedup) == (input % _output_speedup));
+	if(_sw_allocator->ReadRequest(expanded_input, expanded_output) == vc) {
+	  if(f->watch) {
+	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		       << "Assigning output " << (expanded_output / _output_speedup)
+		       << "." << (expanded_output % _output_speedup)
+		       << " to VC " << vc
+		       << " at input " << input
+		       << "." << (vc % _input_speedup)
+		       << "." << endl;
+	  }
+	  if(_input_channels[expanded_input]->IsIO()){
+	    _inj_grant++;
+	  } else {
+	    _cross_grant++;
+	  }
+	  _sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
+	} else {
+	  expanded_output = -1;
+	}
+      } else if(_spec_sw_allocator) {
+	matched= true;
+	expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
+	if(expanded_output >= 0) {
+	  assert((expanded_output % _output_speedup) == (input % _output_speedup));
+
+	  if(_spec_mask_by_reqs && 
+	     _sw_allocator->OutputHasRequests(expanded_output)) {
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Discarding speculative grant for VC " << vc
+			 << " at input " << input
+			 << "." << (vc % _input_speedup)
+			 << " because output " << (expanded_output / _output_speedup)
+			 << "." << (expanded_output % _output_speedup)
+			 << " has non-speculative requests." << endl;
+	    }
+	    expanded_output = -1;
+	  } else if(!_spec_mask_by_reqs &&
+		    (_sw_allocator->InputAssigned(expanded_output) >= 0)) {
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Discarding speculative grant for VC " << vc
+			 << " at input " << input
+			 << "." << (vc % _input_speedup)
+			 << " because output " << (expanded_output / _output_speedup)
+			 << "." << (expanded_output % _output_speedup)
+			 << " has a non-speculative grant." << endl;
+	    }
+	    expanded_output = -1;
+	  } else if(_spec_sw_allocator->ReadRequest(expanded_input, 
+						    expanded_output) == vc) {
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Assigning output " << (expanded_output / _output_speedup)
+			 << "." << (expanded_output % _output_speedup)
+			 << " to VC " << vc
+			 << " at input " << input
+			 << "." << (vc % _input_speedup)
+			 << "." << endl;
+	    }
+	    _sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
+	  } else {
+	    expanded_output = -1;
+	  }
+
+	}
+      }
+    }  //not shared allocator
+
+
   }
-  
   if(!_speculative && (_sw_alloc_delay <= 1)) {
     return;
   }
@@ -1774,7 +1855,7 @@ void IQRouter::_SWAllocUpdate( )
 	_output_share[input*_outputs+expanded_output]--;
       }
 
-      _input_grant_stat[input]++;
+
 
       cur_buf->RemoveFlit(vc);
       --_stored_flits[input];

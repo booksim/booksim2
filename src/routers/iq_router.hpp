@@ -40,6 +40,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "router.hpp"
 #include "routefunc.hpp"
 
+#include "shared_allocator.hpp"
+
 using namespace std;
 
 class VC;
@@ -73,6 +75,10 @@ class IQRouter : public Router {
   int _vc_alloc_delay;
   int _sw_alloc_delay;
   
+
+  
+  SharedAllocator* shared_sw_allocator;
+
   map<int, Flit *> _in_queue_flits;
 
   deque<pair<int, pair<Credit *, int> > > _proc_credits;

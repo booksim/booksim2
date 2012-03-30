@@ -41,8 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class RoundRobinArbiter : public Arbiter {
 
-  // Priority pointer
-  int  _pointer ;
+
 
 public:
 

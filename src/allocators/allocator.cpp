@@ -46,6 +46,7 @@
 #include "selalloc.hpp"
 #include "separable_input_first.hpp"
 #include "separable_output_first.hpp"
+#include "shared_allocator.hpp"
 //
 /////////////////////////////////////////////////////////////////////////
 
@@ -402,7 +403,7 @@ Allocator *Allocator::NewAllocator( Module *parent, const string& name,
 				    int iters, const string &arb_type , const string &output_arb_type)
 {
   Allocator *a = 0;
-  
+
   if ( alloc_type == "max_size" ) {
     a = new MaxSizeMatch( parent, name, inputs, outputs );
   } else if ( alloc_type == "pim" ) {
@@ -419,23 +420,13 @@ Allocator *Allocator::NewAllocator( Module *parent, const string& name,
     a = new PrioWavefront( parent, name, inputs, outputs );
   } else if ( alloc_type == "select" ) {
     a = new SelAlloc( parent, name, inputs, outputs, iters );
+    
   } else if (alloc_type == "separable_input_first") {
-    if(output_arb_type==""){
-      a = new SeparableInputFirstAllocator( parent, name, inputs, outputs,
-					    arb_type, arb_type );
-    } else {
-      a = new SeparableInputFirstAllocator( parent, name, inputs, outputs,
-					    arb_type, output_arb_type );
-    }
+    a = new SeparableInputFirstAllocator( parent, name, inputs, outputs,
+					  arb_type, output_arb_type );
   } else if (alloc_type == "separable_output_first") {
-
-    if(output_arb_type==""){
-      a = new SeparableOutputFirstAllocator( parent, name, inputs, outputs,
-					     arb_type, arb_type );
-    } else {
-      a = new SeparableOutputFirstAllocator( parent, name, inputs, outputs,
-					     arb_type, output_arb_type );
-    }
+    a = new SeparableOutputFirstAllocator( parent, name, inputs, outputs,
+					   arb_type, output_arb_type ); 
   }
 
   //==================================================

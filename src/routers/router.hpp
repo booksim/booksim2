@@ -75,12 +75,6 @@ protected:
   virtual void _InternalStep() = 0;
 
 public:
-  vector<int> _input_vc_request_stat;
-  vector<int> _input_vc_grant_stat;
-  vector<int> _input_request_stat;
-  vector<int> _input_grant_stat;
-  vector<int> _output_grant_stat;
-  vector<int> _output_request_stat;
 
 public:
   Router( const Configuration& config,

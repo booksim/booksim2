@@ -30,55 +30,38 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // ----------------------------------------------------------------------
 //
-//  RoundRobin: RoundRobin Arbiter
+//  SeparableInputFirstAllocator: Separable Input-First Allocator
 //
 // ----------------------------------------------------------------------
 
+#ifndef _SHARED_ALLOC_HPP_
+#define _SHARED_ALLOC_HPP_
+
+#include "separable_input_first.hpp"
 #include "roundrobin_arb.hpp"
-#include <iostream>
-#include <limits>
+#include "weighted_rr_arb.hpp"
 
-using namespace std ;
+class SharedAllocator{
 
-RoundRobinArbiter::RoundRobinArbiter( Module *parent, const string &name,
-				      int size ) 
-  : Arbiter( parent, name, size ){
-  _pointer = 0;
-}
-
-void RoundRobinArbiter::PrintState() const  {
-  cout << "Round Robin Priority Pointer: " << endl ;
-  cout << "  _pointer = " << _pointer << endl ;
-}
-
-void RoundRobinArbiter::UpdateState() {
-  // update priority matrix using last grant
-  if ( _selected > -1 ) 
-    _pointer = ( _selected + 1 ) % _size ;
-}
-
-void RoundRobinArbiter::AddRequest( int input, int id, int pri )
-{
-  if(!_request[input].valid || (_request[input].pri < pri)) {
-    if((_num_reqs == 0) || 
-       Supersedes(input, pri, _best_input, _highest_pri, _pointer,_size )) {
-      _highest_pri = pri;
-      _best_input = input;
-    }
+public:  
+  SharedAllocator( Module* parent, const string& name, int inputs,
+		   int outputs, const string& input_arb_type , const string& output_arb_type) ;
+  
+  void Clear();
+  Allocator* GetNonSpec(){
+    return nonspec;
   }
-  Arbiter::AddRequest(input, id, pri);
-}
-
-int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {
+  Allocator* GetSpec(){
+    return spec;
+  }
+  void Allocate();
   
-  _selected = _best_input;
-  
-  return Arbiter::Arbitrate(id, pri);
-}
+  void UpdateSpec(int input, int output);
+  void UpdateNonSpec(int input, int output);
 
-void RoundRobinArbiter::Clear()
-{
-  _highest_pri = numeric_limits<int>::min();
-  _best_input = -1;
-  Arbiter::Clear();
-}
+  SeparableInputFirstAllocator* nonspec;
+  SeparableInputFirstAllocator* spec;
+
+};
+
+#endif

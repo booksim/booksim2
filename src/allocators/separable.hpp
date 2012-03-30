@@ -47,11 +47,11 @@ class SeparableAllocator : public SparseAllocator {
   
 protected:
 
+public:
+  
   vector<Arbiter*> _input_arb ;
   vector<Arbiter*> _output_arb ;
 
-public:
-  
   SeparableAllocator( Module* parent, const string& name, int inputs,
 		      int outputs, const string& input_arb_type,
 		       const string& output_arb_type) ;

@@ -59,6 +59,8 @@ protected:
   int _best_input;
 
 public:
+  // Priority pointer
+  int  _pointer ;
   int  _num_reqs ;
   // Constructors
   Arbiter( Module *parent, const string &name, int size ) ;

@@ -41,8 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class WeightedRRArbiter : public Arbiter {
 
-  // Priority pointer
-  int  _pointer ;
+
 
   vector<int> _share;
   
