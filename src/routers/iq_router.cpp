@@ -76,7 +76,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     _output_share.resize(inputs*outputs, 0);
   }
 
-
   _vcs         = config.GetInt( "num_vcs" );
   _classes     = config.GetInt( "classes" );
   _speculative = (config.GetInt("speculative") > 0);
@@ -341,7 +340,7 @@ bool IQRouter::_ReceiveFlits( )
   for(int input = 0; input < _inputs; ++input) { 
     Flit * const f = _input_channels[input]->Receive();
     if(f) {
-      if(ENABLE_NOTE){
+      if(ENABLE_NOTE && f->head){
 	f->notification = f->next_notification;
       }
       ++_received_flits[input];
@@ -367,6 +366,12 @@ bool IQRouter::_ReceiveCredits( )
       _proc_credits.push_back(make_pair(GetSimTime() + _credit_delay, 
 					make_pair(c, output)));
       activity = true;
+      if(GetID()==8 && (output==4||output==2)){
+	cout<<output<<"\t";
+	for(set<int>::iterator i = c->vc.begin(); i!=c->vc.end(); i++)
+	  cout<<*i<<"\t";
+	cout<<endl;
+      }
     }
   }
   return activity;
@@ -896,7 +901,8 @@ void IQRouter::_SWHoldEvaluate( )
     //as soon as a vc knows a output port, put up a notificaiton
     if(ENABLE_NOTE){
       _output_notifications[expanded_input*_outputs+expanded_output]=
-	MAX(_output_notifications[expanded_input*_outputs+expanded_output],cur_buf->GetNotification(vc));
+	MAX(_output_notifications[expanded_input*_outputs+expanded_output],
+	    cur_buf->GetNotification(vc));
     }
     
 
@@ -1146,7 +1152,7 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
     if(allocator->ReadRequest(req, expanded_input, expanded_output)) {
       if(RoundRobinArbiter::Supersedes(vc, in_prio, req.label, req.in_pri, 
 				       _sw_rr_offset[expanded_input], _vcs)) {
-	if(f->watch) {
+	if(f->watch ) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  Replacing earlier request from VC " << req.label
 		     << " for output " << output 
@@ -1300,7 +1306,6 @@ void IQRouter::_SWAllocEvaluate( )
     for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
 	iset != setlist.end();
 	++iset) {
-      
       int const & dest_output = iset->output_port;
       assert((dest_output >= 0) && (dest_output < _outputs));
       //as soon as a vc knows a output port, put up a notificaiton
@@ -1308,8 +1313,6 @@ void IQRouter::_SWAllocEvaluate( )
 	_output_notifications[input*_outputs+dest_output]=
 	  MAX(cur_buf->GetNotification(vc),_output_notifications[input*_outputs+dest_output] );
       }
-
-
       // for lower levels of speculation, ignore credit availability and always 
       // issue requests for all output ports in route set
       
@@ -1337,7 +1340,6 @@ void IQRouter::_SWAllocEvaluate( )
       }
       
       if(do_request) { 
-
 	bool const requested = _SWAllocAddReq(input, vc, dest_output);
 	watched |= requested && f->watch;
       } else {
@@ -1351,12 +1353,15 @@ void IQRouter::_SWAllocEvaluate( )
   }
   
   if(watched) {
-    *gWatchOut << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
-    _sw_allocator->PrintRequests(gWatchOut);
-    if(_spec_sw_allocator) {
-      *gWatchOut << GetSimTime() << " | " << _spec_sw_allocator->FullName() << " | ";
-      _spec_sw_allocator->PrintRequests(gWatchOut);
+    Allocator* all = (SHARED_ALLOCATOR)?shared_sw_allocator->GetNonSpec():_sw_allocator;
+    *gWatchOut << GetSimTime() << " | " << all->FullName() << " | ";
+    all->PrintRequests(gWatchOut);
+    all = (SHARED_ALLOCATOR)?shared_sw_allocator->GetSpec():_spec_sw_allocator;
+    if(all) {
+      *gWatchOut << GetSimTime() << " | " << all->FullName() << " | ";
+      all->PrintRequests(gWatchOut);
     }
+    cout<<"pointer at 4 "<<_sw_rr_offset[4] <<endl;
   }
   if(SHARED_ALLOCATOR){
     shared_sw_allocator->Allocate();
@@ -1367,11 +1372,13 @@ void IQRouter::_SWAllocEvaluate( )
   }
 
   if(watched) {
-    *gWatchOut << GetSimTime() << " | " << _sw_allocator->FullName() << " | ";
-    _sw_allocator->PrintGrants(gWatchOut);
-    if(_spec_sw_allocator) {
-      *gWatchOut << GetSimTime() << " | " << _spec_sw_allocator->FullName() << " | ";
-      _spec_sw_allocator->PrintGrants(gWatchOut);
+    Allocator* all = (SHARED_ALLOCATOR)?shared_sw_allocator->GetNonSpec():_sw_allocator;
+    *gWatchOut << GetSimTime() << " | " << all->FullName() << " | ";
+    all->PrintGrants(gWatchOut);
+    all = (SHARED_ALLOCATOR)?shared_sw_allocator->GetSpec():_spec_sw_allocator;
+    if(all) {
+      *gWatchOut << GetSimTime() << " | " << all->FullName() << " | ";
+      all->PrintGrants(gWatchOut);
     }
   }
   
@@ -1471,7 +1478,6 @@ void IQRouter::_SWAllocEvaluate( )
 			 << "." << (vc % _input_speedup)
 			 << "." << endl;
 	    }
-
 	    shared_sw_allocator->UpdateSpec(input, expanded_output);
 	    _sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
 	  } else {

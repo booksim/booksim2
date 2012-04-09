@@ -50,12 +50,12 @@ SharedAllocator( Module* parent,
 		 , const string& out_arb_type)
 {
   
-  nonspec = new SeparableInputFirstAllocator( parent, name,
+  nonspec = new SeparableInputFirstAllocator( parent, name+"_nospec",
 					      inputs, 
 					      outputs, 
 					      in_arb_type , 
 					      out_arb_type);
-  spec =  new SeparableInputFirstAllocator( parent, name,
+  spec =  new SeparableInputFirstAllocator( parent, name+"_spec",
 					    inputs, 
 					    outputs, 
 					    in_arb_type , 
@@ -71,15 +71,12 @@ void SharedAllocator::Allocate(){
   nonspec->Allocate();
   spec->Allocate();
 }
+
 void SharedAllocator::UpdateNonSpec(int input, int output){
-
-  nonspec->_input_arb[input]->UpdateState();
-  nonspec->_output_arb[output]->UpdateState();
-
+  nonspec->UpdateState(input, output);
 }
 
 
 void SharedAllocator::UpdateSpec(int input, int output){
-  spec->_input_arb[input]->UpdateState();
-  spec->_output_arb[output]->UpdateState();
+  spec->UpdateState(input, output);
 }

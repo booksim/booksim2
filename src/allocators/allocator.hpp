@@ -71,7 +71,8 @@ public:
   virtual void RemoveRequest( int in, int out, int label = 1 ) = 0;
   
   virtual void Allocate( ) = 0;
-
+  virtual void UpdateState(int i, int o) {}
+  
   int OutputAssigned( int in ) const;
   int InputAssigned( int out ) const;
 

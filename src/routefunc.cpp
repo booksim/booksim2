@@ -61,6 +61,8 @@ map<string, tRoutingFunction> gRoutingFunctionMap;
 
 int gNumVCs;
 
+int gNumClasses=1;
+
 /* Add more functions here
  *
  */
@@ -690,6 +692,23 @@ void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
     vcBegin = gWriteReplyBeginVC;
     vcEnd = gWriteReplyEndVC;
   }
+  if(gNumClasses>1){
+    assert(f->cl>=0);
+    int vc_per_class = (vcEnd-vcBegin+1)/gNumClasses;
+    vcBegin +=f->cl*vc_per_class;
+    vcEnd = vcBegin + vc_per_class -1;
+  } 
+  if(inject){
+    
+  } else {
+    /*if(f->src==2 && f->vc==0)
+      cout<<r->GetID()<<"\t"<<f->id<<endl;
+    vcBegin= f->vc;
+    vcEnd = f->vc;
+    */
+  }
+
+
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
   if ( !inject && f->watch ) {
@@ -1882,6 +1901,9 @@ void InitializeRoutingMap( const Configuration & config )
 {
 
   gNumVCs = config.GetInt( "num_vcs" );
+  gNumClasses  =config.GetInt("classes");
+  assert(gNumClasses<=gNumVCs);
+  cout<<"Class specific VC assignment enabled\nVC assigned on injection, and remains static\n";
 
   //
   // traffic class partitions

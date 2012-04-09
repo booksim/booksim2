@@ -170,10 +170,28 @@ void VC::UpdatePriority()
     //forward notifcation
     Flit * f = _buffer.front();
     if(f->head){
-     
-       _pri= (f->notification == 0)?1:f->notification;
-       _pri= (_pri_cap!=-1 && _pri>_pri_cap )?_pri_cap:_pri;
-       _note = f->notification;
+      if( _priority_donation) {
+	Flit * df = f;
+	//search for top priority
+	for(size_t i = 1; i < _buffer.size(); ++i) {
+	  Flit * bf = _buffer[i];
+	  if(bf->head && bf->notification > df->notification) 
+	    df = bf;
+	}
+	f = df;
+      }
+      
+      _pri= (f->notification == 0)?1:f->notification;
+      _pri= (_pri_cap!=-1 && _pri>_pri_cap )?_pri_cap:_pri;
+      _note = f->notification;
+      
+      int top_note = _note;
+      for(size_t i = 1; i < _buffer.size(); ++i) {
+	if(_buffer[i]->head && _buffer[i]->notification >top_note){
+	  invert_cycles++;
+	  break;
+	}
+      }
 
       if(f->watch)
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -181,6 +199,29 @@ void VC::UpdatePriority()
 		   << " sets priority to " << _pri
 		   << " sets notification to "<<_note
 		   << "." << endl;
+    } else {
+      int max_note = _note;
+      if( _priority_donation) {
+	//search for top priority
+	for(size_t i = 1; i < _buffer.size(); ++i) {
+	  Flit * bf = _buffer[i];
+	  if(bf->head && bf->notification > max_note) {
+	    max_note  = bf->notification;
+	  }
+	}
+      }
+      
+      _pri= (max_note== 0)?1:max_note;
+      _pri= (_pri_cap!=-1 && _pri>_pri_cap )?_pri_cap:_pri;
+      _note = max_note;
+      
+      int top_note = _note;
+      for(size_t i = 1; i < _buffer.size(); ++i) {
+	if(_buffer[i]->head && _buffer[i]->notification >top_note){
+	  invert_cycles++;
+	  break;
+	}
+      }
     }
   }else if(_pri_type != none) {
     Flit * f = _buffer.front();
@@ -216,7 +257,7 @@ void VC::UpdatePriority()
       _pri = current_p+_pri_cap;
     }
     int top_pri =  (_buffer.front()->pri  - (_queuing_age?_hop_offset*_buffer.front()->hops:0))>>_pri_granularity;
-    for(int i = 1; i < _buffer.size(); ++i) {
+    for(size_t i = 1; i < _buffer.size(); ++i) {
       if((_buffer[i]->pri-(_queuing_age?_hop_offset*_buffer[i]->hops:0))>>_pri_granularity >top_pri){
         invert_cycles++;
         break;

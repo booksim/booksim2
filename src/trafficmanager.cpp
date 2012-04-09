@@ -42,14 +42,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
-
-
-
-
+int ** lol;
 
 TrafficManager * TrafficManager::NewTrafficManager(Configuration const & config,
 						   vector<Booksim_Network *> const & net)
 {
+
   TrafficManager * result = NULL;
   string sim_type = config.GetStr("sim_type");
   if((sim_type == "latency") || (sim_type == "throughput")) {
@@ -65,7 +63,10 @@ TrafficManager * TrafficManager::NewTrafficManager(Configuration const & config,
 TrafficManager::TrafficManager( const Configuration &config, const vector<Booksim_Network *> & net )
 : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0)
 {
-
+  lol = (int**)malloc(64*sizeof(int*));
+  for(int i = 0; i<64; i++)
+    lol[i] = (int*)calloc(4, sizeof(int));
+  
   NOTIFICATION_TIME_THRESHOLD = config.GetInt("notification_time_threshold");
   _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
@@ -165,6 +166,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Booksi
     _load.push_back(config.GetFloat("injection_rate"));
   }
   _load.resize(_classes, _load.back());
+  
 
   if(config.GetInt("injection_rate_uses_flits")) {
     for(int c = 0; c < _classes; ++c)
@@ -851,7 +853,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     if(f->id == -1){
       f->watch = true;
     }
-
+    
     _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
     if(record) {
       _measured_in_flight_flits[f->cl].insert(make_pair(f->id, f));
@@ -870,6 +872,11 @@ void TrafficManager::_GeneratePacket( int source, int stype,
       f->head = false;
       f->dest = -1;
     }
+
+
+
+
+
     switch( _pri_type ) {
     case class_based:
       f->pri = _class_priority[cl];
@@ -886,6 +893,15 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     default:
       f->pri = 0;
     }
+
+    /*
+    if(f->src==8){
+      f->pri = 5;
+      f->next_notification = 5;
+    }
+    */
+
+
     if ( i == ( size - 1 ) ) { // Tail flit
       f->tail = true;
     } else {
@@ -1006,7 +1022,8 @@ void TrafficManager::_Step( )
       vector<int> const & classes = iter->second.second;
       int const count = classes.size();
       
-      for(int j = 1; j <= count; ++j) {
+
+      for(int j = 0; j < count; ++j) {
 	
 	int const offset = (base + j) % count;
 	int const c = classes[offset];
@@ -1085,7 +1102,7 @@ void TrafficManager::_Step( )
 	    if(_flow_out) ++injected_flits[subnet*_nodes+source];
 
 	    _net[subnet]->WriteFlit(f, source);
-	    iter->second.first = offset;
+	    iter->second.first = offset+1;
 	    
 	  }
 	}
@@ -1117,7 +1134,11 @@ void TrafficManager::_Step( )
 	Credit * const c = Credit::New();
 	c->vc.insert(f->vc);
 	_net[subnet]->WriteCredit(c, dest);
+	if(f && f->head)
+	  lol[f->src][f->vc]++;
 	_RetireFlit(f, dest);
+	
+
       }
     }
     flits[subnet].clear();
@@ -1395,7 +1416,6 @@ bool TrafficManager::_SingleSim( )
     }
     ++total_phases;
   }
-  
   if ( _sim_state == running ) {
     ++converged;
     
@@ -1485,6 +1505,8 @@ bool TrafficManager::Run( )
 
     if ( !_SingleSim( ) ) {
       cout << "Simulation unstable, ending ..." << endl;
+      _UpdateOverallStats();
+      DisplayOverallStats();
       return false;
     }
 
@@ -1620,8 +1642,35 @@ void TrafficManager::DisplayStats(ostream & os) {
 	  *_stats_out << _pair_tlat[c][i*_nodes+j]->Average( ) << " ";
 	}
       }
-      *_stats_out << "];" << endl
-		  << "sent(" << c+1 << ",:) = [ ";
+      *_stats_out << "];" << endl;
+      
+      *_stats_out<< "source_lat(" << c+1 << ",:) = [ ";
+      for(int i = 0; i < _nodes; ++i) {
+	double su=0.0;
+	int co = 0;
+	for(int j = 0; j < _nodes; ++j) {
+	  co += _pair_plat[c][i*_nodes+j]->NumSamples();
+	  su += _pair_plat[c][i*_nodes+j]->Sum();
+	}
+	*_stats_out << su/double(co)<<" ";
+      }
+      *_stats_out << "];" << endl;
+
+      
+      *_stats_out<< "dest_lat(" << c+1 << ",:) = [ ";
+      for(int i = 0; i < _nodes; ++i) {
+	double su=0.0;
+	int co = 0;
+	for(int j = 0; j < _nodes; ++j) {
+	  co += _pair_plat[c][j*_nodes+i]->NumSamples();
+	  su += _pair_plat[c][j*_nodes+i]->Sum();
+	}
+	*_stats_out << su/double(co)<<" ";
+      }
+      *_stats_out << "];" << endl;
+
+
+       *_stats_out << "sent(" << c+1 << ",:) = [ ";
       for ( int d = 0; d < _nodes; ++d ) {
 	*_stats_out << _sent_flits[c][d]->Average( ) << " ";
       }
@@ -1697,6 +1746,13 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
   }
   //this is a rough approximate  from updatepriority()
   cout<<"inversion "<<double(VC::invert_cycles)/VC::total_cycles<<endl;
+  for(int i = 0; i<64; i++){
+    cout<<lol[i][0]<<"\t"
+	<<lol[i][1]<<"\t"
+	<<lol[i][2]<<"\t"
+	<<lol[i][3]<<"\n";
+  }
+  _DisplayRemaining( ); 
 }
 
 void TrafficManager::DisplayOverallStatsCSV(ostream & os) const {

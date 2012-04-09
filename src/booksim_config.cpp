@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "booksim.hpp"
 #include "booksim_config.hpp"
 
+
 BookSimConfig::BookSimConfig( )
 {
 

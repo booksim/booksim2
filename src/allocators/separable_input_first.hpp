@@ -49,6 +49,7 @@ public:
 				int outputs, const string& input_arb_type , const string& output_arb_type ) ;
 
   virtual void Allocate() ;
+  virtual void UpdateState(int i, int o);
 
 } ;
 

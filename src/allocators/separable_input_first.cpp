@@ -106,3 +106,10 @@ void SeparableInputFirstAllocator::Allocate() {
     ++port_iter;
   }
 }
+
+void SeparableInputFirstAllocator::UpdateState(int i, int o){
+  _input_arb[i]->UpdateState() ;
+  _output_arb[o]->UpdateState() ;
+}
+
+
