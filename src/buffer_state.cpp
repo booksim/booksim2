@@ -42,6 +42,9 @@
 #include "random_utils.hpp"
 #include "globals.hpp"
 
+//#define DEBUG_FEEDBACK
+//#define DEBUG_SIMPLEFEEDBACK
+
 BufferState::BufferPolicy::BufferPolicy(Configuration const & config, BufferState * parent, const string & name)
 : Module(parent, name), _buffer_state(parent)
 {
@@ -332,11 +335,10 @@ BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuratio
   _offset = config.GetInt("feedback_offset");
   _vcs = config.GetInt("num_vcs");
 
-  int const initial_limit = _buf_size / _vcs;
-  _occupancy_limit.resize(_vcs, initial_limit);
-  _round_trip_time.resize(_vcs, initial_limit);
+  _occupancy_limit.resize(_vcs, _buf_size);
+  _round_trip_time.resize(_vcs, -1);
   _flit_sent_time.resize(_vcs);
-  _total_mapped_size = initial_limit * _vcs;
+  _total_mapped_size = _buf_size * _vcs;
   _min_round_trip_time = numeric_limits<int>::max();
 }
 
@@ -349,10 +351,14 @@ void BufferState::FeedbackSharedBufferPolicy::SendingFlit(Flit const * const f)
 void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
 {
   SharedBufferPolicy::FreeSlotFor(vc);
-  if(_flit_sent_time[vc].empty()) {
-    return;
-  }
+  assert(!_flit_sent_time[vc].empty());
   int const last_rtt = GetSimTime() - _flit_sent_time[vc].front();
+#ifdef DEBUG_FEEDBACK
+  cerr << FullName() << ": Probe for VC "
+       << vc << " came back after "
+       << last_rtt << " cycles."
+       << endl;
+#endif
   _flit_sent_time[vc].pop();
   
   // determine minimum round trip time (could be hardcoded in a real network, 
@@ -360,11 +366,26 @@ void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
   // easiest just to detect this on the fly)
   if(last_rtt < _min_round_trip_time) {
     _min_round_trip_time = last_rtt;
+#ifdef DEBUG_FEEDBACK
+    cerr << FullName() << ": Updating minimum RTT to "
+	 << last_rtt << " cycles."
+	 << endl;
+#endif
   }
 
   // update moving average of round-trip time
   int rtt = _round_trip_time[vc];
-  rtt = ((rtt << _aging_scale) + last_rtt - rtt) >> _aging_scale;
+  if(rtt < 0) {
+    rtt = last_rtt;
+  } else {
+    rtt = ((rtt << _aging_scale) + last_rtt - rtt) >> _aging_scale;
+  }
+#ifdef DEBUG_FEEDBACK
+  cerr << FullName() << ": Updating RTT estimate for VC "
+       << vc << " to "
+       << rtt << " cycles."
+       << endl;
+#endif
   _round_trip_time[vc] = rtt;
   
   // update occupancy limit for this VC
@@ -376,6 +397,15 @@ void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
   limit = max((_min_round_trip_time << 1) - rtt + _offset, 1);
   _occupancy_limit[vc] = limit;
   _total_mapped_size += limit;  
+#ifdef DEBUG_FEEDBACK
+  cerr << FullName() << ": Occupancy limit for VC "
+       << vc << " is "
+       << limit << " slots."
+       << endl;
+  cerr << FullName() << ": Total mapped buffer space is "
+       << _total_mapped_size << " slots."
+       << endl;
+#endif
 }
 
 bool BufferState::FeedbackSharedBufferPolicy::IsFullFor(int vc) const
@@ -387,14 +417,47 @@ bool BufferState::FeedbackSharedBufferPolicy::IsFullFor(int vc) const
 BufferState::SimpleFeedbackSharedBufferPolicy::SimpleFeedbackSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
   : FeedbackSharedBufferPolicy(config, parent, name)
 {
+  _pending_credits.resize(_vcs, 0);
 }
 
 void BufferState::SimpleFeedbackSharedBufferPolicy::SendingFlit(Flit const * const f)
 {
-  SharedBufferPolicy::SendingFlit(f);
-  if(_flit_sent_time[f->vc].empty()) {
-    _flit_sent_time[f->vc].push(GetSimTime());
+  int const & vc = f->vc;
+  if(_flit_sent_time[vc].empty()) {
+    _pending_credits[vc] = _buffer_state->Occupancy(vc) - 1;
+#ifdef DEBUG_SIMPLEFEEDBACK
+    cerr << FullName() << ": Sending probe flit for VC "
+	 << vc << "; "
+	 << _pending_credits[vc] << " non-probe flits in flight."
+	 << endl;
+#endif
+    FeedbackSharedBufferPolicy::SendingFlit(f);
+    return;
   }
+  SharedBufferPolicy::SendingFlit(f);
+}
+
+void BufferState::SimpleFeedbackSharedBufferPolicy::FreeSlotFor(int vc)
+{
+  if(!_flit_sent_time[vc].empty() && _pending_credits[vc] == 0) {
+#ifdef DEBUG_SIMPLEFEEDBACK
+    cerr << FullName() << ": Probe credit for VC "
+	 << vc << " came back." << endl;
+#endif
+    FeedbackSharedBufferPolicy::FreeSlotFor(vc);
+    return;
+  }
+  if(_pending_credits[vc] > 0) {
+    assert(!_flit_sent_time[vc].empty());
+    --_pending_credits[vc];
+#ifdef DEBUG_SIMPLEFEEDBACK
+    cerr << FullName() << ": Ignoring non-probe credit for VC "
+	 << vc << "; "
+	 << _pending_credits[vc] << " remaining."
+	 << endl;
+#endif
+  }
+  SharedBufferPolicy::FreeSlotFor(vc);
 }
 
 BufferState::BufferState( const Configuration& config, Module *parent, const string& name ) : 
