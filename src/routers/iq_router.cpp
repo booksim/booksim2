@@ -1736,6 +1736,8 @@ void IQRouter::_SWAllocUpdate( )
 
       if(!_vc_allocator && (cur_buf->GetState(vc) == VC::vc_alloc)) {
 
+	assert(f->head);
+
 	int const cl = f->cl;
 	assert((cl >= 0) && (cl < _classes));
 
