@@ -87,6 +87,9 @@ BookSimConfig::BookSimConfig( )
   //default setting is unlimited
   _int_map["output_buffer_size"] = -1;
 
+  // enable next-hop-output queueing
+  _int_map["noq"] = 0;
+
   //==== Input-queued ======================================
 
   // Control of virtual channel speculation

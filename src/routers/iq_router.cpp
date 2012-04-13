@@ -153,6 +153,19 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   for(int i = 0; i < _inputs*_input_speedup; ++i)
     _sw_rr_offset[i] = i % _input_speedup;
   
+  _noq = config.GetInt("noq") > 0;
+  if(_noq) {
+    if(_routing_delay) {
+      Error("NOQ requires lookahead routing to be enabled.");
+    }
+    if(_vcs < _outputs) {
+      Error("NOQ requires at least as many VCs as router outputs.");
+    }
+  }
+  _noq_next_output_port.resize(_inputs, vector<int>(_vcs, -1));
+  _noq_next_vc_start.resize(_inputs, vector<int>(_vcs, -1));
+  _noq_next_vc_end.resize(_inputs, vector<int>(_vcs, -1));
+
   // Output queues
   _output_buffer_size = config.GetInt("output_buffer_size");
   _output_buffer.resize(_outputs); 
@@ -365,6 +378,7 @@ void IQRouter::_InputQueuing( )
 
     if(cur_buf->GetState(vc) == VC::idle) {
       assert(cur_buf->FrontFlit(vc) == f);
+      assert(cur_buf->GetOccupancy(vc) == 1);
       assert(f->head);
       assert(_switch_hold_vc[input*_input_speedup + vc%_input_speedup] != vc);
       if(_routing_delay) {
@@ -387,6 +401,9 @@ void IQRouter::_InputQueuing( )
 	if(_vc_allocator) {
 	  _vc_alloc_vcs.push_back(make_pair(-1, make_pair(make_pair(input, vc), 
 							  -1)));
+	}
+	if(_noq) {
+	  _UpdateNOQ(input, vc, f);
 	}
       }
     } else if((cur_buf->GetState(vc) == VC::active) &&
@@ -455,6 +472,7 @@ void IQRouter::_RouteEvaluate( )
 
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
+    assert(f->vc == vc);
     assert(f->head);
 
     if(f->watch) {
@@ -492,6 +510,7 @@ void IQRouter::_RouteUpdate( )
 
     Flit * const f = cur_buf->FrontFlit(vc);
     assert(f);
+    assert(f->vc == vc);
     assert(f->head);
 
     if(f->watch) {
@@ -510,7 +529,7 @@ void IQRouter::_RouteUpdate( )
     if(_vc_allocator) {
       _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second, -1)));
     }
-
+    // NOTE: No need to handle NOQ here, as it requires lookahead routing!
     _route_vcs.pop_front();
   }
 }
@@ -548,8 +567,9 @@ void IQRouter::_VCAllocEvaluate( )
 
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
+    assert(f->vc == vc);
     assert(f->head);
-    
+
     if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | " 
 		 << "Beginning VC allocation for VC " << vc
@@ -568,6 +588,8 @@ void IQRouter::_VCAllocEvaluate( )
     bool cred = false;
     bool reserved = false;
 
+    assert(!_noq || (setlist.size() == 1));
+
     for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
 	iset != setlist.end();
 	++iset) {
@@ -577,7 +599,22 @@ void IQRouter::_VCAllocEvaluate( )
 
       BufferState const * const dest_buf = _next_buf[out_port];
 
-      for(int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc) {
+      int vc_start;
+      int vc_end;
+      
+      if(_noq && _noq_next_output_port[input][vc] >= 0) {
+	assert(!_routing_delay);
+	vc_start = _noq_next_vc_start[input][vc];
+	vc_end = _noq_next_vc_end[input][vc];
+      } else {
+	vc_start = iset->vc_start;
+	vc_end = iset->vc_end;
+      }
+      assert(vc_start >= 0 && vc_start < _vcs);
+      assert(vc_end >= 0 && vc_end < _vcs);
+      assert(vc_end >= vc_start);
+
+      for(int out_vc = vc_start; out_vc <= vc_end; ++out_vc) {
 	assert((out_vc >= 0) && (out_vc < _vcs));
 
 	int in_priority = iset->pri;
@@ -670,6 +707,7 @@ void IQRouter::_VCAllocEvaluate( )
 
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
+    assert(f->vc == vc);
     assert(f->head);
 
     int const output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
@@ -744,6 +782,7 @@ void IQRouter::_VCAllocEvaluate( )
       
       Flit const * const f = cur_buf->FrontFlit(vc);
       assert(f);
+      assert(f->vc == vc);
       assert(f->head);
       
       if(!dest_buf->IsAvailableFor(match_vc)) {
@@ -798,6 +837,7 @@ void IQRouter::_VCAllocUpdate( )
     
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
+    assert(f->vc == vc);
     assert(f->head);
     
     if(f->watch) {
@@ -888,7 +928,8 @@ void IQRouter::_SWHoldEvaluate( )
     
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
-    
+    assert(f->vc == vc);
+
     if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | " 
 		 << "Beginning held switch allocation for VC " << vc
@@ -961,7 +1002,8 @@ void IQRouter::_SWHoldUpdate( )
     
     Flit * const f = cur_buf->FrontFlit(vc);
     assert(f);
-    
+    assert(f->vc == vc);
+
     if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		 << "Completed held switch allocation for VC " << vc
@@ -1013,21 +1055,40 @@ void IQRouter::_SWHoldUpdate( )
       if(!_routing_delay && f->head) {
 	const FlitChannel * channel = _output_channels[output];
 	const Router * router = channel->GetSink();
-	int in_channel = channel->GetSinkPort();
 	if(router) {
-	  if(f->watch) {
-	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		       << "Updating lookahead routing information for flit " << f->id
-		       << "." << endl;
+	  if(_noq) {
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Updating lookahead routing information for flit " << f->id
+			 << " (NOQ)." << endl;
+	    }
+	    int next_output_port = _noq_next_output_port[input][vc];
+	    assert(next_output_port >= 0);
+	    _noq_next_output_port[input][vc] = -1;
+	    int next_vc_start = _noq_next_vc_start[input][vc];
+	    assert(next_vc_start >= 0 && next_vc_start < _vcs);
+	    _noq_next_vc_start[input][vc] = -1;
+	    int next_vc_end = _noq_next_vc_end[input][vc];
+	    assert(next_vc_end >= 0 && next_vc_end < _vcs);
+	    _noq_next_vc_end[input][vc] = -1;
+	    f->la_route_set.Clear();
+	    f->la_route_set.AddRange(next_output_port, next_vc_start, next_vc_end);
+	  } else {
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Updating lookahead routing information for flit " << f->id
+			 << "." << endl;
+	    }
+	    int in_channel = channel->GetSinkPort();
+	    _rf(router, f, in_channel, &f->la_route_set, false);
 	  }
-	  _rf(router, f, in_channel, &f->la_route_set, false);
 	} else {
 	  f->la_route_set.Clear();
 	}
       }
 
       dest_buf->SendingFlit(f);
-      
+
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
       
       if(_out_queue_credits.count(input) == 0) {
@@ -1053,6 +1114,7 @@ void IQRouter::_SWHoldUpdate( )
       } else {
 	Flit * const nf = cur_buf->FrontFlit(vc);
 	assert(nf);
+	assert(nf->vc == vc);
 	if(f->tail) {
 	  assert(nf->head);
 	  if(f->watch) {
@@ -1086,6 +1148,9 @@ void IQRouter::_SWHoldUpdate( )
 	    if(_vc_allocator) {
 	      _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
 							      -1)));
+	    }
+	    if(_noq) {
+	      _UpdateNOQ(input, vc, nf);
 	    }
 	  }
 	} else {
@@ -1126,7 +1191,10 @@ void IQRouter::_SWHoldUpdate( )
 
 bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 {
-
+  assert(input >= 0 && input < _inputs);
+  assert(vc >= 0 && vc < _vcs);
+  assert(output >= 0 && output < _outputs);
+  
   // When input_speedup > 1, the virtual channel buffers are interleaved to 
   // create multiple input ports to the switch. Similarily, the output ports 
   // are interleaved based on their originating input when output_speedup > 1.
@@ -1141,6 +1209,7 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
   
   Flit const * const f = cur_buf->FrontFlit(vc);
   assert(f);
+  assert(f->vc == vc);
   
   if((_switch_hold_in[expanded_input] < 0) && 
      (_switch_hold_out[expanded_output] < 0)) {
@@ -1252,7 +1321,8 @@ void IQRouter::_SWAllocEvaluate( )
     
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
-    
+    assert(f->vc == vc);
+
     if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | " 
 		 << "Beginning switch allocation for VC " << vc
@@ -1297,6 +1367,8 @@ void IQRouter::_SWAllocEvaluate( )
     
     set<OutputSet::sSetElement> const setlist = route_set->GetSet();
     
+    assert(!_noq || (setlist.size() == 1));
+
     for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
 	iset != setlist.end();
 	++iset) {
@@ -1317,7 +1389,22 @@ void IQRouter::_SWAllocEvaluate( )
 	// for higher levels of speculation, check if at least one suitable VC 
 	// is available at the current output
 	
-	for(int dest_vc = iset->vc_start; dest_vc <= iset->vc_end; ++dest_vc) {
+	int vc_start;
+	int vc_end;
+	
+	if(_noq && _noq_next_output_port[input][vc] >= 0) {
+	  assert(!_routing_delay);
+	  vc_start = _noq_next_vc_start[input][vc];
+	  vc_end = _noq_next_vc_end[input][vc];
+	} else {
+	  vc_start = iset->vc_start;
+	  vc_end = iset->vc_end;
+	}
+	assert(vc_start >= 0 && vc_start < _vcs);
+	assert(vc_end >= 0 && vc_end < _vcs);
+	assert(vc_end >= vc_start);
+	
+	for(int dest_vc = vc_start; dest_vc <= vc_end; ++dest_vc) {
 	  assert((dest_vc >= 0) && (dest_vc < _vcs));
 	  
 	  if(dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_buffer[dest_output].size()<(size_t)(_output_buffer_size))) {
@@ -1401,7 +1488,8 @@ void IQRouter::_SWAllocEvaluate( )
     
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
-    
+    assert(f->vc == vc);
+
     int const expanded_input = input * _input_speedup + vc % _input_speedup;
 
     int expanded_output = _sw_allocator->OutputAssigned(expanded_input);
@@ -1550,7 +1638,8 @@ void IQRouter::_SWAllocEvaluate( )
       
       Flit const * const f = cur_buf->FrontFlit(vc);
       assert(f);
-      
+      assert(f->vc == vc);
+
       if((_switch_hold_in[expanded_input] >= 0) ||
 	 (_switch_hold_out[expanded_output] >= 0)) {
 	if(f->watch) {
@@ -1618,19 +1707,35 @@ void IQRouter::_SWAllocEvaluate( )
 	  OutputSet const * const route_set = cur_buf->GetRouteSet(vc);
 	  assert(route_set);
 
-	  set<OutputSet::sSetElement> const setlist = route_set ->GetSet();
+	  set<OutputSet::sSetElement> const setlist = route_set->GetSet();
 
 	  bool busy = true;
 	  bool full = true;
 	  bool reserved = false;
 
+	  assert(!_noq || (setlist.size() == 1));
+
 	  for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
 	      iset != setlist.end();
 	      ++iset) {
 	    if(iset->output_port == output) {
-	      for(int out_vc = iset->vc_start; 
-		  out_vc <= iset->vc_end; 
-		  ++out_vc) {
+
+	      int vc_start;
+	      int vc_end;
+	      
+	      if(_noq && _noq_next_output_port[input][vc] >= 0) {
+		assert(!_routing_delay);
+		vc_start = _noq_next_vc_start[input][vc];
+		vc_end = _noq_next_vc_end[input][vc];
+	      } else {
+		vc_start = iset->vc_start;
+		vc_end = iset->vc_end;
+	      }
+	      assert(vc_start >= 0 && vc_start < _vcs);
+	      assert(vc_end >= 0 && vc_end < _vcs);
+	      assert(vc_end >= vc_start);
+	      
+	      for(int out_vc = vc_start; out_vc <= vc_end; ++out_vc) {
 		assert((out_vc >= 0) && (out_vc < _vcs));
 		if(dest_buf->IsAvailableFor(out_vc)) {
 		  busy = false;
@@ -1718,7 +1823,8 @@ void IQRouter::_SWAllocUpdate( )
     
     Flit * const f = cur_buf->FrontFlit(vc);
     assert(f);
-    
+    assert(f->vc == vc);
+
     if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		 << "Completed switch allocation for VC " << vc
@@ -1757,14 +1863,30 @@ void IQRouter::_SWAllocUpdate( )
 
 	const OutputSet * route_set = cur_buf->GetRouteSet(vc);
 	set<OutputSet::sSetElement> const setlist = route_set->GetSet();
-
+	
+	assert(!_noq || (setlist.size() == 1));
+	
 	for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
 	    iset != setlist.end();
 	    ++iset) {
 	  if(iset->output_port == output) {
-	    for(int out_vc = iset->vc_start; 
-		out_vc <= iset->vc_end; 
-		++out_vc) {
+
+	    int vc_start;
+	    int vc_end;
+	    
+	    if(_noq && _noq_next_output_port[input][vc] >= 0) {
+	      assert(!_routing_delay);
+	      vc_start = _noq_next_vc_start[input][vc];
+	      vc_end = _noq_next_vc_end[input][vc];
+	    } else {
+	      vc_start = iset->vc_start;
+	      vc_end = iset->vc_end;
+	    }
+	    assert(vc_start >= 0 && vc_start < _vcs);
+	    assert(vc_end >= 0 && vc_end < _vcs);
+	    assert(vc_end >= vc_start);
+
+	    for(int out_vc = vc_start; out_vc <= vc_end; ++out_vc) {
 	      assert((out_vc >= 0) && (out_vc < _vcs));
 	      
 	      int vc_prio = iset->pri;
@@ -1836,14 +1958,33 @@ void IQRouter::_SWAllocUpdate( )
       if(!_routing_delay && f->head) {
 	const FlitChannel * channel = _output_channels[output];
 	const Router * router = channel->GetSink();
-	int in_channel = channel->GetSinkPort();
 	if(router) {
-	  if(f->watch) {
-	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		       << "Updating lookahead routing information for flit " << f->id
-		       << "." << endl;
+	  if(_noq) {
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Updating lookahead routing information for flit " << f->id
+			 << " (NOQ)." << endl;
+	    }
+	    int next_output_port = _noq_next_output_port[input][vc];
+	    assert(next_output_port >= 0);
+	    _noq_next_output_port[input][vc] = -1;
+	    int next_vc_start = _noq_next_vc_start[input][vc];
+	    assert(next_vc_start >= 0 && next_vc_start < _vcs);
+	    _noq_next_vc_start[input][vc] = -1;
+	    int next_vc_end = _noq_next_vc_end[input][vc];
+	    assert(next_vc_end >= 0 && next_vc_end < _vcs);
+	    _noq_next_vc_end[input][vc] = -1;
+	    f->la_route_set.Clear();
+	    f->la_route_set.AddRange(next_output_port, next_vc_start, next_vc_end);
+	  } else {
+	    if(f->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Updating lookahead routing information for flit " << f->id
+			 << "." << endl;
+	    }
+	    int in_channel = channel->GetSinkPort();
+	    _rf(router, f, in_channel, &f->la_route_set, false);
 	  }
-	  _rf(router, f, in_channel, &f->la_route_set, false);
 	} else {
 	  f->la_route_set.Clear();
 	}
@@ -1865,6 +2006,7 @@ void IQRouter::_SWAllocUpdate( )
       } else {
 	Flit * const nf = cur_buf->FrontFlit(vc);
 	assert(nf);
+	assert(nf->vc == vc);
 	if(f->tail) {
 	  assert(nf->head);
 	  if(_routing_delay) {
@@ -1887,6 +2029,9 @@ void IQRouter::_SWAllocUpdate( )
 	    if(_vc_allocator) {
 	      _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
 							      -1)));
+	    }
+	    if(_noq) {
+	      _UpdateNOQ(input, vc, nf);
 	    }
 	  }
 	} else {
@@ -2146,4 +2291,43 @@ vector<int> IQRouter::GetBuffers(int i) const {
     }
   }
   return sizes;
+}
+
+void IQRouter::_UpdateNOQ(int input, int vc, Flit const * f) {
+  assert(!_routing_delay);
+  assert(f);
+  assert(f->vc == vc);
+  assert(f->head);
+  set<OutputSet::sSetElement> sl = f->la_route_set.GetSet();
+  assert(sl.size() == 1);
+  int out_port = sl.begin()->output_port;
+  const FlitChannel * channel = _output_channels[out_port];
+  const Router * router = channel->GetSink();
+  if(router) {
+    int in_channel = channel->GetSinkPort();
+    OutputSet nos;
+    _rf(router, f, in_channel, &nos, false);
+    sl = nos.GetSet();
+    assert(sl.size() == 1);
+    OutputSet::sSetElement const & se = *sl.begin();
+    int next_output_port = se.output_port;
+    assert(next_output_port >= 0);
+    assert(_noq_next_output_port[input][vc] < 0);
+    _noq_next_output_port[input][vc] = next_output_port;
+    int next_vc_count = (se.vc_end - se.vc_start + 1) / router->NumOutputs();
+    int next_vc_start = se.vc_start + next_output_port * next_vc_count;
+    assert(next_vc_start >= 0 && next_vc_start < _vcs);
+    assert(_noq_next_vc_start[input][vc] < 0);
+    _noq_next_vc_start[input][vc] = next_vc_start;
+    int next_vc_end = se.vc_start + (next_output_port + 1) * next_vc_count - 1;
+    assert(next_vc_end >= 0 && next_vc_end < _vcs);
+    assert(_noq_next_vc_end[input][vc] < 0);
+    _noq_next_vc_end[input][vc] = next_vc_end;
+    assert(next_vc_start <= next_vc_end);
+    if(f->watch) {
+      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		 << "Computing lookahead routing information for flit " << f->id
+		 << " (NOQ)." << endl;
+    }
+  }
 }

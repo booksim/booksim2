@@ -101,6 +101,11 @@ class IQRouter : public Router {
   vector<int> _switch_hold_out;
   vector<int> _switch_hold_vc;
 
+  bool _noq;
+  vector<vector<int> > _noq_next_output_port;
+  vector<vector<int> > _noq_next_vc_start;
+  vector<vector<int> > _noq_next_vc_end;
+
   bool _ReceiveFlits( );
   bool _ReceiveCredits( );
 
@@ -127,6 +132,8 @@ class IQRouter : public Router {
   void _SendFlits( );
   void _SendCredits( );
   
+  void _UpdateNOQ(int input, int vc, Flit const * f);
+
   // ----------------------------------------
   //
   //   Router Power Modellingyes

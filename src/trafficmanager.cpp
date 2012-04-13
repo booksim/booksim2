@@ -98,7 +98,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _rf = rf_iter->second;
   
   _lookahead_routing = !config.GetInt("routing_delay");
-
+  _noq = config.GetInt("noq");
+  if(_noq) {
+    if(!_lookahead_routing) {
+      Error("NOQ requires lookahead routing to be enabled.");
+    }
+  }
 
   // ============ Traffic ============ 
 
@@ -665,11 +670,45 @@ void TrafficManager::_Step( )
 	  assert(os.size() == 1);
 	  OutputSet::sSetElement const & se = *os.begin();
 	  assert(se.output_port == -1);
-	  int const vcBegin = se.vc_start;
-	  int const vcEnd = se.vc_end;
-	  int const vc_count = vcEnd - vcBegin + 1;
+	  int vcBegin = se.vc_start;
+	  int vcEnd = se.vc_end;
+	  int vc_count = vcEnd - vcBegin + 1;
+	  if(_noq) {
+	    assert(_lookahead_routing);
+	    const FlitChannel * inject = _net[subnet]->GetInject(n);
+	    const Router * router = inject->GetSink();
+	    assert(router);
+	    int in_channel = inject->GetSinkPort();
+
+	    // NOTE: Because the lookahead is not for injection, but for the 
+	    // first hop, we have to temporarily set cf's VC to be non-negative 
+	    // in order to avoid seting of an assertion in the routing function.
+	    cf->vc = vcBegin;
+	    _rf(router, cf, in_channel, &cf->la_route_set, false);
+	    cf->vc = -1;
+
+	    if(cf->watch) {
+	      *gWatchOut << GetSimTime() << " | "
+			 << "node" << n << " | "
+			 << "Generating lookahead routing info for flit " << cf->id
+			 << " (NOQ)." << endl;
+	    }
+	    set<OutputSet::sSetElement> const sl = cf->la_route_set.GetSet();
+	    assert(sl.size() == 1);
+	    int next_output = sl.begin()->output_port;
+	    vc_count /= router->NumOutputs();
+	    vcBegin += next_output * vc_count;
+	    vcEnd = vcBegin + vc_count - 1;
+	    assert(vcBegin >= se.vc_start && vcBegin <= se.vc_end);
+	    assert(vcEnd >= se.vc_start && vcEnd <= se.vc_end);
+	    assert(vcBegin <= vcEnd);
+	  }
 	  for(int i = 1; i <= vc_count; ++i) {
-	    int const vc = vcBegin + (_last_vc[n][subnet][c] - vcBegin + i) % vc_count;
+	    int const lvc = _last_vc[n][subnet][c];
+	    int const vc = 
+	      (lvc < vcBegin || lvc > vcEnd) ? 
+	      vcBegin : 
+	      (vcBegin + (lvc - vcBegin + i) % vc_count);
 	    assert((vc >= vcBegin) && (vc <= vcEnd));
 	    if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
 	      cf->vc = vc;
@@ -690,16 +729,23 @@ void TrafficManager::_Step( )
 	if(f->head) {
 	  
 	  if (_lookahead_routing) {
-	    const FlitChannel * inject = _net[subnet]->GetInject(n);
-	    const Router * router = inject->GetSink();
-	    assert(router);
-	    int in_channel = inject->GetSinkPort();
-	    _rf(router, f, in_channel, &f->la_route_set, false);
-	    if(f->watch) {
+	    if(!_noq) {
+	      const FlitChannel * inject = _net[subnet]->GetInject(n);
+	      const Router * router = inject->GetSink();
+	      assert(router);
+	      int in_channel = inject->GetSinkPort();
+	      _rf(router, f, in_channel, &f->la_route_set, false);
+	      if(f->watch) {
+		*gWatchOut << GetSimTime() << " | "
+			   << "node" << n << " | "
+			   << "Generating lookahead routing info for flit " << f->id
+			   << "." << endl;
+	      }
+	    } else if(f->watch) {
 	      *gWatchOut << GetSimTime() << " | "
 			 << "node" << n << " | "
-			 << "Generating lookahead routing info for flit " << f->id
-			 << "." << endl;
+			 << "Already generated lookahead routing info for flit " << f->id
+			 << " (NOQ)." << endl;
 	    }
 	  } else {
 	    f->la_route_set.Clear();
