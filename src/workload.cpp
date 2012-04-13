@@ -65,7 +65,6 @@ Workload * Workload::New(string const & workload, int nodes,
   if(workload_name == "null") {
     result = new NullWorkload(nodes);
   } else if(workload_name == "synthetic") {
-    bool missing_params = false;
     if(params.size() < 2) {
       cout << "Error: Missing parameter in synthetic workload definition: "
 	   << workload << endl;
