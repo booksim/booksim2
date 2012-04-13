@@ -364,6 +364,7 @@ void IQRouter::_InputQueuing( )
 
     if(cur_buf->GetState(vc) == VC::idle) {
       assert(cur_buf->FrontFlit(vc) == f);
+      assert(cur_buf->GetOccupancy(vc) == 1);
       assert(f->head);
       assert(_switch_hold_vc[input*_input_speedup + vc%_input_speedup] != vc);
       if(_routing_delay) {
@@ -454,6 +455,7 @@ void IQRouter::_RouteEvaluate( )
 
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
+    assert(f->vc == vc);
     assert(f->head);
 
     if(f->watch) {
@@ -491,6 +493,7 @@ void IQRouter::_RouteUpdate( )
 
     Flit * const f = cur_buf->FrontFlit(vc);
     assert(f);
+    assert(f->vc == vc);
     assert(f->head);
 
     if(f->watch) {
@@ -547,6 +550,7 @@ void IQRouter::_VCAllocEvaluate( )
 
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
+    assert(f->vc == vc);
     assert(f->head);
     
     if(f->watch) {
@@ -669,6 +673,7 @@ void IQRouter::_VCAllocEvaluate( )
 
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
+    assert(f->vc == vc);
     assert(f->head);
 
     int const output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
@@ -743,6 +748,7 @@ void IQRouter::_VCAllocEvaluate( )
       
       Flit const * const f = cur_buf->FrontFlit(vc);
       assert(f);
+      assert(f->vc == vc);
       assert(f->head);
       
       if(!dest_buf->IsAvailableFor(match_vc)) {
@@ -797,6 +803,7 @@ void IQRouter::_VCAllocUpdate( )
     
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
+    assert(f->vc == vc);
     assert(f->head);
     
     if(f->watch) {
@@ -887,7 +894,8 @@ void IQRouter::_SWHoldEvaluate( )
     
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
-    
+    assert(f->vc == vc);
+
     if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | " 
 		 << "Beginning held switch allocation for VC " << vc
@@ -960,7 +968,8 @@ void IQRouter::_SWHoldUpdate( )
     
     Flit * const f = cur_buf->FrontFlit(vc);
     assert(f);
-    
+    assert(f->vc == vc);
+
     if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		 << "Completed held switch allocation for VC " << vc
@@ -1052,6 +1061,7 @@ void IQRouter::_SWHoldUpdate( )
       } else {
 	Flit * const nf = cur_buf->FrontFlit(vc);
 	assert(nf);
+	assert(nf->vc == vc);
 	if(f->tail) {
 	  assert(nf->head);
 	  if(f->watch) {
@@ -1125,7 +1135,10 @@ void IQRouter::_SWHoldUpdate( )
 
 bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 {
-
+  assert(input >= 0 && input < _inputs);
+  assert(vc >= 0 && vc < _vcs);
+  assert(output >= 0 && output < _outputs);
+  
   // When input_speedup > 1, the virtual channel buffers are interleaved to 
   // create multiple input ports to the switch. Similarily, the output ports 
   // are interleaved based on their originating input when output_speedup > 1.
@@ -1140,6 +1153,7 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
   
   Flit const * const f = cur_buf->FrontFlit(vc);
   assert(f);
+  assert(f->vc == vc);
   
   if((_switch_hold_in[expanded_input] < 0) && 
      (_switch_hold_out[expanded_output] < 0)) {
@@ -1251,7 +1265,8 @@ void IQRouter::_SWAllocEvaluate( )
     
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
-    
+    assert(f->vc == vc);
+
     if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | " 
 		 << "Beginning switch allocation for VC " << vc
@@ -1400,7 +1415,8 @@ void IQRouter::_SWAllocEvaluate( )
     
     Flit const * const f = cur_buf->FrontFlit(vc);
     assert(f);
-    
+    assert(f->vc == vc);
+
     int const expanded_input = input * _input_speedup + vc % _input_speedup;
 
     int expanded_output = _sw_allocator->OutputAssigned(expanded_input);
@@ -1549,7 +1565,8 @@ void IQRouter::_SWAllocEvaluate( )
       
       Flit const * const f = cur_buf->FrontFlit(vc);
       assert(f);
-      
+      assert(f->vc == vc);
+
       if((_switch_hold_in[expanded_input] >= 0) ||
 	 (_switch_hold_out[expanded_output] >= 0)) {
 	if(f->watch) {
@@ -1717,7 +1734,8 @@ void IQRouter::_SWAllocUpdate( )
     
     Flit * const f = cur_buf->FrontFlit(vc);
     assert(f);
-    
+    assert(f->vc == vc);
+
     if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		 << "Completed switch allocation for VC " << vc
@@ -1864,6 +1882,7 @@ void IQRouter::_SWAllocUpdate( )
       } else {
 	Flit * const nf = cur_buf->FrontFlit(vc);
 	assert(nf);
+	assert(nf->vc == vc);
 	if(f->tail) {
 	  assert(nf->head);
 	  if(_routing_delay) {
