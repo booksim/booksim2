@@ -134,10 +134,13 @@ class BufferState : public Module {
   };
   
   class SimpleFeedbackSharedBufferPolicy : public FeedbackSharedBufferPolicy {
+  protected:
+    vector<int> _pending_credits;
   public:
     SimpleFeedbackSharedBufferPolicy(Configuration const & config, 
 				     BufferState * parent, const string & name);
     virtual void SendingFlit(Flit const * const f);
+    virtual void FreeSlotFor(int vc = 0);
   };
   
   bool _wait_for_tail_credit;

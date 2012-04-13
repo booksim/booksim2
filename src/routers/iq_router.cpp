@@ -432,6 +432,8 @@ void IQRouter::_InputQueuing( )
 
 void IQRouter::_RouteEvaluate( )
 {
+  assert(_routing_delay);
+
   for(deque<pair<int, pair<int, int> > >::iterator iter = _route_vcs.begin();
       iter != _route_vcs.end();
       ++iter) {
@@ -467,6 +469,8 @@ void IQRouter::_RouteEvaluate( )
 
 void IQRouter::_RouteUpdate( )
 {
+  assert(_routing_delay);
+
   while(!_route_vcs.empty()) {
 
     pair<int, pair<int, int> > const & item = _route_vcs.front();
@@ -518,6 +522,8 @@ void IQRouter::_RouteUpdate( )
 
 void IQRouter::_VCAllocEvaluate( )
 {
+  assert(_vc_allocator);
+
   bool watched = false;
 
   for(deque<pair<int, pair<pair<int, int>, int> > >::iterator iter = _vc_alloc_vcs.begin();
@@ -767,6 +773,8 @@ void IQRouter::_VCAllocEvaluate( )
 
 void IQRouter::_VCAllocUpdate( )
 {
+  assert(_vc_allocator);
+
   while(!_vc_alloc_vcs.empty()) {
 
     pair<int, pair<pair<int, int>, int> > const & item = _vc_alloc_vcs.front();
@@ -1737,6 +1745,8 @@ void IQRouter::_SWAllocUpdate( )
 
       if(!_vc_allocator && (cur_buf->GetState(vc) == VC::vc_alloc)) {
 
+	assert(f->head);
+
 	int const cl = f->cl;
 	assert((cl >= 0) && (cl < _classes));
 
@@ -1874,8 +1884,10 @@ void IQRouter::_SWAllocUpdate( )
 	      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
 							      -1)));
 	    }
-	    _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
-							    -1)));
+	    if(_vc_allocator) {
+	      _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
+							      -1)));
+	    }
 	  }
 	} else {
 	  if(_hold_switch_for_packet) {
