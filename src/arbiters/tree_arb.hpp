@@ -27,60 +27,45 @@
 
 // ----------------------------------------------------------------------
 //
-//  Arbiter: Base class for Matrix and Round Robin Arbiter
+//  TreeArbiter
 //
 // ----------------------------------------------------------------------
 
-#ifndef _ARBITER_HPP_
-#define _ARBITER_HPP_
+#ifndef _TREE_ARB_HPP_
+#define _TREE_ARB_HPP_
 
-#include <vector>
+#include "arbiter.hpp"
 
-#include "module.hpp"
+class TreeArbiter : public Arbiter {
 
-class Arbiter : public Module {
+  int  _group_size ;
 
-protected:
+  vector<Arbiter *> _group_arbiters;
+  Arbiter * _global_arbiter;
 
-  typedef struct { 
-    bool valid ;
-    int id ;
-    int pri ;
-  } entry_t ;
-  
-  vector<entry_t> _request ;
-  int  _size ;
-
-  int  _selected ;
-  int _highest_pri;
-  int _best_input;
+  vector<int> _group_reqs;
 
 public:
-  int  _num_reqs ;
-  // Constructors
-  Arbiter( Module *parent, const string &name, int size ) ;
-  
-  // Print priority matrix to standard output
-  virtual void PrintState() const = 0 ;
-  
-  // Register request with arbiter
-  virtual void AddRequest( int input, int id, int pri ) ;
 
+  // Constructors
+  TreeArbiter( Module *parent, const string &name, int size, int groups, const string & arb_type ) ;
+
+  ~TreeArbiter();
+
+  // Print priority matrix to standard output
+  virtual void PrintState() const ;
+  
   // Update priority matrix based on last aribtration result
-  virtual void UpdateState() = 0 ; 
+  virtual void UpdateState() ; 
 
   // Arbitrate amongst requests. Returns winning input and 
   // updates pointers to metadata when valid pointers are passed
-  virtual int Arbitrate( int* id = 0, int* pri = 0 ) ;
+  virtual int Arbitrate( int* id = 0, int* pri = 0) ;
+
+  virtual void AddRequest( int input, int id, int pri ) ;
 
   virtual void Clear();
 
-  inline int LastWinner() const {
-    return _selected;
-  }
-
-  static Arbiter *NewArbiter( Module *parent, const string &name,
-			      const string &arb_type, int size );
 } ;
 
 #endif

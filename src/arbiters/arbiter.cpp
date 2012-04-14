@@ -34,6 +34,7 @@
 #include "arbiter.hpp"
 #include "roundrobin_arb.hpp"
 #include "matrix_arb.hpp"
+#include "tree_arb.hpp"
 
 #include <limits>
 #include <cassert>
@@ -95,6 +96,16 @@ Arbiter *Arbiter::NewArbiter( Module *parent, const string& name,
     a = new RoundRobinArbiter( parent, name, size );
   } else if(arb_type == "matrix") {
     a = new MatrixArbiter( parent, name, size );
+  } else if(arb_type.substr(0, 5) == "tree(") {
+    size_t left = 4;
+    size_t middle = arb_type.find_first_of(',');
+    assert(middle != string::npos);
+    size_t right = arb_type.find_last_of(')');
+    assert(right != string::npos);
+    string groups_str = arb_type.substr(left+1, middle-left-1);
+    int groups = atoi(groups_str.c_str());
+    string sub_arb_type = arb_type.substr(middle+1, right-middle-1);
+    a = new TreeArbiter( parent, name, size, groups, sub_arb_type );
   } else assert(false);
   return a;
 }
