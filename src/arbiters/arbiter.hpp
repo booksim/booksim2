@@ -75,6 +75,10 @@ public:
 
   virtual void Clear();
 
+  inline int LastWinner() const {
+    return _selected;
+  }
+
   static Arbiter *NewArbiter( Module *parent, const string &name,
 			      const string &arb_type, int size );
 } ;
