@@ -245,7 +245,7 @@ int SyntheticWorkload::time() const
   return _qtime[source];
 }
 
-void SyntheticWorkload::inject()
+void SyntheticWorkload::inject(int pid)
 {
   assert(!empty());
   int const & source = _pending.front();
@@ -406,7 +406,7 @@ int TraceWorkload::time() const
   return (scale > 0) ? (time / scale) : (time * -scale);
 }
 
-void TraceWorkload::inject()
+void TraceWorkload::inject(int pid)
 {
   assert(!empty());
   int const n = _ready_iter->source;

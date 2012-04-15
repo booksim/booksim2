@@ -56,8 +56,9 @@ public:
   virtual int dest() const = 0;
   virtual int size() const = 0;
   virtual int time() const = 0;
-  virtual void inject() = 0;
+  virtual void inject(int pid) = 0;
   virtual void defer() = 0;
+  virtual void retire(int pid) = 0;
 };
 
 class NullWorkload : public Workload {
@@ -69,8 +70,9 @@ public:
   virtual int dest() const {return -1;}
   virtual int size() const {return -1;}
   virtual int time() const {return -1;}
-  virtual void inject() {}
+  virtual void inject(int pid) {}
   virtual void defer() {}
+  virtual void retire(int pid) {}
 };
 
 class SyntheticWorkload : public Workload {
@@ -99,8 +101,9 @@ public:
   virtual int dest() const;
   virtual int size() const;
   virtual int time() const;
-  virtual void inject();
+  virtual void inject(int pid);
   virtual void defer();
+  virtual void retire(int pid) {}
 };
 
 class TraceWorkload : public Workload {
@@ -144,9 +147,9 @@ public:
   virtual int dest() const;
   virtual int size() const;
   virtual int time() const;
-  virtual void inject();
+  virtual void inject(int pid);
   virtual void defer();
-  
+  virtual void retire(int pid) {}
 };
 
 #endif

@@ -65,14 +65,20 @@ void WorkloadTrafficManager::_Inject( )
 	int const dest = wl->dest();
 	int const size = wl->size();
 	int const time = (_include_queuing == 1) ? wl->time() : _time;
-	_GeneratePacket(source, dest, size, c, time);
-	wl->inject();
+	int const pid = _GeneratePacket(source, dest, size, c, time);
+	wl->inject(pid);
       } else {
 	wl->defer();
       }
     }
     wl->advanceTime();
   }
+}
+
+void WorkloadTrafficManager::_RetirePacket( Flit * head, Flit * tail )
+{
+  TrafficManager::_RetirePacket( head, tail );
+  _workload[head->cl]->retire(head->pid);
 }
 
 void WorkloadTrafficManager::_ResetSim( )

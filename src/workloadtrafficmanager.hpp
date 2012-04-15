@@ -48,6 +48,7 @@ protected:
   int _overall_runtime;
 
   virtual void _Inject( );
+  virtual void _RetirePacket( Flit * head, Flit * tail );
   virtual void _ResetSim( );
   virtual bool _SingleSim( );
 
