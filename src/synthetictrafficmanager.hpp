@@ -62,6 +62,8 @@ protected:
 
   virtual void _RetirePacket(Flit * head, Flit * tail, int dest);
 
+  virtual int _IssuePacket( int source, int cl ) = 0;
+
   virtual void _Inject( );
 
   virtual bool _PacketsOutstanding( ) const;
