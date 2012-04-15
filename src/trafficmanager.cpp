@@ -449,7 +449,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 		 << ")." << endl;
     }
 
-    _RetirePacket(head, f, dest);
+    _RetirePacket(head, f);
     
     // Only record statistics once per packet (at tail)
     // and based on the simulation state
@@ -482,9 +482,13 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   }
 }
 
-void TrafficManager::_RetirePacket(Flit * head, Flit * tail, int dest)
+void TrafficManager::_RetirePacket(Flit * head, Flit * tail)
 {
-  _requests_outstanding[tail->cl][tail->src]--;
+  assert(head);
+  assert(tail);
+  assert(head->pid == tail->pid);
+  assert(head->cl == tail->cl);
+  _requests_outstanding[head->cl][head->src]--;
 }
 
 int TrafficManager::_GeneratePacket( int source, int dest, int size, int cl, 

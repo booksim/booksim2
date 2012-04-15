@@ -116,25 +116,29 @@ SyntheticTrafficManager::~SyntheticTrafficManager( )
   }
 }
 
-void SyntheticTrafficManager::_RetirePacket(Flit * head, Flit * tail, int dest)
+void SyntheticTrafficManager::_RetirePacket( Flit * head, Flit * tail )
 {
-  int const reply_class = _reply_class[tail->cl];
+  assert(head);
+  assert(tail);
+  assert(head->pid == tail->pid);
+  assert(head->cl == tail->cl);
+  int const reply_class = _reply_class[head->cl];
   assert(reply_class < _classes);
   
   if (reply_class < 0) {
-    int const request_class = _request_class[tail->cl];
+    int const request_class = _request_class[head->cl];
     assert(request_class < _classes);
     if(request_class < 0) {
       // single-packet transactions "magically" notify source of completion 
       // when packet arrives at destination
-      _requests_outstanding[tail->cl][tail->src]--;
+      _requests_outstanding[head->cl][head->src]--;
     } else {
       // request-reply transactions complete when reply arrives
-      _requests_outstanding[request_class][dest]--;
+      _requests_outstanding[request_class][head->dest]--;
     }
     
   } else {
-    _packet_seq_no[tail->cl][dest]++;
+    _packet_seq_no[head->cl][head->dest]++;
     int size = _GetNextPacketSize(reply_class);
     _GeneratePacket(head->dest, head->src, size, reply_class, tail->atime + 1);
   }

@@ -60,7 +60,7 @@ protected:
 
   vector<vector<Stats *> > _pair_tlat;
 
-  virtual void _RetirePacket(Flit * head, Flit * tail, int dest);
+  virtual void _RetirePacket( Flit * head, Flit * tail );
 
   virtual int _IssuePacket( int source, int cl ) = 0;
 
