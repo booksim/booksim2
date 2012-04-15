@@ -76,7 +76,7 @@ void BatchTrafficManager::_RetireFlit( Flit *f, int dest )
   TrafficManager::_RetireFlit(f, dest);
 }
 
-bool BatchTrafficManager::_IssuePacket( int source, int cl )
+int BatchTrafficManager::_IssuePacket( int source, int cl )
 {
   if(((_max_outstanding[cl] <= 0) ||
       (_requests_outstanding[cl][source] < _max_outstanding[cl])) &&
@@ -84,10 +84,9 @@ bool BatchTrafficManager::_IssuePacket( int source, int cl )
     int dest = _traffic_pattern[cl]->dest(source);
     int size = _GetNextPacketSize(cl);
     int time = ((_include_queuing == 1) ? _qtime[cl][source] : _time);
-    _GeneratePacket(source, dest, size, cl, time);
-    return true;
+    return _GeneratePacket(source, dest, size, cl, time);
   }
-  return false;
+  return -1;
 }
 
 void BatchTrafficManager::_ClearStats( )

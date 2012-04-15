@@ -153,7 +153,7 @@ void SyntheticTrafficManager::_Inject( )
 	} else {
 	  while(_qtime[c][source] <= _time) {
 	    ++_qtime[c][source];
-	    if(_IssuePacket(source, c)) { //generate a packet
+	    if(_IssuePacket(source, c) >= 0) { //generate a packet
 	      _requests_outstanding[c][source]++;
 	      _packet_seq_no[c][source]++;
 	      break;

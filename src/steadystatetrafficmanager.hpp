@@ -56,7 +56,7 @@ protected:
   vector<double> _warmup_threshold;
   vector<double> _acc_warmup_threshold;
 
-  virtual bool _IssuePacket( int source, int cl );
+  virtual int _IssuePacket( int source, int cl );
 
   virtual void _ResetSim( );
 

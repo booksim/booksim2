@@ -47,7 +47,7 @@ protected:
 
   int _overall_runtime;
 
-  virtual bool _IssuePacket( int source, int cl );
+  virtual int _IssuePacket( int source, int cl );
   virtual void _Inject( );
   virtual void _ResetSim( );
   virtual bool _SingleSim( );

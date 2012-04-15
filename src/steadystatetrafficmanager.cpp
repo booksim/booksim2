@@ -97,16 +97,15 @@ SteadyStateTrafficManager::~SteadyStateTrafficManager( )
   }
 }
 
-bool SteadyStateTrafficManager::_IssuePacket( int source, int cl )
+int SteadyStateTrafficManager::_IssuePacket( int source, int cl )
 {
   if(_injection_process[cl]->test(source)) {
     int dest = _traffic_pattern[cl]->dest(source);
     int size = _GetNextPacketSize(cl);
     int time = ((_include_queuing == 1) ? _qtime[cl][source] : _time);
-    _GeneratePacket(source, dest, size, cl, time);
-    return true;
+    return _GeneratePacket(source, dest, size, cl, time);
   }
-  return false;
+  return -1;
 }
 
 void SteadyStateTrafficManager::_ResetSim( )

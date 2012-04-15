@@ -205,9 +205,9 @@ protected:
 
   virtual bool _PacketsOutstanding( ) const;
   
-  virtual bool _IssuePacket( int source, int cl ) = 0;
+  virtual int _IssuePacket( int source, int cl ) = 0;
 
-  void _GeneratePacket( int source, int dest, int size, int cl, int time );
+  int _GeneratePacket( int source, int dest, int size, int cl, int time );
 
   virtual void _ResetSim( );
 

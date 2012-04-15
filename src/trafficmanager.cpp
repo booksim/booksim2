@@ -487,7 +487,7 @@ void TrafficManager::_RetirePacket(Flit * head, Flit * tail, int dest)
   _requests_outstanding[tail->cl][tail->src]--;
 }
 
-void TrafficManager::_GeneratePacket( int source, int dest, int size, int cl, 
+int TrafficManager::_GeneratePacket( int source, int dest, int size, int cl, 
 				      int time )
 {
   assert(size > 0);
@@ -566,6 +566,7 @@ void TrafficManager::_GeneratePacket( int source, int dest, int size, int cl,
 
     _partial_packets[cl][source].push_back(f);
   }
+  return pid;
 }
 
 void TrafficManager::_Step( )
