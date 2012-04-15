@@ -28,11 +28,8 @@
 # Makefile
 #
 MOC = /usr/lib/qt4/bin/moc
-CPP    = /usr/bin/g++
-YACC   = /usr/bin/bison -y
-LEX    = /usr/bin/flex
-PURIFY = /usr/bin/purify
-QUANT  = /usr/bin/quantify
+CPP    = g++
+YACC   = bison -y
 DEFINE = 
 DEFINE_TEST = -DUSE_GUI
 INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
