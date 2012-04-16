@@ -116,28 +116,29 @@ protected:
     int time;
     int source;
     int dest;
-    int size;
+    int type;
   };
 
-  list<PacketInfo>::iterator _ready_iter;
-  list<PacketInfo> _waiting_packets;
-  list<PacketInfo> _ready_packets;
-
-  vector<ifstream *> _traces;
   
-  vector<int> _counts;
-  vector<int> _limits;
+  PacketInfo _next_packet;
+  list<PacketInfo> _ready_packets;
+  list<PacketInfo>::iterator _ready_iter;
 
-  vector<int> _scales;
-  vector<int> _skips;
+  ifstream * _trace;
+  
+  int _count;
+  int _limit;
+
+  int _scale;
+  int _skip;
+
+  void _refill(int time);
 
 public:
   
-  TraceWorkload(int nodes, vector<string> const & filenames,
-		vector<int> const & packet_size, 
-		vector<int> const & limits = vector<int>(),
-		vector<int> const & skips = vector<int>(),
-		vector<int> const & scales = vector<int>());
+  TraceWorkload(int nodes, string const & filename, 
+		vector<int> const & packet_size, int limit = -1, int skip = 0, 
+		int scale = 1);
   
   virtual ~TraceWorkload();
   virtual void reset();
