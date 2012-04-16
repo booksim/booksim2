@@ -265,6 +265,7 @@ TraceWorkload::TraceWorkload(int nodes, string const & filename,
     _packet_sizes(packet_sizes), _limit(limit), _scale(scale), _skip(skip)
 {
   assert(limit < 0 || limit > skip);
+  _ready_packets.resize(nodes);
   _trace = new ifstream(filename.c_str());
   if(!_trace->is_open()) {
     cerr << "Unable to open trace file: " << filename << endl;
@@ -288,66 +289,92 @@ void TraceWorkload::_refill(int time)
     ++_count;
     int delay, source, dest, type;
     *_trace >> delay >> source >> dest >> type;
+    assert(delay >= 0);
+    assert((source >= 0) && (source < _nodes));
+    assert((dest >= 0) && (dest < _nodes));
     time += delay;
     if(type >= 0) {
+      _next_source = source;
       _next_packet.time = time;
-      _next_packet.source = source;
       _next_packet.dest = dest;
       _next_packet.type = type;
       if(((_scale > 0) ? (time / _scale) : (time * -_scale)) <= _time) {
-	_ready_packets.push_back(_next_packet);
-	_next_packet.time = -1;
+	if(_ready_packets[source].empty()) {
+	  _pending_nodes.push(source);
+	}
+	_ready_packets[source].push(_next_packet);
+	_next_source = -1;
       } else {
 	break;
       }
     }
   }
+  assert(_deferred_nodes.size() <= _nodes);
 }
 
 void TraceWorkload::reset()
 {
   Workload::reset();
 
+  while(!_pending_nodes.empty()) {
+    _pending_nodes.pop();
+  }
+  while(!_deferred_nodes.empty()) {
+    _deferred_nodes.pop();
+  }
   _count = 0;
   _trace->seekg(0);
   while((_count < _skip) && !_trace->eof()) {
     ++_count;
     int delay, source, dest, type;
     *_trace >> delay >> source >> dest >> type;
+    assert(delay >= 0);
+    assert((source >= 0) && (source < _nodes));
+    assert((dest >= 0) && (dest < _nodes));
   }
-  _next_packet.time = -1;
+  _next_source = -1;
   _refill(0);
-  _ready_iter = _ready_packets.begin();
 }
 
 void TraceWorkload::advanceTime()
 {
   Workload::advanceTime();
 
-  int time = _next_packet.time;
-  if((time >= 0) &&
-     (((_scale > 0) ? (time / _scale) : (time * -_scale)) <= _time)) {
-    _ready_packets.push_back(_next_packet);
-    _next_packet.time = -1;
-    _refill(time);
+  while(!_deferred_nodes.empty()) {
+    int const source = _deferred_nodes.front();
+    assert(!_ready_packets[source].empty());
+    _deferred_nodes.pop();
+    _pending_nodes.push(source);
   }
-  _ready_iter = _ready_packets.begin();
+  assert(_pending_nodes.size() <= _nodes);
+  if(_next_source >= 0) {
+    int const time = _next_packet.time;
+    if(((_scale > 0) ? (time / _scale) : (time * -_scale)) <= _time) {
+      if(_ready_packets[_next_source].empty()) {
+	_pending_nodes.push(_next_source);
+      }
+      _ready_packets[_next_source].push(_next_packet);
+      _next_source = -1;
+      _refill(time);
+    }
+  }
 }
 
 bool TraceWorkload::empty() const
 {
-  return (_ready_iter == _ready_packets.end());
+  return _pending_nodes.empty();
 }
 
 bool TraceWorkload::completed() const
 {
-  return ((_next_packet.time < 0) && _ready_packets.empty());
+  return (_pending_nodes.empty() && _deferred_nodes.empty() && 
+	  (_next_source < 0));
 }
 
 int TraceWorkload::source() const
 {
   assert(!empty());
-  int const source = _ready_iter->source;
+  int const source = _pending_nodes.front();
   assert((source >= 0) && (source < _nodes));
   return source;
 }
@@ -355,7 +382,10 @@ int TraceWorkload::source() const
 int TraceWorkload::dest() const
 {
   assert(!empty());
-  int const dest = _ready_iter->dest;
+  int const source = _pending_nodes.front();
+  assert((source >= 0) && (source < _nodes));
+  assert(!_ready_packets[source].empty());
+  int const dest = _ready_packets[source].front().dest;
   assert((dest >= 0) && (dest < _nodes));
   return dest;
 }
@@ -363,25 +393,51 @@ int TraceWorkload::dest() const
 int TraceWorkload::size() const
 {
   assert(!empty());
-  assert(_packet_sizes[_ready_iter->type] > 0);
-  return _packet_sizes[_ready_iter->type];
+  int const source = _pending_nodes.front();
+  assert((source >= 0) && (source < _nodes));
+  assert(!_ready_packets[source].empty());
+  int const size = _packet_sizes[_ready_packets[source].front().type];
+  assert(size > 0);
+  return size;
 }
 
 int TraceWorkload::time() const
 {
   assert(!empty());
-  int time = _ready_iter->time;
-  return (_scale > 0) ? (time / _scale) : (time * -_scale);
+  int const source = _pending_nodes.front();
+  assert((source >= 0) && (source < _nodes));
+  assert(!_ready_packets[source].empty());
+  int time = _ready_packets[source].front().time;
+  if(_scale > 0) {
+    time /= _scale;
+  } else {
+    time *= -_scale;
+  }
+  assert(time >= 0);
+  return time;
 }
 
 void TraceWorkload::inject(int pid)
 {
   assert(!empty());
-  _ready_iter = _ready_packets.erase(_ready_iter);
+  int const source = _pending_nodes.front();
+  assert((source >= 0) && (source < _nodes));
+  _pending_nodes.pop();
+  assert(!_ready_packets[source].empty());
+  _ready_packets[source].pop();
+  if(!_ready_packets[source].empty()) {
+    _deferred_nodes.push(source);
+  }
+  assert(_deferred_nodes.size() <= _nodes);
 }
 
 void TraceWorkload::defer()
 {
   assert(!empty());
-  ++_ready_iter;
+  int const source = _pending_nodes.front();
+  assert((source >= 0) && (source < _nodes));
+  _pending_nodes.pop();
+  assert(!_ready_packets[source].empty());
+  _deferred_nodes.push(source);
+  assert(_deferred_nodes.size() <= _nodes);
 }

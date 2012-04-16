@@ -114,15 +114,15 @@ protected:
 
   struct PacketInfo {
     int time;
-    int source;
     int dest;
     int type;
   };
 
-  
+  int _next_source;
   PacketInfo _next_packet;
-  list<PacketInfo> _ready_packets;
-  list<PacketInfo>::iterator _ready_iter;
+  vector<queue<PacketInfo> > _ready_packets;
+  queue<int> _pending_nodes;
+  queue<int> _deferred_nodes;
 
   ifstream * _trace;
   
