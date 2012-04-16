@@ -87,11 +87,11 @@ Workload * Workload::New(string const & workload, int nodes,
     vector<string> filenames = tokenize_str(params[0]);
     filenames.resize(nodes, filenames.back());
     vector<int> packet_sizes = tokenize_int(params[1]);
-    int limit = -1;
+    vector<int> limits;
     vector<int> scales;
     vector<int> skips;
     if(params.size() > 2) {
-      limit = atoi(params[2].c_str());
+      limits = tokenize_int(params[2]);
       if(params.size() > 3) {
 	skips = tokenize_int(params[3]);
 	skips.resize(nodes, skips.back());
@@ -101,7 +101,7 @@ Workload * Workload::New(string const & workload, int nodes,
 	}
       }
     }
-    result = new TraceWorkload(nodes, filenames, packet_sizes, limit, skips, scales);
+    result = new TraceWorkload(nodes, filenames, packet_sizes, limits, skips, scales);
   }
   return result;
 }
@@ -262,21 +262,27 @@ void SyntheticWorkload::defer()
 }
 
 TraceWorkload::TraceWorkload(int nodes, vector<string> const & filenames, 
-			     vector<int> const & packet_sizes, int limit,
+			     vector<int> const & packet_sizes, 
+			     vector<int> const & limits,
 			     vector<int> const & skips, 
 			     vector<int> const & scales)
-  : Workload(nodes), _packet_sizes(packet_sizes), _limit(limit), 
+  : Workload(nodes), _packet_sizes(packet_sizes), _limits(limits), 
     _scales(scales), _skips(skips)
 {
-  if(_scales.empty()) {
-    _scales.push_back(1);
+  if(_limits.empty()) {
+    _limits.push_back(-1);
   }
-  _scales.resize(nodes, _scales.back());
+  _limits.resize(nodes, _limits.back());
 
   if(_skips.empty()) {
     _skips.push_back(0);
   }
   _skips.resize(nodes, _skips.back());
+
+  if(_scales.empty()) {
+    _scales.push_back(1);
+  }
+  _scales.resize(nodes, _scales.back());
 
   _traces.resize(nodes);
   for(int n = 0; n < _nodes; ++n) {
@@ -314,10 +320,11 @@ void TraceWorkload::reset()
     ifstream * trace = _traces[n];
     trace->seekg(0);
     int & count = _counts[n];
+    int const limit = _limits[n];
     int const skip = _skips[n];
     int const scale = _scales[n];
     int time = 0;
-    while(((_limit < 0) || (count < _limit)) && !trace->eof()) {
+    while(((limit < 0) || (count < limit)) && !trace->eof()) {
       ++count;
       int delay, source, dest, type;
       *trace >> delay >> source >> dest >> type;
@@ -411,11 +418,12 @@ void TraceWorkload::inject(int pid)
   assert(!empty());
   int const n = _ready_iter->source;
   int & count = _counts[n];
+  int const limit = _limits[n];
   int const scale = _scales[n];
   ifstream * trace = _traces[n];
   int time = _ready_iter->time;
   bool empty = true;
-  while(((_limit < 0) || (count < _limit)) && !trace->eof()) {
+  while(((limit < 0) || (count < limit)) && !trace->eof()) {
     ++count;
     int delay, source, dest, type;
     *trace >> delay >> source >> dest >> type;
