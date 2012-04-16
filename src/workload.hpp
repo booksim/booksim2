@@ -43,6 +43,8 @@ class Workload {
 protected:
   int const _nodes;
   int _time;
+  queue<int> _pending_nodes;
+  queue<int> _deferred_nodes;
   Workload(int nodes);
 public:
   virtual ~Workload();
@@ -50,29 +52,26 @@ public:
 			Configuration const * const config = NULL);
   virtual void reset();
   virtual void advanceTime();
-  virtual bool empty() const = 0;
+  virtual bool empty() const;
   virtual bool completed() const = 0;
-  virtual int source() const = 0;
+  virtual int source() const;
   virtual int dest() const = 0;
   virtual int size() const = 0;
   virtual int time() const = 0;
   virtual void inject(int pid) = 0;
-  virtual void defer() = 0;
+  virtual void defer();
   virtual void retire(int pid) = 0;
 };
 
 class NullWorkload : public Workload {
 public:
   NullWorkload(int nodes) : Workload(nodes) {}
-  virtual bool empty() const {return true;}
   virtual bool completed() const {return true;}
-  virtual int source() const {return -1;}
   virtual int dest() const {return -1;}
   virtual int size() const {return -1;}
   virtual int time() const {return -1;}
-  virtual void inject(int pid) {}
-  virtual void defer() {}
-  virtual void retire(int pid) {}
+  virtual void inject(int pid) {assert(false);}
+  virtual void retire(int pid) {assert(false);}
 };
 
 class SyntheticWorkload : public Workload {
@@ -83,8 +82,6 @@ protected:
   InjectionProcess * _injection;
   TrafficPattern * _traffic;
   vector<int> _qtime;
-  queue<int> _pending_nodes;
-  queue<int> _deferred_nodes;
   queue<int> _sleeping_nodes;
 public:
   SyntheticWorkload(int nodes, double load, string const & traffic, 
@@ -95,14 +92,11 @@ public:
   virtual ~SyntheticWorkload();
   virtual void reset();
   virtual void advanceTime();
-  virtual bool empty() const;
   virtual bool completed() const;
-  virtual int source() const;
   virtual int dest() const;
   virtual int size() const;
   virtual int time() const;
   virtual void inject(int pid);
-  virtual void defer();
   virtual void retire(int pid) {}
 };
 
@@ -121,8 +115,6 @@ protected:
   int _next_source;
   PacketInfo _next_packet;
   vector<queue<PacketInfo> > _ready_packets;
-  queue<int> _pending_nodes;
-  queue<int> _deferred_nodes;
 
   ifstream * _trace;
   
@@ -143,14 +135,11 @@ public:
   virtual ~TraceWorkload();
   virtual void reset();
   virtual void advanceTime();
-  virtual bool empty() const;
   virtual bool completed() const;
-  virtual int source() const;
   virtual int dest() const;
   virtual int size() const;
   virtual int time() const;
   virtual void inject(int pid);
-  virtual void defer();
   virtual void retire(int pid) {}
 };
 
