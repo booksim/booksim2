@@ -121,8 +121,8 @@ void Workload::advanceTime()
     int const source = _deferred_nodes.front();
     _deferred_nodes.pop();
     _pending_nodes.push(source);
+    assert(_pending_nodes.size() <= _nodes);
   }
-  assert(_pending_nodes.size() <= _nodes);
 }
 
 bool Workload::empty() const
@@ -143,6 +143,7 @@ void Workload::defer()
   assert(!_pending_nodes.empty());
   int const source = _pending_nodes.front();
   _deferred_nodes.push(source);
+  assert(_deferred_nodes.size() <= _nodes);
   _pending_nodes.pop();
 }
 
@@ -183,8 +184,10 @@ void SyntheticWorkload::reset()
   for(int source = 0; source < _nodes; ++source) {
     if(_injection->test(source)) {
       _pending_nodes.push(source);
+      assert(_pending_nodes.size() <= _nodes);
     } else {
       _sleeping_nodes.push(source);
+      assert(_sleeping_nodes.size() <= _nodes);
     }
   }
 }
@@ -193,7 +196,8 @@ void SyntheticWorkload::advanceTime()
 {
   Workload::advanceTime();
   for(size_t i = 0; i < _sleeping_nodes.size(); ++i) {
-    int const & source = _sleeping_nodes.front();
+    int const source = _sleeping_nodes.front();
+    _sleeping_nodes.pop();
     bool generated = false;
     while(_qtime[source] < _time) {
       ++_qtime[source];
@@ -204,10 +208,11 @@ void SyntheticWorkload::advanceTime()
     }
     if(generated) {
       _pending_nodes.push(source);
+      assert(_pending_nodes.size() <= _nodes);
     } else {
       _sleeping_nodes.push(source);
+      assert(_sleeping_nodes.size() <= _nodes);
     }
-    _sleeping_nodes.pop();
   }
 }
 
@@ -247,16 +252,17 @@ int SyntheticWorkload::size() const
 int SyntheticWorkload::time() const
 {
   assert(!_pending_nodes.empty());
-  int const & source = _pending_nodes.front();
+  int const source = _pending_nodes.front();
   return _qtime[source];
 }
 
 void SyntheticWorkload::inject(int pid)
 {
   assert(!_pending_nodes.empty());
-  int const & source = _pending_nodes.front();
-  _sleeping_nodes.push(source);
+  int const source = _pending_nodes.front();
   _pending_nodes.pop();
+  _sleeping_nodes.push(source);
+  assert(_sleeping_nodes.size() <= _nodes);
 }
 
 TraceWorkload::TraceWorkload(int nodes, string const & filename, 
@@ -302,6 +308,7 @@ void TraceWorkload::_refill(int time)
       if(((_scale > 0) ? (time / _scale) : (time * -_scale)) <= _time) {
 	if(_ready_packets[source].empty()) {
 	  _pending_nodes.push(source);
+	  assert(_pending_nodes.size() <= _nodes);
 	}
 	_ready_packets[source].push(_next_packet);
 	_next_source = -1;
@@ -310,7 +317,6 @@ void TraceWorkload::_refill(int time)
       }
     }
   }
-  assert(_deferred_nodes.size() <= _nodes);
 }
 
 void TraceWorkload::reset()
@@ -340,6 +346,7 @@ void TraceWorkload::advanceTime()
     if(((_scale > 0) ? (time / _scale) : (time * -_scale)) <= _time) {
       if(_ready_packets[_next_source].empty()) {
 	_pending_nodes.push(_next_source);
+	assert(_pending_nodes.size() <= _nodes);
       }
       _ready_packets[_next_source].push(_next_packet);
       _next_source = -1;
@@ -402,6 +409,6 @@ void TraceWorkload::inject(int pid)
   _ready_packets[source].pop();
   if(!_ready_packets[source].empty()) {
     _deferred_nodes.push(source);
+    assert(_deferred_nodes.size() <= _nodes);
   }
-  assert(_deferred_nodes.size() <= _nodes);
 }
