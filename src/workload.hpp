@@ -83,9 +83,9 @@ protected:
   InjectionProcess * _injection;
   TrafficPattern * _traffic;
   vector<int> _qtime;
-  queue<int> _ready;
-  queue<int> _pending;
-  queue<int> _deferred;
+  queue<int> _pending_nodes;
+  queue<int> _deferred_nodes;
+  queue<int> _sleeping_nodes;
 public:
   SyntheticWorkload(int nodes, double load, string const & traffic, 
 		    string const & injection, 

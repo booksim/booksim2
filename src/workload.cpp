@@ -144,20 +144,20 @@ void SyntheticWorkload::reset()
   _qtime.assign(_nodes, 0);
   _injection->reset();
   _traffic->reset();
-  while(!_ready.empty()) {
-    _ready.pop();
+  while(!_sleeping_nodes.empty()) {
+    _sleeping_nodes.pop();
   }
-  while(!_pending.empty()) {
-    _pending.pop();
+  while(!_pending_nodes.empty()) {
+    _pending_nodes.pop();
   }
-  while(!_deferred.empty()) {
-    _deferred.pop();
+  while(!_deferred_nodes.empty()) {
+    _deferred_nodes.pop();
   }
   for(int source = 0; source < _nodes; ++source) {
     if(_injection->test(source)) {
-      _pending.push(source);
+      _pending_nodes.push(source);
     } else {
-      _ready.push(source);
+      _sleeping_nodes.push(source);
     }
   }
 }
@@ -165,13 +165,13 @@ void SyntheticWorkload::reset()
 void SyntheticWorkload::advanceTime()
 {
   Workload::advanceTime();
-  while(!_deferred.empty()) {
-    int const & source = _deferred.front();
-    _pending.push(source);
-    _deferred.pop();
+  while(!_deferred_nodes.empty()) {
+    int const & source = _deferred_nodes.front();
+    _pending_nodes.push(source);
+    _deferred_nodes.pop();
   }
-  for(size_t i = 0; i < _ready.size(); ++i) {
-    int const & source = _ready.front();
+  for(size_t i = 0; i < _sleeping_nodes.size(); ++i) {
+    int const & source = _sleeping_nodes.front();
     bool generated = false;
     while(_qtime[source] < _time) {
       ++_qtime[source];
@@ -181,17 +181,17 @@ void SyntheticWorkload::advanceTime()
       }
     }
     if(generated) {
-      _pending.push(source);
+      _pending_nodes.push(source);
     } else {
-      _ready.push(source);
+      _sleeping_nodes.push(source);
     }
-    _ready.pop();
+    _sleeping_nodes.pop();
   }
 }
 
 bool SyntheticWorkload::empty() const
 {
-  return _pending.empty();
+  return _pending_nodes.empty();
 }
 
 bool SyntheticWorkload::completed() const
@@ -202,7 +202,7 @@ bool SyntheticWorkload::completed() const
 int SyntheticWorkload::source() const
 {
   assert(!empty());
-  int const source = _pending.front();
+  int const source = _pending_nodes.front();
   assert((source >= 0) && (source < _nodes));
   return source;
 }
@@ -238,24 +238,24 @@ int SyntheticWorkload::size() const
 int SyntheticWorkload::time() const
 {
   assert(!empty());
-  int const & source = _pending.front();
+  int const & source = _pending_nodes.front();
   return _qtime[source];
 }
 
 void SyntheticWorkload::inject(int pid)
 {
   assert(!empty());
-  int const & source = _pending.front();
-  _ready.push(source);
-  _pending.pop();
+  int const & source = _pending_nodes.front();
+  _sleeping_nodes.push(source);
+  _pending_nodes.pop();
 }
 
 void SyntheticWorkload::defer()
 {
   assert(!empty());
-  int const & source = _pending.front();
-  _deferred.push(source);
-  _pending.pop();
+  int const & source = _pending_nodes.front();
+  _deferred_nodes.push(source);
+  _pending_nodes.pop();
 }
 
 TraceWorkload::TraceWorkload(int nodes, string const & filename, 
