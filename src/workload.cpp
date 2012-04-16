@@ -271,7 +271,6 @@ TraceWorkload::TraceWorkload(int nodes, string const & filename,
   : Workload(nodes), 
     _packet_sizes(packet_sizes), _limit(limit), _scale(scale), _skip(skip)
 {
-  assert(limit < 0 || limit > skip);
   _ready_packets.resize(nodes);
   _trace = new ifstream(filename.c_str());
   if(!_trace->is_open()) {
@@ -323,16 +322,17 @@ void TraceWorkload::reset()
 {
   Workload::reset();
 
-  _count = 0;
   _trace->seekg(0);
-  while((_count < _skip) && !_trace->eof()) {
-    ++_count;
+  int count = 0;
+  while((count < _skip) && !_trace->eof()) {
+    ++count;
     int delay, source, dest, type;
     *_trace >> delay >> source >> dest >> type;
     assert(delay >= 0);
     assert((source >= 0) && (source < _nodes));
     assert((dest >= 0) && (dest < _nodes));
   }
+  _count = 0;
   _next_source = -1;
   _refill(0);
 }
