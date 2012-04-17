@@ -53,14 +53,14 @@ TreeArbiter::TreeArbiter( Module *parent, const string &name,
 }
 
 TreeArbiter::~TreeArbiter() {
-  for(int i = 0; i < _group_arbiters.size(); ++i) {
+  for(int i = 0; i < (int)_group_arbiters.size(); ++i) {
     delete _group_arbiters[i];
   }
   delete _global_arbiter;
 }
 
 void TreeArbiter::PrintState() const  {
-  for(int i = 0; i < _group_arbiters.size(); ++i) {
+  for(int i = 0; i < (int)_group_arbiters.size(); ++i) {
     cout << "Group arbiter " << i << ":" << endl;
     _group_arbiters[i]->PrintState();
   }
@@ -71,7 +71,7 @@ void TreeArbiter::PrintState() const  {
 void TreeArbiter::UpdateState() {
   if(_selected > -1) {
     int last_winner = _global_arbiter->LastWinner();
-    assert(last_winner >= 0 && last_winner < _group_arbiters.size());
+    assert(last_winner >= 0 && last_winner < (int)_group_arbiters.size());
     _group_arbiters[last_winner]->UpdateState();
     _global_arbiter->UpdateState();
   }
@@ -89,7 +89,7 @@ int TreeArbiter::Arbitrate( int* id, int* pri ) {
   if(!_num_reqs) {
     return -1;
   } 
-  for(int i = 0; i < _group_arbiters.size(); ++i) {
+  for(int i = 0; i < (int)_group_arbiters.size(); ++i) {
     if(_group_reqs[i]) {
       int group_id, group_pri;
       _group_arbiters[i]->Arbitrate(&group_id, &group_pri);
@@ -110,7 +110,7 @@ void TreeArbiter::Clear()
   if(!_num_reqs) {
     return;
   }
-  for(int i = 0; i < _group_arbiters.size(); ++i) {
+  for(int i = 0; i < (int)_group_arbiters.size(); ++i) {
     _group_arbiters[i]->Clear();
     _group_reqs[i] = 0;
   }
