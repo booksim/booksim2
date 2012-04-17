@@ -28,13 +28,11 @@
 # Makefile
 #
 MOC = /usr/lib/qt4/bin/moc
-CPP    = g++
 YACC   = bison -y
 DEFINE = 
 DEFINE_TEST = -DUSE_GUI
 INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
-CFLAGS = -Wall -O3  -ggdb $(INCPATH) $(DEFINE) 
-CPPFLAGS = $(CFLAGS)
+CPPFLAGS = -Wall -O3  -ggdb $(INCPATH) $(DEFINE) 
 LFLAGS =  
 
 
@@ -103,7 +101,7 @@ OBJS :=  $(LEX_OBJS) $(YACC_OBJS)\
 all:$(PROG)
 
 $(PROG): $(OBJS)
-	 $(CPP) $(LFLAGS) $^ -o $@
+	 $(CXX) $(LFLAGS) $^ -o $@
 
 # rules to compile simulator
 
@@ -113,33 +111,33 @@ moc_bgui.cpp: booksim_config.hpp \
 	$(MOC) $(INCPATH) bgui.hpp -o moc_bgui.cpp
 
 ${LEX_OBJS}: lex.yy.c y.tab.h
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) -c $< -o $@
 
 ${YACC_OBJS}: y.tab.c y.tab.h
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) -c $< -o $@
 
 ${OBJDIR}/%.o: %.cpp 
-	$(CPP) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) -c $< -o $@
 
 # rules to compile networks
 ${OBJDIR}/%.o: networks/%.cpp 
-	$(CPP) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) -c $< -o $@
 
 # rules to compile arbiters
 ${OBJDIR}/%.o: arbiters/%.cpp 
-	$(CPP) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) -c $< -o $@
 
 # rules to compile allocators
 ${OBJDIR}/%.o: allocators/%.cpp 
-	$(CPP) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) -c $< -o $@
 
 # rules to compile routers
 ${OBJDIR}/%.o: routers/%.cpp 
-	$(CPP) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) -c $< -o $@
 
 # rules to compile power classes
 ${OBJDIR}/%.o: power/%.cpp
-	$(CPP) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) -c $< -o $@
 
 clean:
 	rm -f $(OBJS) 
@@ -153,13 +151,6 @@ clean:
 	rm -f examples/*~
 	rm -f y.tab.c y.tab.h lex.yy.c
 	rm -f moc_bgui.cpp
-
-
-#purify: $(OBJS)
-#	$(PURIFY) -always-use-cache-dir $(CPP) $(OBJS) -o $(PROG) -L/usr/pubsw/lib
-#
-#quantify: $(OBJS)
-#	$(QUANT) -always-use-cache-dir $(CPP) $(OBJS) -o $(PROG) -L/usr/pubsw/lib
 
 y.tab.c y.tab.h: config.y
 	$(YACC) -d $<
