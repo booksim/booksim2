@@ -97,7 +97,7 @@ int TreeArbiter::Arbitrate( int* id, int* pri ) {
     }
   }
   int group = _global_arbiter->Arbitrate(NULL, NULL);
-  assert(group >= 0 && group < _group_arbiters.size());
+  assert(group >= 0 && group < (int)_group_arbiters.size());
   int group_sel = _group_arbiters[group]->LastWinner();
   assert(group_sel >= 0 && group_sel < _group_size);
   _selected = group * _group_size + group_sel;
