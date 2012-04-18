@@ -444,9 +444,9 @@ NetraceWorkload::NetraceWorkload(int nodes, string const & filename,
   nt_open_trfile(_ctx, filename.c_str());
   nt_header_t* header = nt_get_trheader(_ctx);
   assert(nodes == header->num_nodes);
-  assert(region >= 0 && region < (int)header->num_regions);
-  _skip = 0;
-  for(int r = 0; r < _region; ++r) {
+  assert(region >= 0 && (unsigned int)region < header->num_regions);
+  _skip = 0ll;
+  for(unsigned int r = 0; r < _region; ++r) {
 #ifdef DEBUG_NETRACE
     cout << "CONSTR: Skipping region " << r << "." << endl;
 #endif
@@ -485,13 +485,11 @@ void NetraceWorkload::_refill()
     nt_print_packet(_next_packet);
 #endif
     _next_packet->cycle -= _skip;
-    if(_scale > 1) {
+    if(_scale > 1ll) {
       _next_packet->cycle /= _scale;
-    } else if(_scale < 1) {
-      _next_packet->cycle *= -_scale;
     }
-    assert(_next_packet->cycle >= _time);
-    if(_next_packet->cycle == _time) {
+    assert(_next_packet->cycle >= (unsigned long long int)_time);
+    if(_next_packet->cycle == (unsigned long long int)_time) {
 #ifdef DEBUG_NETRACE
       cout << "REFILL: Injection time has elapsed." << endl;
 #endif
@@ -533,7 +531,7 @@ void NetraceWorkload::reset()
   Workload::reset();
   nt_header_t* header = nt_get_trheader(_ctx);
   nt_seek_region(_ctx, &header->regions[_region]);
-  _count = 0;
+  _count = 0ll;
   _next_packet = NULL;
   _refill();
 }
@@ -549,7 +547,7 @@ void NetraceWorkload::advanceTime()
 #ifdef DEBUG_NETRACE
       cout << "ADVANC: Dependencies cleared for packet " << packet->id << "." << endl;
 #endif
-      packet->cycle = _time;
+      packet->cycle = (unsigned long long int)_time;
       int const source = packet->src;
       assert((source >= 0) && (source < _nodes));
       if(_ready_packets[source].empty()) {
@@ -567,8 +565,8 @@ void NetraceWorkload::advanceTime()
   }
 
   if(_next_packet) {
-    assert(_next_packet->cycle >= _time);
-    if(_next_packet->cycle == _time) {
+    assert(_next_packet->cycle >= (unsigned long long int)_time);
+    if(_next_packet->cycle == (unsigned long long int)_time) {
 #ifdef DEBUG_NETRACE
       cout << "ADVANC: Injection time has elapsed for waiting packet " << _next_packet->id << "." << endl;
       cout << "ADVANC: ";
@@ -634,7 +632,7 @@ int NetraceWorkload::time() const
   int const source = _pending_nodes.front();
   assert((source >= 0) && (source < _nodes));
   assert(!_ready_packets[source].empty());
-  int const time = _ready_packets[source].front()->cycle;
+  int const time = (int)_ready_packets[source].front()->cycle;
   assert(time >= 0);
   return time;
 }
@@ -670,10 +668,8 @@ void NetraceWorkload::retire(int pid)
   cout << "RETIRE: Ejecting packet " << packet->id << "." << endl;
 #endif
   _in_flight_packets.erase(iter);
-  if(_scale > 1) {
+  if(_scale > 1ll) {
     packet->cycle *= _scale;
-  } else if(_scale < 1) {
-    packet->cycle /= -_scale;
   }
   packet->cycle += _skip;
   nt_clear_dependencies_free_packet(_ctx, packet);

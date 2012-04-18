@@ -162,13 +162,14 @@ protected:
 
   int _channel_width;
 
-  int _region;
+  unsigned int _region;
 
-  int _count;
-  int _limit;
+  unsigned long long int _count;
+  unsigned long long int _limit;
 
-  int _scale;
-  int _skip;
+  unsigned long long int _scale;
+
+  unsigned long long int _skip;
 
   void _refill();
 
