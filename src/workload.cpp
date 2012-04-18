@@ -31,6 +31,8 @@
 #include "workload.hpp"
 #include "random_utils.hpp"
 
+//#define DEBUG_NETRACE
+
 Workload::Workload(int nodes) : _nodes(nodes)
 {
   
@@ -99,6 +101,27 @@ Workload * Workload::New(string const & workload, int nodes,
       }
     }
     result = new TraceWorkload(nodes, filename, packet_sizes, limit, skip, scale);
+  } else if(workload_name == "netrace") {
+    if(params.size() < 1) {
+      cout << "Error: Missing parameter in trace workload definition: "
+	   << workload << endl;
+      exit(-1);
+    }
+    string const & filename = params[0];
+    int channel_width = config ? (config->GetInt("channel_width") / 8) : 16;
+    int region = 0;
+    int limit = -1;
+    int scale = 1;
+    if(params.size() > 1) {
+      region = atoi(params[1].c_str());
+      if(params.size() > 2) {
+	limit = atoi(params[2].c_str());
+	if(params.size() > 3) {
+	  scale = atoi(params[3].c_str());
+	}
+      }
+    }
+    result = new NetraceWorkload(nodes, filename, channel_width, region, limit, scale);
   }
   return result;
 }
@@ -391,14 +414,9 @@ int TraceWorkload::time() const
   int const source = _pending_nodes.front();
   assert((source >= 0) && (source < _nodes));
   assert(!_ready_packets[source].empty());
-  int time = _ready_packets[source].front().time;
-  if(_scale > 0) {
-    time /= _scale;
-  } else {
-    time *= -_scale;
-  }
+  int const time = _ready_packets[source].front().time;
   assert(time >= 0);
-  return time;
+  return (_scale > 0) ? (time / _scale) : (time * -_scale);
 }
 
 void TraceWorkload::inject(int pid)
@@ -413,4 +431,253 @@ void TraceWorkload::inject(int pid)
     _deferred_nodes.push(source);
     assert(_deferred_nodes.size() <= (size_t)_nodes);
   }
+}
+
+NetraceWorkload::NetraceWorkload(int nodes, string const & filename, 
+				 int channel_width, int region,  int limit, 
+				 int scale)
+  : Workload(nodes), 
+    _channel_width(channel_width), _region(region), _limit(limit), _scale(scale)
+{
+  _ready_packets.resize(nodes);
+  _ctx = (nt_context_t*)calloc(1, sizeof(nt_context_t));
+  nt_open_trfile(_ctx, filename.c_str());
+  nt_header_t* header = nt_get_trheader(_ctx);
+  assert(nodes == header->num_nodes);
+  assert(region >= 0 && region < (int)header->num_regions);
+  _skip = 0;
+  for(int r = 0; r < _region; ++r) {
+#ifdef DEBUG_NETRACE
+    cout << "CONSTR: Skipping region " << r << "." << endl;
+#endif
+    _skip += header->regions[r].num_cycles;
+  }
+#ifdef DEBUG_NETRACE
+  if(_skip) {
+    cout << "CONSTR: Skipped " << _skip << " cycles total." << endl;
+  }
+#endif
+}
+
+NetraceWorkload::~NetraceWorkload()
+{
+  assert(_pending_nodes.empty());
+  assert(_deferred_nodes.empty());
+  assert(_in_flight_packets.empty());
+  nt_close_trfile(_ctx);
+  free(_ctx);
+}
+
+void NetraceWorkload::_refill()
+{
+  while((_limit < 0) || (_count < _limit)) {
+    _next_packet = nt_read_packet(_ctx);
+    if(!_next_packet) {
+#ifdef DEBUG_NETRACE
+      cout << "REFILL: Reached end of trace." << endl;
+#endif
+      break;
+    }
+    ++_count;
+#ifdef DEBUG_NETRACE
+    cout << "REFILL: Read next packet (" << _next_packet->id << ")" << endl;
+    cout << "REFILL: ";
+    nt_print_packet(_next_packet);
+#endif
+    _next_packet->cycle -= _skip;
+    if(_scale > 1) {
+      _next_packet->cycle /= _scale;
+    } else if(_scale < 1) {
+      _next_packet->cycle *= -_scale;
+    }
+    assert(_next_packet->cycle >= _time);
+    if(_next_packet->cycle == _time) {
+#ifdef DEBUG_NETRACE
+      cout << "REFILL: Injection time has elapsed." << endl;
+#endif
+      int const source = _next_packet->src;
+      assert((source >= 0) && (source < _nodes));
+      if(nt_dependencies_cleared(_ctx, _next_packet)) {
+#ifdef DEBUG_NETRACE
+	cout << "REFILL: No dependencies." << endl;
+#endif
+	if(_ready_packets[source].empty()) {
+#ifdef DEBUG_NETRACE
+	  cout << "REFILL: Waking up node " << source << "." << endl;
+#endif
+	  _pending_nodes.push(source);
+	  assert(_pending_nodes.size() <= (size_t)_nodes);
+	}
+	_ready_packets[source].push(_next_packet);
+      } else {
+#ifdef DEBUG_NETRACE
+	cout << "REFILL: Unmet dependencies." << endl;
+#endif
+	_stalled_packets.push_back(_next_packet);
+      }
+      _next_packet = NULL;
+    } else {
+#ifdef DEBUG_NETRACE
+      cout << "REFILL: Injection time is in the future; sleeping." << endl;
+#endif
+      break;
+    }
+  }
+}
+
+void NetraceWorkload::reset()
+{
+#ifdef DEBUG_NETRACE
+  cout << "RESET : Restarting trace." << endl;
+#endif
+  Workload::reset();
+  nt_header_t* header = nt_get_trheader(_ctx);
+  nt_seek_region(_ctx, &header->regions[_region]);
+  _count = 0;
+  _next_packet = NULL;
+  _refill();
+}
+
+void NetraceWorkload::advanceTime()
+{
+  Workload::advanceTime();
+
+  list<nt_packet_t *>::iterator iter = _stalled_packets.begin();
+  while(iter != _stalled_packets.end()) {
+    nt_packet_t * packet = *iter;
+    if(nt_dependencies_cleared(_ctx, packet)) {
+#ifdef DEBUG_NETRACE
+      cout << "ADVANC: Dependencies cleared for packet " << packet->id << "." << endl;
+#endif
+      packet->cycle = _time;
+      int const source = packet->src;
+      assert((source >= 0) && (source < _nodes));
+      if(_ready_packets[source].empty()) {
+#ifdef DEBUG_NETRACE
+	  cout << "ADVANC: Waking up node " << source << "." << endl;
+#endif
+	_pending_nodes.push(source);
+	assert(_pending_nodes.size() <= (size_t)_nodes);
+      }
+      _ready_packets[source].push(packet);
+      iter = _stalled_packets.erase(iter);
+    } else {
+#ifdef DEBUG_NETRACE
+      cout << "ADVANC: Unmet dependencies remain for packet " << packet->id << "." << endl;
+#endif
+      ++iter;
+    }
+  }
+
+  if(_next_packet) {
+    assert(_next_packet->cycle >= _time);
+    if(_next_packet->cycle == _time) {
+#ifdef DEBUG_NETRACE
+      cout << "ADVANC: Injection time has elapsed for waiting packet " << _next_packet->id << "." << endl;
+      cout << "ADVANC: ";
+      nt_print_packet(_next_packet);
+#endif
+      int const source = _next_packet->src;
+      assert((source >= 0) && (source < _nodes));
+      if(nt_dependencies_cleared(_ctx, _next_packet)) {
+#ifdef DEBUG_NETRACE
+	cout << "ADVANC: All dependencies are cleared." << endl;
+#endif
+	if(_ready_packets[source].empty()) {
+#ifdef DEBUG_NETRACE
+	  cout << "ADVANC: Waking up node " << source << "." << endl;
+#endif
+	  _pending_nodes.push(source);
+	  assert(_pending_nodes.size() <= (size_t)_nodes);
+	}
+	_ready_packets[source].push(_next_packet);
+      } else {
+#ifdef DEBUG_NETRACE
+	cout << "REFILL: Unmet dependencies remain." << endl;
+#endif
+	_stalled_packets.push_back(_next_packet);
+      }
+      _next_packet = NULL;
+      _refill();
+    }
+  }
+}
+
+bool NetraceWorkload::completed() const
+{
+  return (_pending_nodes.empty() && _deferred_nodes.empty() && 
+	  _stalled_packets.empty() && !_next_packet);
+}
+
+int NetraceWorkload::dest() const
+{
+  assert(!_pending_nodes.empty());
+  int const source = _pending_nodes.front();
+  assert((source >= 0) && (source < _nodes));
+  assert(!_ready_packets[source].empty());
+  int const dest = _ready_packets[source].front()->dst;
+  assert((dest >= 0) && (dest < _nodes));
+  return dest;
+}
+
+int NetraceWorkload::size() const
+{
+  assert(!_pending_nodes.empty());
+  int const source = _pending_nodes.front();
+  assert((source >= 0) && (source < _nodes));
+  assert(!_ready_packets[source].empty());
+  int const size = nt_get_packet_size(_ready_packets[source].front());
+  assert(size > 0);
+  return (size + _channel_width - 1) / _channel_width;
+}
+
+int NetraceWorkload::time() const
+{
+  assert(!_pending_nodes.empty());
+  int const source = _pending_nodes.front();
+  assert((source >= 0) && (source < _nodes));
+  assert(!_ready_packets[source].empty());
+  int const time = _ready_packets[source].front()->cycle;
+  assert(time >= 0);
+  return time;
+}
+
+void NetraceWorkload::inject(int pid)
+{
+  assert(!_pending_nodes.empty());
+  int const source = _pending_nodes.front();
+  assert((source >= 0) && (source < _nodes));
+  _pending_nodes.pop();
+  assert(!_ready_packets[source].empty());
+  nt_packet_t * packet = _ready_packets[source].front();
+#ifdef DEBUG_NETRACE
+  cout << "INJECT: Injecting packet " << packet->id << " at node " << source << "." << endl;
+#endif
+  _ready_packets[source].pop();
+  _in_flight_packets.insert(make_pair(pid, packet));
+  if(!_ready_packets[source].empty()) {
+#ifdef DEBUG_NETRACE
+    cout << "INJECT: " << _ready_packets[source].size() << " ready packets remaining." << endl;
+#endif
+    _deferred_nodes.push(source);
+    assert(_deferred_nodes.size() <= (size_t)_nodes);
+  }
+}
+
+void NetraceWorkload::retire(int pid)
+{
+  map<int, nt_packet_t *>::iterator iter = _in_flight_packets.find(pid);
+  assert(iter != _in_flight_packets.end());
+  nt_packet_t * packet = iter->second;
+#ifdef DEBUG_NETRACE
+  cout << "RETIRE: Ejecting packet " << packet->id << "." << endl;
+#endif
+  _in_flight_packets.erase(iter);
+  if(_scale > 1) {
+    packet->cycle *= _scale;
+  } else if(_scale < 1) {
+    packet->cycle /= -_scale;
+  }
+  packet->cycle += _skip;
+  nt_clear_dependencies_free_packet(_ctx, packet);
 }

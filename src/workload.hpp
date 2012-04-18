@@ -31,11 +31,16 @@
 #include <string>
 #include <vector>
 #include <queue>
+#include <map>
 #include <list>
 #include <fstream>
 
 #include "injection.hpp"
 #include "traffic.hpp"
+
+extern "C" {
+#include "netrace/netrace.h"
+}
 
 using namespace std;
 
@@ -141,6 +146,46 @@ public:
   virtual int time() const;
   virtual void inject(int pid);
   virtual void retire(int pid) {}
+};
+
+class NetraceWorkload : public Workload {
+
+protected:
+
+  nt_context_t * _ctx;
+
+  nt_packet_t * _next_packet;
+
+  vector<queue<nt_packet_t *> > _ready_packets;
+  list<nt_packet_t *> _stalled_packets;
+  map<int, nt_packet_t *> _in_flight_packets;
+
+  int _channel_width;
+
+  int _region;
+
+  int _count;
+  int _limit;
+
+  int _scale;
+  int _skip;
+
+  void _refill();
+
+public:
+  
+  NetraceWorkload(int nodes, string const & filename, int channel_width, 
+		  int region = 0, int limit = -1, int scale = 1);
+  
+  virtual ~NetraceWorkload();
+  virtual void reset();
+  virtual void advanceTime();
+  virtual bool completed() const;
+  virtual int dest() const;
+  virtual int size() const;
+  virtual int time() const;
+  virtual void inject(int pid);
+  virtual void retire(int pid);
 };
 
 #endif

@@ -32,7 +32,9 @@ YACC   = bison -y
 DEFINE = 
 DEFINE_TEST = -DUSE_GUI
 INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
-CPPFLAGS += -Wall -O3 $(INCPATH) $(DEFINE) 
+CPPFLAGS += -Wall $(INCPATH) $(DEFINE) 
+#CPPFLAGS += -O3
+CPPFLAGS += -g
 LFLAGS +=  
 
 
@@ -79,6 +81,7 @@ endif
 
 LEX_OBJS  = ${OBJDIR}/lex.yy.o
 YACC_OBJS = ${OBJDIR}/y.tab.o
+NETRACE_OBJS = ${OBJDIR}/netrace.o
 
 # networks 
 NETWORKS:= $(wildcard networks/*.cpp) 
@@ -88,7 +91,7 @@ ROUTERS:= $(wildcard routers/*.cpp)
 POWER:= $(wildcard power/*.cpp)
 
 #--- Make rules ---
-OBJS :=  $(LEX_OBJS) $(YACC_OBJS)\
+OBJS :=  $(LEX_OBJS) $(YACC_OBJS) $(NETRACE_OBJS)\
  $(CPP_SRCS:%.cpp=${OBJDIR}/%.o)\
  $(NETWORKS:networks/%.cpp=${OBJDIR}/%.o)\
  $(ALLOCATORS:allocators/%.cpp=${OBJDIR}/%.o)\
@@ -114,6 +117,9 @@ ${LEX_OBJS}: lex.yy.c y.tab.h
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
 ${YACC_OBJS}: y.tab.c y.tab.h
+	$(CC) $(CPPFLAGS) -c $< -o $@
+
+${NETRACE_OBJS}: netrace/netrace.c netrace/netrace.h
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
 ${OBJDIR}/%.o: %.cpp 
