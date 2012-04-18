@@ -112,16 +112,20 @@ Workload * Workload::New(string const & workload, int nodes,
     int region = 0;
     int limit = -1;
     int scale = 1;
+    bool enforce_deps = true;
     if(params.size() > 1) {
       region = atoi(params[1].c_str());
       if(params.size() > 2) {
 	limit = atoi(params[2].c_str());
 	if(params.size() > 3) {
 	  scale = atoi(params[3].c_str());
+	  if(params.size() > 4) {
+	    enforce_deps = atoi(params[4].c_str());
+	  }
 	}
       }
     }
-    result = new NetraceWorkload(nodes, filename, channel_width, region, limit, scale);
+    result = new NetraceWorkload(nodes, filename, channel_width, region, limit, scale, enforce_deps);
   }
   return result;
 }
@@ -435,13 +439,17 @@ void TraceWorkload::inject(int pid)
 
 NetraceWorkload::NetraceWorkload(int nodes, string const & filename, 
 				 int channel_width, int region,  int limit, 
-				 int scale)
+				 int scale, bool enforce_deps)
   : Workload(nodes), 
-    _channel_width(channel_width), _region(region), _limit(limit), _scale(scale)
+    _channel_width(channel_width), _region(region), _limit(limit), 
+    _scale(scale), _enforce_deps(enforce_deps)
 {
   _ready_packets.resize(nodes);
   _ctx = (nt_context_t*)calloc(1, sizeof(nt_context_t));
   nt_open_trfile(_ctx, filename.c_str());
+  if(!enforce_deps) {
+    nt_disable_dependencies(_ctx);
+  }
   nt_header_t* header = nt_get_trheader(_ctx);
   assert(nodes == header->num_nodes);
   assert(region >= 0 && (unsigned int)region < header->num_regions);
@@ -495,7 +503,7 @@ void NetraceWorkload::_refill()
 #endif
       int const source = _next_packet->src;
       assert((source >= 0) && (source < _nodes));
-      if(nt_dependencies_cleared(_ctx, _next_packet)) {
+      if(!_enforce_deps || nt_dependencies_cleared(_ctx, _next_packet)) {
 #ifdef DEBUG_NETRACE
 	cout << "REFILL: No dependencies." << endl;
 #endif
@@ -543,7 +551,7 @@ void NetraceWorkload::advanceTime()
   list<nt_packet_t *>::iterator iter = _stalled_packets.begin();
   while(iter != _stalled_packets.end()) {
     nt_packet_t * packet = *iter;
-    if(nt_dependencies_cleared(_ctx, packet)) {
+    if(!_enforce_deps || nt_dependencies_cleared(_ctx, packet)) {
 #ifdef DEBUG_NETRACE
       cout << "ADVANC: Dependencies cleared for packet " << packet->id << "." << endl;
 #endif
@@ -574,7 +582,7 @@ void NetraceWorkload::advanceTime()
 #endif
       int const source = _next_packet->src;
       assert((source >= 0) && (source < _nodes));
-      if(nt_dependencies_cleared(_ctx, _next_packet)) {
+      if(!_enforce_deps || nt_dependencies_cleared(_ctx, _next_packet)) {
 #ifdef DEBUG_NETRACE
 	cout << "ADVANC: All dependencies are cleared." << endl;
 #endif

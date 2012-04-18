@@ -171,12 +171,15 @@ protected:
 
   unsigned long long int _skip;
 
+  bool _enforce_deps;
+
   void _refill();
 
 public:
   
   NetraceWorkload(int nodes, string const & filename, int channel_width, 
-		  int region = 0, int limit = -1, int scale = 1);
+		  int region = 0, int limit = -1, int scale = 1, 
+		  bool enforce_deps = true);
   
   virtual ~NetraceWorkload();
   virtual void reset();
