@@ -1239,6 +1239,9 @@ void TrafficManager::_DisplayClassStats(int c, ostream & os) const {
      << "Maximum accepted flit rate = " << rate_max
      << " (at node " << max_pos << ")" << endl;
   
+  os << "Total number of injected packets = " << sent_flits << endl
+     << "Total number of accepted packets = " << accepted_flits << endl;
+
   os << "Average injected packet length = " << (double)sent_flits / (double)sent_packets << endl
      << "Average accepted packet length = " << (double)accepted_flits / (double)accepted_packets << endl;
   
