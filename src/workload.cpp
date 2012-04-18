@@ -304,7 +304,8 @@ void TraceWorkload::_refill(int time)
       _next_packet.time = time;
       _next_packet.dest = dest;
       _next_packet.type = type;
-      if(((_scale > 0) ? (time / _scale) : (time * -_scale)) <= _time) {
+      assert(((_scale > 0) ? (time / _scale) : (time * -_scale)) >= _time);
+      if(((_scale > 0) ? (time / _scale) : (time * -_scale)) == _time) {
 	if(_ready_packets[source].empty()) {
 	  _pending_nodes.push(source);
 	  assert(_pending_nodes.size() <= (size_t)_nodes);
@@ -343,7 +344,8 @@ void TraceWorkload::advanceTime()
 
   if(_next_source >= 0) {
     int const time = _next_packet.time;
-    if(((_scale > 0) ? (time / _scale) : (time * -_scale)) <= _time) {
+    assert(((_scale > 0) ? (time / _scale) : (time * -_scale)) >= _time);
+    if(((_scale > 0) ? (time / _scale) : (time * -_scale)) == _time) {
       if(_ready_packets[_next_source].empty()) {
 	_pending_nodes.push(_next_source);
 	assert(_pending_nodes.size() <= (size_t)_nodes);
