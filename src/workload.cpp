@@ -562,9 +562,6 @@ void NetraceWorkload::advanceTime()
       _ready_packets[source].push(packet);
       iter = _stalled_packets.erase(iter);
     } else {
-#ifdef DEBUG_NETRACE
-      cout << "ADVANC: Unmet dependencies remain for packet " << packet->id << "." << endl;
-#endif
       ++iter;
     }
   }
