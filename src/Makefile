@@ -32,7 +32,9 @@ YACC   = bison -y
 DEFINE = 
 DEFINE_TEST = -DUSE_GUI
 INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
-CPPFLAGS += -Wall -O3 $(INCPATH) $(DEFINE) 
+CPPFLAGS += -Wall $(INCPATH) $(DEFINE)
+#CPPFLAGS += -O3
+CPPFLAGS += -g
 LFLAGS +=  
 
 
