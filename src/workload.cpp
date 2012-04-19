@@ -613,7 +613,8 @@ void NetraceWorkload::advanceTime()
   list<nt_packet_t *>::iterator iter = _stalled_packets.begin();
   while(iter != _stalled_packets.end()) {
     nt_packet_t * packet = *iter;
-    if(!_enforce_deps || nt_dependencies_cleared(_ctx, packet)) {
+    assert(_enforce_deps);
+    if(nt_dependencies_cleared(_ctx, packet)) {
 #ifdef DEBUG_NETRACE
       cout << "ADVANC: Dependencies cleared for packet " << packet->id << "." << endl;
 #endif
