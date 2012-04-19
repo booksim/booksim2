@@ -549,7 +549,8 @@ void NetraceWorkload::_refill()
 #ifdef DEBUG_NETRACE
 	cout << "REFILL: Unmet dependencies." << endl;
 #endif
-	_stalled_packets.push_back(_next_packet);
+	assert(_stalled_packets.count(_next_packet->id) == 0);
+	_stalled_packets.insert(make_pair(_next_packet->id, _next_packet));
       }
       _next_packet = NULL;
     } else if(_enforce_lats && 
@@ -575,7 +576,8 @@ void NetraceWorkload::_refill()
 #ifdef DEBUG_NETRACE
 	cout << "REFILL: Unmet dependencies." << endl;
 #endif
-	_stalled_packets.push_back(_next_packet);
+	assert(_stalled_packets.count(_next_packet->id) == 0);
+	_stalled_packets.insert(make_pair(_next_packet->id, _next_packet));
       }
       _next_packet = NULL;
     } else {
@@ -610,13 +612,26 @@ void NetraceWorkload::advanceTime()
 {
   Workload::advanceTime();
 
-  list<nt_packet_t *>::iterator iter = _stalled_packets.begin();
-  while(iter != _stalled_packets.end()) {
-    nt_packet_t * packet = *iter;
+  for(set<unsigned int>::iterator iter = _check_packets.begin();
+      iter != _check_packets.end(); ++iter) {
+    unsigned int id = *iter;
+#ifdef DEBUG_NETRACE
+    cout << "ADVANC: Checking if packet " << id << " is cleared." << endl;
+#endif
+    map<unsigned int, nt_packet_t *>::iterator piter = _stalled_packets.find(id);
+    if(piter == _stalled_packets.end()) {
+#ifdef DEBUG_NETRACE
+      cout << "ADVANC: Dependent packet " << id << " has not yet been read from trace." << endl;
+#endif
+      continue;
+    }
+    nt_packet_t * packet = piter->second;
+    assert(packet);
+    assert(packet->id == id);
     assert(_enforce_deps);
     if(nt_dependencies_cleared(_ctx, packet)) {
 #ifdef DEBUG_NETRACE
-      cout << "ADVANC: Dependencies cleared for packet " << packet->id << "." << endl;
+      cout << "ADVANC: Dependencies cleared for packet " << id << "." << endl;
 #endif
       if(_enforce_lats) {
 	int latency = 0;
@@ -659,11 +674,10 @@ void NetraceWorkload::advanceTime()
 	}
 	_ready_packets[source].push(packet);
       }
-      iter = _stalled_packets.erase(iter);
-    } else {
-      ++iter;
+      _stalled_packets.erase(piter);
     }
   }
+  _check_packets.clear();
 
   while(!_future_packets.empty()) {
     nt_packet_t * packet = _future_packets.front();
@@ -703,7 +717,7 @@ void NetraceWorkload::advanceTime()
       assert((source >= 0) && (source < _nodes));
       if(!_enforce_deps || nt_dependencies_cleared(_ctx, _next_packet)) {
 #ifdef DEBUG_NETRACE
-	cout << "ADVANC: All dependencies are cleared." << endl;
+	cout << "ADVANC: No dependencies." << endl;
 #endif
 	if(_ready_packets[source].empty()) {
 #ifdef DEBUG_NETRACE
@@ -715,9 +729,10 @@ void NetraceWorkload::advanceTime()
 	_ready_packets[source].push(_next_packet);
       } else {
 #ifdef DEBUG_NETRACE
-	cout << "ADVANC: Unmet dependencies remain." << endl;
+	cout << "ADVANC: Unmet dependencies." << endl;
 #endif
-	_stalled_packets.push_back(_next_packet);
+	assert(_stalled_packets.count(_next_packet->id) == 0);
+	_stalled_packets.insert(make_pair(_next_packet->id, _next_packet));
       }
       _next_packet = NULL;
       _refill();
@@ -746,7 +761,8 @@ void NetraceWorkload::advanceTime()
 #ifdef DEBUG_NETRACE
 	cout << "ADVANC: Unmet dependencies." << endl;
 #endif
-	_stalled_packets.push_back(_next_packet);
+	assert(_stalled_packets.count(_next_packet->id) == 0);
+	_stalled_packets.insert(make_pair(_next_packet->id, _next_packet));
       }
       _next_packet = NULL;
       _refill();
@@ -831,6 +847,13 @@ void NetraceWorkload::retire(int pid)
   cout << "RETIRE: Ejecting packet " << packet->id << "." << endl;
 #endif
   _in_flight_packets.erase(iter);
+  for(unsigned char d = 0; d < packet->num_deps; ++d) {
+    unsigned int const dep = packet->deps[d];
+#ifdef DEBUG_NETRACE
+    cout << "RETIRE: Waking up dependent packet " << dep << "." << endl;
+#endif
+    _check_packets.insert(dep);
+  }
   assert(!_ctx->self_throttling);
   nt_clear_dependencies_free_packet(_ctx, packet);
 }

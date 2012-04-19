@@ -160,7 +160,8 @@ protected:
 
   vector<queue<nt_packet_t *> > _ready_packets;
   list<nt_packet_t *> _future_packets;
-  list<nt_packet_t *> _stalled_packets;
+  set<unsigned int> _check_packets;
+  map<unsigned int, nt_packet_t *> _stalled_packets;
   map<int, nt_packet_t *> _in_flight_packets;
 
   unsigned int _channel_width;
