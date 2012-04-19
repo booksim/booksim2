@@ -1240,12 +1240,11 @@ void TrafficManager::_DisplayClassStats(int c, ostream & os) const {
      << " (at node " << max_pos << ")" << endl;
   
   os << "Total number of injected packets = " << sent_packets << endl
-     << "Total number of accepted packets = " << accepted_packets << endl;
+     << "Total number of injected flits = " << sent_flits << endl
+     << "Average injected packet length = " << (double)sent_flits / (double)sent_packets << endl;
 
-  os << "Total number of injected flits = " << sent_flits << endl
-     << "Total number of accepted flits = " << accepted_flits << endl;
-
-  os << "Average injected packet length = " << (double)sent_flits / (double)sent_packets << endl
+  os << "Total number of accepted packets = " << accepted_packets << endl
+     << "Total number of accepted flits = " << accepted_flits << endl
      << "Average accepted packet length = " << (double)accepted_flits / (double)accepted_packets << endl;
   
   os << "Total in-flight flits = " << _total_in_flight_flits[c].size()
