@@ -160,14 +160,14 @@ protected:
   list<nt_packet_t *> _stalled_packets;
   map<int, nt_packet_t *> _in_flight_packets;
 
-  int _channel_width;
+  unsigned int _channel_width;
 
   unsigned int _region;
 
   unsigned long long int _count;
-  unsigned long long int _limit;
+  long long int _limit;
 
-  unsigned long long int _scale;
+  unsigned int _scale;
 
   unsigned long long int _skip;
 
@@ -177,8 +177,9 @@ protected:
 
 public:
   
-  NetraceWorkload(int nodes, string const & filename, int channel_width, 
-		  int region = 0, int limit = -1, int scale = 1, 
+  NetraceWorkload(int nodes, string const & filename, 
+		  unsigned int channel_width, unsigned int region = 0, 
+		  long long int limit = -1, unsigned int scale = 1, 
 		  bool enforce_deps = true);
   
   virtual ~NetraceWorkload();

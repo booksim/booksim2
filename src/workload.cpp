@@ -110,13 +110,13 @@ Workload * Workload::New(string const & workload, int nodes,
     string const & filename = params[0];
     int channel_width = config ? (config->GetInt("channel_width") / 8) : 16;
     int region = 0;
-    int limit = -1;
+    long long int limit = -1;
     int scale = 1;
     bool enforce_deps = true;
     if(params.size() > 1) {
       region = atoi(params[1].c_str());
       if(params.size() > 2) {
-	limit = atoi(params[2].c_str());
+	limit = atoll(params[2].c_str());
 	if(params.size() > 3) {
 	  scale = atoi(params[3].c_str());
 	  if(params.size() > 4) {
@@ -438,8 +438,9 @@ void TraceWorkload::inject(int pid)
 }
 
 NetraceWorkload::NetraceWorkload(int nodes, string const & filename, 
-				 int channel_width, int region,  int limit, 
-				 int scale, bool enforce_deps)
+				 unsigned int channel_width, 
+				 unsigned int region,  long long int limit, 
+				 unsigned int scale, bool enforce_deps)
   : Workload(nodes), 
     _channel_width(channel_width), _region(region), _limit(limit), 
     _scale(scale), _enforce_deps(enforce_deps)
