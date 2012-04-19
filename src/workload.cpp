@@ -479,7 +479,7 @@ NetraceWorkload::~NetraceWorkload()
 
 void NetraceWorkload::_refill()
 {
-  while((_limit < 0) || (_count < _limit)) {
+  while((_limit < 0) || (_count < (unsigned long long int)_limit)) {
     _next_packet = nt_read_packet(_ctx);
     if(!_next_packet) {
 #ifdef DEBUG_NETRACE
