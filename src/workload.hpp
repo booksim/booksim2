@@ -66,6 +66,7 @@ public:
   virtual void inject(int pid) = 0;
   virtual void defer();
   virtual void retire(int pid) = 0;
+  virtual void printStats(ostream & os) const;
 };
 
 class NullWorkload : public Workload {
@@ -145,7 +146,8 @@ public:
   virtual int size() const;
   virtual int time() const;
   virtual void inject(int pid);
-  virtual void retire(int pid) {}
+  virtual void retire(int pid);
+  virtual void printStats(ostream & os) const;
 };
 
 class NetraceWorkload : public Workload {
@@ -201,6 +203,7 @@ public:
   virtual int time() const;
   virtual void inject(int pid);
   virtual void retire(int pid);
+  virtual void printStats(ostream & os) const;
 };
 
 #endif

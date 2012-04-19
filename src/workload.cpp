@@ -178,6 +178,11 @@ void Workload::defer()
   _pending_nodes.pop();
 }
 
+void Workload::printStats(ostream & os) const
+{
+  
+}
+
 SyntheticWorkload::SyntheticWorkload(int nodes, double load, 
 				     string const & traffic, 
 				     string const & injection, 
@@ -439,6 +444,22 @@ void TraceWorkload::inject(int pid)
     _deferred_nodes.push(source);
     assert(_deferred_nodes.size() <= (size_t)_nodes);
   }
+}
+
+void TraceWorkload::retire(int pid)
+{
+
+}
+
+void TraceWorkload::printStats(ostream & os) const
+{
+  os << "Packets read from trace = " << _count << endl;
+  os << "Future packets = " << ((_next_source < 0) ? 0 : 1) << endl;
+  int pend_count = 0;
+  for(int n = 0; n < _nodes; ++n) {
+    pend_count += _ready_packets[n].size();
+  }
+  os << "Packets pending injection = " << pend_count << endl;
 }
 
 NetraceWorkload::NetraceWorkload(int nodes, string const & filename, 
@@ -812,4 +833,18 @@ void NetraceWorkload::retire(int pid)
   packet->cycle *= _scale;
   packet->cycle += _skip;
   nt_clear_dependencies_free_packet(_ctx, packet);
+}
+
+void NetraceWorkload::printStats(ostream & os) const
+{
+  os << "Packets read from trace = " << _count << endl;
+  os << "Future packets = " << (_next_packet ? 1 : 0) << endl;
+  os << "Waiting packets = " << _future_packets.size() << endl;
+  os << "Stalled packets = " << _stalled_packets.size() << endl;
+  int pend_count = 0;
+  for(int n = 0; n < _nodes; ++n) {
+    pend_count += _ready_packets[n].size();
+  }
+  os << "Packets pending injection = " << pend_count << endl;
+  os << "Packets in flight = " << _in_flight_packets.size() << endl;
 }

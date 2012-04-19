@@ -174,6 +174,12 @@ string WorkloadTrafficManager::_OverallClassStatsCSV(int c) const
   return os.str();
 }
 
+void WorkloadTrafficManager::_DisplayClassStats(int c, ostream & os) const
+{
+  _workload[c]->printStats(os);
+  TrafficManager::_DisplayClassStats(c, os);
+}
+
 void WorkloadTrafficManager::_DisplayOverallClassStats(int c, ostream & os) const
 {
   TrafficManager::_DisplayOverallClassStats(c, os);

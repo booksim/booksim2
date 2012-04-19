@@ -59,6 +59,7 @@ protected:
   virtual string _OverallStatsHeaderCSV() const;
   virtual string _OverallClassStatsCSV(int c) const;
 
+  virtual void _DisplayClassStats(int c, ostream & os) const;
   virtual void _DisplayOverallClassStats(int c, ostream & os) const;
 
 public:
