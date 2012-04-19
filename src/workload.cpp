@@ -830,8 +830,7 @@ void NetraceWorkload::retire(int pid)
   cout << "RETIRE: Ejecting packet " << packet->id << "." << endl;
 #endif
   _in_flight_packets.erase(iter);
-  packet->cycle *= _scale;
-  packet->cycle += _skip;
+  assert(!_ctx->self_throttling);
   nt_clear_dependencies_free_packet(_ctx, packet);
 }
 
