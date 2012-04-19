@@ -596,7 +596,7 @@ void NetraceWorkload::advanceTime()
 	_ready_packets[source].push(_next_packet);
       } else {
 #ifdef DEBUG_NETRACE
-	cout << "REFILL: Unmet dependencies remain." << endl;
+	cout << "ADVANC: Unmet dependencies remain." << endl;
 #endif
 	_stalled_packets.push_back(_next_packet);
       }
