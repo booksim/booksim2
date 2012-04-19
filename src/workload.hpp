@@ -157,12 +157,15 @@ protected:
   nt_packet_t * _next_packet;
 
   vector<queue<nt_packet_t *> > _ready_packets;
+  list<nt_packet_t *> _future_packets;
   list<nt_packet_t *> _stalled_packets;
   map<int, nt_packet_t *> _in_flight_packets;
 
   unsigned int _channel_width;
 
   unsigned int _region;
+
+  int _window_size;
 
   unsigned long long int _count;
   long long int _limit;
@@ -171,7 +174,14 @@ protected:
 
   unsigned long long int _skip;
 
+  int _last;
+
   bool _enforce_deps;
+  bool _enforce_lats;
+
+  int _l2_tag_latency;
+  int _l2_data_latency;
+  int _mem_latency;
 
   void _refill();
 
@@ -180,7 +190,7 @@ public:
   NetraceWorkload(int nodes, string const & filename, 
 		  unsigned int channel_width, unsigned int region = 0, 
 		  long long int limit = -1, unsigned int scale = 1, 
-		  bool enforce_deps = true);
+		  bool enforce_deps = true, bool enforce_lats = false);
   
   virtual ~NetraceWorkload();
   virtual void reset();
