@@ -171,7 +171,7 @@ protected:
   int _window_size;
 
   unsigned long long int _count;
-  long long int _limit;
+  unsigned long long int _limit;
 
   unsigned int _scale;
 
@@ -191,8 +191,8 @@ protected:
 public:
   
   NetraceWorkload(int nodes, string const & filename, 
-		  unsigned int channel_width, unsigned int region = 0, 
-		  long long int limit = -1, unsigned int scale = 1, 
+		  unsigned int channel_width, long long int limit = -1ll, 
+		  unsigned int scale = 1, int region = -1, 
 		  bool enforce_deps = true, bool enforce_lats = false);
   
   virtual ~NetraceWorkload();

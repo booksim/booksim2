@@ -109,17 +109,17 @@ Workload * Workload::New(string const & workload, int nodes,
     }
     string const & filename = params[0];
     int channel_width = config ? (config->GetInt("channel_width") / 8) : 16;
-    int region = 0;
+    int region = -1;
     long long int limit = -1;
     int scale = 1;
     bool enforce_deps = true;
     bool enforce_lats = false;
     if(params.size() > 1) {
-      region = atoi(params[1].c_str());
+      limit = atoll(params[1].c_str());
       if(params.size() > 2) {
-	limit = atoll(params[2].c_str());
+	scale = atoi(params[2].c_str());
 	if(params.size() > 3) {
-	  scale = atoi(params[3].c_str());
+	  region = atoi(params[3].c_str());
 	  if(params.size() > 4) {
 	    enforce_deps = atoi(params[4].c_str());
 	    if(params.size() > 5) {
@@ -129,7 +129,7 @@ Workload * Workload::New(string const & workload, int nodes,
 	}
       }
     }
-    result = new NetraceWorkload(nodes, filename, channel_width, region, limit, scale, enforce_deps, enforce_lats);
+    result = new NetraceWorkload(nodes, filename, channel_width, limit, scale, region, enforce_deps, enforce_lats);
   }
   return result;
 }
@@ -464,12 +464,11 @@ void TraceWorkload::printStats(ostream & os) const
 
 NetraceWorkload::NetraceWorkload(int nodes, string const & filename, 
 				 unsigned int channel_width, 
-				 unsigned int region,  long long int limit, 
-				 unsigned int scale, bool enforce_deps,
+				 long long int limit, unsigned int scale, 
+				 int region, bool enforce_deps, 
 				 bool enforce_lats)
-  : Workload(nodes), 
-    _channel_width(channel_width), _region(region), _limit(limit), 
-    _scale(scale), _enforce_deps(enforce_deps), _enforce_lats(enforce_lats)
+  : Workload(nodes), _channel_width(channel_width), _scale(scale), 
+    _enforce_deps(enforce_deps), _enforce_lats(enforce_lats)
 {
   _l2_tag_latency = (2 + _scale - 1) / _scale;
   _l2_data_latency = (8 + _scale - 1) / _scale;
@@ -483,20 +482,35 @@ NetraceWorkload::NetraceWorkload(int nodes, string const & filename,
     nt_disable_dependencies(_ctx);
   }
   nt_header_t* header = nt_get_trheader(_ctx);
-  assert(nodes == header->num_nodes);
-  assert(region >= 0 && (unsigned int)region < header->num_regions);
   _skip = 0ll;
+  assert(nodes == header->num_nodes);
+  int last_region;
+  if(region < 0) {
+    _region = 0;
+    last_region = header->num_regions - 1;
+  } else {
+    assert((unsigned int)region < header->num_regions);
+    _region = region;
+    last_region = region;
+  }
   for(unsigned int r = 0; r < _region; ++r) {
-#ifdef DEBUG_NETRACE
-    cout << "CONSTR: Skipping region " << r << "." << endl;
-#endif
     _skip += header->regions[r].num_cycles;
   }
 #ifdef DEBUG_NETRACE
   if(_skip) {
-    cout << "CONSTR: Skipped " << _skip << " cycles total." << endl;
+    cout << "CONSTR: Skipping " << region << " regions (" << _skip << " cycles)." << endl;
   }
 #endif
+  _limit = 0ll;
+  for(unsigned int r = _region; r <= last_region; ++r) {
+    _limit += header->regions[r].num_packets;
+  }
+  if(limit >= 0) {
+    _limit = min(_limit, (unsigned long long int)limit);
+  }
+#ifdef DEBUG_NETRACE
+  cout << "CONSTR: Playing back " << _limit << " packets." << endl;
+#endif 
 }
 
 NetraceWorkload::~NetraceWorkload()
@@ -510,7 +524,7 @@ NetraceWorkload::~NetraceWorkload()
 
 void NetraceWorkload::_refill()
 {
-  while((_limit < 0ll) || (_count < (unsigned long long int)_limit)) {
+  while(_count < _limit) {
     _next_packet = nt_read_packet(_ctx);
     if(!_next_packet) {
 #ifdef DEBUG_NETRACE
@@ -860,7 +874,7 @@ void NetraceWorkload::retire(int pid)
 
 void NetraceWorkload::printStats(ostream & os) const
 {
-  os << "Packets read from trace = " << _count << endl;
+  os << "Packets read from trace = " << _count << " of " << _limit << " (" << (100ll*_count/_limit)<< "%)" << endl;
   os << "Future packets = " << (_next_packet ? 1 : 0) << endl;
   os << "Waiting packets = " << _future_packets.size() << endl;
   os << "Stalled packets = " << _stalled_packets.size() << endl;
