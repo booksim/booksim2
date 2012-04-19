@@ -65,7 +65,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Booksi
 {
   lol = (int**)malloc(64*sizeof(int*));
   for(int i = 0; i<64; i++)
-    lol[i] = (int*)calloc(4, sizeof(int));
+    lol[i] = (int*)calloc(16, sizeof(int));
   
   NOTIFICATION_TIME_THRESHOLD = config.GetInt("notification_time_threshold");
   _nodes = _net[0]->NumNodes( );
@@ -207,7 +207,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Booksi
   for ( int source = 0; source < _nodes; ++source ) {
     _injection_process[source].resize(_classes);
     for(int c = 0; c < _classes; ++c) {
-      _injection_process[source][c] = InjectionProcess::New(injection_process[c], _load[c]);
+      _injection_process[source][c] = InjectionProcess::New(config, injection_process[c], _load[c]);
     }
     _buf_states[source].resize(_subnets);
     _last_vc[source].resize(_subnets);
@@ -727,7 +727,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
     } else {
       
       //produce a packet
-      if(_injection_process[source][cl]->test()) {
+      if(_injection_process[source][cl]->test(source)) {
 	
 	//coin toss to determine request type.
 	result = (RandomFloat() < 0.5) ? -2 : -1;
@@ -737,7 +737,7 @@ int TrafficManager::_IssuePacket( int source, int cl )
       }
     } 
   } else { //normal mode
-    result = _injection_process[source][cl]->test() ? 1 : 0;
+    result = _injection_process[source][cl]->test(source) ? 1 : 0;
   } 
   if(result != 0) {
     _sent_packets[source]++;
@@ -1746,12 +1746,13 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
   }
   //this is a rough approximate  from updatepriority()
   cout<<"inversion "<<double(VC::invert_cycles)/VC::total_cycles<<endl;
+  /*
   for(int i = 0; i<64; i++){
     cout<<lol[i][0]<<"\t"
 	<<lol[i][1]<<"\t"
 	<<lol[i][2]<<"\t"
 	<<lol[i][3]<<"\n";
-  }
+	}*/
   _DisplayRemaining( ); 
 }
 

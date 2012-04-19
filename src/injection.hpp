@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _INJECTION_HPP_
 
 #include "config_utils.hpp"
-
+#include <set> 
 using namespace std;
 
 class InjectionProcess {
@@ -40,14 +40,14 @@ protected:
   double _rate;
   InjectionProcess(double rate);
 public:
-  virtual bool test() = 0;
-  static InjectionProcess * New(string const & inject, double load);
+  virtual bool test(int src = 0) = 0;
+  static InjectionProcess * New(Configuration const & config, string const & inject, double load);
 };
 
 class BernoulliInjectionProcess : public InjectionProcess {
 public:
   BernoulliInjectionProcess(double rate);
-  virtual bool test();
+  virtual bool test(int src = 0);
 };
 
 class OnOffInjectionProcess : public InjectionProcess {
@@ -58,7 +58,21 @@ private:
 public:
   OnOffInjectionProcess(double rate, double alpha, double beta, 
 			bool initial = false);
-  virtual bool test();
+  virtual bool test(int src = 0);
+};
+
+
+class HotspotInjectionProcess : public InjectionProcess {
+private:
+  bool  hs_send_all ;
+  set<int> hs_lookup;
+  set<int> hs_senders;
+  BernoulliInjectionProcess * ber;
+public:
+  HotspotInjectionProcess(Configuration const & config, double load);
+
+
+  virtual bool test(int src = 0);
 };
 
 #endif 

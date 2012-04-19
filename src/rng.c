@@ -94,15 +94,3 @@ long ran_arr_cycle()
   return ran_arr_buf[0];
 }
 
-#include <stdio.h>
-int main()
-{
-  register int m; long a[2009]; 
-  ran_start(310952L);
-  for (m=0;m<=2009;m++) ran_array(a,1009);
-  printf("%ld\n", a[0]);             /* 995235265 */
-  ran_start(310952L);
-  for (m=0;m<=1009;m++) ran_array(a,2009);
-  printf("%ld\n", a[0]);             /* 995235265 */
-  return 0;
-}

@@ -97,16 +97,3 @@ double ranf_arr_cycle()
   return ranf_arr_buf[0];
 }
 
-#include <stdio.h>
-int main()
-{
-  register int m; double a[2009]; /* a rudimentary test */
-  ranf_start(310952);
-  for (m=0;m<2009;m++) ranf_array(a,1009);
-  printf("%.20f\n", ran_u[0]);            /* 0.36410514377569680455 */
-     /* beware of buggy printf routines that do not give full accuracy here! */
-  ranf_start(310952);
-  for (m=0;m<1009;m++) ranf_array(a,2009);
-  printf("%.20f\n", ran_u[0]);            /* 0.36410514377569680455 */
-  return 0;
-}

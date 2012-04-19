@@ -45,7 +45,7 @@ InjectionProcess::InjectionProcess(double rate)
   }
 }
 
-InjectionProcess * InjectionProcess::New(string const & inject, double load)
+InjectionProcess * InjectionProcess::New(Configuration const & config, string const & inject, double load)
 {
   string process_name;
   string param_str;
@@ -67,6 +67,8 @@ InjectionProcess * InjectionProcess::New(string const & inject, double load)
   InjectionProcess * result = NULL;
   if(process_name == "bernoulli") {
     result = new BernoulliInjectionProcess(load);
+  } else if(process_name == "hotspot") {
+    result = new HotspotInjectionProcess(config, load);
   } else if(process_name == "on_off") {
     if(params.size() < 2) {
       cout << "Missing parameters for injection process: " << inject << endl;
@@ -91,7 +93,7 @@ BernoulliInjectionProcess::BernoulliInjectionProcess(double rate)
 
 }
 
-bool BernoulliInjectionProcess::test()
+bool BernoulliInjectionProcess::test(int src)
 {
   return (RandomFloat() < _rate);
 }
@@ -106,7 +108,44 @@ OnOffInjectionProcess::OnOffInjectionProcess(double rate, double alpha,
   assert((beta >= 0.0) && (beta <= 1.0));
 }
 
-bool OnOffInjectionProcess::test()
+
+HotspotInjectionProcess::HotspotInjectionProcess(Configuration const & config, double load)
+  : InjectionProcess(load){
+
+  ber = new BernoulliInjectionProcess(load);
+
+  vector<int> hotspot_nodes = config.GetIntArray("hotspot_nodes");
+  vector<int> hotspot_senders = config.GetIntArray("hotspot_senders");
+
+  if(hotspot_senders.empty()){
+    hs_send_all = true;
+  } else {
+    for(size_t i = 0; i<hotspot_senders.size(); i++){
+      hs_senders.insert(hotspot_senders[i]);
+    }
+  }
+  for(size_t i = 0; i < hotspot_nodes.size(); ++i) {
+    hs_lookup.insert(hotspot_nodes[i]);
+  }
+
+}
+
+bool HotspotInjectionProcess::test(int source){
+  if(hs_lookup.count(source)!=0){
+    return false;
+  } else {
+    if( hs_send_all || hs_senders.count(source)!=0){
+      return ber->test(source);
+    } else {
+      return false;
+    }
+  }
+}
+
+
+
+
+bool OnOffInjectionProcess::test(int src)
 {
 
   // advance state

@@ -115,14 +115,15 @@ void WeightedRRArbiter::AddRequest( int input, int id, int pri )
     if(_num_reqs == 0) {
       _highest_pri = pri;
       _best_input = input;
+      Arbiter::AddRequest(input, id, pri);
       //round robin the pointers, but check for _share
     } else if(RoundRobinArbiter::Supersedes(input,1,_best_input, 1, _pointer,_size)){
       assert(_share[input]!=0);
       _highest_pri = pri;
       _best_input = input;   
+      Arbiter::AddRequest(input, id, pri);
     }
   }
-  Arbiter::AddRequest(input, id, pri);
 }
 
 int WeightedRRArbiter::Arbitrate( int* id, int* pri ) {

@@ -1,0 +1,63 @@
+SOURCES := $(SOURCES) network/booksim/vc.cpp \
+network/booksim/BooksimWrapper.cpp \
+network/booksim/trafficmanager.cpp \
+network/booksim/batchtrafficmanager.cpp \
+network/booksim/sstrafficmanager.cpp \
+network/booksim/traffic.cpp \
+network/booksim/stats.cpp \
+network/booksim/routefunc.cpp \
+network/booksim/packet_reply_info.cpp \
+network/booksim/outputset.cpp \
+network/booksim/module.cpp \
+network/booksim/misc_utils.cpp \
+network/booksim/injection.cpp \
+network/booksim/flit.cpp \
+network/booksim/flitchannel.cpp \
+network/booksim/credit.cpp \
+network/booksim/config_tab.cpp \
+network/booksim/configlex.cpp \
+network/booksim/config_utils.cpp \
+network/booksim/buffer_state.cpp \
+network/booksim/buffer.cpp \
+network/booksim/booksim_config.cpp \
+network/booksim/routers/router.cpp \
+network/booksim/routers/iq_router.cpp \
+network/booksim/routers/event_router.cpp \
+network/booksim/routers/chaos_router.cpp \
+network/booksim/power/switch_monitor.cpp \
+network/booksim/power/power_module.cpp \
+network/booksim/power/buffer_monitor.cpp \
+network/booksim/networks/tree4.cpp \
+network/booksim/networks/qtree.cpp \
+network/booksim/networks/network.cpp \
+network/booksim/networks/kncube.cpp \
+network/booksim/networks/fly.cpp \
+network/booksim/networks/flatfly_onchip.cpp \
+network/booksim/networks/fattree.cpp \
+network/booksim/networks/dragonfly.cpp \
+network/booksim/networks/cmesh.cpp \
+network/booksim/networks/anynet.cpp \
+network/booksim/arbiters/roundrobin_arb.cpp \
+network/booksim/arbiters/prio_arb.cpp \
+network/booksim/arbiters/matrix_arb.cpp \
+network/booksim/arbiters/arbiter.cpp \
+network/booksim/arbiters/weighted_rr_arb.cpp\
+network/booksim/arbiters/probabilistic_arb.cpp\
+network/booksim/arbiters/HierArbiter.cpp\
+network/booksim/allocators/wavefront.cpp \
+network/booksim/allocators/separable_output_first.cpp \
+network/booksim/allocators/separable_input_first.cpp \
+network/booksim/allocators/separable.cpp \
+network/booksim/allocators/selalloc.cpp \
+network/booksim/allocators/prio_wavefront.cpp \
+network/booksim/allocators/pim.cpp \
+network/booksim/allocators/maxsize.cpp \
+network/booksim/allocators/loa.cpp \
+network/booksim/allocators/islip.cpp \
+network/booksim/allocators/fair_wavefront.cpp \
+network/booksim/allocators/allocator.cpp \
+network/booksim/allocators/HierAllocator.cpp\
+network/booksim/allocators/shared_allocator.cpp\
+network/booksim/rng_wrapper.cpp \
+network/booksim/rng_double_wrapper.cpp \
+network/booksim/main.cpp 

@@ -148,8 +148,6 @@ bool Simulate( BookSimConfig const & config )
       Power_Module pnet(net[i], config);
       pnet.run();
     }
-
-    delete net[i];
   }
 
   delete trafficManager;

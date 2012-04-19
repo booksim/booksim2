@@ -42,12 +42,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 BookSimConfig::BookSimConfig( )
 {
 
+  AddStrField( "hotspot_senders","");
+  AddStrField( "hotspot_nodes", "" );
+
+  _int_map["clock_ratio"] = 1;
+
   _int_map["perfect_network"] = 0;
   _int_map["perfect_latency"] = 1;
 
-  _int_map["disable_input_prio"] = 0;
-  _int_map["disable_output_prio"] = 0;
+  _int_map["disable_vc_input_prio"] = 0;
+  _int_map["disable_vc_output_prio"] = 0;
+  _int_map["disable_sw_input_prio"] = 0;
+  _int_map["disable_sw_output_prio"] = 0;
 
+  _int_map["simple_notification"] = 0;
   _int_map["notification_time_threshold"] = 10;
   _int_map["queuing_age"] = 1;
   _int_map["hop_offset"]= 4;
@@ -299,7 +307,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["sim_power"] = 0;
   AddStrField("power_output_file","pwr_tmp");
   AddStrField("tech_file", "");
-  _int_map["channel_width"] = 128;
+  _int_map["channel_width"] = 64;
   _int_map["channel_sweep"] = 0;
 
   //==================Network file===========================

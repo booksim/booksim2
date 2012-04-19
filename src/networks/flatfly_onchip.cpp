@@ -320,7 +320,7 @@ double FlatFlyOnChip::Capacity( ) const
 
 void FlatFlyOnChip::RegisterRoutingFunctions(){
 
-  
+  gRoutingFunctionMap["dor_flatfly"] = &min_flatfly;
   gRoutingFunctionMap["ran_min_flatfly"] = &min_flatfly;
   gRoutingFunctionMap["xyyx_flatfly"] = &xyyx_flatfly;
   gRoutingFunctionMap["valiant_flatfly"] = &valiant_flatfly;

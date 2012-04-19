@@ -65,9 +65,9 @@ CMesh::CMesh( const Configuration& config, const string & name )
 }
 
 void CMesh::RegisterRoutingFunctions() {
-  gRoutingFunctionMap["dor_cmesh"] = &dor_cmesh;
+  gRoutingFunctionMap["dor_cmesh"] = &dor_no_express_cmesh;
   gRoutingFunctionMap["dor_no_express_cmesh"] = &dor_no_express_cmesh;
-  gRoutingFunctionMap["xy_yx_cmesh"] = &xy_yx_cmesh;
+  gRoutingFunctionMap["xy_yx_cmesh"] = &xy_yx_no_express_cmesh;
   gRoutingFunctionMap["xy_yx_no_express_cmesh"]  = &xy_yx_no_express_cmesh;
 }
 

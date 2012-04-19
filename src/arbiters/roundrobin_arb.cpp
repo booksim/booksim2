@@ -64,9 +64,9 @@ void RoundRobinArbiter::AddRequest( int input, int id, int pri )
        Supersedes(input, pri, _best_input, _highest_pri, _pointer,_size )) {
       _highest_pri = pri;
       _best_input = input;
+  Arbiter::AddRequest(input, id, pri);
     }
   }
-  Arbiter::AddRequest(input, id, pri);
 }
 
 int RoundRobinArbiter::Arbitrate( int* id, int* pri ) {

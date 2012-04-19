@@ -47,34 +47,46 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "buffer_state.hpp"
 #include "roundrobin_arb.hpp"
 #include "allocator.hpp"
+#include "HierAllocator.hpp"
 #include "switch_monitor.hpp"
 #include "buffer_monitor.hpp"
 
 #include "shared_allocator.hpp"
-
+   
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
-
- //forward notification
+   
+   //forward notification
+   bool SIMPLE_NOTE  = false;
 bool ENABLE_NOTE = false;
-bool DISABLE_INPUT_PRIO = false;
-bool DISABLE_OUTPUT_PRIO = false;
+bool DISABLE_SW_INPUT_PRIO = false;
+bool DISABLE_SW_OUTPUT_PRIO = false;
+bool DISABLE_VC_INPUT_PRIO = false;
+bool DISABLE_VC_OUTPUT_PRIO = false;
 
 bool SHARED_ALLOCATOR=false;
+
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
 		    string const & name, int id, int inputs, int outputs )
 : Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
   ENABLE_NOTE = (config.GetStr("priority")=="notification");
-  DISABLE_INPUT_PRIO =  (config.GetInt("disable_input_prio")==1);
-  DISABLE_OUTPUT_PRIO = (config.GetInt("disable_output_prio")==1);
-  
+  SIMPLE_NOTE = ENABLE_NOTE && (config.GetInt("simple_notification")==1);
+    
+  DISABLE_SW_INPUT_PRIO =  (config.GetInt("disable_sw_input_prio")==1);
+  DISABLE_SW_OUTPUT_PRIO = (config.GetInt("disable_sw_output_prio")==1);
+  DISABLE_VC_INPUT_PRIO =  (config.GetInt("disable_vc_input_prio")==1);
+  DISABLE_VC_OUTPUT_PRIO = (config.GetInt("disable_vc_output_prio")==1);
+
   if(ENABLE_NOTE){
     _output_notifications.clear();
     _output_notifications.resize(inputs*outputs, 0);
-    _output_share.clear();
-    _output_share.resize(inputs*outputs, 0);
   }
+  if(SIMPLE_NOTE){
+    _port_note.clear();
+    _port_note.resize(inputs,0);
+  }
+  
 
   _vcs         = config.GetInt( "num_vcs" );
   _classes     = config.GetInt( "classes" );
@@ -140,12 +152,24 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     out_arb_type = (config.GetStr( "vc_alloc_output_arb_type" )=="")?
       config.GetStr( "vc_alloc_arb_type"):
       config.GetStr( "vc_alloc_output_arb_type");
-    
-    _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
-					     alloc_type,
-					     _vcs*_inputs, 
-					     _vcs*_outputs,
-					     iters, in_arb_type, out_arb_type );
+
+    if(alloc_type == "hier"){
+      _vc_allocator = new HierAllocator( this, "vc_allocator", 
+					 _vcs,
+					 _inputs, 
+					 _vcs,
+					 _outputs,
+					 in_arb_type, 
+					 in_arb_type, 
+					 out_arb_type, 
+					 "weighted");
+    } else {
+      _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
+					       alloc_type,
+					       _vcs*_inputs, 
+					       _vcs*_outputs,
+					       iters, in_arb_type, out_arb_type );
+    }
     if ( !_vc_allocator ) {
       Error("Unknown vc_allocator type: " + alloc_type);
     }
@@ -169,6 +193,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     _sw_allocator= NULL;
     _spec_sw_allocator = NULL;
   } else {
+    shared_sw_allocator =NULL;
     _sw_allocator = Allocator::NewAllocator( this, "sw_allocator",
 					     alloc_type,
 					     _inputs*_input_speedup, 
@@ -220,7 +245,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
 IQRouter::~IQRouter( )
 {
-
   if(gPrintActivity) {
     cout << Name() << ".bufferMonitor:" << endl ; 
     cout << *_bufferMonitor << endl ;
@@ -240,8 +264,10 @@ IQRouter::~IQRouter( )
     delete _vc_allocator;
   if(_sw_allocator)
     delete _sw_allocator;
+  _sw_allocator=NULL;
   if(_spec_sw_allocator)
     delete _spec_sw_allocator;
+  _spec_sw_allocator=NULL;
   if(shared_sw_allocator)
     delete shared_sw_allocator;
 
@@ -262,7 +288,7 @@ void IQRouter::_InternalStep( )
     return;
   }
 
-  if(ENABLE_NOTE){
+  if(ENABLE_NOTE && !SIMPLE_NOTE){
     _output_notifications.clear();
     _output_notifications.resize(_inputs* _outputs, 0);
   }
@@ -342,6 +368,9 @@ bool IQRouter::_ReceiveFlits( )
     if(f) {
       if(ENABLE_NOTE && f->head){
 	f->notification = f->next_notification;
+	if(SIMPLE_NOTE){
+	  _port_note[input] = f->notification;
+	}
       }
       ++_received_flits[input];
       if(f->watch) {
@@ -366,12 +395,6 @@ bool IQRouter::_ReceiveCredits( )
       _proc_credits.push_back(make_pair(GetSimTime() + _credit_delay, 
 					make_pair(c, output)));
       activity = true;
-      if(GetID()==8 && (output==4||output==2)){
-	cout<<output<<"\t";
-	for(set<int>::iterator i = c->vc.begin(); i!=c->vc.end(); i++)
-	  cout<<*i<<"\t";
-	cout<<endl;
-      }
     }
   }
   return activity;
@@ -611,7 +634,7 @@ void IQRouter::_VCAllocEvaluate( )
     OutputSet const * const route_set = cur_buf->GetRouteSet(vc);
     assert(route_set);
 
-    int const out_priority = cur_buf->GetPriority(vc);
+    int  out_priority = cur_buf->GetPriority(vc);
     set<OutputSet::sSetElement> const setlist = route_set->GetSet();
 
     for(set<OutputSet::sSetElement>::const_iterator iset = setlist.begin();
@@ -622,8 +645,12 @@ void IQRouter::_VCAllocEvaluate( )
       assert((out_port >= 0) && (out_port < _outputs));
       //as soon as a vc knows a output port, put up a notificaiton
       if(ENABLE_NOTE){
-	_output_notifications[input*_outputs+out_port]=
-	  MAX(_output_notifications[input*_outputs+out_port],cur_buf->GetNotification(vc));
+	if(SIMPLE_NOTE){
+	  _output_notifications[input*_outputs+out_port]=_port_note[input];
+	} else {
+	  _output_notifications[input*_outputs+out_port]=
+	    MAX(_output_notifications[input*_outputs+out_port],cur_buf->GetNotification(vc));
+	}
       }
 
 
@@ -633,13 +660,18 @@ void IQRouter::_VCAllocEvaluate( )
  
       for(int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc) {
 	assert((out_vc >= 0) && (out_vc < _vcs));
-	int const & in_priority = out_priority;
+	int  in_priority = out_priority;
 
 	// On the input input side, a VC might request several output VCs. 
 	// These VCs can be prioritized by the routing function, and this is 
 	// reflected in "in_priority". On the output side, if multiple VCs are 
 	// requesting the same output VC, the priority of VCs is based on the 
 	// actual packet priorities, which is reflected in "out_priority".
+	
+	if(DISABLE_VC_INPUT_PRIO)
+	  in_priority = 1;
+	if(DISABLE_VC_OUTPUT_PRIO)   
+	  out_priority = 1;
 	
 	if(dest_buf->IsAvailableFor(out_vc)) {
 	  if(f->watch){
@@ -696,7 +728,7 @@ void IQRouter::_VCAllocEvaluate( )
     output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
 
     if(output_and_vc >= 0) {
-
+      _vc_allocator->UpdateState(input * _vcs + vc,  output_and_vc);
       int const match_output = output_and_vc / _vcs;
       assert((match_output >= 0) && (match_output < _outputs));
       int const match_vc = output_and_vc % _vcs;
@@ -900,9 +932,13 @@ void IQRouter::_SWHoldEvaluate( )
     assert(_switch_hold_in[expanded_input] == expanded_output);
     //as soon as a vc knows a output port, put up a notificaiton
     if(ENABLE_NOTE){
-      _output_notifications[expanded_input*_outputs+expanded_output]=
-	MAX(_output_notifications[expanded_input*_outputs+expanded_output],
-	    cur_buf->GetNotification(vc));
+      if(SIMPLE_NOTE){
+	_output_notifications[expanded_input*_outputs+expanded_output]=_port_note[expanded_input];
+      } else {
+	_output_notifications[expanded_input*_outputs+expanded_output]=
+	  MAX(_output_notifications[expanded_input*_outputs+expanded_output],
+	      cur_buf->GetNotification(vc));
+      }
     }
     
 
@@ -1128,10 +1164,10 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
     }
     int prio = cur_buf->GetPriority(vc);
     int in_prio = prio;
-    if(DISABLE_INPUT_PRIO)
+    if(DISABLE_SW_INPUT_PRIO)
       in_prio=1;
     int out_prio = prio;
-    if(DISABLE_OUTPUT_PRIO)   
+    if(DISABLE_SW_OUTPUT_PRIO)   
       out_prio=1;
     
     if(_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)) {
@@ -1267,8 +1303,12 @@ void IQRouter::_SWAllocEvaluate( )
       assert((dest_output >= 0) && (dest_output < _outputs));
       //as soon as a vc knows a output port, put up a notificaiton
       if(ENABLE_NOTE){
-	_output_notifications[input*_outputs+dest_output]=
-	  MAX(cur_buf->GetNotification(vc),_output_notifications[input*_outputs+dest_output] );
+	if(SIMPLE_NOTE){
+	  _output_notifications[input*_outputs+dest_output]= _port_note[input];
+	} else {
+	  _output_notifications[input*_outputs+dest_output]=
+	    MAX(cur_buf->GetNotification(vc),_output_notifications[input*_outputs+dest_output] );
+	}
       }
 
       int const dest_vc = cur_buf->GetOutputVC(vc);
@@ -1310,8 +1350,12 @@ void IQRouter::_SWAllocEvaluate( )
       assert((dest_output >= 0) && (dest_output < _outputs));
       //as soon as a vc knows a output port, put up a notificaiton
       if(ENABLE_NOTE){
-	_output_notifications[input*_outputs+dest_output]=
-	  MAX(cur_buf->GetNotification(vc),_output_notifications[input*_outputs+dest_output] );
+	if(SIMPLE_NOTE){
+	  _output_notifications[input*_outputs+dest_output]= _port_note[input];
+	} else {
+	  _output_notifications[input*_outputs+dest_output]=
+	    MAX(cur_buf->GetNotification(vc),_output_notifications[input*_outputs+dest_output] );
+	}
       }
       // for lower levels of speculation, ignore credit availability and always 
       // issue requests for all output ports in route set
@@ -1489,8 +1533,8 @@ void IQRouter::_SWAllocEvaluate( )
     }  //shared allocator
     else {
       expanded_output = _sw_allocator->OutputAssigned(expanded_input);
-      if(expanded_output >= 0) {
 
+      if(expanded_output >= 0) {
 	assert((expanded_output % _output_speedup) == (input % _output_speedup));
 	if(_sw_allocator->ReadRequest(expanded_input, expanded_output) == vc) {
 	  if(f->watch) {
@@ -1502,6 +1546,7 @@ void IQRouter::_SWAllocEvaluate( )
 		       << "." << (vc % _input_speedup)
 		       << "." << endl;
 	  }
+	  _sw_allocator->UpdateState(expanded_input,  expanded_output);
 	  if(_input_channels[expanded_input]->IsIO()){
 	    _inj_grant++;
 	  } else {
@@ -1515,6 +1560,7 @@ void IQRouter::_SWAllocEvaluate( )
 	matched= true;
 	expanded_output = _spec_sw_allocator->OutputAssigned(expanded_input);
 	if(expanded_output >= 0) {
+	  _spec_sw_allocator->UpdateState(expanded_input,  expanded_output);
 	  assert((expanded_output % _output_speedup) == (input % _output_speedup));
 
 	  if(_spec_mask_by_reqs && 
@@ -1856,9 +1902,8 @@ void IQRouter::_SWAllocUpdate( )
 	for(int i = 0; i<_inputs; i++){
 	  sum += _output_notifications[i*_outputs+expanded_output];
 	}
-	assert(f->notification<= sum);
+	assert(SIMPLE_NOTE || f->notification<= sum);
 	cur_buf->FrontFlit(vc)->next_notification = sum;
-	_output_share[input*_outputs+expanded_output]--;
       }
 
 
