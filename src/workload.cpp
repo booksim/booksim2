@@ -136,7 +136,6 @@ Workload * Workload::New(string const & workload, int nodes,
 
 void Workload::reset()
 {
-  _time = 0;
   while(!_pending_nodes.empty()) {
     _pending_nodes.pop();
   }
@@ -147,7 +146,6 @@ void Workload::reset()
 
 void Workload::advanceTime()
 {
-  ++_time;
   while(!_deferred_nodes.empty()) {
     int const source = _deferred_nodes.front();
     _deferred_nodes.pop();
@@ -211,6 +209,7 @@ SyntheticWorkload::~SyntheticWorkload()
 void SyntheticWorkload::reset()
 {
   Workload::reset();
+  _time = 0;
   while(!_sleeping_nodes.empty()) {
     _sleeping_nodes.pop();
   }
@@ -231,6 +230,7 @@ void SyntheticWorkload::reset()
 void SyntheticWorkload::advanceTime()
 {
   Workload::advanceTime();
+  ++_time;
   for(size_t i = 0; i < _sleeping_nodes.size(); ++i) {
     int const source = _sleeping_nodes.front();
     _sleeping_nodes.pop();
@@ -303,7 +303,7 @@ void SyntheticWorkload::inject(int pid)
 
 TraceWorkload::TraceWorkload(int nodes, string const & filename, 
 			     vector<int> const & packet_sizes, 
-			     int limit, int skip, int scale)
+			     int limit, unsigned int skip, unsigned int scale)
   : Workload(nodes), 
     _packet_sizes(packet_sizes), _limit(limit), _scale(scale), _skip(skip)
 {
@@ -325,23 +325,24 @@ TraceWorkload::~TraceWorkload()
   }
 }
 
-void TraceWorkload::_refill(int time)
+void TraceWorkload::_refill()
 {
-  while(((_limit < 0) || (_count < _limit)) && !_trace->eof()) {
+  unsigned int time = _time;
+  while(((_limit < 0) || (_count < (unsigned int)_limit)) && !_trace->eof()) {
     ++_count;
     int delay, source, dest, type;
     *_trace >> delay >> source >> dest >> type;
     assert(delay >= 0);
     assert((source >= 0) && (source < _nodes));
     assert((dest >= 0) && (dest < _nodes));
-    time += delay;
+    time += (unsigned int)delay;
     if(type >= 0) {
       _next_source = source;
       _next_packet.time = time;
       _next_packet.dest = dest;
       _next_packet.type = type;
-      assert(((_scale > 0) ? (time / _scale) : (time * -_scale)) >= _time);
-      if(((_scale > 0) ? (time / _scale) : (time * -_scale)) == _time) {
+      assert(time >= _time);
+      if(time == _time) {
 	if(_ready_packets[source].empty()) {
 	  _pending_nodes.push(source);
 	  assert(_pending_nodes.size() <= (size_t)_nodes);
@@ -358,9 +359,9 @@ void TraceWorkload::_refill(int time)
 void TraceWorkload::reset()
 {
   Workload::reset();
-
+  _time = 0;
   _trace->seekg(0);
-  int count = 0;
+  unsigned int count = 0;
   while((count < _skip) && !_trace->eof()) {
     ++count;
     int delay, source, dest, type;
@@ -371,24 +372,26 @@ void TraceWorkload::reset()
   }
   _count = 0;
   _next_source = -1;
-  _refill(0);
+  _refill();
 }
 
 void TraceWorkload::advanceTime()
 {
   Workload::advanceTime();
-
-  if(_next_source >= 0) {
-    int const time = _next_packet.time;
-    assert(((_scale > 0) ? (time / _scale) : (time * -_scale)) >= _time);
-    if(((_scale > 0) ? (time / _scale) : (time * -_scale)) == _time) {
-      if(_ready_packets[_next_source].empty()) {
-	_pending_nodes.push(_next_source);
-	assert(_pending_nodes.size() <= (size_t)_nodes);
+  for(unsigned int s = 0; s < _scale; ++s) {
+    ++_time;
+    if(_next_source >= 0) {
+      unsigned int const time = _next_packet.time;
+      assert(time >= _time);
+      if(time == _time) {
+	if(_ready_packets[_next_source].empty()) {
+	  _pending_nodes.push(_next_source);
+	  assert(_pending_nodes.size() <= (size_t)_nodes);
+	}
+	_ready_packets[_next_source].push(_next_packet);
+	_next_source = -1;
+	_refill();
       }
-      _ready_packets[_next_source].push(_next_packet);
-      _next_source = -1;
-      _refill(time);
     }
   }
 }
@@ -429,7 +432,7 @@ int TraceWorkload::time() const
   assert(!_ready_packets[source].empty());
   int const time = _ready_packets[source].front().time;
   assert(time >= 0);
-  return (_scale > 0) ? (time / _scale) : (time * -_scale);
+  return time / _scale;
 }
 
 void TraceWorkload::inject(int pid)
@@ -470,9 +473,9 @@ NetraceWorkload::NetraceWorkload(int nodes, string const & filename,
   : Workload(nodes), _channel_width(channel_width), _scale(scale), 
     _enforce_deps(enforce_deps), _enforce_lats(enforce_lats)
 {
-  _l2_tag_latency = (2 + _scale - 1) / _scale;
-  _l2_data_latency = (8 + _scale - 1) / _scale;
-  _mem_latency = (150 + _scale - 1) / _scale;
+  _l2_tag_latency = 2;
+  _l2_data_latency = 8;
+  _mem_latency = 150;
   _window_size = enforce_lats ? max(max(_l2_tag_latency, _l2_data_latency), _mem_latency) : 1;
   _ready_packets.resize(nodes);
   _ctx = (nt_context_t*)calloc(1, sizeof(nt_context_t));
@@ -539,9 +542,8 @@ void NetraceWorkload::_refill()
     nt_print_packet(_next_packet);
 #endif
     _next_packet->cycle -= _skip;
-    _next_packet->cycle /= _scale;
-    assert(_next_packet->cycle >= (unsigned long long int)_time);
-    if(_next_packet->cycle == (unsigned long long int)_time) {
+    assert(_next_packet->cycle >= _time);
+    if(_next_packet->cycle == _time) {
 #ifdef DEBUG_NETRACE
       cout << "REFILL: Injection time has elapsed." << endl;
 #endif
@@ -567,8 +569,7 @@ void NetraceWorkload::_refill()
 	_stalled_packets.insert(make_pair(_next_packet->id, _next_packet));
       }
       _next_packet = NULL;
-    } else if(_enforce_lats && 
-	      (_next_packet->cycle < (unsigned long long int)(_time + _window_size))) {
+    } else if(_enforce_lats && (_next_packet->cycle < _time + _window_size)) {
 #ifdef DEBUG_NETRACE
       cout << "REFILL: Injection time is within window; queuing packet." << endl;
 #endif
@@ -609,6 +610,7 @@ void NetraceWorkload::reset()
   cout << "RESET : Restarting trace." << endl;
 #endif
   Workload::reset();
+  _time = 0ll;
   for(int i = 0; i < _nodes; ++i) {
     assert(_ready_packets[i].empty());
   }
@@ -656,9 +658,9 @@ void NetraceWorkload::advanceTime()
 	} else if(nt_get_src_type(packet) == 3) {
 	  latency = _mem_latency;
 	}
-	packet->cycle = max(packet->cycle, (unsigned long long int)(_time+latency));
-	assert(packet->cycle >= (unsigned long long int)_time);
-	if(packet->cycle > (unsigned long long int)_time) {
+	packet->cycle = max(packet->cycle, _time + latency);
+	assert(packet->cycle >= _time);
+	if(packet->cycle > _time) {
 #ifdef DEBUG_NETRACE
 	  cout << "ADVANC: New injection time is in the future; queuing packet." << endl;
 #endif
@@ -674,11 +676,11 @@ void NetraceWorkload::advanceTime()
 	  }
 	}
       } else {
-	assert(packet->cycle <= (unsigned long long int)_time);
-	packet->cycle = (unsigned long long int)_time;
+	assert(packet->cycle <= _time);
+	packet->cycle = _time;
       }
-      assert(packet->cycle >= (unsigned long long int)_time);
-      if(!_enforce_lats || (packet->cycle == (unsigned long long int)_time)) {
+      assert(packet->cycle >= _time);
+      if(!_enforce_lats || (packet->cycle == _time)) {
 	int const source = packet->src;
 	assert((source >= 0) && (source < _nodes));
 	if(_ready_packets[source].empty()) {
@@ -694,49 +696,22 @@ void NetraceWorkload::advanceTime()
     }
   }
   _check_packets.clear();
-
   Workload::advanceTime();
-
-  while(!_future_packets.empty()) {
-    nt_packet_t * packet = _future_packets.front();
-    assert(packet->cycle >= (unsigned long long int)_time);
-    if(packet->cycle == (unsigned long long int)_time) {
-      _future_packets.pop_front();
+  for(unsigned int s = 0; s < _scale; ++s) {
+    ++_time;
+    while(!_future_packets.empty()) {
+      nt_packet_t * packet = _future_packets.front();
+      assert(packet->cycle >= _time);
+      if(packet->cycle == _time) {
+	_future_packets.pop_front();
 #ifdef DEBUG_NETRACE
-      cout << "ADVANC: Injection time has elapsed for queued packet " << packet->id << "." << endl;
-      cout << "ADVANC: ";
-      nt_print_packet(packet);
+	cout << "ADVANC: Injection time has elapsed for queued packet " << packet->id << "." << endl;
+	cout << "ADVANC: ";
+	nt_print_packet(packet);
 #endif
-      int const source = packet->src;
-      assert((source >= 0) && (source < _nodes));
-      assert(!_enforce_deps || nt_dependencies_cleared(_ctx, packet));
-      if(_ready_packets[source].empty()) {
-#ifdef DEBUG_NETRACE
-	cout << "ADVANC: Waking up node " << source << "." << endl;
-#endif
-	_pending_nodes.push(source);
-	assert(_pending_nodes.size() <= (size_t)_nodes);
-      }
-      _ready_packets[source].push(packet);
-    } else {
-      break;
-    }
-  }
-
-  if(_next_packet) {
-    assert(_next_packet->cycle >= (unsigned long long int)_time);
-    if(_next_packet->cycle == (unsigned long long int)_time) {
-#ifdef DEBUG_NETRACE
-      cout << "ADVANC: Injection time has elapsed for waiting packet " << _next_packet->id << "." << endl;
-      cout << "ADVANC: ";
-      nt_print_packet(_next_packet);
-#endif
-      int const source = _next_packet->src;
-      assert((source >= 0) && (source < _nodes));
-      if(!_enforce_deps || nt_dependencies_cleared(_ctx, _next_packet)) {
-#ifdef DEBUG_NETRACE
-	cout << "ADVANC: No dependencies." << endl;
-#endif
+	int const source = packet->src;
+	assert((source >= 0) && (source < _nodes));
+	assert(!_enforce_deps || nt_dependencies_cleared(_ctx, packet));
 	if(_ready_packets[source].empty()) {
 #ifdef DEBUG_NETRACE
 	  cout << "ADVANC: Waking up node " << source << "." << endl;
@@ -744,52 +719,79 @@ void NetraceWorkload::advanceTime()
 	  _pending_nodes.push(source);
 	  assert(_pending_nodes.size() <= (size_t)_nodes);
 	}
-	_ready_packets[source].push(_next_packet);
+	_ready_packets[source].push(packet);
       } else {
-#ifdef DEBUG_NETRACE
-	cout << "ADVANC: Unmet dependencies." << endl;
-#endif
-	assert(_stalled_packets.count(_next_packet->id) == 0);
-	_stalled_packets.insert(make_pair(_next_packet->id, _next_packet));
+	break;
       }
-      _next_packet = NULL;
-      _refill();
-    } else if(_enforce_lats && 
-	      (_next_packet->cycle < (unsigned long long int)(_time + _window_size))) {
+    }
+    if(_next_packet) {
+      assert(_next_packet->cycle >= _time);
+      if(_next_packet->cycle == _time) {
 #ifdef DEBUG_NETRACE
-      cout << "ADVANC: Injection time is within window for waiting packet " << _next_packet->id << "; queuing packet." << endl;
-      cout << "ADVANC: ";
-      nt_print_packet(_next_packet);
+	cout << "ADVANC: Injection time has elapsed for waiting packet " << _next_packet->id << "." << endl;
+	cout << "ADVANC: ";
+	nt_print_packet(_next_packet);
 #endif
-      if(!_enforce_deps || nt_dependencies_cleared(_ctx, _next_packet)) {
+	int const source = _next_packet->src;
+	assert((source >= 0) && (source < _nodes));
+	if(!_enforce_deps || nt_dependencies_cleared(_ctx, _next_packet)) {
 #ifdef DEBUG_NETRACE
-	cout << "ADVANC: No dependencies." << endl;
+	  cout << "ADVANC: No dependencies." << endl;
 #endif
-	if(_future_packets.empty() || 
-	   (_future_packets.back()->cycle <= _next_packet->cycle)) {
-	  _future_packets.push_back(_next_packet);
-	} else {
-	  list<nt_packet_t *>::iterator iter = _future_packets.begin();
-	  while((*iter)->cycle < _next_packet->cycle) {
-	    ++iter;
+	  if(_ready_packets[source].empty()) {
+#ifdef DEBUG_NETRACE
+	    cout << "ADVANC: Waking up node " << source << "." << endl;
+#endif
+	    _pending_nodes.push(source);
+	    assert(_pending_nodes.size() <= (size_t)_nodes);
 	  }
-	  _future_packets.insert(iter, _next_packet);
+	  _ready_packets[source].push(_next_packet);
+	} else {
+#ifdef DEBUG_NETRACE
+	  cout << "ADVANC: Unmet dependencies." << endl;
+#endif
+	  assert(_stalled_packets.count(_next_packet->id) == 0);
+	  _stalled_packets.insert(make_pair(_next_packet->id, _next_packet));
 	}
+	_next_packet = NULL;
+	_refill();
+      } else if(_enforce_lats && 
+		(_next_packet->cycle < _time + _window_size)) {
+#ifdef DEBUG_NETRACE
+	cout << "ADVANC: Injection time is within window for waiting packet " << _next_packet->id << "; queuing packet." << endl;
+	cout << "ADVANC: ";
+	nt_print_packet(_next_packet);
+#endif
+	if(!_enforce_deps || nt_dependencies_cleared(_ctx, _next_packet)) {
+#ifdef DEBUG_NETRACE
+	  cout << "ADVANC: No dependencies." << endl;
+#endif
+	  if(_future_packets.empty() || 
+	     (_future_packets.back()->cycle <= _next_packet->cycle)) {
+	    _future_packets.push_back(_next_packet);
+	  } else {
+	    list<nt_packet_t *>::iterator iter = _future_packets.begin();
+	    while((*iter)->cycle < _next_packet->cycle) {
+	      ++iter;
+	    }
+	    _future_packets.insert(iter, _next_packet);
+	  }
+	} else {
+#ifdef DEBUG_NETRACE
+	  cout << "ADVANC: Unmet dependencies." << endl;
+#endif
+	  assert(_stalled_packets.count(_next_packet->id) == 0);
+	  _stalled_packets.insert(make_pair(_next_packet->id, _next_packet));
+	}
+	_next_packet = NULL;
+	_refill();
       } else {
 #ifdef DEBUG_NETRACE
-	cout << "ADVANC: Unmet dependencies." << endl;
+	cout << "ADVANC: Injection time is in the future for waiting packet " << _next_packet->id << "; sleeping." << endl;
+	cout << "ADVANC: ";
+	nt_print_packet(_next_packet);
 #endif
-	assert(_stalled_packets.count(_next_packet->id) == 0);
-	_stalled_packets.insert(make_pair(_next_packet->id, _next_packet));
       }
-      _next_packet = NULL;
-      _refill();
-    } else {
-#ifdef DEBUG_NETRACE
-      cout << "ADVANC: Injection time is in the future for waiting packet " << _next_packet->id << "; sleeping." << endl;
-      cout << "ADVANC: ";
-      nt_print_packet(_next_packet);
-#endif
     }
   }
 }
@@ -831,7 +833,7 @@ int NetraceWorkload::time() const
   assert(!_ready_packets[source].empty());
   int const time = (int)_ready_packets[source].front()->cycle;
   assert(time >= 0);
-  return time;
+  return time / _scale;
 }
 
 void NetraceWorkload::inject(int pid)

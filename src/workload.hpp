@@ -47,7 +47,6 @@ using namespace std;
 class Workload {
 protected:
   int const _nodes;
-  int _time;
   queue<int> _pending_nodes;
   queue<int> _deferred_nodes;
   Workload(int nodes);
@@ -82,12 +81,13 @@ public:
 
 class SyntheticWorkload : public Workload {
 protected:
+  unsigned int _time;
   vector<int> _sizes;
   vector<int> _rates;
   int _max_val;
   InjectionProcess * _injection;
   TrafficPattern * _traffic;
-  vector<int> _qtime;
+  vector<unsigned int> _qtime;
   queue<int> _sleeping_nodes;
 public:
   SyntheticWorkload(int nodes, double load, string const & traffic, 
@@ -110,6 +110,8 @@ class TraceWorkload : public Workload {
 
 protected:
 
+  unsigned int _time;
+
   vector<int> _packet_sizes;
 
   struct PacketInfo {
@@ -124,19 +126,19 @@ protected:
 
   ifstream * _trace;
   
-  int _count;
+  unsigned int _count;
   int _limit;
 
-  int _scale;
-  int _skip;
+  unsigned int _scale;
+  unsigned int _skip;
 
-  void _refill(int time);
+  void _refill();
 
 public:
   
   TraceWorkload(int nodes, string const & filename, 
-		vector<int> const & packet_size, int limit = -1, int skip = 0, 
-		int scale = 1);
+		vector<int> const & packet_size, int limit = -1, 
+		unsigned int skip = 0, unsigned int scale = 1);
   
   virtual ~TraceWorkload();
   virtual void reset();
@@ -153,6 +155,8 @@ public:
 class NetraceWorkload : public Workload {
 
 protected:
+
+  unsigned long long int _time;
 
   nt_context_t * _ctx;
 
@@ -176,8 +180,6 @@ protected:
   unsigned int _scale;
 
   unsigned long long int _skip;
-
-  int _last;
 
   bool _enforce_deps;
   bool _enforce_lats;
