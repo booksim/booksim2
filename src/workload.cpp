@@ -657,6 +657,7 @@ void NetraceWorkload::advanceTime()
 	  latency = _mem_latency;
 	}
 	packet->cycle = max(packet->cycle, (unsigned long long int)(_time+latency));
+	assert(packet->cycle >= (unsigned long long int)_time);
 	if(packet->cycle > (unsigned long long int)_time) {
 #ifdef DEBUG_NETRACE
 	  cout << "ADVANC: New injection time is in the future; queuing packet." << endl;
@@ -676,6 +677,7 @@ void NetraceWorkload::advanceTime()
 	assert(packet->cycle <= (unsigned long long int)_time);
 	packet->cycle = (unsigned long long int)_time;
       }
+      assert(packet->cycle >= (unsigned long long int)_time);
       if(!_enforce_lats || (packet->cycle == (unsigned long long int)_time)) {
 	int const source = packet->src;
 	assert((source >= 0) && (source < _nodes));
