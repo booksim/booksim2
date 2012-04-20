@@ -484,14 +484,14 @@ NetraceWorkload::NetraceWorkload(int nodes, string const & filename,
   nt_header_t* header = nt_get_trheader(_ctx);
   _skip = 0ll;
   assert(nodes == header->num_nodes);
-  int last_region;
+  unsigned int last_region;
   if(region < 0) {
     _region = 0;
     last_region = header->num_regions - 1;
   } else {
     assert((unsigned int)region < header->num_regions);
-    _region = region;
-    last_region = region;
+    _region = (unsigned int)region;
+    last_region = (unsigned int)region;
   }
   for(unsigned int r = 0; r < _region; ++r) {
     _skip += header->regions[r].num_cycles;

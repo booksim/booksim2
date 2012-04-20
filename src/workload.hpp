@@ -168,7 +168,7 @@ protected:
 
   unsigned int _region;
 
-  int _window_size;
+  unsigned int _window_size;
 
   unsigned long long int _count;
   unsigned long long int _limit;
@@ -182,9 +182,9 @@ protected:
   bool _enforce_deps;
   bool _enforce_lats;
 
-  int _l2_tag_latency;
-  int _l2_data_latency;
-  int _mem_latency;
+  unsigned int _l2_tag_latency;
+  unsigned int _l2_data_latency;
+  unsigned int _mem_latency;
 
   void _refill();
 
