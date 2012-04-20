@@ -115,7 +115,7 @@ protected:
   vector<int> _packet_sizes;
 
   struct PacketInfo {
-    int time;
+    unsigned int time;
     int dest;
     int type;
   };
@@ -168,6 +168,9 @@ protected:
   map<unsigned int, nt_packet_t *> _stalled_packets;
   map<int, nt_packet_t *> _in_flight_packets;
 
+  map<unsigned int, unsigned long long int> _response_eject_time;
+  vector<unsigned long long int> _last_response_eject_time;
+
   unsigned int _channel_width;
 
   unsigned int _region;
@@ -187,6 +190,7 @@ protected:
   unsigned int _l2_tag_latency;
   unsigned int _l2_data_latency;
   unsigned int _mem_latency;
+  unsigned int _trace_net_delay;
 
   void _refill();
 

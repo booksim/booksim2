@@ -430,9 +430,9 @@ int TraceWorkload::time() const
   int const source = _pending_nodes.front();
   assert((source >= 0) && (source < _nodes));
   assert(!_ready_packets[source].empty());
-  int const time = _ready_packets[source].front().time;
+  int const time = (int)(_ready_packets[source].front().time / _scale);
   assert(time >= 0);
-  return time / _scale;
+  return time;
 }
 
 void TraceWorkload::inject(int pid)
@@ -476,10 +476,12 @@ NetraceWorkload::NetraceWorkload(int nodes, string const & filename,
   _l2_tag_latency = 2;
   _l2_data_latency = 8;
   _mem_latency = 150;
+  _trace_net_delay = 8;
   _window_size = enforce_lats ? max(max(_l2_tag_latency, _l2_data_latency), _mem_latency) : 1;
   _ready_packets.resize(nodes);
   _ctx = (nt_context_t*)calloc(1, sizeof(nt_context_t));
   _next_packet = NULL;
+  _last_response_eject_time.resize(_nodes);
   nt_open_trfile(_ctx, filename.c_str());
   if(!enforce_deps) {
     nt_disable_dependencies(_ctx);
@@ -542,6 +544,19 @@ void NetraceWorkload::_refill()
     nt_print_packet(_next_packet);
 #endif
     _next_packet->cycle -= _skip;
+    if(_enforce_deps && _enforce_lats &&
+       (nt_get_dst_type(_next_packet) <= 1) &&
+       ((_next_packet->type == 2) ||
+	(_next_packet->type == 3) ||
+	(_next_packet->type == 5) ||
+	(_next_packet->type == 14) ||
+	(_next_packet->type == 16) ||
+	(_next_packet->type == 28) ||
+	(_next_packet->type == 30))) {
+      assert(_response_eject_time.count(_next_packet->id) == 0);
+      unsigned long long int const eject_time = _next_packet->cycle + _trace_net_delay;
+      _response_eject_time.insert(make_pair(_next_packet->id, eject_time));
+    }
     assert(_next_packet->cycle >= _time);
     if(_next_packet->cycle == _time) {
 #ifdef DEBUG_NETRACE
@@ -611,6 +626,7 @@ void NetraceWorkload::reset()
 #endif
   Workload::reset();
   _time = 0ll;
+  _last_response_eject_time.assign(_nodes, 0ll);
   for(int i = 0; i < _nodes; ++i) {
     assert(_ready_packets[i].empty());
   }
@@ -648,15 +664,31 @@ void NetraceWorkload::advanceTime()
       cout << "ADVANC: Dependencies cleared for packet " << id << "." << endl;
 #endif
       if(_enforce_lats) {
-	int latency = 0;
-	if(nt_get_src_type(packet) == 2) {
-	  if(nt_get_dst_type(packet) == 3) {
-	    latency = _l2_tag_latency;
-	  } else if(nt_get_dst_type(packet) <= 1) {
-	    latency = _l2_data_latency;
+	unsigned int latency = 0;
+	if((nt_get_src_type(packet) == 1) &&
+	   ((packet->type == 1) ||
+	    (packet->type == 4) ||
+	    (packet->type == 13) ||
+	    (packet->type == 16) ||
+	    (packet->type == 27) ||
+	    (packet->type == 29))) {
+	  int const source = packet->src;
+	  assert((source >= 0) && (source < _nodes));
+	  unsigned long long int const last_response_eject_time = _last_response_eject_time[source];
+	  assert(packet->cycle >= last_response_eject_time - 1);
+	  if(packet->cycle >= last_response_eject_time) {
+	    latency = (unsigned int)(packet->cycle - last_response_eject_time);
 	  }
-	} else if(nt_get_src_type(packet) == 3) {
-	  latency = _mem_latency;
+	} else {
+	  if(nt_get_src_type(packet) == 2) {
+	    if(nt_get_dst_type(packet) == 3) {
+	      latency = _l2_tag_latency;
+	    } else if(nt_get_dst_type(packet) <= 1) {
+	      latency = _l2_data_latency;
+	    }
+	  } else if(nt_get_src_type(packet) == 3) {
+	    latency = _mem_latency;
+	  }
 	}
 	packet->cycle = max(packet->cycle, _time + latency);
 	assert(packet->cycle >= _time);
@@ -831,9 +863,9 @@ int NetraceWorkload::time() const
   int const source = _pending_nodes.front();
   assert((source >= 0) && (source < _nodes));
   assert(!_ready_packets[source].empty());
-  int const time = (int)_ready_packets[source].front()->cycle;
+  int const time = (int)(_ready_packets[source].front()->cycle / _scale);
   assert(time >= 0);
-  return time / _scale;
+  return time;
 }
 
 void NetraceWorkload::inject(int pid)
@@ -866,6 +898,29 @@ void NetraceWorkload::retire(int pid)
 #ifdef DEBUG_NETRACE
   cout << "RETIRE: Ejecting packet " << packet->id << "." << endl;
 #endif
+  if(_enforce_deps && _enforce_lats &&
+     (nt_get_dst_type(packet) <= 1) &&
+     ((packet->type == 2) ||
+      (packet->type == 3) ||
+      (packet->type == 5) ||
+      (packet->type == 14) ||
+      (packet->type == 16) ||
+      (packet->type == 28) ||
+      (packet->type == 30))) {
+    map<unsigned int, unsigned long long int>::iterator iter = _response_eject_time.find(packet->id);
+    assert(iter != _response_eject_time.end());
+    unsigned long long int const eject_time = iter->second;
+    assert(_time >= eject_time - 1);
+    int const dest = packet->dst;
+    assert((dest >= 0) && (dest < _nodes));
+#ifdef DEBUG_NETRACE
+    if(_last_response_eject_time[dest] != eject_time) {
+      cout << "RETIRE: Updating last response eject time for node " << dest << " to " << eject_time << " cycles." << endl;
+    }
+#endif
+    _last_response_eject_time[dest] = eject_time;
+    _response_eject_time.erase(iter);
+  }
   _in_flight_packets.erase(iter);
   for(unsigned char d = 0; d < packet->num_deps; ++d) {
     unsigned int const dep = packet->deps[d];
