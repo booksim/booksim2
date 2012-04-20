@@ -677,6 +677,7 @@ void NetraceWorkload::advanceTime()
 	  _future_packets.insert(iter, packet);
 	}
       } else {
+	assert(packet->cycle == (unsigned long long int)_time);
 	int const source = packet->src;
 	assert((source >= 0) && (source < _nodes));
 	if(_ready_packets[source].empty()) {
