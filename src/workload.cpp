@@ -624,8 +624,6 @@ void NetraceWorkload::reset()
 
 void NetraceWorkload::advanceTime()
 {
-  Workload::advanceTime();
-
   for(set<unsigned int>::iterator iter = _check_packets.begin();
       iter != _check_packets.end(); ++iter) {
     unsigned int id = *iter;
@@ -659,25 +657,26 @@ void NetraceWorkload::advanceTime()
 	  latency = _mem_latency;
 	}
 	packet->cycle = max(packet->cycle, (unsigned long long int)(_time+latency));
-      } else {
-	packet->cycle = _time;
-      }
-      if(_enforce_lats && (packet->cycle > (unsigned long long int)_time)) {
+	if(packet->cycle > (unsigned long long int)_time) {
 #ifdef DEBUG_NETRACE
-	cout << "ADVANC: New injection time is in the future; queuing packet." << endl;
+	  cout << "ADVANC: New injection time is in the future; queuing packet." << endl;
 #endif
-	if(_future_packets.empty() || 
-	   (_future_packets.back()->cycle <= packet->cycle)) {
-	  _future_packets.push_back(packet);
-	} else {
-	  list<nt_packet_t *>::iterator iter = _future_packets.begin();
-	  while((*iter)->cycle < packet->cycle) {
-	    ++iter;
+	  if(_future_packets.empty() || 
+	     (_future_packets.back()->cycle <= packet->cycle)) {
+	    _future_packets.push_back(packet);
+	  } else {
+	    list<nt_packet_t *>::iterator iter = _future_packets.begin();
+	    while((*iter)->cycle < packet->cycle) {
+	      ++iter;
+	    }
+	    _future_packets.insert(iter, packet);
 	  }
-	  _future_packets.insert(iter, packet);
 	}
       } else {
-	assert(packet->cycle == (unsigned long long int)_time);
+	assert(packet->cycle <= (unsigned long long int)_time);
+	packet->cycle = (unsigned long long int)_time;
+      }
+      if(!_enforce_lats || (packet->cycle == (unsigned long long int)_time)) {
 	int const source = packet->src;
 	assert((source >= 0) && (source < _nodes));
 	if(_ready_packets[source].empty()) {
@@ -693,6 +692,8 @@ void NetraceWorkload::advanceTime()
     }
   }
   _check_packets.clear();
+
+  Workload::advanceTime();
 
   while(!_future_packets.empty()) {
     nt_packet_t * packet = _future_packets.front();
