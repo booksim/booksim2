@@ -52,7 +52,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 : Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
   _vcs         = config.GetInt( "num_vcs" );
-  _classes     = config.GetInt( "classes" );
 
   _vc_busy_when_full = (config.GetInt("vc_busy_when_full") > 0);
   _vc_prioritize_empty = (config.GetInt("vc_prioritize_empty") > 0);
@@ -883,9 +882,9 @@ void IQRouter::_VCAllocUpdate( )
       assert((output_and_vc == STALL_BUFFER_BUSY) ||
 	     (output_and_vc == STALL_BUFFER_CONFLICT));
       if(output_and_vc == STALL_BUFFER_BUSY) {
-	++_buffer_busy_stalls;
+	++_buffer_busy_stalls[f->cl];
       } else if(output_and_vc == STALL_BUFFER_CONFLICT) {
-	++_buffer_conflict_stalls;
+	++_buffer_conflict_stalls[f->cl];
       }
 #endif
 
@@ -2069,15 +2068,15 @@ void IQRouter::_SWAllocUpdate( )
 	     (expanded_output == STALL_BUFFER_RESERVED) ||
 	     (expanded_output == STALL_CROSSBAR_CONFLICT));
       if(expanded_output == STALL_BUFFER_BUSY) {
-	++_buffer_busy_stalls;
+	++_buffer_busy_stalls[f->cl];
       } else if(expanded_output == STALL_BUFFER_CONFLICT) {
-	++_buffer_conflict_stalls;
+	++_buffer_conflict_stalls[f->cl];
       } else if(expanded_output == STALL_BUFFER_FULL) {
-	++_buffer_full_stalls;
+	++_buffer_full_stalls[f->cl];
       } else if(expanded_output == STALL_BUFFER_RESERVED) {
-	++_buffer_reserved_stalls;
+	++_buffer_reserved_stalls[f->cl];
       } else if(expanded_output == STALL_CROSSBAR_CONFLICT) {
-	++_crossbar_conflict_stalls;
+	++_crossbar_conflict_stalls[f->cl];
       }
 #endif
 
