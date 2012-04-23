@@ -318,11 +318,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_max_accepted.resize(_classes, 0.0);
 
 #ifdef TRACK_STALLS
-  _overall_buffer_busy_stalls = 0;
-  _overall_buffer_conflict_stalls = 0;
-  _overall_buffer_full_stalls = 0;
-  _overall_buffer_reserved_stalls = 0;
-  _overall_crossbar_conflict_stalls = 0;
+  _overall_buffer_busy_stalls.resize(_classes, 0);
+  _overall_buffer_conflict_stalls.resize(_classes, 0);
+  _overall_buffer_full_stalls.resize(_classes, 0);
+  _overall_buffer_reserved_stalls.resize(_classes, 0);
+  _overall_crossbar_conflict_stalls.resize(_classes, 0);
 #endif
 
   for ( int c = 0; c < _classes; ++c ) {
@@ -1191,7 +1191,9 @@ void TrafficManager::_ClearStats( )
 #ifdef TRACK_STALLS
   for(int s = 0; s < _subnets; ++s) {
     for(int r = 0; r < _routers; ++r) {
-      _router[s][r]->ResetStallStats();
+      for(int c = 0; c < _classes; ++c) {
+	_router[s][r]->ResetStallStats(c);
+      }
     }
   }
 #endif
@@ -1610,11 +1612,13 @@ void TrafficManager::_UpdateOverallStats() {
     for(int subnet = 0; subnet < _subnets; ++subnet) {
       for(int router = 0; router < _routers; ++router) {
 	Router const * const r = _router[subnet][router];
-	_overall_buffer_busy_stalls += r->GetBufferBusyStalls();
-	_overall_buffer_conflict_stalls += r->GetBufferConflictStalls();
-	_overall_buffer_full_stalls += r->GetBufferFullStalls();
-	_overall_buffer_reserved_stalls += r->GetBufferReservedStalls();
-	_overall_crossbar_conflict_stalls += r->GetCrossbarConflictStalls();
+	for(int c = 0; c < _classes; ++c) {
+	  _overall_buffer_busy_stalls[c] += r->GetBufferBusyStalls(c);
+	  _overall_buffer_conflict_stalls[c] += r->GetBufferConflictStalls(c);
+	  _overall_buffer_full_stalls[c] += r->GetBufferFullStalls(c);
+	  _overall_buffer_reserved_stalls[c] += r->GetBufferReservedStalls(c);
+	  _overall_crossbar_conflict_stalls[c] += r->GetCrossbarConflictStalls(c);
+	}
       }
     }
 #endif
@@ -1866,16 +1870,16 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
     os << "Overall average hops = " << _overall_hop_stats[c] / (double)_total_sims
        << " (" << _total_sims << " samples)" << endl;
     
+#ifdef TRACK_STALLS
+    os << "Overall buffer busy stalls = " << (double)_overall_buffer_busy_stalls[c] / (double)_total_sims << endl
+       << "Overall buffer conflict stalls = " << (double)_overall_buffer_conflict_stalls[c] / (double)_total_sims << endl
+       << "Overall buffer full stalls = " << (double)_overall_buffer_full_stalls[c] / (double)_total_sims << endl
+       << "Overall buffer reserved stalls = " << (double)_overall_buffer_reserved_stalls[c] / (double)_total_sims << endl
+       << "Overall crossbar conflict stalls = " << (double)_overall_crossbar_conflict_stalls[c] / (double)_total_sims << endl;
+#endif
+    
   }
   
-#ifdef TRACK_STALLS
-  os << "Overall buffer busy stalls = " << (double)_overall_buffer_busy_stalls / (double)_total_sims << endl
-     << "Overall buffer conflict stalls = " << (double)_overall_buffer_conflict_stalls / (double)_total_sims << endl
-     << "Overall buffer full stalls = " << (double)_overall_buffer_full_stalls / (double)_total_sims << endl
-     << "Overall buffer reserved stalls = " << (double)_overall_buffer_reserved_stalls / (double)_total_sims << endl
-     << "Overall crossbar conflict stalls = " << (double)_overall_crossbar_conflict_stalls / (double)_total_sims << endl;
-#endif
-
 }
 
 string TrafficManager::_OverallStatsCSV(int c) const
@@ -1913,11 +1917,11 @@ string TrafficManager::_OverallStatsCSV(int c) const
      << ',' << _overall_hop_stats[c] / (double)_total_sims;
 
 #ifdef TRACK_STALLS
-  os << ',' << (double)_overall_buffer_busy_stalls / (double)_total_sims
-     << ',' << (double)_overall_buffer_conflict_stalls / (double)_total_sims
-     << ',' << (double)_overall_buffer_full_stalls / (double)_total_sims
-     << ',' << (double)_overall_buffer_reserved_stalls / (double)_total_sims
-     << ',' << (double)_overall_crossbar_conflict_stalls / (double)_total_sims;
+  os << ',' << (double)_overall_buffer_busy_stalls[c] / (double)_total_sims
+     << ',' << (double)_overall_buffer_conflict_stalls[c] / (double)_total_sims
+     << ',' << (double)_overall_buffer_full_stalls[c] / (double)_total_sims
+     << ',' << (double)_overall_buffer_reserved_stalls[c] / (double)_total_sims
+     << ',' << (double)_overall_crossbar_conflict_stalls[c] / (double)_total_sims;
 #endif
 
   return os.str();

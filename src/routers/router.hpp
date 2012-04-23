@@ -55,6 +55,8 @@ protected:
   int _inputs;
   int _outputs;
   
+  int _classes;
+
   int _input_speedup;
   int _output_speedup;
   
@@ -78,11 +80,11 @@ protected:
 #endif
 
 #ifdef TRACK_STALLS
-  int _buffer_busy_stalls;
-  int _buffer_conflict_stalls;
-  int _buffer_full_stalls;
-  int _buffer_reserved_stalls;
-  int _crossbar_conflict_stalls;
+  vector<int> _buffer_busy_stalls;
+  vector<int> _buffer_conflict_stalls;
+  vector<int> _buffer_full_stalls;
+  vector<int> _buffer_reserved_stalls;
+  vector<int> _crossbar_conflict_stalls;
 #endif
 
   virtual void _InternalStep() = 0;
@@ -143,28 +145,34 @@ public:
 #endif
 
 #ifdef TRACK_STALLS
-  inline int GetBufferBusyStalls() const {
-    return _buffer_busy_stalls;
+  inline int GetBufferBusyStalls(int c) const {
+    assert((c >= 0) && (c < _classes));
+    return _buffer_busy_stalls[c];
   }
-  inline int GetBufferConflictStalls() const {
-    return _buffer_conflict_stalls;
+  inline int GetBufferConflictStalls(int c) const {
+    assert((c >= 0) && (c < _classes));
+    return _buffer_conflict_stalls[c];
   }
-  inline int GetBufferFullStalls() const {
-    return _buffer_full_stalls;
+  inline int GetBufferFullStalls(int c) const {
+    assert((c >= 0) && (c < _classes));
+    return _buffer_full_stalls[c];
   }
-  inline int GetBufferReservedStalls() const {
-    return _buffer_reserved_stalls;
+  inline int GetBufferReservedStalls(int c) const {
+    assert((c >= 0) && (c < _classes));
+    return _buffer_reserved_stalls[c];
   }
-  inline int GetCrossbarConflictStalls() const {
-    return _crossbar_conflict_stalls;
+  inline int GetCrossbarConflictStalls(int c) const {
+    assert((c >= 0) && (c < _classes));
+    return _crossbar_conflict_stalls[c];
   }
 
-  inline void ResetStallStats() {
-    _buffer_busy_stalls = 0;
-    _buffer_conflict_stalls = 0;
-    _buffer_full_stalls = 0;
-    _buffer_reserved_stalls = 0;
-    _crossbar_conflict_stalls = 0;
+  inline void ResetStallStats(int c) {
+    assert((c >= 0) && (c < _classes));
+    _buffer_busy_stalls[c] = 0;
+    _buffer_conflict_stalls[c] = 0;
+    _buffer_full_stalls[c] = 0;
+    _buffer_reserved_stalls[c] = 0;
+    _crossbar_conflict_stalls[c] = 0;
   }
 #endif
 

@@ -67,6 +67,7 @@ TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
   _input_speedup    = config.GetInt( "input_speedup" );
   _output_speedup   = config.GetInt( "output_speedup" );
   _internal_speedup = config.GetFloat( "internal_speedup" );
+  _classes          = config.GetInt( "classes" );
 
 #ifdef TRACK_FLOWS
   _received_flits.resize(inputs, 0);
@@ -74,10 +75,11 @@ TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
 #endif
 
 #ifdef TRACK_STALLS
-  _buffer_busy_stalls = 0;
-  _buffer_conflict_stalls = 0;
-  _buffer_full_stalls = 0;
-  _crossbar_conflict_stalls = 0;
+  _buffer_busy_stalls.resize(_classes, 0);
+  _buffer_conflict_stalls.resize(_classes, 0);
+  _buffer_full_stalls.resize(_classes, 0);
+  _buffer_reserved_stalls.resize(_classes, 0);
+  _crossbar_conflict_stalls.resize(_classes, 0);
 #endif
 
 }
