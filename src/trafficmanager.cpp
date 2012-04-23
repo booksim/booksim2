@@ -798,25 +798,19 @@ void TrafficManager::_Step( )
 	    ++_sent_packets[c][n];
 	  }
 	}
-
+	
 	_net[subnet]->WriteFlit(f, n);
 
       }	
     }
   }
 
-#ifdef TRACK_FLOWS
-  vector<vector<int> > received_flits(_subnets*_routers, 0);
-  vector<vector<int> > sent_flits(_subnets*_routers, 0);
-  vector<vector<int> > stored_flits(_subnets*_routers, 0);
-  vector<vector<int> > active_packets(_subnets*_routers, 0);
-#endif
-
   for(int subnet = 0; subnet < _subnets; ++subnet) {
     for(int n = 0; n < _nodes; ++n) {
       map<int, Flit *>::const_iterator iter = flits[subnet].find(n);
       if(iter != flits[subnet].end()) {
 	Flit * const f = iter->second;
+
 	f->atime = _time;
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | "
@@ -834,26 +828,27 @@ void TrafficManager::_Step( )
     flits[subnet].clear();
     _net[subnet]->Evaluate( );
     _net[subnet]->WriteOutputs( );
+  }
 
 #ifdef TRACK_FLOWS
-    for(int router = 0; router < _routers; ++router) {
-      Router * const r = _router[subnet][router];
-      for(int c = 0; c < _classes; ++c) {
-	received_flits[(c*_subnets+subnet)*_routers+router] = r->GetReceivedFlits(c);
-	sent_flits[(c*_subnets+subnet)*_routers+router] = r->GetSentFlits(c);
-	stored_flits[(c*_subnets+subnet)*_routers+router] = r->GetStoredFlits(c);
-	active_packets[(c*_subnets+subnet)*_routers+router] = r->GetActivePackets(c);
+  for(int c = 0; c < _classes; ++c) {
+    for(int subnet = 0; subnet < _subnets; ++subnet) {
+      for(int router = 0; router < _routers; ++router) {
+	char trail_char = 
+	  ((router == _routers - 1) && (subnet == _subnets - 1) && (c == _classes - 1)) ? '\n' : ',';
+	Router * const r = _router[subnet][router];
+	if(_received_flits_out) *_received_flits_out << r->GetReceivedFlits(c) << trail_char;
+	if(_sent_flits_out) *_sent_flits_out << r->GetSentFlits(c) << trail_char;
+	if(_stored_flits_out) *_stored_flits_out << r->GetStoredFlits(c) << trail_char;
+	if(_active_packets_out) *_active_packets_out << r->GetActivePackets(c) << trail_char;
 	r->ResetFlowStats(c);
       }
     }
-#endif
   }
-  
-#ifdef TRACK_FLOWS
-  if(_received_flits_out) *_received_flits_out << received_flits << endl;
-  if(_stored_flits_out) *_stored_flits_out << stored_flits << endl;
-  if(_sent_flits_out) *_sent_flits_out << sent_flits << endl;
-  if(_active_packets_out) *_active_packets_out << active_packets << endl;
+  if(_received_flits_out) *_received_flits_out << flush;
+  if(_sent_flits_out) *_sent_flits_out << flush;
+  if(_stored_flits_out) *_stored_flits_out << flush;
+  if(_active_packets_out) *_active_packets_out << flush;
 #endif
 
   ++_time;
