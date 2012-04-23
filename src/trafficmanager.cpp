@@ -1397,11 +1397,16 @@ void TrafficManager::_DisplayOverallClassStats( int c, ostream & os ) const {
      << " (" << _total_sims << " samples)" << endl;
   
 #ifdef TRACK_STALLS
-  os << "Overall buffer busy stalls = " << (double)_overall_buffer_busy_stalls[c] / (double)_total_sims << endl
-     << "Overall buffer conflict stalls = " << (double)_overall_buffer_conflict_stalls[c] / (double)_total_sims << endl
-     << "Overall buffer full stalls = " << (double)_overall_buffer_full_stalls[c] / (double)_total_sims << endl
-     << "Overall buffer reserved stalls = " << (double)_overall_buffer_reserved_stalls[c] / (double)_total_sims << endl
-     << "Overall crossbar conflict stalls = " << (double)_overall_crossbar_conflict_stalls[c] / (double)_total_sims << endl;
+  os << "Overall buffer busy stalls = " << (double)_overall_buffer_busy_stalls[c] / (double)_total_sims
+     << " (" << _total_sims << " samples)" << endl
+     << "Overall buffer conflict stalls = " << (double)_overall_buffer_conflict_stalls[c] / (double)_total_sims
+     << " (" << _total_sims << " samples)" << endl
+     << "Overall buffer full stalls = " << (double)_overall_buffer_full_stalls[c] / (double)_total_sims
+     << " (" << _total_sims << " samples)" << endl
+     << "Overall buffer reserved stalls = " << (double)_overall_buffer_reserved_stalls[c] / (double)_total_sims
+     << " (" << _total_sims << " samples)" << endl
+     << "Overall crossbar conflict stalls = " << (double)_overall_crossbar_conflict_stalls[c] / (double)_total_sims
+     << " (" << _total_sims << " samples)" << endl;
 #endif
 
 }
