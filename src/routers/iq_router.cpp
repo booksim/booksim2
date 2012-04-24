@@ -2246,20 +2246,14 @@ void IQRouter::Display( ostream & os ) const
   }
 }
 
-int IQRouter::GetUsedCredit(int out, int vc_begin, int vc_end ) const
+int IQRouter::GetUsedCredit(int o) const
 {
-  assert((out >= 0) && (out < _outputs));
-  assert(vc_begin < _vcs);
-  assert(vc_end < _vcs);
-  assert(vc_end >= vc_begin);
+  assert((o >= 0) && (o < _outputs));
 
-  BufferState const * const dest_buf = _next_buf[out];
+  BufferState const * const dest_buf = _next_buf[o];
   
-  int const start = (vc_begin >= 0) ? vc_begin : 0;
-  int const end = (vc_begin >= 0) ? vc_end : (_vcs - 1);
-
   int size = 0;
-  for (int v = start; v <= end; v++)  {
+  for (int v = 0; v < _vcs; ++v)  {
     size+= dest_buf->Occupancy(v);
   }
   return size;
