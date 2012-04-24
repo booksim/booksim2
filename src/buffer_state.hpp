@@ -154,6 +154,12 @@ class BufferState : public Module {
   vector<int> _last_id;
   vector<int> _last_pid;
 
+#ifdef TRACK_BUFFERS
+  int _classes;
+  vector<queue<int> > _outstanding_classes;
+  vector<int> _class_occupancy;
+#endif
+
 public:
 
   BufferState( const Configuration& config, 
@@ -186,6 +192,13 @@ public:
     return _vc_occupancy[vc];
   }
   
+#ifdef TRACK_BUFFERS
+  inline int OccupancyForClass(int c) const {
+    assert((c >= 0) && (c < _classes));
+    return _class_occupancy[c];
+  }
+#endif
+
   void Display( ostream & os = cout ) const;
 };
 
