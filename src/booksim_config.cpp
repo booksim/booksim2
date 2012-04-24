@@ -283,10 +283,12 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField("stats_out", "");
 
-  AddStrField("active_packets_out", "");
+  AddStrField("injected_flits_out", "");
   AddStrField("received_flits_out", "");
-  AddStrField("sent_flits_out", "");
   AddStrField("stored_flits_out", "");
+  AddStrField("sent_flits_out", "");
+  AddStrField("ejected_flits_out", "");
+  AddStrField("active_packets_out", "");
 
   // batch only -- packet sequence numbers
   AddStrField("sent_packets_out", "");
