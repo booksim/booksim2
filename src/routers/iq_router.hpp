@@ -106,6 +106,10 @@ class IQRouter : public Router {
   vector<vector<int> > _noq_next_vc_start;
   vector<vector<int> > _noq_next_vc_end;
 
+#ifdef TRACK_FLOWS
+  vector<vector<queue<int> > > _outstanding_classes;
+#endif
+
   bool _ReceiveFlits( );
   bool _ReceiveCredits( );
 
