@@ -1142,10 +1142,12 @@ void TrafficManager::_Step( )
       }
     }
   }
+#if TRACK_FLOWS
   if(_received_flits_out) *_received_flits_out << flush;
   if(_sent_flits_out) *_sent_flits_out << flush;
   if(_stored_flits_out) *_stored_flits_out << flush;
   if(_active_packets_out) *_active_packets_out << flush;
+#endif
 #endif
 
   ++_time;
