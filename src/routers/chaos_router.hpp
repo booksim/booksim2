@@ -117,6 +117,11 @@ public:
   virtual int GetUsedCredit(int out) const {return 0;}
   virtual int GetBufferOccupancy(int i) const {return 0;}
 
+#ifdef TRACK_BUFFERS
+  virtual int GetUsedCreditForClass(int output, int cl) const {return 0;}
+  virtual int GetBufferOccupancyForClass(int input, int cl) const {return 0;}
+#endif
+
   void Display( ostream & os = cout ) const;
 };
 

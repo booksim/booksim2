@@ -123,6 +123,11 @@ public:
   virtual int GetUsedCredit(int o) const = 0;
   virtual int GetBufferOccupancy(int i) const = 0;
 
+#ifdef TRACK_BUFFERS
+  virtual int GetUsedCreditForClass(int output, int cl) const = 0;
+  virtual int GetBufferOccupancyForClass(int input, int cl) const = 0;
+#endif
+
 #ifdef TRACK_FLOWS
   inline vector<int> const & GetReceivedFlits(int c) const {
     assert((c >= 0) && (c < _classes));
