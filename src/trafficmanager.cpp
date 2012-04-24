@@ -1141,13 +1141,11 @@ void TrafficManager::_UpdateOverallStats() {
     for(int subnet = 0; subnet < _subnets; ++subnet) {
       for(int router = 0; router < _routers; ++router) {
 	Router const * const r = _router[subnet][router];
-	for(int c = 0; c < _classes; ++c) {
-	  _overall_buffer_busy_stalls[c] += r->GetBufferBusyStalls(c);
-	  _overall_buffer_conflict_stalls[c] += r->GetBufferConflictStalls(c);
-	  _overall_buffer_full_stalls[c] += r->GetBufferFullStalls(c);
-	  _overall_buffer_reserved_stalls[c] += r->GetBufferReservedStalls(c);
-	  _overall_crossbar_conflict_stalls[c] += r->GetCrossbarConflictStalls(c);
-	}
+	_overall_buffer_busy_stalls[c] += r->GetBufferBusyStalls(c);
+	_overall_buffer_conflict_stalls[c] += r->GetBufferConflictStalls(c);
+	_overall_buffer_full_stalls[c] += r->GetBufferFullStalls(c);
+	_overall_buffer_reserved_stalls[c] += r->GetBufferReservedStalls(c);
+	_overall_crossbar_conflict_stalls[c] += r->GetCrossbarConflictStalls(c);
       }
     }
 #endif
