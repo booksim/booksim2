@@ -70,8 +70,14 @@ TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
   _classes          = config.GetInt( "classes" );
 
 #ifdef TRACK_FLOWS
-  _received_flits.resize(inputs, 0);
-  _sent_flits.resize(inputs, 0);
+  _received_flits.resize(_classes);
+  for(int c = 0; c < _classes; ++c)
+    _received_flits[c].resize(_inputs);
+  _stored_flits.resize(_classes);
+  _sent_flits.resize(_classes);
+  for(int c = 0; c < _classes; ++c)
+    _sent_flits[c].resize(_outputs);
+  _active_packets.resize(_classes);
 #endif
 
 #ifdef TRACK_STALLS
