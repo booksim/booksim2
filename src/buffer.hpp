@@ -43,6 +43,10 @@ class Buffer : public Module {
 
   vector<VC*> _vc;
 
+#ifdef TRACK_BUFFERS
+  vector<int> _class_occupancy;
+#endif
+
 public:
   
   Buffer( const Configuration& config, int outputs,
@@ -54,6 +58,11 @@ public:
   inline Flit *RemoveFlit( int vc )
   {
     --_occupancy;
+#ifdef TRACK_BUFFERS
+    int cl = _vc[vc]->FrontFlit()->cl;
+    assert(_class_occupancy[cl] > 0);
+    --_class_occupancy[cl];
+#endif
     return _vc[vc]->RemoveFlit( );
   }
   
@@ -138,6 +147,13 @@ public:
   {
     return _vc[vc]->GetOccupancy( );
   }
+
+#ifdef TRACK_BUFFERS
+  inline int GetOccupancyForClass(int c) const
+  {
+    return _class_occupancy[c];
+  }
+#endif
 
   void Display( ostream & os = cout ) const;
 };

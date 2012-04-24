@@ -162,6 +162,7 @@ bool BatchTrafficManager::_SingleSim( )
 
     cout << _sim_state << endl;
 
+    UpdateStats();
     DisplayStats();
         
     ++batch_index;

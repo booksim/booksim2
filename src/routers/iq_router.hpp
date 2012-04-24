@@ -156,8 +156,13 @@ public:
   
   void Display( ostream & os = cout ) const;
 
-  virtual int GetUsedCredit(int out, int vc_begin = -1, int vc_end = -1 ) const;
-  virtual int GetBuffer(int i) const;
+  virtual int GetUsedCredit(int o) const;
+  virtual int GetBufferOccupancy(int i) const;
+
+#ifdef TRACK_BUFFERS
+  virtual int GetUsedCreditForClass(int output, int cl) const;
+  virtual int GetBufferOccupancyForClass(int input, int cl) const;
+#endif
 
   SwitchMonitor const * const GetSwitchMonitor() const {return _switchMonitor;}
   BufferMonitor const * const GetBufferMonitor() const {return _bufferMonitor;}

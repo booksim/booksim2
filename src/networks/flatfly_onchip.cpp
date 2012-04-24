@@ -614,7 +614,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       cout<<"Router "<<rID<<endl;
       cout<<"Input Channel "<<in_channel<<endl;
       //need to modify router to report the buffere depth
-      load +=r->GetBuffer(in_channel);
+      load +=r->GetBufferOccupancy(in_channel);
       cout<<"Rload "<<load<<endl;
     }
 
@@ -800,7 +800,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       cout<<"Router "<<rID<<endl;
       cout<<"Input Channel "<<in_channel<<endl;
       //need to modify router to report the buffere depth
-      load +=r->GetBuffer(in_channel);
+      load +=r->GetBufferOccupancy(in_channel);
       cout<<"Rload "<<load<<endl;
     }
 
@@ -961,7 +961,7 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       cout<<"Router "<<rID<<endl;
       cout<<"Input Channel "<<in_channel<<endl;
       //need to modify router to report the buffere depth
-      load +=r->GetBuffer(in_channel);
+      load +=r->GetBufferOccupancy(in_channel);
       cout<<"Rload "<<load<<endl;
     }
 

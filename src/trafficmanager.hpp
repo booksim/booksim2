@@ -244,6 +244,7 @@ public:
 
   bool Run( );
 
+  void UpdateStats();
   void DisplayStats(ostream & os = cout) const;
   void WriteStats(ostream & os = cout) const;
   void DisplayOverallStats(ostream & os = cout) const;

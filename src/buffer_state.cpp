@@ -494,6 +494,12 @@ BufferState::BufferState( const Configuration& config, Module *parent, const str
 
   _last_id.resize(_vcs, -1);
   _last_pid.resize(_vcs, -1);
+
+#ifdef TRACK_BUFFERS
+  _classes = config.GetInt("classes");
+  _outstanding_classes.resize(_vcs);
+  _class_occupancy.resize(_classes, 0);
+#endif
 }
 
 BufferState::~BufferState()
@@ -533,6 +539,15 @@ void BufferState::ProcessCredit( Credit const * const c )
       _in_use[vc] = false;
     }
 
+#ifdef TRACK_BUFFERS
+    assert(!_outstanding_classes[vc].empty());
+    int cl = _outstanding_classes[vc].front();
+    _outstanding_classes[vc].pop();
+    assert((cl >= 0) && (cl < _classes));
+    assert(_class_occupancy[cl] > 0);
+    --_class_occupancy[cl];
+#endif
+
     _buffer_policy->FreeSlotFor(vc);
 
     ++iter;
@@ -555,6 +570,11 @@ void BufferState::SendingFlit( Flit const * const f )
   
   _buffer_policy->SendingFlit(f);
   
+#ifdef TRACK_BUFFERS
+  _outstanding_classes[vc].push(f->cl);
+  ++_class_occupancy[f->cl];
+#endif
+
   if ( f->tail ) {
     _tail_sent[vc] = true;
     

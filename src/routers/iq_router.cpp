@@ -2246,34 +2246,32 @@ void IQRouter::Display( ostream & os ) const
   }
 }
 
-int IQRouter::GetUsedCredit(int out, int vc_begin, int vc_end ) const
+int IQRouter::GetUsedCredit(int o) const
 {
-  assert((out >= 0) && (out < _outputs));
-  assert(vc_begin < _vcs);
-  assert(vc_end < _vcs);
-  assert(vc_end >= vc_begin);
-
-  BufferState const * const dest_buf = _next_buf[out];
-  
-  int const start = (vc_begin >= 0) ? vc_begin : 0;
-  int const end = (vc_begin >= 0) ? vc_end : (_vcs - 1);
-
-  int size = 0;
-  for (int v = start; v <= end; v++)  {
-    size+= dest_buf->Occupancy(v);
-  }
-  return size;
+  assert((o >= 0) && (o < _outputs));
+  BufferState const * const dest_buf = _next_buf[o];
+  return dest_buf->Occupancy();
 }
 
-int IQRouter::GetBuffer(int i) const {
+int IQRouter::GetBufferOccupancy(int i) const {
   assert(i >= 0 && i < _inputs);
-
-  int size = 0;
-  for(int vc = 0; vc < _vcs; ++vc) {
-    size += _buf[i]->GetOccupancy(vc);
-  }
-  return size;
+  return _buf[i]->GetOccupancy();
 }
+
+#ifdef TRACK_BUFFERS
+int IQRouter::GetUsedCreditForClass(int output, int cl) const
+{
+  assert((output >= 0) && (output < _outputs));
+  BufferState const * const dest_buf = _next_buf[output];
+  return dest_buf->OccupancyForClass(cl);
+}
+
+int IQRouter::GetBufferOccupancyForClass(int input, int cl) const
+{
+  assert((input >= 0) && (input < _inputs));
+  return _buf[input]->GetOccupancyForClass(cl);
+}
+#endif
 
 void IQRouter::_UpdateNOQ(int input, int vc, Flit const * f) {
   assert(!_routing_delay);

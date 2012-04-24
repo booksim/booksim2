@@ -148,6 +148,7 @@ bool SteadyStateTrafficManager::_SingleSim( )
     
     cout << _sim_state << endl;
     
+    UpdateStats();
     DisplayStats();
     
     int lat_exc_class = -1;

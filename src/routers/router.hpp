@@ -120,8 +120,13 @@ public:
   inline int GetID( ) const {return _id;}
 
 
-  virtual int GetUsedCredit(int out, int vc_begin = -1, int vc_end = -1 ) const = 0;
-  virtual int GetBuffer(int i) const = 0;
+  virtual int GetUsedCredit(int o) const = 0;
+  virtual int GetBufferOccupancy(int i) const = 0;
+
+#ifdef TRACK_BUFFERS
+  virtual int GetUsedCreditForClass(int output, int cl) const = 0;
+  virtual int GetBufferOccupancyForClass(int input, int cl) const = 0;
+#endif
 
 #ifdef TRACK_FLOWS
   inline vector<int> const & GetReceivedFlits(int c) const {

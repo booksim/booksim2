@@ -105,6 +105,7 @@ bool WorkloadTrafficManager::_SingleSim( )
       _Step();
       
       if((_time % _sample_period) == 0) {
+	UpdateStats();
 	DisplayStats();
       }
 
@@ -128,6 +129,7 @@ bool WorkloadTrafficManager::_SingleSim( )
     _Step();
     
     if((_time % _sample_period) == 0) {
+      UpdateStats();
       DisplayStats();
     }
 

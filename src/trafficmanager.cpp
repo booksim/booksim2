@@ -843,12 +843,11 @@ void TrafficManager::_Step( )
     _net[subnet]->WriteOutputs( );
   }
 
-#if defined(TRACK_FLOWS) || defined(TRACK_STALLS)
+#ifdef TRACK_FLOWS
   for(int c = 0; c < _classes; ++c) {
     for(int subnet = 0; subnet < _subnets; ++subnet) {
       for(int router = 0; router < _routers; ++router) {
 	Router * const r = _router[subnet][router];
-#ifdef TRACK_FLOWS
 	char trail_char = 
 	  ((router == _routers - 1) && (subnet == _subnets - 1) && (c == _classes - 1)) ? '\n' : ',';
 	if(_received_flits_out) *_received_flits_out << r->GetReceivedFlits(c) << trail_char;
@@ -856,15 +855,6 @@ void TrafficManager::_Step( )
 	if(_stored_flits_out) *_stored_flits_out << r->GetStoredFlits(c) << trail_char;
 	if(_active_packets_out) *_active_packets_out << r->GetActivePackets(c) << trail_char;
 	r->ResetFlowStats(c);
-#endif
-#ifdef TRACK_STALLS
-	_buffer_busy_stalls[c][subnet*_routers+router] += r->GetBufferBusyStalls(c);
-	_buffer_conflict_stalls[c][subnet*_routers+router] += r->GetBufferConflictStalls(c);
-	_buffer_full_stalls[c][subnet*_routers+router] += r->GetBufferFullStalls(c);
-	_buffer_reserved_stalls[c][subnet*_routers+router] += r->GetBufferReservedStalls(c);
-	_crossbar_conflict_stalls[c][subnet*_routers+router] += r->GetCrossbarConflictStalls(c);
-	r->ResetStallStats(c);
-#endif
       }
     }
   }
@@ -1184,6 +1174,24 @@ void TrafficManager::_UpdateOverallStats() {
   }
 }
 
+void TrafficManager::UpdateStats() {
+#ifdef TRACK_STALLS
+  for(int c = 0; c < _classes; ++c) {
+    for(int subnet = 0; subnet < _subnets; ++subnet) {
+      for(int router = 0; router < _routers; ++router) {
+	Router * const r = _router[subnet][router];
+	_buffer_busy_stalls[c][subnet*_routers+router] += r->GetBufferBusyStalls(c);
+	_buffer_conflict_stalls[c][subnet*_routers+router] += r->GetBufferConflictStalls(c);
+	_buffer_full_stalls[c][subnet*_routers+router] += r->GetBufferFullStalls(c);
+	_buffer_reserved_stalls[c][subnet*_routers+router] += r->GetBufferReservedStalls(c);
+	_crossbar_conflict_stalls[c][subnet*_routers+router] += r->GetCrossbarConflictStalls(c);
+	r->ResetStallStats(c);
+      }
+    }
+  }
+#endif
+}
+
 void TrafficManager::DisplayStats(ostream & os) const {
   os << "===== Time: " << _time << " =====" << endl;
 
@@ -1274,6 +1282,29 @@ void TrafficManager::_DisplayClassStats(int c, ostream & os) const {
   os << "Total in-flight flits = " << _total_in_flight_flits[c].size()
        << " (" << _measured_in_flight_flits[c].size() << " measured)"
        << endl;
+
+#ifdef TRACK_STALLS
+  _ComputeStats(_buffer_busy_stalls[c], &count_sum);
+  rate_sum = (double)count_sum / time_delta;
+  rate_avg = rate_sum / (double)(_subnets*_routers);
+  os << "Buffer busy stall rate = " << rate_avg << endl;
+  _ComputeStats(_buffer_conflict_stalls[c], &count_sum);
+  rate_sum = (double)count_sum / time_delta;
+  rate_avg = rate_sum / (double)(_subnets*_routers);
+  os << "Buffer conflict stall rate = " << rate_avg << endl;
+  _ComputeStats(_buffer_full_stalls[c], &count_sum);
+  rate_sum = (double)count_sum / time_delta;
+  rate_avg = rate_sum / (double)(_subnets*_routers);
+  os << "Buffer full stall rate = " << rate_avg << endl;
+  _ComputeStats(_buffer_reserved_stalls[c], &count_sum);
+  rate_sum = (double)count_sum / time_delta;
+  rate_avg = rate_sum / (double)(_subnets*_routers);
+  os << "Buffer reserved stall rate = " << rate_avg << endl;
+  _ComputeStats(_crossbar_conflict_stalls[c], &count_sum);
+  rate_sum = (double)count_sum / time_delta;
+  rate_avg = rate_sum / (double)(_subnets*_routers);
+  os << "Crossbar conflict stall rate = " << rate_avg << endl;
+#endif
 }
 
 void TrafficManager::WriteStats(ostream & os) const {
