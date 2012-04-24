@@ -76,7 +76,6 @@ protected:
   vector<vector<int> > _received_flits;
   vector<vector<int> > _stored_flits;
   vector<vector<int> > _sent_flits;
-
   vector<vector<int> > _active_packets;
 #endif
 
