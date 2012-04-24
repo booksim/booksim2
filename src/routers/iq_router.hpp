@@ -156,7 +156,7 @@ public:
   
   void Display( ostream & os = cout ) const;
 
-  virtual int GetUsedCredit(int out, int vc_begin = -1, int vc_end = -1 ) const;
+  virtual int GetUsedCredit(int o) const;
   virtual int GetBuffer(int i) const;
 
   SwitchMonitor const * const GetSwitchMonitor() const {return _switchMonitor;}
