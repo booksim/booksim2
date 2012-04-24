@@ -1637,10 +1637,10 @@ void TrafficManager::WriteStats(ostream & os) const {
     //c+1 due to matlab array starting at 1
     os << "plat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
        << "plat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
-       << "nlat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
-       << "nlat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
-       << "flat(" << c+1 << ") = " << _plat_stats[c]->Average() << ";" << endl
-       << "flat_hist(" << c+1 << ",:) = " << *_plat_stats[c] << ";" << endl
+       << "nlat(" << c+1 << ") = " << _nlat_stats[c]->Average() << ";" << endl
+       << "nlat_hist(" << c+1 << ",:) = " << *_nlat_stats[c] << ";" << endl
+       << "flat(" << c+1 << ") = " << _flat_stats[c]->Average() << ";" << endl
+       << "flat_hist(" << c+1 << ",:) = " << *_flat_stats[c] << ";" << endl
        << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
        << "hops(" << c+1 << ",:) = " << *_hop_stats[c] << ";" << endl
        << "pair_sent(" << c+1 << ",:) = [ ";
