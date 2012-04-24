@@ -2249,24 +2249,13 @@ void IQRouter::Display( ostream & os ) const
 int IQRouter::GetUsedCredit(int o) const
 {
   assert((o >= 0) && (o < _outputs));
-
   BufferState const * const dest_buf = _next_buf[o];
-  
-  int size = 0;
-  for (int v = 0; v < _vcs; ++v)  {
-    size+= dest_buf->Occupancy(v);
-  }
-  return size;
+  return dest_buf->Occupancy();
 }
 
 int IQRouter::GetBufferOccupancy(int i) const {
   assert(i >= 0 && i < _inputs);
-
-  int size = 0;
-  for(int vc = 0; vc < _vcs; ++vc) {
-    size += _buf[i]->GetOccupancy(vc);
-  }
-  return size;
+  return _buf[i]->GetOccupancy();
 }
 
 void IQRouter::_UpdateNOQ(int input, int vc, Flit const * f) {
