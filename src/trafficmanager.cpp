@@ -1737,9 +1737,6 @@ void TrafficManager::WriteStats(ostream & os) const {
 }
 
 void TrafficManager::UpdateStats() {
-#ifdef TRACK_FLOWS
-  double time_delta = (double)(_time - _reset_time);
-#endif
 #if defined(TRACK_FLOWS) || defined(TRACK_STALLS)
   for(int c = 0; c < _classes; ++c) {
     for(int subnet = 0; subnet < _subnets; ++subnet) {
