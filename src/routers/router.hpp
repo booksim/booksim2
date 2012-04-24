@@ -144,8 +144,8 @@ public:
 
   inline void ResetFlowStats(int c) {
     assert((c >= 0) && (c < _classes));
-    _received_flits[c].assign(_received_flits.size(), 0);
-    _sent_flits[c].assign(_sent_flits.size(), 0);
+    _received_flits[c].assign(_received_flits[c].size(), 0);
+    _sent_flits[c].assign(_sent_flits[c].size(), 0);
   }
 #endif
 

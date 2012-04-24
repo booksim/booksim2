@@ -1124,7 +1124,7 @@ void TrafficManager::_Step( )
 	Router * const r = _router[subnet][router];
 #ifdef TRACK_FLOWS
 	char trail_char = 
-	  ((router == _routers - 1) && (subnet == _subnets - 1)) ? '\n' : ',';
+	  ((router == _routers - 1) && (subnet == _subnets - 1) && (c == _classes - 1)) ? '\n' : ',';
 	if(_received_flits_out) *_received_flits_out << r->GetReceivedFlits(c) << trail_char;
 	if(_sent_flits_out) *_sent_flits_out << r->GetSentFlits(c) << trail_char;
 	if(_stored_flits_out) *_stored_flits_out << r->GetStoredFlits(c) << trail_char;
