@@ -237,8 +237,6 @@ protected:
 
 #ifdef TRACK_FLOWS
   ostream * _active_packets_out;
-  ostream * _injected_flits_out;
-  ostream * _ejected_flits_out;
   ostream * _received_flits_out;
   ostream * _sent_flits_out;
   ostream * _stored_flits_out;
