@@ -2258,6 +2258,21 @@ int IQRouter::GetBufferOccupancy(int i) const {
   return _buf[i]->GetOccupancy();
 }
 
+#ifdef TRACK_BUFFERS
+int IQRouter::GetUsedCreditForClass(int output, int cl) const
+{
+  assert((output >= 0) && (output < _outputs));
+  BufferState const * const dest_buf = _next_buf[output];
+  return dest_buf->OccupancyForClass(cl);
+}
+
+int IQRouter::GetBufferOccupancyForClass(int input, int cl) const
+{
+  assert((input >= 0) && (input < _inputs));
+  return _buf[input]->GetOccupancyForClass(cl);
+}
+#endif
+
 void IQRouter::_UpdateNOQ(int input, int vc, Flit const * f) {
   assert(!_routing_delay);
   assert(f);
