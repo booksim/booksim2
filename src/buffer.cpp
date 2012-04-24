@@ -49,6 +49,11 @@ Module( parent, name ), _occupancy(0)
     vc_name << "vc_" << i;
     _vc[i] = new VC(config, outputs, this, vc_name.str( ) );
   }
+
+#ifdef TRACK_BUFFERS
+  int classes = config.GetInt("classes");
+  _class_occupancy.resize(classes, 0);
+#endif
 }
 
 Buffer::~Buffer()
@@ -65,6 +70,9 @@ void Buffer::AddFlit( int vc, Flit *f )
   }
   ++_occupancy;
   _vc[vc]->AddFlit(f);
+#ifdef TRACK_BUFFERS
+  ++_class_occupancy[f->cl];
+#endif
 }
 
 void Buffer::Display( ostream & os ) const
