@@ -187,7 +187,11 @@ public:
     return !_in_use[vc];
   }
   
-  inline int Occupancy(int vc = 0) const {
+  inline int Occupancy() const {
+    return _occupancy;
+  }
+
+  inline int Occupancy(int vc) const {
     assert((vc >= 0) && (vc < _vcs));
     return _vc_occupancy[vc];
   }
