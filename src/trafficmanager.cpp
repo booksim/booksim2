@@ -334,11 +334,13 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   
 #ifdef TRACK_FLOWS
-  string active_packets_out_file = config.GetStr( "active_packets_out" );
-  if(active_packets_out_file == "") {
-    _active_packets_out = NULL;
+  _injected_flits.resize(_classes, vector<int>(_nodes, 0));
+  _ejected_flits.resize(_classes, vector<int>(_nodes, 0));
+  string injected_flits_out_file = config.GetStr( "injected_flits_out" );
+  if(injected_flits_out_file == "") {
+    _injected_flits_out = NULL;
   } else {
-    _active_packets_out = new ofstream(active_packets_out_file.c_str());
+    _injected_flits_out = new ofstream(injected_flits_out_file.c_str());
   }
   string received_flits_out_file = config.GetStr( "received_flits_out" );
   if(received_flits_out_file == "") {
@@ -346,17 +348,29 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   } else {
     _received_flits_out = new ofstream(received_flits_out_file.c_str());
   }
+  string stored_flits_out_file = config.GetStr( "stored_flits_out" );
+  if(stored_flits_out_file == "") {
+    _stored_flits_out = NULL;
+  } else {
+    _stored_flits_out = new ofstream(stored_flits_out_file.c_str());
+  }
   string sent_flits_out_file = config.GetStr( "sent_flits_out" );
   if(sent_flits_out_file == "") {
     _sent_flits_out = NULL;
   } else {
     _sent_flits_out = new ofstream(sent_flits_out_file.c_str());
   }
-  string stored_flits_out_file = config.GetStr( "stored_flits_out" );
-  if(stored_flits_out_file == "") {
-    _stored_flits_out = NULL;
+  string ejected_flits_out_file = config.GetStr( "ejected_flits_out" );
+  if(ejected_flits_out_file == "") {
+    _ejected_flits_out = NULL;
   } else {
-    _stored_flits_out = new ofstream(stored_flits_out_file.c_str());
+    _ejected_flits_out = new ofstream(ejected_flits_out_file.c_str());
+  }
+  string active_packets_out_file = config.GetStr( "active_packets_out" );
+  if(active_packets_out_file == "") {
+    _active_packets_out = NULL;
+  } else {
+    _active_packets_out = new ofstream(active_packets_out_file.c_str());
   }
 #endif
 
@@ -391,10 +405,12 @@ TrafficManager::~TrafficManager( )
   if(_stats_out && (_stats_out != &cout)) delete _stats_out;
 
 #ifdef TRACK_FLOWS
-  if(_active_packets_out) delete _active_packets_out;
+  if(_injected_flits_out) delete _injected_flits_out;
   if(_received_flits_out) delete _received_flits_out;
-  if(_sent_flits_out) delete _sent_flits_out;
   if(_stored_flits_out) delete _stored_flits_out;
+  if(_sent_flits_out) delete _sent_flits_out;
+  if(_ejected_flits_out) delete _ejected_flits_out;
+  if(_active_packets_out) delete _active_packets_out;
 #endif
 
   Flit::FreeAll();
@@ -812,6 +828,10 @@ void TrafficManager::_Step( )
 	  }
 	}
 	
+#ifdef TRACK_FLOWS
+	++_injected_flits[c][n];
+#endif
+	
 	_net[subnet]->WriteFlit(f, n);
 
       }	
@@ -835,6 +855,11 @@ void TrafficManager::_Step( )
 	Credit * const c = Credit::New();
 	c->vc.insert(f->vc);
 	_net[subnet]->WriteCredit(c, n);
+	
+#ifdef TRACK_FLOWS
+	++_ejected_flits[f->cl][n];
+#endif
+	
 	_RetireFlit(f, n);
       }
     }
@@ -842,27 +867,6 @@ void TrafficManager::_Step( )
     _net[subnet]->Evaluate( );
     _net[subnet]->WriteOutputs( );
   }
-
-#ifdef TRACK_FLOWS
-  for(int c = 0; c < _classes; ++c) {
-    for(int subnet = 0; subnet < _subnets; ++subnet) {
-      for(int router = 0; router < _routers; ++router) {
-	Router * const r = _router[subnet][router];
-	char trail_char = 
-	  ((router == _routers - 1) && (subnet == _subnets - 1) && (c == _classes - 1)) ? '\n' : ',';
-	if(_received_flits_out) *_received_flits_out << r->GetReceivedFlits(c) << trail_char;
-	if(_sent_flits_out) *_sent_flits_out << r->GetSentFlits(c) << trail_char;
-	if(_stored_flits_out) *_stored_flits_out << r->GetStoredFlits(c) << trail_char;
-	if(_active_packets_out) *_active_packets_out << r->GetActivePackets(c) << trail_char;
-	r->ResetFlowStats(c);
-      }
-    }
-  }
-  if(_received_flits_out) *_received_flits_out << flush;
-  if(_sent_flits_out) *_sent_flits_out << flush;
-  if(_stored_flits_out) *_stored_flits_out << flush;
-  if(_active_packets_out) *_active_packets_out << flush;
-#endif
 
   ++_time;
   assert(_time);
@@ -1175,20 +1179,48 @@ void TrafficManager::_UpdateOverallStats() {
 }
 
 void TrafficManager::UpdateStats() {
-#ifdef TRACK_STALLS
+#if defined(TRACK_FLOWS) || defined(TRACK_STALLS)
   for(int c = 0; c < _classes; ++c) {
+#ifdef TRACK_FLOWS
+    {
+      char trail_char = (c == _classes - 1) ? '\n' : ',';
+      if(_injected_flits_out) *_injected_flits_out << _injected_flits[c] << trail_char;
+      _injected_flits[c].assign(_nodes, 0);
+      if(_ejected_flits_out) *_ejected_flits_out << _ejected_flits[c] << trail_char;
+      _ejected_flits[c].assign(_nodes, 0);
+    }
+#endif
     for(int subnet = 0; subnet < _subnets; ++subnet) {
       for(int router = 0; router < _routers; ++router) {
 	Router * const r = _router[subnet][router];
+#ifdef TRACK_FLOWS
+	char trail_char = 
+	  ((router == _routers - 1) && (subnet == _subnets - 1) && (c == _classes - 1)) ? '\n' : ',';
+	if(_received_flits_out) *_received_flits_out << r->GetReceivedFlits(c) << trail_char;
+	if(_stored_flits_out) *_stored_flits_out << r->GetStoredFlits(c) << trail_char;
+	if(_sent_flits_out) *_sent_flits_out << r->GetSentFlits(c) << trail_char;
+	if(_active_packets_out) *_active_packets_out << r->GetActivePackets(c) << trail_char;
+	r->ResetFlowStats(c);
+#endif
+#ifdef TRACK_STALLS
 	_buffer_busy_stalls[c][subnet*_routers+router] += r->GetBufferBusyStalls(c);
 	_buffer_conflict_stalls[c][subnet*_routers+router] += r->GetBufferConflictStalls(c);
 	_buffer_full_stalls[c][subnet*_routers+router] += r->GetBufferFullStalls(c);
 	_buffer_reserved_stalls[c][subnet*_routers+router] += r->GetBufferReservedStalls(c);
 	_crossbar_conflict_stalls[c][subnet*_routers+router] += r->GetCrossbarConflictStalls(c);
 	r->ResetStallStats(c);
+#endif
       }
     }
   }
+#ifdef TRACK_FLOWS
+  if(_injected_flits_out) *_injected_flits_out << flush;
+  if(_received_flits_out) *_received_flits_out << flush;
+  if(_stored_flits_out) *_stored_flits_out << flush;
+  if(_sent_flits_out) *_sent_flits_out << flush;
+  if(_ejected_flits_out) *_ejected_flits_out << flush;
+  if(_active_packets_out) *_active_packets_out << flush;
+#endif
 #endif
 }
 
