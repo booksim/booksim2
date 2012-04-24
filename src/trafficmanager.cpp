@@ -1115,34 +1115,33 @@ void TrafficManager::_Step( )
     flits[subnet].clear();
     _net[subnet]->Evaluate( );
     _net[subnet]->WriteOutputs( );
+  }
 
 #if defined(TRACK_FLOWS) || defined(TRACK_STALLS)
-    for(int router = 0; router < _routers; ++router) {
-      Router * const r = _router[subnet][router];
+  for(int c = 0; c < _classes; ++c) {
+    for(int subnet = 0; subnet < _subnets; ++subnet) {
+      for(int router = 0; router < _routers; ++router) {
+	Router * const r = _router[subnet][router];
 #ifdef TRACK_FLOWS
-      char trail_char = 
-	((router == _routers - 1) && (subnet == _subnets - 1)) ? '\n' : ',';
-      if(_received_flits_out) *_received_flits_out << r->GetReceivedFlits() << trail_char;
-      if(_sent_flits_out) *_sent_flits_out << r->GetSentFlits() << trail_char;
-      if(_stored_flits_out) *_stored_flits_out << r->GetStoredFlits() << trail_char;
-      if(_active_packets_out) *_active_packets_out << r->GetActivePackets() << trail_char;
-      r->ResetFlowStats();
+	char trail_char = 
+	  ((router == _routers - 1) && (subnet == _subnets - 1)) ? '\n' : ',';
+	if(_received_flits_out) *_received_flits_out << r->GetReceivedFlits(c) << trail_char;
+	if(_sent_flits_out) *_sent_flits_out << r->GetSentFlits(c) << trail_char;
+	if(_stored_flits_out) *_stored_flits_out << r->GetStoredFlits(c) << trail_char;
+	if(_active_packets_out) *_active_packets_out << r->GetActivePackets(c) << trail_char;
+	r->ResetFlowStats(c);
 #endif
 #ifdef TRACK_STALLS
-      for(int c = 0; c < _classes; ++c) {
 	_buffer_busy_stalls[c][subnet*_routers+router] += r->GetBufferBusyStalls(c);
 	_buffer_conflict_stalls[c][subnet*_routers+router] += r->GetBufferConflictStalls(c);
 	_buffer_full_stalls[c][subnet*_routers+router] += r->GetBufferFullStalls(c);
 	_buffer_reserved_stalls[c][subnet*_routers+router] += r->GetBufferReservedStalls(c);
 	_crossbar_conflict_stalls[c][subnet*_routers+router] += r->GetCrossbarConflictStalls(c);
 	r->ResetStallStats(c);
+#endif
       }
-#endif
     }
-#endif
   }
-  
-#ifdef TRACK_FLOWS
   if(_received_flits_out) *_received_flits_out << flush;
   if(_sent_flits_out) *_sent_flits_out << flush;
   if(_stored_flits_out) *_stored_flits_out << flush;

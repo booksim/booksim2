@@ -73,10 +73,10 @@ protected:
   vector<bool>            _channel_faults;
 
 #ifdef TRACK_FLOWS
-  vector<int> _received_flits;
-  vector<int> _stored_flits;
-  vector<int> _sent_flits;
-  vector<int> _active_packets;
+  vector<vector<int> > _received_flits;
+  vector<vector<int> > _stored_flits;
+  vector<vector<int> > _sent_flits;
+  vector<vector<int> > _active_packets;
 #endif
 
 #ifdef TRACK_STALLS
@@ -124,23 +124,28 @@ public:
   virtual int GetBuffer(int i = -1) const = 0;
 
 #ifdef TRACK_FLOWS
-  inline vector<int> const & GetReceivedFlits() const {
-    return _received_flits;
+  inline vector<int> const & GetReceivedFlits(int c) const {
+    assert((c >= 0) && (c < _classes));
+    return _received_flits[c];
   }
-  inline vector<int> const & GetStoredFlits() const {
-    return _stored_flits;
+  inline vector<int> const & GetStoredFlits(int c) const {
+    assert((c >= 0) && (c < _classes));
+    return _stored_flits[c];
   }
-  inline vector<int> const & GetSentFlits() const {
-    return _sent_flits;
+  inline vector<int> const & GetSentFlits(int c) const {
+    assert((c >= 0) && (c < _classes));
+    return _sent_flits[c];
   }
   
-  inline vector<int> const & GetActivePackets() const {
-    return _active_packets;
+  inline vector<int> const & GetActivePackets(int c) const {
+    assert((c >= 0) && (c < _classes));
+    return _active_packets[c];
   }
 
-  inline void ResetFlowStats() {
-    _received_flits.assign(_received_flits.size(), 0);
-    _sent_flits.assign(_sent_flits.size(), 0);
+  inline void ResetFlowStats(int c) {
+    assert((c >= 0) && (c < _classes));
+    _received_flits[c].assign(_received_flits.size(), 0);
+    _sent_flits[c].assign(_sent_flits.size(), 0);
   }
 #endif
 
