@@ -115,7 +115,7 @@ public:
   virtual void WriteOutputs( );
 
   virtual int GetUsedCredit(int out) const {return 0;}
-  virtual int GetBuffer(int i) const {return 0;}
+  virtual int GetBufferOccupancy(int i) const {return 0;}
 
   void Display( ostream & os = cout ) const;
 };
