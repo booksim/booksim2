@@ -2259,7 +2259,7 @@ int IQRouter::GetUsedCredit(int o) const
   return size;
 }
 
-int IQRouter::GetBuffer(int i) const {
+int IQRouter::GetBufferOccupancy(int i) const {
   assert(i >= 0 && i < _inputs);
 
   int size = 0;
