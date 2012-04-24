@@ -185,6 +185,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     _stored_flits[c].resize(_inputs, 0);
     _active_packets[c].resize(_inputs, 0);
   }
+  _outstanding_classes.resize(_outputs, vector<queue<int> >(_vcs));
 #endif
 }
 
@@ -436,6 +437,17 @@ void IQRouter::_InputQueuing( )
     
     BufferState * const dest_buf = _next_buf[output];
     
+#ifdef TRACK_FLOWS
+    for(set<int>::const_iterator iter = c->vc.begin(); iter != c->vc.end(); ++iter) {
+      int const vc = *iter;
+      assert(!_outstanding_classes[output][vc].empty());
+      int cl = _outstanding_classes[output][vc].front();
+      _outstanding_classes[output][vc].pop();
+      assert(_outstanding_flits[cl][output] > 0);
+      --_outstanding_flits[cl][output];
+    }
+#endif
+
     dest_buf->ProcessCredit(c);
     c->Free();
     _proc_credits.pop_front();
@@ -2207,6 +2219,8 @@ void IQRouter::_SendFlits( )
 
 #ifdef TRACK_FLOWS
       ++_sent_flits[f->cl][output];
+      ++_outstanding_flits[f->cl][output];
+      _outstanding_classes[output][f->vc].push(f->cl);
 #endif
 
       if(f->watch)

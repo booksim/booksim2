@@ -360,6 +360,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   } else {
     _sent_flits_out = new ofstream(sent_flits_out_file.c_str());
   }
+  string outstanding_flits_out_file = config.GetStr( "outstanding_flits_out" );
+  if(outstanding_flits_out_file == "") {
+    _outstanding_flits_out = NULL;
+  } else {
+    _outstanding_flits_out = new ofstream(outstanding_flits_out_file.c_str());
+  }
   string ejected_flits_out_file = config.GetStr( "ejected_flits_out" );
   if(ejected_flits_out_file == "") {
     _ejected_flits_out = NULL;
@@ -409,6 +415,7 @@ TrafficManager::~TrafficManager( )
   if(_received_flits_out) delete _received_flits_out;
   if(_stored_flits_out) delete _stored_flits_out;
   if(_sent_flits_out) delete _sent_flits_out;
+  if(_outstanding_flits_out) delete _outstanding_flits_out;
   if(_ejected_flits_out) delete _ejected_flits_out;
   if(_active_packets_out) delete _active_packets_out;
 #endif
@@ -1199,6 +1206,7 @@ void TrafficManager::UpdateStats() {
 	if(_received_flits_out) *_received_flits_out << r->GetReceivedFlits(c) << trail_char;
 	if(_stored_flits_out) *_stored_flits_out << r->GetStoredFlits(c) << trail_char;
 	if(_sent_flits_out) *_sent_flits_out << r->GetSentFlits(c) << trail_char;
+	if(_outstanding_flits_out) *_outstanding_flits_out << r->GetOutstandingFlits(c) << trail_char;
 	if(_active_packets_out) *_active_packets_out << r->GetActivePackets(c) << trail_char;
 	r->ResetFlowStats(c);
 #endif
@@ -1218,6 +1226,7 @@ void TrafficManager::UpdateStats() {
   if(_received_flits_out) *_received_flits_out << flush;
   if(_stored_flits_out) *_stored_flits_out << flush;
   if(_sent_flits_out) *_sent_flits_out << flush;
+  if(_outstanding_flits_out) *_stored_flits_out << flush;
   if(_ejected_flits_out) *_ejected_flits_out << flush;
   if(_active_packets_out) *_active_packets_out << flush;
 #endif
