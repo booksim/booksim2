@@ -148,11 +148,16 @@ protected:
   vector<double> _overall_max_accepted;
 
 #ifdef TRACK_STALLS
-  vector<int> _overall_buffer_busy_stalls;
-  vector<int> _overall_buffer_conflict_stalls;
-  vector<int> _overall_buffer_full_stalls;
-  vector<int> _overall_buffer_reserved_stalls;
-  vector<int> _overall_crossbar_conflict_stalls;
+  vector<vector<int> > _buffer_busy_stalls;
+  vector<vector<int> > _buffer_conflict_stalls;
+  vector<vector<int> > _buffer_full_stalls;
+  vector<vector<int> > _buffer_reserved_stalls;
+  vector<vector<int> > _crossbar_conflict_stalls;
+  vector<double> _overall_buffer_busy_stalls;
+  vector<double> _overall_buffer_conflict_stalls;
+  vector<double> _overall_buffer_full_stalls;
+  vector<double> _overall_buffer_reserved_stalls;
+  vector<double> _overall_crossbar_conflict_stalls;
 #endif
 
   vector<int> _slowest_packet;
