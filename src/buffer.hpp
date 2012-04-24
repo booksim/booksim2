@@ -149,7 +149,7 @@ public:
   }
 
 #ifdef TRACK_BUFFERS
-  inline int OccupancyForClass(int c) const
+  inline int GetOccupancyForClass(int c) const
   {
     return _class_occupancy[c];
   }
