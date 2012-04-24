@@ -2266,31 +2266,13 @@ int IQRouter::GetUsedCredit(int out, int vc_begin, int vc_end ) const
 }
 
 int IQRouter::GetBuffer(int i) const {
-  assert(i < _inputs);
+  assert(i >= 0 && i < _inputs);
 
   int size = 0;
-  int const i_start = (i >= 0) ? i : 0;
-  int const i_end = (i >= 0) ? i : (_inputs - 1);
-  for(int input = i_start; input <= i_end; ++input) {
-    for(int vc = 0; vc < _vcs; ++vc) {
-      size += _buf[input]->GetOccupancy(vc);
-    }
+  for(int vc = 0; vc < _vcs; ++vc) {
+    size += _buf[i]->GetOccupancy(vc);
   }
   return size;
-}
-
-vector<int> IQRouter::GetBuffers(int i) const {
-  assert(i < _inputs);
-
-  vector<int> sizes(_vcs);
-  int const i_start = (i >= 0) ? i : 0;
-  int const i_end = (i >= 0) ? i : (_inputs - 1);
-  for(int input = i_start; input <= i_end; ++input) {
-    for(int vc = 0; vc < _vcs; ++vc) {
-      sizes[vc] += _buf[input]->GetOccupancy(vc);
-    }
-  }
-  return sizes;
 }
 
 void IQRouter::_UpdateNOQ(int input, int vc, Flit const * f) {

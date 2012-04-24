@@ -121,7 +121,7 @@ public:
 
 
   virtual int GetUsedCredit(int out, int vc_begin = -1, int vc_end = -1 ) const = 0;
-  virtual int GetBuffer(int i = -1) const = 0;
+  virtual int GetBuffer(int i) const = 0;
 
 #ifdef TRACK_FLOWS
   inline vector<int> const & GetReceivedFlits(int c) const {
