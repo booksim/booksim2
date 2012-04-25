@@ -336,7 +336,7 @@ BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuratio
   _vcs = config.GetInt("num_vcs");
 
   _occupancy_limit.resize(_vcs, _buf_size);
-  _round_trip_time.resize(_vcs, -1);
+  _round_trip_time.resize(_vcs, _buf_size);
   _flit_sent_time.resize(_vcs);
   _total_mapped_size = _buf_size * _vcs;
   _min_round_trip_time = numeric_limits<int>::max();
@@ -352,9 +352,6 @@ int BufferState::FeedbackSharedBufferPolicy::_ComputeRTT(int vc, int last_rtt) c
 {
   // compute moving average of round-trip time
   int rtt = _round_trip_time[vc];
-  if(rtt < 0) {
-    return last_rtt;
-  }
   return ((rtt << _aging_scale) + last_rtt - rtt) >> _aging_scale;
 }
 
