@@ -438,6 +438,7 @@ void BufferState::SimpleFeedbackSharedBufferPolicy::SendingFlit(Flit const * con
 {
   int const & vc = f->vc;
   if(_flit_sent_time[vc].empty()) {
+    assert(_buffer_state->Occupancy(vc) > 0);
     _pending_credits[vc] = _buffer_state->Occupancy(vc) - 1;
 #ifdef DEBUG_SIMPLEFEEDBACK
     cerr << FullName() << ": Sending probe flit for VC "
