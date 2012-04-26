@@ -389,24 +389,36 @@ void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
 
   int rtt = _ComputeRTT(vc, last_rtt);
 #ifdef DEBUG_FEEDBACK
-  cerr << FullName() << ": Updating RTT estimate for VC "
-       << vc << " to "
-       << rtt << " cycles."
-       << endl;
+  int old_rtt = _round_trip_time[vc];
+  if(rtt != old_rtt) {
+    cerr << FullName() << ": Updating RTT estimate for VC "
+	 << vc << " from "
+	 << old_rtt << " to "
+	 << rtt << " cycles."
+	 << endl;
+  }
 #endif
   _round_trip_time[vc] = rtt;
 
   int limit = _ComputeLimit(rtt);
+#ifdef DEBUG_FEEDBACK
+  int old_limit = _occupancy_limit[vc];
+  int old_mapped_size = _total_mapped_size;
+#endif
   _total_mapped_size += (limit - _occupancy_limit[vc]);
   _occupancy_limit[vc] = limit;
 #ifdef DEBUG_FEEDBACK
-  cerr << FullName() << ": Occupancy limit for VC "
-       << vc << " is "
-       << limit << " slots."
-       << endl;
-  cerr << FullName() << ": Total mapped buffer space is "
-       << _total_mapped_size << " slots."
-       << endl;
+  if(limit != old_limit) {
+    cerr << FullName() << ": Occupancy limit for VC "
+	 << vc << " changed from "
+	 << old_limit << " to "
+	 << limit << " slots."
+	 << endl;
+    cerr << FullName() << ": Total mapped buffer space changed from "
+	 << old_mapped_size << " to "
+	 << _total_mapped_size << " slots."
+	 << endl;
+  }
 #endif
 }
 
