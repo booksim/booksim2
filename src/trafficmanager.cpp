@@ -744,6 +744,11 @@ void TrafficManager::_Step( )
 	    assert(vcEnd >= se.vc_start && vcEnd <= se.vc_end);
 	    assert(vcBegin <= vcEnd);
 	  }
+	  if(cf->watch) {
+	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		       << "Finding output VC for flit " << cf->id
+		       << ":" << endl;
+	  }
 	  for(int i = 1; i <= vc_count; ++i) {
 	    int const lvc = _last_vc[n][subnet][c];
 	    int const vc = 
@@ -751,15 +756,46 @@ void TrafficManager::_Step( )
 	      vcBegin : 
 	      (vcBegin + (lvc - vcBegin + i) % vc_count);
 	    assert((vc >= vcBegin) && (vc <= vcEnd));
-	    if(dest_buf->IsAvailableFor(vc) && !dest_buf->IsFullFor(vc)) {
-	      cf->vc = vc;
-	      break;
+	    if(!dest_buf->IsAvailableFor(vc)) {
+	      if(cf->watch) {
+		*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			   << "  Output VC " << vc << " is busy." << endl;
+	      }
+	    } else {
+	      if(dest_buf->IsFullFor(vc)) {
+		if(cf->watch) {
+		  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			     << "  Output VC " << vc << " is full." << endl;
+		}
+	      } else {
+		if(cf->watch) {
+		  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			     << "  Selected output VC " << vc << "." << endl;
+		}
+		cf->vc = vc;
+		break;
+	      }
 	    }
 	  }
 	}
-	  
-	if((cf->vc != -1) && (!dest_buf->IsFullFor(cf->vc))) {
-	  f = cf;
+	
+	if(cf->vc == -1) {
+	  if(cf->watch) {
+	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		       << "No output VC found for flit " << cf->id
+		       << "." << endl;
+	  }
+	} else {
+	  if(dest_buf->IsFullFor(cf->vc)) {
+	    if(cf->watch) {
+	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			 << "Selected output VC " << cf->vc
+			 << " is full for flit " << cf->id
+			 << "." << endl;
+	    }
+	  } else {
+	    f = cf;
+	  }
 	}
       }
       
