@@ -44,6 +44,7 @@ class BufferState : public Module {
   public:
     BufferPolicy(Configuration const & config, BufferState * parent, 
 		 const string & name);
+    virtual void SetMinLatency(int min_latency) {}
     virtual void TakeBuffer(int vc = 0);
     virtual void SendingFlit(Flit const * const f);
     virtual void FreeSlotFor(int vc = 0);
@@ -115,17 +116,20 @@ class BufferState : public Module {
   
   class FeedbackSharedBufferPolicy : public SharedBufferPolicy {
   protected:
+    int _ComputeRTT(int vc, int last_rtt) const;
+    int _ComputeLimit(int rtt) const;
     int _vcs;
     vector<int> _occupancy_limit;
     vector<int> _round_trip_time;
     vector<queue<int> > _flit_sent_time;
-    int _min_round_trip_time;
+    int _min_latency;
     int _total_mapped_size;
     int _aging_scale;
     int _offset;
   public:
     FeedbackSharedBufferPolicy(Configuration const & config, 
 			       BufferState * parent, const string & name);
+    virtual void SetMinLatency(int min_latency);
     virtual void SendingFlit(Flit const * const f);
     virtual void FreeSlotFor(int vc = 0);
     virtual bool IsFullFor(int vc = 0) const;
@@ -166,6 +170,10 @@ public:
 	       Module *parent, const string& name );
 
   ~BufferState();
+
+  inline void SetMinLatency(int min_latency) {
+    _buffer_policy->SetMinLatency(min_latency);
+  }
 
   void ProcessCredit( Credit const * const c );
   void SendingFlit( Flit const * const f );

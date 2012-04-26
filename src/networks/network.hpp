@@ -101,9 +101,14 @@ public:
   int NumChannels() const {return _channels;}
   const vector<FlitChannel *> & GetInject() {return _inject;}
   FlitChannel * GetInject(int index) {return _inject[index];}
+  const vector<CreditChannel *> & GetInjectCred() {return _inject_cred;}
+  CreditChannel * GetInjectCred(int index) {return _inject_cred[index];}
   const vector<FlitChannel *> & GetEject(){return _eject;}
   FlitChannel * GetEject(int index) {return _eject[index];}
+  const vector<CreditChannel *> & GetEjectCred(){return _eject_cred;}
+  CreditChannel * GetEjectCred(int index) {return _eject_cred[index];}
   const vector<FlitChannel *> & GetChannels(){return _chan;}
+  const vector<CreditChannel *> & GetChannelsCred(){return _chan_cred;}
   const vector<Router *> & GetRouters(){return _routers;}
   Router * GetRouter(int index) {return _routers[index];}
   int NumRouters() const {return _size;}
