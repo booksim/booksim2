@@ -336,7 +336,7 @@ BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuratio
   _vcs = config.GetInt("num_vcs");
 
   _occupancy_limit.resize(_vcs, _buf_size);
-  _round_trip_time.resize(_vcs, _buf_size);
+  _round_trip_time.resize(_vcs, -1);
   _flit_sent_time.resize(_vcs);
   _total_mapped_size = _buf_size * _vcs;
   _min_round_trip_time = numeric_limits<int>::max();
@@ -378,7 +378,11 @@ void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
 #ifdef DEBUG_FEEDBACK
   int old_rtt = rtt;
 #endif
-  rtt = ((rtt << _aging_scale) + last_rtt - rtt) >> _aging_scale;
+  if(rtt < 0) {
+    rtt = last_rtt;
+  } else {
+    rtt = ((rtt << _aging_scale) + last_rtt - rtt) >> _aging_scale;
+  }
 #ifdef DEBUG_FEEDBACK
   if(rtt != old_rtt) {
     cerr << FullName() << ": Updating RTT estimate for VC "
