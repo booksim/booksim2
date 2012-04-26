@@ -29,7 +29,7 @@
 #
 MOC = /usr/lib/qt4/bin/moc
 YACC   = bison -y
-DEFINE = 
+DEFINE = -DDEBUG_FEEDBACK -DDEBUG_SIMPLEFEEDBACK
 DEFINE_TEST = -DUSE_GUI
 INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
 CPPFLAGS += -Wall $(INCPATH) $(DEFINE)

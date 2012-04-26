@@ -339,7 +339,16 @@ BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuratio
   _round_trip_time.resize(_vcs, -1);
   _flit_sent_time.resize(_vcs);
   _total_mapped_size = _buf_size * _vcs;
-  _min_round_trip_time = numeric_limits<int>::max();
+  _min_latency = -1;
+}
+
+void BufferState::FeedbackSharedBufferPolicy::SetMinLatency(int min_latency)
+{
+#ifdef DEBUG_FEEDBACK
+  cerr << FullName() << ": Setting minimum latency to "
+       << min_latency << "." << endl;
+#endif
+  _min_latency = min_latency;
 }
 
 void BufferState::FeedbackSharedBufferPolicy::SendingFlit(Flit const * const f)
@@ -362,7 +371,8 @@ int BufferState::FeedbackSharedBufferPolicy::_ComputeLimit(int rtt) const
 {
   // for every cycle that the measured average round trip time exceeded the 
   // observed minimum round trip time, reduce buffer occupancy limit by one
-  return max((_min_round_trip_time << 1) - rtt + _offset, 1);
+  assert(_min_latency >= 0);
+  return max((_min_latency << 1) - rtt + _offset, 1);
 }
 
 void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
@@ -378,18 +388,6 @@ void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
 #endif
   _flit_sent_time[vc].pop();
   
-  // determine minimum round trip time (could be hardcoded in a real network, 
-  // but since some of the topologies here have varying channel lengths, it's 
-  // easiest just to detect this on the fly)
-  if(last_rtt < _min_round_trip_time) {
-    _min_round_trip_time = last_rtt;
-#ifdef DEBUG_FEEDBACK
-    cerr << FullName() << ": Updating minimum RTT to "
-	 << last_rtt << " cycles."
-	 << endl;
-#endif
-  }
-
   int rtt = _ComputeRTT(vc, last_rtt);
 #ifdef DEBUG_FEEDBACK
   int old_rtt = _round_trip_time[vc];

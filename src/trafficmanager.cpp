@@ -134,7 +134,13 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     for ( int subnet = 0; subnet < _subnets; ++subnet ) {
       ostringstream tmp_name;
       tmp_name << "terminal_buf_state_" << source << "_" << subnet;
-      _buf_states[source][subnet] = new BufferState( config, this, tmp_name.str( ) );
+      BufferState * bs = new BufferState( config, this, tmp_name.str( ) );
+      int vc_alloc_delay = config.GetInt("vc_alloc_delay");
+      int sw_alloc_delay = config.GetInt("sw_alloc_delay");
+      int router_latency = config.GetInt("routing_delay") + (config.GetInt("speculative") ? max(vc_alloc_delay, sw_alloc_delay) : (vc_alloc_delay + sw_alloc_delay));
+      int min_latency = 1 + _net[subnet]->GetInject(source)->GetLatency() + router_latency + _net[subnet]->GetInjectCred(source)->GetLatency();
+      bs->SetMinLatency(min_latency);
+      _buf_states[source][subnet] = bs;
       _last_vc[source][subnet] = gEndVCs;
     }
   }
