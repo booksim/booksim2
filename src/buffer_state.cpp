@@ -375,12 +375,18 @@ void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
 
   // update moving average of round-trip time
   int rtt = _round_trip_time[vc];
+#ifdef DEBUG_FEEDBACK
+  int old_rtt = rtt;
+#endif
   rtt = ((rtt << _aging_scale) + last_rtt - rtt) >> _aging_scale;
 #ifdef DEBUG_FEEDBACK
-  cerr << FullName() << ": Updating RTT estimate for VC "
-       << vc << " to "
-       << rtt << " cycles."
-       << endl;
+  if(rtt != old_rtt) {
+    cerr << FullName() << ": Updating RTT estimate for VC "
+	 << vc << " from "
+	 << old_rtt << " to "
+	 << rtt << " cycles."
+	 << endl;
+  }
 #endif
   _round_trip_time[vc] = rtt;
   
