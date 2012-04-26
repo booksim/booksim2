@@ -389,18 +389,26 @@ void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
   // for every cycle that the measured average round trip time exceeded the 
   // observed minimum round trip time, reduce buffer occupancy limit by one
   int limit = _occupancy_limit[vc];
+#ifdef DEBUG_FEEDBACK
+  int old_limit = limit;
+  int old_mapped_size = _total_mapped_size;
+#endif
   _total_mapped_size -= limit;
   limit = max((_min_round_trip_time << 1) - rtt + _offset, 1);
   _occupancy_limit[vc] = limit;
   _total_mapped_size += limit;  
 #ifdef DEBUG_FEEDBACK
-  cerr << FullName() << ": Occupancy limit for VC "
-       << vc << " is "
-       << limit << " slots."
-       << endl;
-  cerr << FullName() << ": Total mapped buffer space is "
-       << _total_mapped_size << " slots."
-       << endl;
+  if(limit != old_limit) {
+    cerr << FullName() << ": Occupancy limit for VC "
+	 << vc << " changed from "
+	 << old_limit << " to "
+	 << limit << " slots."
+	 << endl;
+    cerr << FullName() << ": Total mapped buffer space changed from "
+	 << old_mapped_size << " to "
+	 << _total_mapped_size << " slots."
+	 << endl;
+  }
 #endif
 }
 
