@@ -99,8 +99,8 @@ public:
 			    Module *parent, const string & name, int id,
 			    int inputs, int outputs );
 
-  void AddInputChannel( FlitChannel *channel, CreditChannel *backchannel );
-  void AddOutputChannel( FlitChannel *channel, CreditChannel *backchannel );
+  virtual void AddInputChannel( FlitChannel *channel, CreditChannel *backchannel );
+  virtual void AddOutputChannel( FlitChannel *channel, CreditChannel *backchannel );
  
   inline FlitChannel * GetInputChannel( int input ) const {
     assert((input >= 0) && (input < _inputs));
