@@ -172,6 +172,7 @@ protected:
   vector<unsigned long long int> _last_response_eject_time;
 
   unsigned int _channel_width;
+  unsigned int _size_offset;
 
   unsigned int _region;
 
@@ -199,7 +200,8 @@ public:
   NetraceWorkload(int nodes, string const & filename, 
 		  unsigned int channel_width, long long int limit = -1ll, 
 		  unsigned int scale = 1, int region = -1, 
-		  bool enforce_deps = true, bool enforce_lats = false);
+		  bool enforce_deps = true, bool enforce_lats = false, 
+		  unsigned int size_offset = 0);
   
   virtual ~NetraceWorkload();
   virtual void reset();

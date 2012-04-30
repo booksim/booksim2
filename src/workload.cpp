@@ -109,6 +109,7 @@ Workload * Workload::New(string const & workload, int nodes,
     }
     string const & filename = params[0];
     int channel_width = config ? (config->GetInt("channel_width") / 8) : 16;
+    int size_offset = 0;
     int region = -1;
     long long int limit = -1;
     int scale = 1;
@@ -124,12 +125,15 @@ Workload * Workload::New(string const & workload, int nodes,
 	    enforce_deps = atoi(params[4].c_str());
 	    if(params.size() > 5) {
 	      enforce_lats = atoi(params[5].c_str());
+	      if(params.size() > 6) {
+		size_offset = atoi(params[6].c_str());
+	      }
 	    }
 	  }
 	}
       }
     }
-    result = new NetraceWorkload(nodes, filename, channel_width, limit, scale, region, enforce_deps, enforce_lats);
+    result = new NetraceWorkload(nodes, filename, channel_width, size_offset, limit, scale, region, enforce_deps, enforce_lats);
   }
   return result;
 }
@@ -469,9 +473,10 @@ NetraceWorkload::NetraceWorkload(int nodes, string const & filename,
 				 unsigned int channel_width, 
 				 long long int limit, unsigned int scale, 
 				 int region, bool enforce_deps, 
-				 bool enforce_lats)
-  : Workload(nodes), _channel_width(channel_width), _scale(scale), 
-    _enforce_deps(enforce_deps), _enforce_lats(enforce_lats)
+				 bool enforce_lats, 
+				 unsigned int size_offset)
+  : Workload(nodes), _channel_width(channel_width), _size_offset(size_offset), 
+    _scale(scale), _enforce_deps(enforce_deps), _enforce_lats(enforce_lats)
 {
   _l2_tag_latency = 2;
   _l2_data_latency = 8;
@@ -854,7 +859,8 @@ int NetraceWorkload::size() const
   assert(!_ready_packets[source].empty());
   int const size = nt_get_packet_size(_ready_packets[source].front());
   assert(size > 0);
-  return (size + _channel_width - 1) / _channel_width;
+  int const scaled_size = (size + _size_offset + _channel_width - 1) / _channel_width;
+  return scaled_size;
 }
 
 int NetraceWorkload::time() const
