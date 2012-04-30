@@ -1924,16 +1924,37 @@ void InitializeRoutingMap( const Configuration & config )
   // traffic class partitions
   //
   gReadReqBeginVC    = config.GetInt("read_request_begin_vc");
+  if(gReadReqBeginVC < 0) {
+    gReadReqBeginVC = 0;
+  }
   gReadReqEndVC      = config.GetInt("read_request_end_vc");
-
+  if(gReadReqEndVC < 0) {
+    gReadReqEndVC = gNumVCs / 4 - 1;
+  }
   gWriteReqBeginVC   = config.GetInt("write_request_begin_vc");
+  if(gWriteReqBeginVC < 0) {
+    gWriteReqBeginVC = gNumVCs / 4;
+  }
   gWriteReqEndVC     = config.GetInt("write_request_end_vc");
-
+  if(gWriteReqEndVC < 0) {
+    gWriteReqEndVC = gNumVCs / 2 - 1;
+  }
   gReadReplyBeginVC  = config.GetInt("read_reply_begin_vc");
+  if(gReadReplyBeginVC < 0) {
+    gReadReplyBeginVC = gNumVCs / 2;
+  }
   gReadReplyEndVC    = config.GetInt("read_reply_end_vc");
-
+  if(gReadReplyEndVC < 0) {
+    gReadReplyEndVC = 3 * gNumVCs / 4 - 1;
+  }
   gWriteReplyBeginVC = config.GetInt("write_reply_begin_vc");
+  if(gWriteReplyBeginVC < 0) {
+    gWriteReplyBeginVC = 3 * gNumVCs / 4;
+  }
   gWriteReplyEndVC   = config.GetInt("write_reply_end_vc");
+  if(gWriteReplyEndVC < 0) {
+    gWriteReplyEndVC = gNumVCs - 1;
+  }
 
   /* Register routing functions here */
 
