@@ -133,7 +133,7 @@ Workload * Workload::New(string const & workload, int nodes,
 	}
       }
     }
-    result = new NetraceWorkload(nodes, filename, channel_width, size_offset, limit, scale, region, enforce_deps, enforce_lats);
+    result = new NetraceWorkload(nodes, filename, channel_width, limit, scale, region, enforce_deps, enforce_lats, size_offset);
   }
   return result;
 }
