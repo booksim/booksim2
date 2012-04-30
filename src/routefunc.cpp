@@ -1929,11 +1929,11 @@ void InitializeRoutingMap( const Configuration & config )
   }
   gReadReqEndVC      = config.GetInt("read_request_end_vc");
   if(gReadReqEndVC < 0) {
-    gReadReqEndVC = gNumVCs / 4 - 1;
+    gReadReqEndVC = gNumVCs / 2 - 1;
   }
   gWriteReqBeginVC   = config.GetInt("write_request_begin_vc");
   if(gWriteReqBeginVC < 0) {
-    gWriteReqBeginVC = gNumVCs / 4;
+    gWriteReqBeginVC = 0;
   }
   gWriteReqEndVC     = config.GetInt("write_request_end_vc");
   if(gWriteReqEndVC < 0) {
@@ -1945,11 +1945,11 @@ void InitializeRoutingMap( const Configuration & config )
   }
   gReadReplyEndVC    = config.GetInt("read_reply_end_vc");
   if(gReadReplyEndVC < 0) {
-    gReadReplyEndVC = 3 * gNumVCs / 4 - 1;
+    gReadReplyEndVC = gNumVCs - 1;
   }
   gWriteReplyBeginVC = config.GetInt("write_reply_begin_vc");
   if(gWriteReplyBeginVC < 0) {
-    gWriteReplyBeginVC = 3 * gNumVCs / 4;
+    gWriteReplyBeginVC = gNumVCs / 2;
   }
   gWriteReplyEndVC   = config.GetInt("write_reply_end_vc");
   if(gWriteReplyEndVC < 0) {
