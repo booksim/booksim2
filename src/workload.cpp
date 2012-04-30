@@ -108,7 +108,7 @@ Workload * Workload::New(string const & workload, int nodes,
       exit(-1);
     }
     string const & filename = params[0];
-    int channel_width = config ? (config->GetInt("channel_width") / 8) : 16;
+    int channel_width = config ? (config->GetInt("channel_width")) : 128;
     int size_offset = 0;
     int region = -1;
     long long int limit = -1;
@@ -859,7 +859,7 @@ int NetraceWorkload::size() const
   assert(!_ready_packets[source].empty());
   int const size = nt_get_packet_size(_ready_packets[source].front());
   assert(size > 0);
-  int const scaled_size = (size + _size_offset + _channel_width - 1) / _channel_width;
+  int const scaled_size = (8 * size + _size_offset + _channel_width - 1) / _channel_width;
   return scaled_size;
 }
 
