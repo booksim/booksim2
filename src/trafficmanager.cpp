@@ -1268,7 +1268,7 @@ void TrafficManager::UpdateStats() {
   if(_received_flits_out) *_received_flits_out << flush;
   if(_stored_flits_out) *_stored_flits_out << flush;
   if(_sent_flits_out) *_sent_flits_out << flush;
-  if(_outstanding_flits_out) *_stored_flits_out << flush;
+  if(_outstanding_flits_out) *_outstanding_flits_out << flush;
   if(_ejected_flits_out) *_ejected_flits_out << flush;
   if(_active_packets_out) *_active_packets_out << flush;
 #endif
