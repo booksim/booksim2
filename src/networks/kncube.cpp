@@ -124,6 +124,7 @@ void KNCube::_BuildNet( const Configuration &config )
       left_input  = _RightChannel( left_node, dim );
 
       //add the input channel
+
       _routers[node]->AddInputChannel( _chan[right_input], _chan_cred[right_input] );
       _routers[node]->AddInputChannel( _chan[left_input], _chan_cred[left_input] );
 

@@ -89,7 +89,7 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
     result = new AsymmetricTrafficPattern(nodes);
   } else if(pattern_name == "taper64") {
     result = new Taper64TrafficPattern(nodes);
-  } else if((pattern_name == "tornado") || (pattern_name == "neighbor") ||
+  } else if((pattern_name == "xshift") || (pattern_name == "xswap") || (pattern_name == "tornado") || (pattern_name == "neighbor") ||
 	    (pattern_name == "bad_dragon") || (pattern_name == "badperm_yarc")) {
     if(params.size() < 3) {
       cout << "Error: Missing parameters for digit permutation traffic pattern: " << pattern << endl;
@@ -100,7 +100,11 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
     int xr = atoi(params[2].c_str());
     if(pattern_name == "tornado") {
       result = new TornadoTrafficPattern(nodes, k, n, xr);
-    } else if(pattern_name == "neighbor") {
+    } else if(pattern_name == "xshift") {
+      result = new XShiftTrafficPattern(nodes, k, n, xr);
+    }else if(pattern_name == "xswap") {
+      result = new XSwapTrafficPattern(nodes, k, n, xr);
+    }else if(pattern_name == "neighbor") {
       result = new NeighborTrafficPattern(nodes, k, n, xr);
     } else if(pattern_name == "bad_dragon") {
       result = new BadPermDFlyTrafficPattern(nodes, k, n, xr);
@@ -136,7 +140,7 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
 TrafficPattern * TrafficPattern::New(string const & pattern, int nodes, Configuration const & config)
 {
   TrafficPattern * result = NULL;
-  if((pattern == "tornado") || (pattern == "neighbor") || 
+  if((pattern == "xshift") ||(pattern == "xswap") ||(pattern == "tornado") || (pattern == "neighbor") || 
      (pattern == "bad_dragon") || (pattern == "badperm_yarc")) {
     int k = config.GetInt("k");
     int n = config.GetInt("n");
@@ -253,10 +257,37 @@ int TornadoTrafficPattern::dest(int source)
 
   for(int n = 0; n < _n; ++n) {
     result += offset *
-      (((source / offset) % (_xr * _k) + ((_xr * _k) / 2 - 1)) % (_xr * _k));
+      //      (((source / offset) % (_xr * _k) + ((_xr * _k) / 2 - 1)) % (_xr * _k));//original
+      (((source / offset) % (_xr * _k) + ((_xr * _k) / 2)) % (_xr * _k));
     offset *= (_xr * _k);
   }
   return result;
+}
+
+XShiftTrafficPattern::XShiftTrafficPattern(int nodes, int k, int n, int xr)
+  : DigitPermutationTrafficPattern(nodes, k, n, xr)
+{
+  
+}
+
+int XShiftTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+  int row_start = source - (source%_k);
+  return  row_start + ((source%_k)+ 5)%_k;
+}
+
+XSwapTrafficPattern::XSwapTrafficPattern(int nodes, int k, int n, int xr)
+  : DigitPermutationTrafficPattern(nodes, k, n, xr)
+{
+  
+}
+
+int XSwapTrafficPattern::dest(int source)
+{
+  assert((source >= 0) && (source < _nodes));
+  int row_start = source - (source%_k);
+  return  row_start + _k-1-(source%_k);
 }
 
 NeighborTrafficPattern::NeighborTrafficPattern(int nodes, int k, int n, int xr)
@@ -338,6 +369,9 @@ int UniformRandomTrafficPattern::dest(int source)
   assert((source >= 0) && (source < _nodes));
   return RandomInt(_nodes - 1);
 }
+
+
+
 
 UniformBackgroundTrafficPattern::UniformBackgroundTrafficPattern(int nodes, vector<int> excluded_nodes)
   : RandomTrafficPattern(nodes)

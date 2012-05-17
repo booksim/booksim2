@@ -257,9 +257,23 @@ double Booksim_Network::Capacity( ) const
  */
 void Booksim_Network::Display( ostream & os ) const
 {
+  /*
   for ( int r = 0; r < _size; ++r ) {
     _routers[r]->Display( os );
   }
+  */
+  cout<<"activity = [" ;
+  for(size_t i = 0; i<_chan.size(); i++){
+    cout<<" "<<_chan[i]->GetIdle();
+  }
+  cout<<"];\n";
+
+
+  cout<<"user = [" ;
+  for(size_t i = 0; i<_chan.size(); i++){
+    cout<<" "<<_chan[i]->GetUser();
+  }
+  cout<<"];\n";
 }
 
 void Booksim_Network::DumpChannelMap( ostream & os, string const & prefix ) const
@@ -272,7 +286,7 @@ void Booksim_Network::DumpChannelMap( ostream & os, string const & prefix ) cons
        << _inject[c]->GetSink() << ',' 
        << _inject[c]->GetSinkPort() << endl;
   for(int c = 0; c < _channels; ++c)
-    os << prefix
+    os << prefix <<c<<","
        << _chan[c]->GetSource() << ',' 
        << _chan[c]->GetSourcePort() << ',' 
        << _chan[c]->GetSink() << ',' 

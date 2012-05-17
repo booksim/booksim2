@@ -48,7 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "channel.hpp"
 #include "flit.hpp"
-
+#include <set>
 using namespace std;
 
 class Router ;
@@ -74,6 +74,12 @@ public:
   inline vector<int> const & GetActivity() const {
     return _active;
   }
+  inline int GetIdle() const {
+    return _idle;
+  }
+  inline int GetUser() const {
+    return _sources.size();;
+  }
 
   // Send flit 
   virtual void Send(Flit * flit);
@@ -98,6 +104,7 @@ private:
   vector<int> _active;
   int _idle;
   int _classes;
+  set <int>  _sources;
 };
 
 #endif

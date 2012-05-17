@@ -97,6 +97,18 @@ public:
   virtual int dest(int source);
 };
 
+
+class XSwapTrafficPattern : public  DigitPermutationTrafficPattern{
+public:
+  XSwapTrafficPattern(int nodes, int k, int n, int xr = 1);
+  virtual int dest(int source);
+};
+class XShiftTrafficPattern : public  DigitPermutationTrafficPattern{
+public:
+  XShiftTrafficPattern(int nodes, int k, int n, int xr = 1);
+  virtual int dest(int source);
+};
+
 class NeighborTrafficPattern : public DigitPermutationTrafficPattern {
 public:
   NeighborTrafficPattern(int nodes, int k, int n, int xr = 1);
@@ -122,6 +134,8 @@ public:
   UniformRandomTrafficPattern(int nodes);
   virtual int dest(int source);
 };
+
+
 
 class UniformBackgroundTrafficPattern : public RandomTrafficPattern {
 private:

@@ -1754,6 +1754,10 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
 	<<lol[i][3]<<"\n";
 	}*/
   _DisplayRemaining( ); 
+
+  cout<<"wtf\n";
+  _net[0]->Display();
+  _net[0]-> DumpChannelMap(cout,"");
 }
 
 void TrafficManager::DisplayOverallStatsCSV(ostream & os) const {

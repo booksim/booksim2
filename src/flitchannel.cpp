@@ -65,10 +65,12 @@ void FlitChannel::SetSink(Router const * const router, int port) {
 }
 
 void FlitChannel::Send(Flit * f) {
+
   if(f) {
+  _sources.insert(f->src);
     ++_active[f->cl];
-  } else {
     ++_idle;
+  } else {
   }
   Channel<Flit>::Send(f);
 }
