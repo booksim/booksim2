@@ -134,7 +134,11 @@ public:
   UniformRandomTrafficPattern(int nodes);
   virtual int dest(int source);
 };
-
+class TestTrafficPattern : public RandomTrafficPattern {
+public:
+  TestTrafficPattern(int nodes);
+  virtual int dest(int source);
+};
 
 
 class UniformBackgroundTrafficPattern : public RandomTrafficPattern {

@@ -41,8 +41,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class WeightedRRArbiter : public Arbiter {
 
+  bool _improved;
 
-
+  vector<int> _input_share;
   vector<int> _share;
   
   vector<int> _position;
@@ -53,7 +54,7 @@ class WeightedRRArbiter : public Arbiter {
 public:
 
   // Constructors
-  WeightedRRArbiter( Module *parent, const string &name, int size ) ;
+  WeightedRRArbiter( Module *parent, const string &name, int size, bool imp=false) ;
   ~WeightedRRArbiter();
   // Print priority matrix to standard output
   virtual void PrintState() const ;

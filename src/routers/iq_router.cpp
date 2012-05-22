@@ -163,7 +163,17 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 					 in_arb_type, 
 					 out_arb_type, 
 					 "weighted");
-    } else {
+    } else if(alloc_type == "hier_improved"){
+      _vc_allocator = new HierAllocator( this, "vc_allocator", 
+					 _vcs,
+					 _inputs, 
+					 _vcs,
+					 _outputs,
+					 in_arb_type, 
+					 in_arb_type, 
+					 out_arb_type, 
+					 "weighted_improved");
+    } else{
       _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
 					       alloc_type,
 					       _vcs*_inputs, 

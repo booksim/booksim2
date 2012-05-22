@@ -104,7 +104,9 @@ Arbiter *Arbiter::NewArbiter( Module *parent, const string& name,
   } else if(arb_type == "prob"){
     a = new ProbabilisticArbiter( parent, name, size );
   } else if(arb_type == "weighted"){
-    a = new WeightedRRArbiter(parent, name,size);
-  }else assert(false);
+    a = new WeightedRRArbiter(parent, name,size, false);
+  } else if(arb_type == "weighted_improved"){
+    a = new WeightedRRArbiter(parent, name,size, true);
+  } else assert(false);
   return a;
 }

@@ -43,9 +43,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace std ;
 
 WeightedRRArbiter::WeightedRRArbiter( Module *parent, const string &name,
-				      int size ) 
+				      int size , bool imp) 
   : Arbiter( parent, name, size ) {
+  _improved = imp;
   _pointer = 0;
+  _input_share.resize(size,0);
   _share.resize(size,0);
   _position.resize(size,0);
   _req.resize(size,0);
@@ -86,7 +88,19 @@ void WeightedRRArbiter::UpdateState() {
   if ( _selected > -1 ) {
     _share[_selected]--;
     assert(_share[_selected]>=0);
+ 
+    //bump the port that was ignored
+    if(_improved){
+      if(_pointer!=_selected){
+	_share[_pointer]+=_input_share[_pointer];
+	//_share[_pointer] = (_share[_pointer]>7)?7:_share[_pointer];
+      }
+    }
+
+    //pointer calculation based on weights
     if(_share[_selected]==0){
+      //natural expiration of weights, bump weight
+      _share[_selected]+=_input_share[_selected];
       _pointer = ( _selected + 1 ) % _size ;
     } else {
       _pointer =  _selected;
@@ -98,15 +112,15 @@ void WeightedRRArbiter::UpdateState() {
 
 void WeightedRRArbiter::AddRequest( int input, int id, int pri )
 {
-
   assert(pri>0);
+
   //update weight
-  //updating out here is not a problem, because this is just for sw allocator
-  //sw allocator in iq_router has code that ensures a single entry per input
-  //so the the weight here is only updated by a single request
   if(_share[input] == 0){
     _share[input] = pri;
   }
+
+  _input_share[input] = pri;
+
   _req[input]++;
   _total_pri[input]+=pri;
   _total_share[input]+=_share[input];
@@ -118,7 +132,7 @@ void WeightedRRArbiter::AddRequest( int input, int id, int pri )
       Arbiter::AddRequest(input, id, pri);
       //round robin the pointers, but check for _share
     } else if(RoundRobinArbiter::Supersedes(input,1,_best_input, 1, _pointer,_size)){
-      assert(_share[input]!=0);
+      assert(_share[input]>0);
       _highest_pri = pri;
       _best_input = input;   
       Arbiter::AddRequest(input, id, pri);

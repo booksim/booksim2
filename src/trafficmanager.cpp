@@ -850,7 +850,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     f->cl     = cl;
 
     //watchwatch
-    if(f->id == -1){
+    if(f->src== 5 && f->id == -1){
       f->watch = true;
     }
     
@@ -1065,7 +1065,26 @@ void TrafficManager::_Step( )
 	    //retarded congestion inidcator
 	    if(_pri_type == forward_note  && (_qtime[source][c]<=_time-NOTIFICATION_TIME_THRESHOLD || NOTIFICATION_TIME_THRESHOLD==0)){
 	      f->next_notification = 1;
-	    }	     
+	    }
+	    /*
+	    ////////crossbar test begin/////////////
+	    switch(source){
+	    case 0:
+	      f->next_notification = 1;
+	      break;
+	    case 1:
+	      f->next_notification = 50000;
+	      break;
+	    case 2:
+	      f->next_notification = 2;
+	      break;
+	    case 3:
+	      break;
+	    default:
+	      break;
+	    }
+	    ////////crossbar test end///////////
+	    */
 	    _last_vc[source][subnet][c] = f->vc - vc_start;
 	  }
 	  
@@ -1755,9 +1774,9 @@ void TrafficManager::DisplayOverallStats( ostream & os ) const {
 	}*/
   _DisplayRemaining( ); 
 
-  cout<<"wtf\n";
+  //cout<<"wtf\n";
   _net[0]->Display();
-  _net[0]-> DumpChannelMap(cout,"");
+  //_net[0]-> DumpChannelMap(cout,"");
 }
 
 void TrafficManager::DisplayOverallStatsCSV(ostream & os) const {

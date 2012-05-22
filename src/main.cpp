@@ -162,8 +162,6 @@ void test();
 int main( int argc, char **argv )
 {
 
-  //  test();exit(0);
-
 
   BookSimConfig config;
 
@@ -249,20 +247,20 @@ void test(){
     0.2
   };
   int pri[] = {
+    4,
     1,
     1,
-    1,
-    1,
-    3,
     3,
     3,
     5,
+    3,
+    1,
     5,
-    5
+    1
   };
   int* buffer = new int[ports];
   int* results = new int[ports];
-  WeightedRRArbiter * wrr = new WeightedRRArbiter(NULL, "lol",ports);
+  WeightedRRArbiter * wrr = new WeightedRRArbiter(NULL, "lol",ports, false);
 
   for(int j = 0; j<ports; j++){
     results[j]=0;

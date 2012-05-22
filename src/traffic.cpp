@@ -76,6 +76,8 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes)
     result = new RandomPermutationTrafficPattern(nodes, perm_seed);
   } else if(pattern_name == "uniform") {
     result = new UniformRandomTrafficPattern(nodes);
+  } else if(pattern_name == "test") {
+    result = new TestTrafficPattern(nodes);
   } else if(pattern_name == "background") {
     vector<string> excludes_str = tokenize(params[0]);
     vector<int> excludes(excludes_str.size());
@@ -257,8 +259,8 @@ int TornadoTrafficPattern::dest(int source)
 
   for(int n = 0; n < _n; ++n) {
     result += offset *
-      //      (((source / offset) % (_xr * _k) + ((_xr * _k) / 2 - 1)) % (_xr * _k));//original
-      (((source / offset) % (_xr * _k) + ((_xr * _k) / 2)) % (_xr * _k));
+            (((source / offset) % (_xr * _k) + ((_xr * _k) / 2 - 1)) % (_xr * _k));//original
+      //(((source / offset) % (_xr * _k) + ((_xr * _k) / 2)) % (_xr * _k));
     offset *= (_xr * _k);
   }
   return result;
@@ -274,7 +276,7 @@ int XShiftTrafficPattern::dest(int source)
 {
   assert((source >= 0) && (source < _nodes));
   int row_start = source - (source%_k);
-  return  row_start + ((source%_k)+ 5)%_k;
+  return  row_start + ((source%_k)+ 3)%_k;
 }
 
 XSwapTrafficPattern::XSwapTrafficPattern(int nodes, int k, int n, int xr)
@@ -369,6 +371,40 @@ int UniformRandomTrafficPattern::dest(int source)
   assert((source >= 0) && (source < _nodes));
   return RandomInt(_nodes - 1);
 }
+
+TestTrafficPattern::TestTrafficPattern(int nodes)
+  : RandomTrafficPattern(nodes)
+{
+
+}
+
+int TestTrafficPattern::dest(int source)
+{
+  int dest;
+  switch(source){
+  case 0:
+    dest = 3;
+    break;
+  case 1:
+    if(RandomFloat()<1.0/4.0){
+      dest = 0;
+    } else {
+      dest = 3;
+    }
+    break;
+  case 2:
+    dest = 0;
+    break;
+  case 3:
+    dest = 1;
+    break;
+  default:
+    dest = 0;
+    break;
+  }
+  return dest;
+}
+
 
 
 
