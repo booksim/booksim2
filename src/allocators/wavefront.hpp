@@ -28,6 +28,8 @@
 #ifndef _WAVEFRONT_HPP_
 #define _WAVEFRONT_HPP_
 
+#include <set>
+
 #include "allocator.hpp"
 
 class Wavefront : public DenseAllocator {
@@ -35,6 +37,7 @@ class Wavefront : public DenseAllocator {
 private:
   int _last_in;
   int _last_out;
+  set<pair<int, int> > _priorities;
 
 protected:
   int _square;
