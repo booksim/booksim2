@@ -31,10 +31,8 @@
  *
  */
 #include "booksim.hpp"
-#include <iostream>
 
 #include "wavefront.hpp"
-#include "random_utils.hpp"
 
 Wavefront::Wavefront( Module *parent, const string& name,
 		      int inputs, int outputs ) :
