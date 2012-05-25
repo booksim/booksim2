@@ -37,8 +37,8 @@
 Wavefront::Wavefront( Module *parent, const string& name,
 		      int inputs, int outputs ) :
   DenseAllocator( parent, name, inputs, outputs ),
-  _square(max(inputs, outputs)), _pri(0), _num_requests(0), 
-  _last_in(-1), _last_out(-1)
+  _last_in(-1), _last_out(-1), _square(max(inputs, outputs)), _pri(0), 
+  _num_requests(0)
 {
 }
 
