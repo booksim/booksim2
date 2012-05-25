@@ -31,11 +31,15 @@
 #include "allocator.hpp"
 
 class Wavefront : public DenseAllocator {
+
+private:
+  int _last_in;
+  int _last_out;
+
+protected:
   int _square;
   int _pri;
   int _num_requests;
-  int _last_in;
-  int _last_out;
 
 public:
   Wavefront( Module *parent, const string& name,
