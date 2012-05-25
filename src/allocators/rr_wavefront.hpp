@@ -1,4 +1,4 @@
-// $Id$
+// $Id: fair_wavefront.hpp 4080 2011-10-22 23:11:32Z dub $
 
 /*
  Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
@@ -25,26 +25,23 @@
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _PRIO_WAVEFRONT_HPP_
-#define _PRIO_WAVEFRONT_HPP_
+#ifndef _FAIR_WAVEFRONT_HPP_
+#define _FAIR_WAVEFRONT_HPP_
 
-#include "allocator.hpp"
+#include "wavefront.hpp"
 
-class PrioWavefront : public DenseAllocator {
-  int _square;
-  int _pri;
-  int _num_requests;
-  int _last_in;
-  int _last_out;
-  int _max_prio;
+class RRWavefront : public Wavefront {
+
+private:
+  int _skip_diags;
 
 public:
-  PrioWavefront( Module *parent, const string& name,
-		 int inputs, int outputs );
+  RRWavefront( Module *parent, const string& name,
+	       int inputs, int outputs );
   
-  void AddRequest( int in, int out, int label = 1, 
-		   int in_pri = 0, int out_pri = 0 );
-  void Allocate( );
+  virtual void AddRequest( int in, int out, int label = 1, 
+			   int in_pri = 0, int out_pri = 0 );
+  virtual void Allocate( );
 };
 
 #endif

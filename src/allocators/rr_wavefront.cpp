@@ -1,4 +1,4 @@
-// $Id$
+// $Id: fair_wavefront.cpp 4080 2011-10-22 23:11:32Z dub $
 
 /*
  Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
@@ -25,25 +25,37 @@
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _FAIR_WAVEFRONT_HPP_
-#define _FAIR_WAVEFRONT_HPP_
+/*fair_wavefront.cpp
+ *
+ *A fairer wave front allocator
+ *
+ */
+#include "booksim.hpp"
 
-#include "allocator.hpp"
+#include "rr_wavefront.hpp"
 
-class FairWavefront : public DenseAllocator {
-  int _square;
-  int _pri;
-  int _num_requests;
-  int _last_in;
-  int _last_out;
+RRWavefront::RRWavefront( Module *parent, const string& name,
+			  int inputs, int outputs ) :
+  Wavefront( parent, name, inputs, outputs ),
+  _skip_diags(max(inputs, outputs))
+{
+}
 
-public:
-  FairWavefront( Module *parent, const string& name,
-		 int inputs, int outputs );
-  
-  void AddRequest( int in, int out, int label = 1, 
-		   int in_pri = 0, int out_pri = 0 );
-  void Allocate( );
-};
+void RRWavefront::AddRequest( int in, int out, int label, 
+			      int in_pri, int out_pri )
+{
+  Wavefront::AddRequest(in, out, label, in_pri, out_pri);
+  int offset = (in + (_square - out) + (_square - _pri)) % _square;
+  if(offset < _skip_diags) {
+    _skip_diags = offset;
+  }
+}
 
-#endif
+void RRWavefront::Allocate( )
+{
+  Wavefront::Allocate();
+  _pri = (_pri + _skip_diags) % _square;
+  _skip_diags = _square;
+}
+
+

@@ -31,16 +31,14 @@
  *
  */
 #include "booksim.hpp"
-#include <iostream>
 
 #include "wavefront.hpp"
-#include "random_utils.hpp"
 
 Wavefront::Wavefront( Module *parent, const string& name,
 		      int inputs, int outputs ) :
-DenseAllocator( parent, name, inputs, outputs ),
-   _square((inputs > outputs) ? inputs : outputs), _pri(0), _num_requests(0), 
-   _last_in(-1), _last_out(-1)
+  DenseAllocator( parent, name, inputs, outputs ),
+  _square(max(inputs, outputs)), _pri(0), _num_requests(0), 
+  _last_in(-1), _last_out(-1)
 {
 }
 
@@ -51,6 +49,7 @@ void Wavefront::AddRequest( int in, int out, int label,
   _num_requests++;
   _last_in = in;
   _last_out = out;
+  _priorities.insert(make_pair(out_pri, in_pri));
 }
 
 void Wavefront::Allocate( )
@@ -71,25 +70,33 @@ void Wavefront::Allocate( )
 
     // otherwise we have to loop through the diagonals of request matrix
 
-    for ( int p = 0; p < _square; ++p ) {
-      for ( int q = 0; q < _square; ++q ) {
-	int input = ( ( _pri + p ) + ( _square - q ) ) % _square;
-	int output = q;
-	
-	if ( ( input < _inputs ) && ( output < _outputs ) && 
-	     ( _inmatch[input] == -1 ) && ( _outmatch[output] == -1 ) &&
-	     ( _request[input][output].label != -1 ) ) {
-	  // Grant!
-	  _inmatch[input] = output;
-	  _outmatch[output] = input;
+    for(set<pair<int, int> >::const_reverse_iterator iter = 
+	  _priorities.rbegin();
+	iter != _priorities.rend(); ++iter) {
+      
+      for ( int p = 0; p < _square; ++p ) {
+	for ( int q = 0; q < _square; ++q ) {
+	  int input = ( ( _pri + p ) + ( _square - q ) ) % _square;
+	  int output = q;
+	  
+	  if ( ( input < _inputs ) && ( output < _outputs ) && 
+	       ( _inmatch[input] == -1 ) && ( _outmatch[output] == -1 ) &&
+	       ( _request[input][output].label != -1 ) &&
+	       ( _request[input][output].in_pri == iter->second ) &&
+	       ( _request[input][output].out_pri == iter->first ) ) {
+	    // Grant!
+	    _inmatch[input] = output;
+	    _outmatch[output] = input;
+	  }
 	}
       }
     }
   }
-  
+
   _num_requests = 0;
   _last_in = -1;
   _last_out = -1;
+  _priorities.clear();
   
   // Round-robin the priority diagonal
   _pri = ( _pri + 1 ) % _square;
