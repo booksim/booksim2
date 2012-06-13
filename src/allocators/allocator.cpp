@@ -394,29 +394,48 @@ void SparseAllocator::PrintRequests( ostream * os ) const
 
 Allocator *Allocator::NewAllocator( Module *parent, const string& name,
 				    const string &alloc_type, 
-				    int inputs, int outputs,
-				    int iters, const string &arb_type )
+				    int inputs, int outputs, 
+				    Configuration const * const config )
 {
   Allocator *a = 0;
   
-  if ( alloc_type == "max_size" ) {
+  string alloc_name;
+  string param_str;
+  size_t left = alloc_type.find_first_of('(');
+  if(left == string::npos) {
+    alloc_name = alloc_type;
+  } else {
+    alloc_name = alloc_type.substr(0, left);
+    size_t right = alloc_type.find_last_of(')');
+    if(right == string::npos) {
+      param_str = alloc_type.substr(left+1);
+    } else {
+      param_str = alloc_type.substr(left+1, right-left-1);
+    }
+  }
+  if ( alloc_name == "max_size" ) {
     a = new MaxSizeMatch( parent, name, inputs, outputs );
-  } else if ( alloc_type == "pim" ) {
+  } else if ( alloc_name == "pim" ) {
+    int iters = param_str.empty() ? (config ? config->GetInt("alloc_iters") : 1) : atoi(param_str.c_str());
     a = new PIM( parent, name, inputs, outputs, iters );
-  } else if ( alloc_type == "islip" ) {
+  } else if ( alloc_name == "islip" ) {
+    int iters = param_str.empty() ? (config ? config->GetInt("alloc_iters") : 1) : atoi(param_str.c_str());
     a = new iSLIP_Sparse( parent, name, inputs, outputs, iters );
-  } else if ( alloc_type == "loa" ) {
+  } else if ( alloc_name == "loa" ) {
     a = new LOA( parent, name, inputs, outputs );
-  } else if ( alloc_type == "wavefront" ) {
+  } else if ( alloc_name == "wavefront" ) {
     a = new Wavefront( parent, name, inputs, outputs );
-  } else if ( alloc_type == "rr_wavefront" ) {
+  } else if ( alloc_name == "rr_wavefront" ) {
     a = new RRWavefront( parent, name, inputs, outputs );
-  } else if ( alloc_type == "select" ) {
+  } else if ( alloc_name == "select" ) {
+    int iters = param_str.empty() ? (config ? config->GetInt("alloc_iters") : 1) : atoi(param_str.c_str());
     a = new SelAlloc( parent, name, inputs, outputs, iters );
-  } else if (alloc_type == "separable_input_first") {
+  } else if (alloc_name == "separable_input_first") {
+    string arb_type = param_str.empty() ? (config ? config->GetStr("arb_type") : "round_robin") : param_str;
     a = new SeparableInputFirstAllocator( parent, name, inputs, outputs,
 					  arb_type );
-  } else if (alloc_type == "separable_output_first") {
+  } else if (alloc_name == "separable_output_first") {
+    string arb_type = param_str.empty() ? (config ? config->GetStr("arb_type") : "round_robin") : param_str;
     a = new SeparableOutputFirstAllocator( parent, name, inputs, outputs,
 					   arb_type );
   }
