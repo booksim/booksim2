@@ -80,8 +80,8 @@ public:
 
   static Allocator *NewAllocator( Module *parent, const string& name,
 				  const string &alloc_type, 
-				  int inputs, int outputs,
-				  int iters, const string &arb_type );
+				  int inputs, int outputs, 
+				  Configuration const * const config = NULL );
 };
 
 //==================================================
