@@ -193,6 +193,28 @@ bool DenseAllocator::OutputHasRequests( int out ) const
   return false;
 }
 
+int DenseAllocator::NumInputRequests( int in ) const
+{
+  int result = 0;
+  for(int out = 0; out < _outputs; ++out) {
+    if(_request[in][out].label >= 0) {
+      ++result;
+    }
+  }
+  return result;
+}
+
+int DenseAllocator::NumOutputRequests( int out ) const
+{
+  int result = 0;
+  for(int in = 0; in < _inputs; ++in) {
+    if(_request[in][out].label >= 0) {
+      ++result;
+    }
+  }
+  return result;
+}
+
 void DenseAllocator::PrintRequests( ostream * os ) const
 {
   if(!os) os = &cout;
@@ -354,6 +376,16 @@ bool SparseAllocator::InputHasRequests( int in ) const
 bool SparseAllocator::OutputHasRequests( int out ) const
 {
   return _out_occ.count(out) > 0;
+}
+
+int SparseAllocator::NumInputRequests( int in ) const
+{
+  return _in_occ.count(in);
+}
+
+int SparseAllocator::NumOutputRequests( int out ) const
+{
+  return _out_occ.count(out);
 }
 
 void SparseAllocator::PrintRequests( ostream * os ) const

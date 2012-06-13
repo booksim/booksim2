@@ -75,6 +75,9 @@ public:
   virtual bool OutputHasRequests( int out ) const = 0;
   virtual bool InputHasRequests( int in ) const = 0;
 
+  virtual int NumOutputRequests( int out ) const = 0;
+  virtual int NumInputRequests( int in ) const = 0;
+
   virtual void PrintRequests( ostream * os = NULL ) const = 0;
   void PrintGrants( ostream * os = NULL ) const;
 
@@ -109,6 +112,9 @@ public:
   bool OutputHasRequests( int out ) const;
   bool InputHasRequests( int in ) const;
 
+  int NumOutputRequests( int out ) const;
+  int NumInputRequests( int in ) const;
+
   void PrintRequests( ostream * os = NULL ) const;
 
 };
@@ -141,6 +147,9 @@ public:
   
   bool OutputHasRequests( int out ) const;
   bool InputHasRequests( int in ) const;
+
+  int NumOutputRequests( int out ) const;
+  int NumInputRequests( int in ) const;
 
   void PrintRequests( ostream * os = NULL ) const;
 
