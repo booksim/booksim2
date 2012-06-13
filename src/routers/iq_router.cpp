@@ -166,6 +166,10 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _switch_hold_out.resize(_outputs*_output_speedup, -1);
   _switch_hold_vc.resize(_inputs*_input_speedup, -1);
 
+  _backoff_alloc = (config.GetInt("backoff_alloc") > 0);
+  _switch_backoff.resize(_inputs*_input_speedup, vector<int>(_outputs*_output_speedup, -1));
+  _switch_requests.resize(_outputs*_output_speedup, 0);
+
   _bufferMonitor = new BufferMonitor(inputs, _classes);
   _switchMonitor = new SwitchMonitor(inputs, outputs, _classes);
 
@@ -1220,6 +1224,19 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
   assert(f);
   assert(f->vc == vc);
   
+  if(_backoff_alloc && (_switch_backoff[expanded_input][expanded_output] > GetSimTime())) {
+    if(f->watch) {
+      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		 << "  Output " << output
+		 << "." << (expanded_output % _output_speedup)
+		 << " is in back-off mode for input " << input
+		 << "." << (expanded_input % _input_speedup)
+		 << " until time " << _switch_backoff[expanded_input][expanded_output]
+		 << "." << endl;
+    }
+    return false;
+  }
+
   if((_switch_hold_in[expanded_input] < 0) && 
      (_switch_hold_out[expanded_output] < 0)) {
     
@@ -1278,6 +1295,7 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 		 << ")." << endl;
     }
     allocator->AddRequest(expanded_input, expanded_output, vc, prio, prio);
+    ++_switch_requests[expanded_output];
     return true;
   }
   if(f->watch) {
@@ -1516,6 +1534,17 @@ void IQRouter::_SWAllocEvaluate( )
 		     << "." << (vc % _input_speedup)
 		     << "." << endl;
 	}
+	if(_backoff_alloc) {
+	  assert(_switch_backoff[expanded_input][expanded_output] <= GetSimTime());
+	  int backoff_time = GetSimTime() + _switch_requests[expanded_output];
+	  if(f->watch) {
+	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		       << "Backing off until time " << backoff_time
+		       << "." << endl;
+	  }
+	  _switch_backoff[expanded_input][expanded_output] = backoff_time;
+	}
+	_switch_requests[expanded_output] = 0;
 	_sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
 	iter->second.second = expanded_output;
       } else {
@@ -1568,6 +1597,17 @@ void IQRouter::_SWAllocEvaluate( )
 			 << "." << (vc % _input_speedup)
 			 << "." << endl;
 	    }
+	    if(_backoff_alloc) {
+	      assert(_switch_backoff[expanded_input][expanded_output] <= GetSimTime());
+	      int backoff_time = GetSimTime() + _switch_requests[expanded_output];
+	      if(f->watch) {
+		*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+			   << "Backing off until time " << backoff_time
+			   << "." << endl;
+	      }
+	      _switch_backoff[expanded_input][expanded_output] = backoff_time;
+	    }
+	    _switch_requests[expanded_output] = 0;
 	    _sw_rr_offset[expanded_input] = (vc + _input_speedup) % _vcs;
 	    iter->second.second = expanded_output;
 	  } else {

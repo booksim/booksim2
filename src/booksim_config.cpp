@@ -124,6 +124,8 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["hold_switch_for_packet"] = 0; // hold a switch config for the entire packet
 
+  _int_map["backoff_alloc"]     = 0; // use back-off allocation
+
   _int_map["input_speedup"]     = 1;  // expansion of input ports into crossbar
   _int_map["output_speedup"]    = 1;  // expansion of output ports into crossbar
 

@@ -101,6 +101,10 @@ class IQRouter : public Router {
   vector<int> _switch_hold_out;
   vector<int> _switch_hold_vc;
 
+  bool _backoff_alloc;
+  vector<vector<int> > _switch_backoff;
+  vector<int> _switch_requests;
+
   bool _noq;
   vector<vector<int> > _noq_next_output_port;
   vector<vector<int> > _noq_next_vc_start;
