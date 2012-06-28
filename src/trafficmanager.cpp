@@ -1269,6 +1269,7 @@ void TrafficManager::UpdateStats() {
     for(int subnet = 0; subnet < _subnets; ++subnet) {
 #ifdef TRACK_FLOWS
       if(_outstanding_credits_out) *_outstanding_credits_out << _outstanding_credits[c][subnet] << ',';
+      if(_stored_flits_out) *_stored_flits_out << vector<int>(_nodes, 0) << ',';
 #endif
       for(int router = 0; router < _routers; ++router) {
 	Router * const r = _router[subnet][router];
