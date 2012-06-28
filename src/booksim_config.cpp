@@ -142,16 +142,10 @@ BookSimConfig::BookSimConfig( )
   AddStrField( "vc_allocator", "islip" ); 
   AddStrField( "sw_allocator", "islip" ); 
   
-  AddStrField( "vc_alloc_arb_type", "round_robin" );
-  AddStrField( "sw_alloc_arb_type", "round_robin" );
+  AddStrField( "arb_type", "round_robin" );
   
   _int_map["alloc_iters"] = 1;
   
-  // dub: allow setting the number of iterations for each allocator separately
-  // (a value of 0 indicates it should inherit its value from alloc_iters)
-  _int_map["vc_alloc_iters"] = 0;
-  _int_map["sw_alloc_iters"] = 0;
-
   //==== Traffic ========================================
 
   _int_map["classes"] = 1;
@@ -321,9 +315,8 @@ vector<pair<string, vector<string> > > BookSimConfig::GetImportantMap() {
 
   important.push_back(make_pair("Allocator", vector<string>()));
   important[2].second.push_back("vc_allocator");
-  important[2].second.push_back("vc_alloc_arb_type");
   important[2].second.push_back("sw_allocator");
-  important[2].second.push_back("sw_alloc_arb_type");
+  important[2].second.push_back("arb_type");
   important[2].second.push_back("priority");
   important[2].second.push_back("speculative");
 

@@ -75,13 +75,16 @@ public:
   virtual bool OutputHasRequests( int out ) const = 0;
   virtual bool InputHasRequests( int in ) const = 0;
 
+  virtual int NumOutputRequests( int out ) const = 0;
+  virtual int NumInputRequests( int in ) const = 0;
+
   virtual void PrintRequests( ostream * os = NULL ) const = 0;
   void PrintGrants( ostream * os = NULL ) const;
 
   static Allocator *NewAllocator( Module *parent, const string& name,
 				  const string &alloc_type, 
-				  int inputs, int outputs,
-				  int iters, const string &arb_type );
+				  int inputs, int outputs, 
+				  Configuration const * const config = NULL );
 };
 
 //==================================================
@@ -108,6 +111,9 @@ public:
 
   bool OutputHasRequests( int out ) const;
   bool InputHasRequests( int in ) const;
+
+  int NumOutputRequests( int out ) const;
+  int NumInputRequests( int in ) const;
 
   void PrintRequests( ostream * os = NULL ) const;
 
@@ -141,6 +147,9 @@ public:
   
   bool OutputHasRequests( int out ) const;
   bool InputHasRequests( int in ) const;
+
+  int NumOutputRequests( int out ) const;
+  int NumInputRequests( int in ) const;
 
   void PrintRequests( ostream * os = NULL ) const;
 
