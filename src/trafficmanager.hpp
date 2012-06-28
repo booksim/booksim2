@@ -242,7 +242,7 @@ protected:
   ostream * _received_flits_out;
   ostream * _stored_flits_out;
   ostream * _sent_flits_out;
-  ostream * _outstanding_flits_out;
+  ostream * _outstanding_credits_out;
   ostream * _ejected_flits_out;
   ostream * _active_packets_out;
 #endif

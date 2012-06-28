@@ -440,8 +440,8 @@ void IQRouter::_InputQueuing( )
       assert(!_outstanding_classes[output][vc].empty());
       int cl = _outstanding_classes[output][vc].front();
       _outstanding_classes[output][vc].pop();
-      assert(_outstanding_flits[cl][output] > 0);
-      --_outstanding_flits[cl][output];
+      assert(_outstanding_credits[cl][output] > 0);
+      --_outstanding_credits[cl][output];
     }
 #endif
 
@@ -1095,6 +1095,11 @@ void IQRouter::_SWHoldUpdate( )
 	  f->la_route_set.Clear();
 	}
       }
+
+#ifdef TRACK_FLOWS
+      ++_outstanding_credits[f->cl][output];
+      _outstanding_classes[output][f->vc].push(f->cl);
+#endif
 
       dest_buf->SendingFlit(f);
 
@@ -1999,6 +2004,11 @@ void IQRouter::_SWAllocUpdate( )
 	}
       }
 
+#ifdef TRACK_FLOWS
+      ++_outstanding_credits[f->cl][output];
+      _outstanding_classes[output][f->vc].push(f->cl);
+#endif
+
       dest_buf->SendingFlit(f);
 
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
@@ -2216,8 +2226,6 @@ void IQRouter::_SendFlits( )
 
 #ifdef TRACK_FLOWS
       ++_sent_flits[f->cl][output];
-      ++_outstanding_flits[f->cl][output];
-      _outstanding_classes[output][f->vc].push(f->cl);
 #endif
 
       if(f->watch)

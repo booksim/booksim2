@@ -76,7 +76,7 @@ protected:
   vector<vector<int> > _received_flits;
   vector<vector<int> > _stored_flits;
   vector<vector<int> > _sent_flits;
-  vector<vector<int> > _outstanding_flits;
+  vector<vector<int> > _outstanding_credits;
   vector<vector<int> > _active_packets;
 #endif
 
@@ -142,9 +142,9 @@ public:
     assert((c >= 0) && (c < _classes));
     return _sent_flits[c];
   }
-  inline vector<int> const & GetOutstandingFlits(int c) const {
+  inline vector<int> const & GetOutstandingCredits(int c) const {
     assert((c >= 0) && (c < _classes));
-    return _outstanding_flits[c];
+    return _outstanding_credits[c];
   }
 
   inline vector<int> const & GetActivePackets(int c) const {
