@@ -145,6 +145,17 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     }
   }
 
+#ifdef TRACK_FLOWS
+  _outstanding_credits.resize(_classes);
+  for(int c = 0; c < _classes; ++c) {
+    _outstanding_credits[c].resize(_subnets, vector<int>(_nodes, 0));
+  }
+  _outstanding_classes.resize(_nodes);
+  for(int n = 0; n < _nodes; ++n) {
+    _outstanding_classes[n].resize(_subnets, vector<queue<int> >(config.GetInt("num_vcs")));
+  }
+#endif
+
   // ============ Injection queues ============ 
 
   _partial_packets.resize(_classes);
@@ -651,6 +662,16 @@ void TrafficManager::_Step( )
 
       Credit * const c = _net[subnet]->ReadCredit( n );
       if ( c ) {
+#ifdef TRACK_FLOWS
+	for(set<int>::const_iterator iter = c->vc.begin(); iter != c->vc.end(); ++iter) {
+	  int const vc = *iter;
+	  assert(!_outstanding_classes[n][subnet][vc].empty());
+	  int cl = _outstanding_classes[n][subnet][vc].front();
+	  _outstanding_classes[n][subnet][vc].pop();
+	  assert(_outstanding_credits[cl][subnet][n] > 0);
+	  --_outstanding_credits[cl][subnet][n];
+	}
+#endif
 	_buf_states[n][subnet]->ProcessCredit(c);
 	c->Free();
       }
@@ -841,6 +862,12 @@ void TrafficManager::_Step( )
 	_last_class[n][subnet] = c;
 
 	_partial_packets[c][n].pop_front();
+
+#ifdef TRACK_FLOWS
+      ++_outstanding_credits[c][subnet][n];
+      _outstanding_classes[n][subnet][f->vc].push(c);
+#endif
+
 	dest_buf->SendingFlit(f);
 	
 	if(_pri_type == network_age_based) {
@@ -1240,6 +1267,9 @@ void TrafficManager::UpdateStats() {
     }
 #endif
     for(int subnet = 0; subnet < _subnets; ++subnet) {
+#ifdef TRACK_FLOWS
+      if(_outstanding_credits_out) *_outstanding_credits_out << _outstanding_credits[c][subnet] << ',';
+#endif
       for(int router = 0; router < _routers; ++router) {
 	Router * const r = _router[subnet][router];
 #ifdef TRACK_FLOWS

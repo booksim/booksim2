@@ -71,6 +71,10 @@ protected:
   // ============ Injection VC states  ============ 
 
   vector<vector<BufferState *> > _buf_states;
+#ifdef TRACK_FLOWS
+  vector<vector<vector<int> > > _outstanding_credits;
+  vector<vector<vector<queue<int> > > > _outstanding_classes;
+#endif
   vector<vector<vector<int> > > _last_vc;
 
   // ============ Routing ============ 
