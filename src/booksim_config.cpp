@@ -281,7 +281,7 @@ BookSimConfig::BookSimConfig( )
   AddStrField("received_flits_out", "");
   AddStrField("stored_flits_out", "");
   AddStrField("sent_flits_out", "");
-  AddStrField("outstanding_flits_out", "");
+  AddStrField("outstanding_credits_out", "");
   AddStrField("ejected_flits_out", "");
   AddStrField("active_packets_out", "");
 
