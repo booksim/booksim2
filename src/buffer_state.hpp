@@ -199,7 +199,7 @@ public:
     return _occupancy;
   }
 
-  inline int Occupancy(int vc) const {
+  inline int OccupancyFor( int vc = 0 ) const {
     assert((vc >= 0) && (vc < _vcs));
     return _vc_occupancy[vc];
   }
