@@ -99,7 +99,7 @@ BufferState::PrivateBufferPolicy::PrivateBufferPolicy(Configuration const & conf
 void BufferState::PrivateBufferPolicy::SendingFlit(Flit const * const f)
 {
   int const vc = f->vc;
-  if(_buffer_state->Occupancy(vc) > _vc_buf_size) {
+  if(_buffer_state->OccupancyFor(vc) > _vc_buf_size) {
     ostringstream err;
     err << "Buffer overflow for VC " << vc;
     Error(err.str());
@@ -108,7 +108,7 @@ void BufferState::PrivateBufferPolicy::SendingFlit(Flit const * const f)
 
 bool BufferState::PrivateBufferPolicy::IsFullFor(int vc) const
 {
-  return (_buffer_state->Occupancy(vc) >= _vc_buf_size);
+  return (_buffer_state->OccupancyFor(vc) >= _vc_buf_size);
 }
 
 BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
@@ -269,7 +269,7 @@ void BufferState::LimitedSharedBufferPolicy::SendingFlit(Flit const * const f)
 bool BufferState::LimitedSharedBufferPolicy::IsFullFor(int vc) const
 {
   return (SharedBufferPolicy::IsFullFor(vc) ||
-	  (_buffer_state->Occupancy(vc) >= _max_held_slots));
+	  (_buffer_state->OccupancyFor(vc) >= _max_held_slots));
 }
 
 BufferState::DynamicLimitedSharedBufferPolicy::DynamicLimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
@@ -435,7 +435,7 @@ bool BufferState::FeedbackSharedBufferPolicy::IsFullFor(int vc) const
     int limit = _ComputeLimit(rtt);
     max_slots = min(max_slots, limit);
   }
-  return (_buffer_state->Occupancy(vc) >= max_slots);
+  return (_buffer_state->OccupancyFor(vc) >= max_slots);
 }
 
 BufferState::SimpleFeedbackSharedBufferPolicy::SimpleFeedbackSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
@@ -448,8 +448,8 @@ void BufferState::SimpleFeedbackSharedBufferPolicy::SendingFlit(Flit const * con
 {
   int const & vc = f->vc;
   if(_flit_sent_time[vc].empty()) {
-    assert(_buffer_state->Occupancy(vc) > 0);
-    _pending_credits[vc] = _buffer_state->Occupancy(vc) - 1;
+    assert(_buffer_state->OccupancyFor(vc) > 0);
+    _pending_credits[vc] = _buffer_state->OccupancyFor(vc) - 1;
 #ifdef DEBUG_SIMPLEFEEDBACK
     cerr << FullName() << ": Sending probe flit for VC "
 	 << vc << "; "
