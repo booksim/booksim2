@@ -47,6 +47,7 @@ protected:
 
   int _nodes;
   int _routers;
+  int _vcs;
 
   vector<Network *> _net;
   vector<vector<Router *> > _router;
@@ -207,6 +208,11 @@ protected:
   ostream * _active_packets_out;
 #endif
 
+#ifdef TRACK_CREDITS
+  ostream * _used_credits_out;
+  ostream * _free_credits_out;
+  ostream * _max_credits_out;
+#endif
 
   // ============ Internal methods ============ 
 

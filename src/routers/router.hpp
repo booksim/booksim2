@@ -159,6 +159,10 @@ public:
   }
 #endif
 
+  virtual vector<int> UsedCredits() const = 0;
+  virtual vector<int> FreeCredits() const = 0;
+  virtual vector<int> MaxCredits() const = 0;
+
 #ifdef TRACK_STALLS
   inline int GetBufferBusyStalls(int c) const {
     assert((c >= 0) && (c < _classes));

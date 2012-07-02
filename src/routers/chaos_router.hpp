@@ -122,6 +122,10 @@ public:
   virtual int GetBufferOccupancyForClass(int input, int cl) const {return 0;}
 #endif
 
+  virtual vector<int> UsedCredits() const { return vector<int>(); }
+  virtual vector<int> FreeCredits() const { return vector<int>(); }
+  virtual vector<int> MaxCredits() const { return vector<int>(); }
+
   void Display( ostream & os = cout ) const;
 };
 

@@ -62,6 +62,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
 
+  _vcs = config.GetInt("num_vcs");
   _subnets = config.GetInt("subnets");
  
   // ============ Message priorities ============ 
@@ -152,7 +153,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
   _outstanding_classes.resize(_nodes);
   for(int n = 0; n < _nodes; ++n) {
-    _outstanding_classes[n].resize(_subnets, vector<queue<int> >(config.GetInt("num_vcs")));
+    _outstanding_classes[n].resize(_subnets, vector<queue<int> >(_vcs));
   }
 #endif
 
@@ -397,6 +398,27 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
 #endif
 
+#ifdef TRACK_CREDITS
+  string used_credits_out_file = config.GetStr( "used_credits_out" );
+  if(used_credits_out_file == "") {
+    _used_credits_out = NULL;
+  } else {
+    _used_credits_out = new ofstream(used_credits_out_file.c_str());
+  }
+  string free_credits_out_file = config.GetStr( "free_credits_out" );
+  if(free_credits_out_file == "") {
+    _free_credits_out = NULL;
+  } else {
+    _free_credits_out = new ofstream(free_credits_out_file.c_str());
+  }
+  string max_credits_out_file = config.GetStr( "max_credits_out" );
+  if(max_credits_out_file == "") {
+    _max_credits_out = NULL;
+  } else {
+    _max_credits_out = new ofstream(max_credits_out_file.c_str());
+  }
+#endif
+
 }
 
 TrafficManager::~TrafficManager( )
@@ -435,6 +457,12 @@ TrafficManager::~TrafficManager( )
   if(_outstanding_credits_out) delete _outstanding_credits_out;
   if(_ejected_flits_out) delete _ejected_flits_out;
   if(_active_packets_out) delete _active_packets_out;
+#endif
+
+#ifdef TRACK_CREDITS
+  if(_used_credits_out) delete _used_credits_out;
+  if(_free_credits_out) delete _free_credits_out;
+  if(_max_credits_out) delete _max_credits_out;
 #endif
 
   Flit::FreeAll();
@@ -1304,6 +1332,31 @@ void TrafficManager::UpdateStats() {
   if(_active_packets_out) *_active_packets_out << flush;
 #endif
 #endif
+
+#ifdef TRACK_CREDITS
+  for(int s = 0; s < _subnets; ++s) {
+    for(int n = 0; n < _nodes; ++n) {
+      BufferState const * const bs = _buf_states[n][s];
+      for(int v = 0; v < _vcs; ++v) {
+	if(_used_credits_out) *_used_credits_out << bs->OccupancyFor(v) << ',';
+	if(_free_credits_out) *_free_credits_out << bs->AvailableFor(v) << ',';
+	if(_max_credits_out) *_max_credits_out << bs->LimitFor(v) << ',';
+      }
+    }
+    for(int r = 0; r < _routers; ++r) {
+      Router const * const rtr = _router[s][r];
+      char trail_char = 
+	((r == _routers - 1) && (s == _subnets - 1)) ? '\n' : ',';
+      if(_used_credits_out) *_used_credits_out << rtr->UsedCredits() << trail_char;
+      if(_free_credits_out) *_free_credits_out << rtr->FreeCredits() << trail_char;
+      if(_max_credits_out) *_max_credits_out << rtr->MaxCredits() << trail_char;
+    }
+  }
+  if(_used_credits_out) *_used_credits_out << flush;
+  if(_free_credits_out) *_free_credits_out << flush;
+  if(_max_credits_out) *_max_credits_out << flush;
+#endif
+
 }
 
 void TrafficManager::DisplayStats(ostream & os) const {

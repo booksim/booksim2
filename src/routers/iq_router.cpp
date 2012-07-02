@@ -2292,6 +2292,39 @@ int IQRouter::GetBufferOccupancyForClass(int input, int cl) const
 }
 #endif
 
+vector<int> IQRouter::UsedCredits() const
+{
+  vector<int> result(_outputs*_vcs);
+  for(int o = 0; o < _outputs; ++o) {
+    for(int v = 0; v < _vcs; ++v) {
+      result[o*_vcs+v] = _next_buf[o]->OccupancyFor(v);
+    }
+  }
+  return result;
+}
+
+vector<int> IQRouter::FreeCredits() const
+{
+  vector<int> result(_outputs*_vcs);
+  for(int o = 0; o < _outputs; ++o) {
+    for(int v = 0; v < _vcs; ++v) {
+      result[o*_vcs+v] = _next_buf[o]->AvailableFor(v);
+    }
+  }
+  return result;
+}
+
+vector<int> IQRouter::MaxCredits() const
+{
+  vector<int> result(_outputs*_vcs);
+  for(int o = 0; o < _outputs; ++o) {
+    for(int v = 0; v < _vcs; ++v) {
+      result[o*_vcs+v] = _next_buf[o]->LimitFor(v);
+    }
+  }
+  return result;
+}
+
 void IQRouter::_UpdateNOQ(int input, int vc, Flit const * f) {
   assert(!_routing_delay);
   assert(f);

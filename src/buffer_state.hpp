@@ -49,6 +49,8 @@ class BufferState : public Module {
     virtual void SendingFlit(Flit const * const f);
     virtual void FreeSlotFor(int vc = 0);
     virtual bool IsFullFor(int vc = 0) const = 0;
+    virtual int AvailableFor(int vc = 0) const = 0;
+    virtual int LimitFor(int vc = 0) const = 0;
 
     static BufferPolicy * New(Configuration const & config, 
 			      BufferState * parent, const string & name);
@@ -62,6 +64,8 @@ class BufferState : public Module {
 			const string & name);
     virtual void SendingFlit(Flit const * const f);
     virtual bool IsFullFor(int vc = 0) const;
+    virtual int AvailableFor(int vc = 0) const;
+    virtual int LimitFor(int vc = 0) const;
   };
   
   class SharedBufferPolicy : public BufferPolicy {
@@ -80,6 +84,8 @@ class BufferState : public Module {
     virtual void SendingFlit(Flit const * const f);
     virtual void FreeSlotFor(int vc = 0);
     virtual bool IsFullFor(int vc = 0) const;
+    virtual int AvailableFor(int vc = 0) const;
+    virtual int LimitFor(int vc = 0) const;
   };
 
   class LimitedSharedBufferPolicy : public SharedBufferPolicy {
@@ -94,6 +100,8 @@ class BufferState : public Module {
     virtual void TakeBuffer(int vc = 0);
     virtual void SendingFlit(Flit const * const f);
     virtual bool IsFullFor(int vc = 0) const;
+    virtual int AvailableFor(int vc = 0) const;
+    virtual int LimitFor(int vc = 0) const;
   };
     
   class DynamicLimitedSharedBufferPolicy : public LimitedSharedBufferPolicy {
@@ -118,6 +126,7 @@ class BufferState : public Module {
   protected:
     int _ComputeRTT(int vc, int last_rtt) const;
     int _ComputeLimit(int rtt) const;
+    int _ComputeMaxSlots(int vc) const;
     int _vcs;
     vector<int> _occupancy_limit;
     vector<int> _round_trip_time;
@@ -133,6 +142,8 @@ class BufferState : public Module {
     virtual void SendingFlit(Flit const * const f);
     virtual void FreeSlotFor(int vc = 0);
     virtual bool IsFullFor(int vc = 0) const;
+    virtual int AvailableFor(int vc = 0) const;
+    virtual int LimitFor(int vc = 0) const;
   };
   
   class SimpleFeedbackSharedBufferPolicy : public FeedbackSharedBufferPolicy {
@@ -185,6 +196,12 @@ public:
   }
   inline bool IsFullFor( int vc = 0 ) const {
     return _buffer_policy->IsFullFor(vc);
+  }
+  inline int AvailableFor( int vc = 0 ) const {
+    return _buffer_policy->AvailableFor(vc);
+  }
+  inline int LimitFor( int vc = 0 ) const {
+    return _buffer_policy->LimitFor(vc);
   }
   inline bool IsEmptyFor(int vc = 0) const {
     assert((vc >= 0) && (vc < _vcs));
