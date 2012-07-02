@@ -265,6 +265,7 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField("stats_out", "");
 
+#ifdef TRACK_FLOWS
   AddStrField("injected_flits_out", "");
   AddStrField("received_flits_out", "");
   AddStrField("stored_flits_out", "");
@@ -272,6 +273,7 @@ BookSimConfig::BookSimConfig( )
   AddStrField("outstanding_credits_out", "");
   AddStrField("ejected_flits_out", "");
   AddStrField("active_packets_out", "");
+#endif
 
   // batch only -- packet sequence numbers
   AddStrField("sent_packets_out", "");
