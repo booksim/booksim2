@@ -170,6 +170,10 @@ public:
   virtual int GetBufferOccupancyForClass(int input, int cl) const;
 #endif
 
+  virtual vector<int> UsedCredits() const;
+  virtual vector<int> FreeCredits() const;
+  virtual vector<int> MaxCredits() const;
+
   SwitchMonitor const * const GetSwitchMonitor() const {return _switchMonitor;}
   BufferMonitor const * const GetBufferMonitor() const {return _bufferMonitor;}
 

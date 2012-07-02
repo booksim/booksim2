@@ -111,6 +111,16 @@ bool BufferState::PrivateBufferPolicy::IsFullFor(int vc) const
   return (_buffer_state->OccupancyFor(vc) >= _vc_buf_size);
 }
 
+int BufferState::PrivateBufferPolicy::AvailableFor(int vc) const
+{
+  return _vc_buf_size - _buffer_state->OccupancyFor(vc);
+}
+
+int BufferState::PrivateBufferPolicy::LimitFor(int vc) const
+{
+  return _vc_buf_size;
+}
+
 BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
   : BufferPolicy(config, parent, name), _shared_buf_occupancy(0)
 {
@@ -237,6 +247,20 @@ bool BufferState::SharedBufferPolicy::IsFullFor(int vc) const
 	  (_shared_buf_occupancy >= _shared_buf_size));
 }
 
+int BufferState::SharedBufferPolicy::AvailableFor(int vc) const
+{
+  int i = _private_buf_vc_map[vc];
+  return (_reserved_slots[vc] + 
+	  max(_private_buf_size[i] - _private_buf_occupancy[i], 0) +
+	  (_shared_buf_size - _shared_buf_occupancy));
+}
+
+int BufferState::SharedBufferPolicy::LimitFor(int vc) const
+{
+  int i = _private_buf_vc_map[vc];
+  return (_private_buf_size[i] + _shared_buf_size);
+}
+
 BufferState::LimitedSharedBufferPolicy::LimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
   : SharedBufferPolicy(config, parent, name), _active_vcs(0)
 {
@@ -270,6 +294,17 @@ bool BufferState::LimitedSharedBufferPolicy::IsFullFor(int vc) const
 {
   return (SharedBufferPolicy::IsFullFor(vc) ||
 	  (_buffer_state->OccupancyFor(vc) >= _max_held_slots));
+}
+
+int BufferState::LimitedSharedBufferPolicy::AvailableFor(int vc) const
+{
+  return min(SharedBufferPolicy::AvailableFor(vc), 
+	     _max_held_slots - _buffer_state->OccupancyFor(vc));
+}
+
+int BufferState::LimitedSharedBufferPolicy::LimitFor(int vc) const
+{
+  return min(SharedBufferPolicy::LimitFor(vc), _max_held_slots);
 }
 
 BufferState::DynamicLimitedSharedBufferPolicy::DynamicLimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
@@ -375,6 +410,18 @@ int BufferState::FeedbackSharedBufferPolicy::_ComputeLimit(int rtt) const
   return max((_min_latency << 1) - rtt + _offset, 1);
 }
 
+int BufferState::FeedbackSharedBufferPolicy::_ComputeMaxSlots(int vc) const
+{
+  int max_slots = _occupancy_limit[vc];
+  if(!_flit_sent_time[vc].empty()) {
+    int min_rtt = GetSimTime() - _flit_sent_time[vc].front();
+    int rtt = _ComputeRTT(vc, min_rtt);
+    int limit = _ComputeLimit(rtt);
+    max_slots = min(max_slots, limit);
+  }
+  return max_slots;
+}
+
 void BufferState::FeedbackSharedBufferPolicy::FreeSlotFor(int vc)
 {
   SharedBufferPolicy::FreeSlotFor(vc);
@@ -428,14 +475,18 @@ bool BufferState::FeedbackSharedBufferPolicy::IsFullFor(int vc) const
   if(SharedBufferPolicy::IsFullFor(vc)) {
     return true;
   }
-  int max_slots = _occupancy_limit[vc];
-  if(!_flit_sent_time[vc].empty()) {
-    int min_rtt = GetSimTime() - _flit_sent_time[vc].front();
-    int rtt = _ComputeRTT(vc, min_rtt);
-    int limit = _ComputeLimit(rtt);
-    max_slots = min(max_slots, limit);
-  }
-  return (_buffer_state->OccupancyFor(vc) >= max_slots);
+  return (_buffer_state->OccupancyFor(vc) >= _ComputeMaxSlots(vc));
+}
+
+int BufferState::FeedbackSharedBufferPolicy::AvailableFor(int vc) const
+{
+  return min(SharedBufferPolicy::AvailableFor(vc), 
+	     _ComputeMaxSlots(vc) - _buffer_state->OccupancyFor(vc));
+}
+
+int BufferState::FeedbackSharedBufferPolicy::LimitFor(int vc) const
+{
+  return min(SharedBufferPolicy::LimitFor(vc), _ComputeMaxSlots(vc));
 }
 
 BufferState::SimpleFeedbackSharedBufferPolicy::SimpleFeedbackSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)

@@ -287,6 +287,12 @@ BookSimConfig::BookSimConfig( )
   AddStrField("active_packets_out", "");
 #endif
 
+#ifdef TRACK_CREDITS
+  AddStrField("used_credits_out", "");
+  AddStrField("free_credits_out", "");
+  AddStrField("max_credits_out", "");
+#endif
+
   // batch only -- packet sequence numbers
   AddStrField("sent_packets_out", "");
   
