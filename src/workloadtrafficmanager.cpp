@@ -31,7 +31,7 @@
 
 WorkloadTrafficManager::WorkloadTrafficManager( const Configuration &config, 
 						const vector<Network *> & net )
-: TrafficManager(config, net)
+  : TrafficManager(config, net), _overall_runtime(0)
 {
   _sample_period = config.GetInt( "sample_period" );
   _max_samples    = config.GetInt( "max_samples" );
