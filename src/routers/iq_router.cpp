@@ -54,7 +54,8 @@
 
 extern vector< Network * > net;
 extern TrafficManager * trafficManager;
-extern map<int, vector<int> > gDropStats;
+extern map<int, vector<int> > gDropInStats;
+extern map<int, vector<int> > gDropOutStats;
 extern map<int, vector<int> > gChanDropStats;
 extern Stats* gStatDropLateness;
 
@@ -171,8 +172,10 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 {
 
 
-  gDropStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
-  gDropStats[id].resize(inputs,0);
+  gDropInStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
+  gDropInStats[id].resize(inputs,0);
+  gDropOutStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
+  gDropOutStats[id].resize(inputs,0);
   gChanDropStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
   gChanDropStats[id].resize(inputs,0);  
 
@@ -1173,8 +1176,10 @@ void IQRouter::_VCAllocUpdate( )
       //send dropped credit since the packet is removed from the buffer
     
       Flit* drop_f = NULL;
-      gDropStats[_id][input]++;
-      _next_bandwidth_commitment[(cur_buf->GetRouteSet(vc)->GetSet().output_port)]-=f->packet_size;
+      int out = (cur_buf->GetRouteSet(vc)->GetSet().output_port);
+      gDropInStats[_id][input]++;
+      gDropOutStats[_id][out]++;
+      _next_bandwidth_commitment[out]-=f->packet_size;
       drop_f = trafficManager->DropPacket(input, f);
       drop_f->vc = f->vc;
 
@@ -2526,12 +2531,12 @@ int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
   assert((out >= 0) && (out < _outputs));
   assert(vc_begin < (_special_vcs+_data_vcs));
   assert(vc_end <(_special_vcs+_data_vcs));
-  assert(vc_end >= vc_begin);
+  assert(vc_end >= vc_begin || vc_end==-1);
 
   BufferState const * const dest_buf = _next_buf[out];
   
   int const start = (vc_begin >= 0) ? vc_begin : 0;
-  int const end = (vc_begin >= 0) ? vc_end : ((_special_vcs+_data_vcs) - 1);
+  int const end = (vc_end >= 0) ? vc_end : ((vc_begin >= 0)?start:((_special_vcs+_data_vcs) - 1));
 
   int size = 0;
   for (int v = start; v <= end; v++)  {

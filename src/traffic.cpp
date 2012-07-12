@@ -310,8 +310,8 @@ int badperm_dfly( int source, int total_nodes )
 
 int badperm_dflynew( int source, int total_nodes )
 {
-  int grp_size_routers = 2*(_xr*gK);
-  int grp_size_nodes = grp_size_routers * (_xr*gK);
+  int grp_size_routers = 2*(gK);
+  int grp_size_nodes = grp_size_routers * (gK);
 
   int temp;
   int dest;

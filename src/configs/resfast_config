@@ -12,7 +12,7 @@ priority = other;
 num_vcs     = 4;
 res_vcs = 1;
 expiration_time = 200;
-reservation_packet_threshold=0;
+reservation_packet_threshold=128;
 reservation_chunk_limit=512;
 
 reservation_overhead_factor=1.05;

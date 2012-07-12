@@ -72,8 +72,10 @@ BookSimConfig::BookSimConfig( )
   _int_map["reservation_always_succeed"] = 0;
   _float_map["reservation_rtt"] = 1.0;
   _float_map["reservation_overhead_factor"] = 1.05;
+  _int_map["reservation_control_overhead"] = 0;
+  _int_map["reservation_walkin_overhead"] = 0;
   _int_map["fast_reservation_transmit"] = 0;
-  _int_map["reservation_packet_threshold"] = 64;
+  _int_map["reservation_packet_threshold"] = 128;
   _int_map["reservation_chunk_limit"] = 256;
   _int_map["fast_retransmit"] = 0;
   _int_map["reservation_queuing_drop"]= 1;

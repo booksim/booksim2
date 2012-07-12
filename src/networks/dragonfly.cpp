@@ -747,7 +747,7 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
     return;
   }
 
-  int adaptive_threshold = f->packet_size*3;
+  int adaptive_threshold = f->packet_size*6;
 
  
   int dest  = f->dest;
@@ -780,8 +780,8 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
       if (debug){
 	cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
       }
-      //intermediate are in the same group
-      if(grp_ID == intm_grp_ID){
+      //intermediate was useless are in the same group
+      if(grp_ID == intm_grp_ID ||intm_grp_ID==dest_grp_ID ){
 	f->ph = 0;
 	f->minimal = 1;
       } else {
@@ -794,12 +794,23 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
 	//min and non-min output port could be identical, need to distinquish them
 	if(nonmin_router_output == min_router_output){
-	  min_queue_size = MAX(r->GetCredit(min_router_output,1,1),0) ; 
-	  nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output,0,0),0);
+	  //this is fucking hand coded VCs
+	  if(gReservation){
+	    
+	    min_queue_size = MAX(r->GetCredit(min_router_output,SRP_VC_CONVERTER(4,RES_TYPE_NORM)),0) 
+	      +MAX(r->GetCredit(min_router_output,SRP_VC_CONVERTER(4,RES_TYPE_SPEC)),0); 
+	    nonmin_queue_size = MAX(r->GetCredit(min_router_output,SRP_VC_CONVERTER(2,RES_TYPE_NORM)),0) 
+	      +MAX(r->GetCredit(min_router_output,SRP_VC_CONVERTER(2,RES_TYPE_SPEC)),0);
+	  } else {
+	    int min_vc = SRP_VC_CONVERTER(4,RES_TYPE_NORM);
+	    int nonmin_vc = SRP_VC_CONVERTER(2,RES_TYPE_NORM);
+	    min_queue_size = MAX(r->GetCredit(min_router_output,min_vc),0) ; 
+	    nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output,nonmin_vc),0);
+	  }
 
 	} else {	  
-	  min_queue_size = MAX(r->GetCredit(min_router_output,1,1),0) ; 
-	  nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output,0,0),0);
+	  min_queue_size = MAX(r->GetCredit(min_router_output),0) ; 
+	  nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output),0);
 	}
 
 

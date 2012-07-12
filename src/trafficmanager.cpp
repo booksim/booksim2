@@ -104,7 +104,12 @@ bool RESERVATION_POST_WAIT = false;
 bool RESERVATION_BUFFER_SIZE_DROP=false;
 //send the reservation to the next segment with the last packet
 bool RESERVATION_TAIL_RESERVE=false;
-
+//instead or in addition to the reservaiton overhead factor, control packet also update the 
+//reservaitons scheduling, this tires to eliminate the reservaiton overhead
+int RESERVATION_CONTROL_OVERHEAD = 0;
+//When small packets are mixed in, they do not rquire reservations, we need to account for 
+//their bandwidth
+bool RESERVATION_WALKIN_OVERHEAD= false;
 
 
 //expiration timer for IRD
@@ -140,7 +145,8 @@ Stats* gStatSpecCount;
 Stats* gStatDropLateness;
 Stats* gStatSurviveTTL;
 
-map<int, vector<int> > gDropStats;
+map<int, vector<int> > gDropInStats;
+map<int, vector<int> > gDropOutStats;
 map<int, vector<int> > gChanDropStats;
 int gExpirationTime = 0;
 
@@ -312,6 +318,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   FAST_RESERVATION_TRANSMIT = (config.GetInt("fast_reservation_transmit"));
   RESERVATION_OVERHEAD_FACTOR = config.GetFloat("reservation_overhead_factor");
+  RESERVATION_CONTROL_OVERHEAD = config.GetInt("reservation_control_overhead");
+  RESERVATION_WALKIN_OVERHEAD =  (config.GetInt("reservation_walkin_overhead")==1);
   RESERVATION_RTT=config.GetFloat("reservation_rtt");
   RESERVATION_PACKET_THRESHOLD = config.GetInt("reservation_packet_threshold");
   RESERVATION_CHUNK_LIMIT=config.GetInt("reservation_chunk_limit");
@@ -535,6 +543,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _write_reply_size.resize(_classes, _write_reply_size.back());
 
   _packet_size = config.GetIntArray( "const_flits_per_packet" );
+ 
+  
   if(_packet_size.empty()) {
     _packet_size.push_back(config.GetInt("const_flits_per_packet"));
   }
@@ -1150,11 +1160,19 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	    //Reactivate the flow, assign vc, and insertinto the correct queues
 	    receive_flow_buffer->Reset();
 	    _FlowVC(receive_flow_buffer);
-	    _reservation_set[dest].insert(receive_flow_buffer);
+	    if(receive_flow_buffer->send_spec_ready())
+	      {		
+		_reservation_set[dest].insert(receive_flow_buffer);
+	      }
 	  }
 	}
       }
       f->Free();
+      
+      if(RESERVATION_CONTROL_OVERHEAD!=0){
+	_reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
+	_reservation_schedule[dest]+=RESERVATION_CONTROL_OVERHEAD;
+      }      
     } else if(gECN){
 #ifdef ENABLE_STATS
       gStatAckLatency->AddSample(_time-f->time);
@@ -1195,6 +1213,10 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 #endif
     }
     f->Free();
+
+    if(RESERVATION_CONTROL_OVERHEAD!=0){
+      _reservation_schedule[dest]+=RESERVATION_CONTROL_OVERHEAD;
+     }     
     return;
     break;
   case RES_TYPE_GRANT: 
@@ -1219,6 +1241,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 				 int(ceil(RESERVATION_RTT*float(_time-f->ntime))));
     }
     f->Free();
+    if(RESERVATION_CONTROL_OVERHEAD!=0){
+      _reservation_schedule[dest]+=RESERVATION_CONTROL_OVERHEAD;
+    }     
     return;
     break;
   case RES_TYPE_RES:
@@ -1261,8 +1286,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       ff->vc = 1+gAuxVCs;
       _response_packets[dest].push_back(ff);
     }
-    break;
 
+    if(RESERVATION_CONTROL_OVERHEAD!=0){
+      _reservation_schedule[dest]+=RESERVATION_CONTROL_OVERHEAD;
+    }     
+    break;
   case RES_TYPE_SPEC:
 #ifdef ENABLE_STATS
     gStatSpecReceived[dest]++;
@@ -1327,6 +1355,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 #ifdef ENABLE_STATS
     gStatNormReceived[dest]++;
 #endif
+    
+    if(gReservation && RESERVATION_WALKIN_OVERHEAD && f->walkin && f->head){      
+      _reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
+      _reservation_schedule[dest] +=  f->packet_size+4;
+    }
     if(gReservation && !f->walkin){
       //find or create a reorder buffer
       if(_rob[dest].count(f->flid)==0){
@@ -1383,13 +1416,17 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	  ff->vc = 1+gAuxVCs;;
 	  _response_packets[dest].push_back(ff);
 	}
+	
 	_sent_data_flits[f->cl][f->src]++;
 	if(f->tail){
 #ifdef ENABLE_STATS
 	  gStatNormLatency->AddSample(_time-f->time);
 #endif
 	}
+	
       }
+      
+      
     } else { //for other modes duplication normal is not possible
       _sent_data_flits[f->cl][f->src]++;
     }  
@@ -1988,7 +2025,11 @@ void TrafficManager::_Inject(){
 	  _active_set[input].insert(_flow_buffer[input][empty_flow]);
 	  _deactive_set[input].erase(_flow_buffer[input][empty_flow]);
 	  if(gReservation){
-	    _reservation_set[input].insert(_flow_buffer[input][empty_flow]);
+	    FlowBuffer* temp = _flow_buffer[input][empty_flow];
+	    if(temp->send_spec_ready())
+	      {	
+		_reservation_set[input].insert(_flow_buffer[input][empty_flow]);
+	      }    
 	  }
 	  if(_pending_flow[input]->flid == WATCH_FLID){
 	    _flow_buffer[input][empty_flow]->_watch = true;
@@ -2262,7 +2303,7 @@ void TrafficManager::_Step( )
 	    assert(f->res_type==RES_TYPE_RES);
 	    _last_sent_spec_buffer[source] =NULL;
 	  }
-	} else {
+	}else {
 	  if(f->res_type==RES_TYPE_SPEC){
 #ifdef ENABLE_STATS
 	    gStatSpecSent[source]++;
@@ -2275,6 +2316,7 @@ void TrafficManager::_Step( )
 #endif
 	  }
 	}
+	
 
 	//check flow done
 	int flow_done_status = ready_flow_buffer->done();
@@ -2299,7 +2341,7 @@ void TrafficManager::_Step( )
 	  } else {
 	    ready_flow_buffer->Reset();
 	    _FlowVC(ready_flow_buffer);
-	    if(gReservation){
+	    if(gReservation && ready_flow_buffer->send_spec_ready()){
 	      _reservation_set[source].insert(ready_flow_buffer);
 	    }	  
 	  }
@@ -2351,7 +2393,7 @@ void TrafficManager::_Step( )
 
 
     cout<<" Retired "<<retired_s->NumSamples()+retired_n->NumSamples()
-	<<" Spec Out "<<TOTAL_SPEC_BUFFER
+	<<" Adaptive "<<float(_nonmin_plat_stats->NumSamples())/(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples())
 	<<" spec_lat "<<retired_s->Average()
 	<<" norm_lat "<<retired_n->Average()
 	<<" ("<<float(retired_s->NumSamples())/retired_n->NumSamples()<<")"<<endl
@@ -2444,8 +2486,13 @@ void TrafficManager::_ClearStats( )
   }
   
   for(int i = 0; i<_routers; i++){
-    for(unsigned int j = 0; j<    gDropStats[i].size(); j++){
-      gDropStats[i][j] = 0;
+    for(unsigned int j = 0; j<    gDropInStats[i].size(); j++){
+      gDropInStats[i][j] = 0;
+    }
+  }
+  for(int i = 0; i<_routers; i++){
+    for(unsigned int j = 0; j<    gDropOutStats[i].size(); j++){
+      gDropOutStats[i][j] = 0;
     }
   }
   for(int i = 0; i<_routers; i++){
@@ -3257,7 +3304,7 @@ void TrafficManager::DisplayStats( ostream & os ) {
     }
     os<<"ECN ratio "<<ecn_sum/ecn_num<<endl;
     os<<"Flows created "<<_cur_flid<<endl;
-    os<<"Adaptive Raitio "<<float(_nonmin_plat_stats->NumSamples())/(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples())<<endl;
+    os<<"Adaptive Ratio "<<float(_nonmin_plat_stats->NumSamples())/(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples())<<endl;
     _DisplayTedsShit();    
 #endif
   }
@@ -3537,8 +3584,14 @@ void TrafficManager::_DisplayTedsShit(){
       *_stats_out <<"];"<<endl;
     }
     for(int i = 0; i<_routers; i++){
-      *_stats_out <<"drop_router("<<i+1<<",:)=["
-		  <<gDropStats[i] ;
+      *_stats_out <<"drop_router_in("<<i+1<<",:)=["
+		  <<gDropInStats[i] ;
+      for(int ii=0; ii<max_outputs-rrr[i]->NumOutputs(); ii++)	 *_stats_out<<"0 ";
+      *_stats_out <<"];"<<endl;
+    }
+    for(int i = 0; i<_routers; i++){
+      *_stats_out <<"drop_router_out("<<i+1<<",:)=["
+		  <<gDropOutStats[i] ;
       for(int ii=0; ii<max_outputs-rrr[i]->NumOutputs(); ii++)	 *_stats_out<<"0 ";
       *_stats_out <<"];"<<endl;
     }

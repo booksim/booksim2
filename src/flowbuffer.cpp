@@ -37,7 +37,7 @@ FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id,int mode, flow* f){
 }
 
 void FlowBuffer::Activate(int src, int id,  int mode, flow* f){
- //ECN stuff need to be initilized once not every time or else benefits are lost
+  //ECN stuff need to be initilized once not every time or else benefits are lost
   if(mode == ECN_MODE && _dest!=f->dest){
     _IRD = 0; 
     _IRD_timer = 0;
@@ -54,14 +54,15 @@ void FlowBuffer::Activate(int src, int id,  int mode, flow* f){
 }
 void FlowBuffer::Deactivate(){
   //  gStatResEarly->AddSample(_reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size)-1-GetSimTime());
-  int sample = _reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size)-1-_last_send_time;
-  //negative early means late
-  if(sample>=0){
-    gStatResEarly_POS->AddSample(sample);  
-  } else {
-    gStatResEarly_NEG->AddSample(-sample);  
+  if(_mode == RES_MODE && fl->flow_size>=RESERVATION_PACKET_THRESHOLD){
+    int sample = _reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size)-1-_last_send_time;
+    //negative early means late
+    if(sample>=0){
+      gStatResEarly_POS->AddSample(sample);  
+    } else {
+      gStatResEarly_NEG->AddSample(-sample);  
+    }
   }
-
   delete fl;
   fl= NULL;
   _active= false;
@@ -90,6 +91,7 @@ void FlowBuffer::Init( flow* f){
   _tail_sent = true;
   _guarantee_sent = 0;
   if(_mode == RES_MODE && fl->flow_size>=RESERVATION_PACKET_THRESHOLD){
+ 
     _reservation_flit  = Flit::New();
     _reservation_flit->packet_size=1;
     _reservation_flit->src = _src;
@@ -120,6 +122,7 @@ void FlowBuffer::Init( flow* f){
   } else {
     _status =FLOW_STATUS_NORM;
     _res_sent = true;
+    _res_outstanding=false;
   }
   
   _flit_status.clear();
@@ -766,13 +769,14 @@ void FlowBuffer::Reset(){
     _sleep_time = _reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size);
   
   //gStatResEarly->AddSample(_reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size)-1-GetSimTime());
-  int sample = _reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size)-1-_last_send_time;
-  if(sample>=0){
-    gStatResEarly_POS->AddSample(sample);  
-  } else {
-    gStatResEarly_NEG->AddSample(-sample);  
+  if(_mode == RES_MODE && fl->flow_size>=RESERVATION_PACKET_THRESHOLD){
+    int sample = _reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size)-1-_last_send_time;
+    if(sample>=0){
+      gStatResEarly_POS->AddSample(sample);  
+    } else {
+      gStatResEarly_NEG->AddSample(-sample);  
+    }
   }
-
   delete fl;
   Init(_flow_queue.front());
   _flow_queue.pop();
