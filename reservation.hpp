@@ -1,0 +1,44 @@
+#ifndef _RESERVATION_H_
+#define _RESERVATION_H_
+
+#define FLOW_STATUS_GRANT_TRANSITION 5
+#define FLOW_STATUS_WAIT 4
+#define FLOW_STATUS_NACK_TRANSITION 3
+#define FLOW_STATUS_NACK 2
+#define FLOW_STATUS_NORM 1
+#define FLOW_STATUS_SPEC 0
+
+#define RES_TYPE_GRANT 5
+#define RES_TYPE_RES 4
+#define RES_TYPE_ACK 3
+#define RES_TYPE_NACK 2
+#define RES_TYPE_NORM 1
+#define RES_TYPE_SPEC 0
+
+
+#define RES_STATUS_REORDER 2
+#define RES_STATUS_ASSIGNED 1
+#define RES_STATUS_NONE 0
+
+
+#define FLIT_PRI_GRANT 4
+#define FLIT_PRI_RES 3
+#define FLIT_PRI_ACK 2
+#define FLIT_PRI_NACK 2
+#define FLIT_PRI_NORM 1
+#define FLIT_PRI_SPEC 0
+
+#define RES_RESERVED_VCS 2
+#define ECN_RESERVED_VCS 1
+
+
+#define FLIT_NACKED 2
+#define FLIT_NORMAL 1
+#define FLIT_SPEC 0
+
+
+#define NORMAL_MODE 0 
+#define RES_MODE 1
+#define ECN_MODE 2
+
+#endif

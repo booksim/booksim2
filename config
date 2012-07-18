@@ -1,0 +1,77 @@
+vc_allocator = separable_input_first;
+sw_allocator = separable_input_first;
+alloc_iters  = 1;
+
+
+output_buffer_size=64;
+internal_speedup  = 2.0;
+vc_buf_size = 512;
+
+priority = other;
+
+// Num vcs used to be vc and res vcs used to be 1. ??
+//num_vcs     = 8;
+//res_vcs = 2; // How many additional VCs other than 2 (hard-coded) for control packets.
+num_vcs = 4;
+
+expiration_time = 200;
+reservation_packet_threshold=0;
+reservation_chunk_limit=512;
+
+reservation_overhead_factor=1.05;
+hotspot_reservation=1;
+
+fast_reservation_transmit=1;
+voq=1;
+
+//seed = 54321;
+
+vc_busy_when_full=1;
+reservation_buffer_size_drop=1;
+reservation_spec_voq=0;
+reservation_tail_reserve=0;
+hold_switch_for_packet=1;
+
+vc_busy_when_full=1;
+hold_switch_for_packet=1;
+cut_through=1;
+deadlock_warn_timeout=99999999;
+
+use_noc_latency = 1;
+express_channels = 1;
+
+sim_power = 1;
+tech_file = techfile;
+power_output_file = power;
+
+//topology = fattree;
+//k  = 16;
+//routing_function = nca;
+topology = flatfly;
+k = 4;
+c = 4;
+x = 4;
+y = 4;
+xr = 2;
+yr = 2;
+routing_function = ran_min;
+
+n = 2;
+default_channel_latency=5;
+
+traffic       = uniform;
+drain_measured_only=1;
+const_flits_per_packet = 32;
+
+flow_size=4;
+injection_rate=0.5;
+sample_period=10000;
+
+reservation_spec_off = 0;
+
+adaptively_speculate = 0; // Whether to decide adaptively whether to speculate or not.
+speculation_decision_threshold = 4; // How many NACKs must a flow receive in order to stop trying to speculate again.
+
+network_clusters = 2; // How many clusters.
+bottleneck_channels = 4; // How many channels connect a cluster with another.
+transition_channel_latency = 10; // The latency of the transition channels. Make this an even number or else it will be one less cycle.
