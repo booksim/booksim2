@@ -107,6 +107,9 @@ void Flit::Reset()
   original_destination = -1;
   going_up_clusters = false;
   ring_par = -1;
+  cluster_hops = -1;
+  queue<int> empty;
+  swap(bottleneck_channel_choices, empty);
 }  
 
 Flit * Flit::Replicate(Flit* f){

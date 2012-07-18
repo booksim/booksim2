@@ -244,7 +244,6 @@ void SuperNetwork::ConnectTransitionChannels()
   }
 }
 
-// TODO If it's a reservation grant (reply), it must follow the same path back (sequence of clusters and bottleneck channels) to the source because it must manipulate data structures on the way back.
 void SuperNetwork::RouteFlit(Flit* f, int network_cluster, bool is_injection)
 {
   if (f->head == false)
@@ -278,11 +277,14 @@ void SuperNetwork::RouteFlit(Flit* f, int network_cluster, bool is_injection)
       if ((network_cluster < f->dest_network_cluster && _network_clusters == 2) || going_up < going_down)
       {
         f->going_up_clusters = true;
+        f->cluster_hops = going_up;
       }
       else
       {
         f->going_up_clusters = false;
+        f->cluster_hops = going_down;
       }
+      assert(f->cluster_hops > 0);
     }
   }
   assert(f->dest_network_cluster != -1 && f->dest_network_cluster != network_cluster);
@@ -293,7 +295,19 @@ void SuperNetwork::RouteFlit(Flit* f, int network_cluster, bool is_injection)
   else
   {
     assert(_network_clusters >= 2);
-    int choice = RandomInt(_bottleneck_channels - 1); // Choose the next bottleneck channel randomly.
+    int choice;
+    if (!(f->res_type == RES_TYPE_GRANT || f->res_type == RES_TYPE_ACK))
+    {
+      choice = RandomInt(_bottleneck_channels - 1); // Choose the next bottleneck channel randomly.
+      f->bottleneck_channel_choices.push(choice);
+      assert((int)f->bottleneck_channel_choices.size() <= f->cluster_hops);
+    }
+    else
+    {
+      assert(f->bottleneck_channel_choices.empty() == false);
+      choice = f->bottleneck_channel_choices.front();
+      f->bottleneck_channel_choices.pop();
+    }
     int next_cluster;
     if (f->going_up_clusters) // It has more hops to go.
     {
@@ -495,7 +509,6 @@ void SuperNetwork::Display( ostream & os ) const
 
 void SuperNetwork::DumpChannelMap( ostream & os, string const & prefix ) const
 {
-  // TODO Dump the channel mapping of bottleneck channels.
   for (int n = 0; n < _network_clusters; n++)
   {
     _networks[n]->DumpChannelMap(os, prefix);

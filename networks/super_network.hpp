@@ -41,6 +41,7 @@
 #include "config_utils.hpp"
 #include "network.hpp"
 #include "globals.hpp"
+#include "reservation.hpp"
 
 typedef Channel<Credit> CreditChannel;
 

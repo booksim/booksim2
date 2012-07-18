@@ -30,6 +30,7 @@
 
 #include <iostream>
 #include <stack>
+#include <queue>
 
 #include "booksim.hpp"
 
@@ -64,6 +65,8 @@ public:
   int source_network_cluster;
   int original_destination;
   bool going_up_clusters;
+  int cluster_hops;
+  queue<int> bottleneck_channel_choices;
 
   int head_sn;
   mutable int ring_par;

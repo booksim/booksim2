@@ -1286,6 +1286,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       _reservation_schedule[dest] += int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
 
       ff->res_type = RES_TYPE_GRANT;
+      assert(ff->bottleneck_channel_choices.empty() == true);
+      ff->bottleneck_channel_choices = f->bottleneck_channel_choices;
       ff->pri = FLIT_PRI_GRANT;
       ff->vc = 1+gAuxVCs;
       _response_packets[dest].push_back(ff);
@@ -1349,6 +1351,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	ff = IssueSpecial(dest,f);
 	ff->sn = f->head_sn;
 	ff->res_type = RES_TYPE_ACK;
+        assert(ff->bottleneck_channel_choices.empty() == true);
+        ff->bottleneck_channel_choices = f->bottleneck_channel_choices;
 	ff->pri  = FLIT_PRI_ACK;
 	ff->vc =  1+gAuxVCs;;
 	_response_packets[dest].push_back(ff);
@@ -1416,6 +1420,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	  _reservation_schedule[dest] += int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
 
 	  ff->res_type = RES_TYPE_GRANT;
+          assert(ff->bottleneck_channel_choices.empty() == true);
+          ff->bottleneck_channel_choices = f->bottleneck_channel_choices;
 	  ff->pri = FLIT_PRI_GRANT;
 	  ff->vc = 1+gAuxVCs;;
 	  _response_packets[dest].push_back(ff);
@@ -1454,6 +1460,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	ff = IssueSpecial(dest,f);
 	ff->sn = f->head_sn;
 	ff->res_type = RES_TYPE_ACK;
+        assert(ff->bottleneck_channel_choices.empty() == true);
+        ff->bottleneck_channel_choices = f->bottleneck_channel_choices;
 	ff->pri  = FLIT_PRI_ACK;
 	ff->vc =  0;
 	ff->becn = f->fecn;

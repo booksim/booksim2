@@ -26,6 +26,8 @@ extern int TOTAL_SPEC_BUFFER;
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 
+// TODO Also, if it's a reservation request, it must tell the corresponding packets what bottleneck channels to use.
+
 FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id,int mode, bool adaptively_speculate, int speculation_decision_threshold, flow* f){
   parent = p;
   _dest=-1;
@@ -34,7 +36,7 @@ FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id,int mode, bool adaptiv
   _IRD_wait = 0;
   _total_wait = 0;
   _adaptively_speculate = adaptively_speculate;
-  _speculate_in_the_future = true;
+  _speculate_in_the_future = 0;
   _speculation_decision_threshold = speculation_decision_threshold;
   Activate(src,id, mode,f);
 }
@@ -420,7 +422,11 @@ bool FlowBuffer::nack(int sn){
   if (_speculate_in_the_future < 2 * _speculation_decision_threshold)
   {
     _speculate_in_the_future++; // Bias towards not speculating again.
-    // TODO: Random backoff time.
+    // Random backoff time.
+    if (_speculate_in_the_future == _speculation_decision_threshold) // Just turned off reservations
+    {
+        _speculate_in_the_future += RandomInt(_speculation_decision_threshold - 1);
+    }
   }
   bool effective = false;
   if(_watch){
