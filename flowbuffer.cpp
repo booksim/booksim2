@@ -26,7 +26,6 @@ extern int TOTAL_SPEC_BUFFER;
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 
-// TODO Also, if it's a reservation request, it must tell the corresponding packets what bottleneck channels to use.
 
 FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id,int mode, bool adaptively_speculate, int speculation_decision_threshold, flow* f){
   parent = p;
