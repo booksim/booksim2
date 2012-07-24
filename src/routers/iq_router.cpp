@@ -98,8 +98,8 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   }
 
   // Alloc allocators
-  string alloc_type = config.GetStr( "vc_allocator" );
-  if(alloc_type == "piggyback") {
+  string vc_alloc_type = config.GetStr( "vc_allocator" );
+  if(vc_alloc_type == "piggyback") {
     if(!_speculative) {
       Error("Piggyback VC allocation requires speculative switch allocation to be enabled.");
     }
@@ -107,32 +107,33 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     _vc_rr_offset.resize(_outputs*_classes, -1);
   } else {
     _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
-					     alloc_type,
+					     vc_alloc_type,
 					     _vcs*_inputs, 
 					     _vcs*_outputs );
 
     if ( !_vc_allocator ) {
-      Error("Unknown vc_allocator type: " + alloc_type);
+      Error("Unknown vc_allocator type: " + vc_alloc_type);
     }
   }
   
-  alloc_type = config.GetStr( "sw_allocator" );
+  string sw_alloc_type = config.GetStr( "sw_allocator" );
   _sw_allocator = Allocator::NewAllocator( this, "sw_allocator",
-					   alloc_type,
+					   sw_alloc_type,
 					   _inputs*_input_speedup, 
 					   _outputs*_output_speedup );
 
   if ( !_sw_allocator ) {
-    Error("Unknown sw_allocator type: " + alloc_type);
+    Error("Unknown sw_allocator type: " + sw_alloc_type);
   }
   
-  if ( _speculative && ( config.GetInt("spec_use_prio") == 0 ) ) {    
+  string spec_sw_alloc_type = config.GetStr( "spec_sw_allocator" );
+  if ( _speculative && ( spec_sw_alloc_type != "prio" ) ) {
     _spec_sw_allocator = Allocator::NewAllocator( this, "spec_sw_allocator",
-						  alloc_type,
+						  spec_sw_alloc_type,
 						  _inputs*_input_speedup, 
 						  _outputs*_output_speedup );
     if ( !_spec_sw_allocator ) {
-      Error("Unknown spec_sw_allocator type: " + alloc_type);
+      Error("Unknown spec_sw_allocator type: " + spec_sw_alloc_type);
     }
   } else {
     _spec_sw_allocator = NULL;
