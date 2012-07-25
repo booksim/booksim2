@@ -108,10 +108,79 @@ void Flit::Reset()
   going_up_clusters = false;
   ring_par = -1;
   cluster_hops = -1;
-  queue<int> empty;
-  swap(bottleneck_channel_choices, empty);
+  cluster_hops_taken = 0;
+  epoch = -1;
+  try_again_after_time = -1;
+  reservation_size = -1;
+  bottleneck_channel_choices.clear();
+  reservation_vector.clear();
 }  
 
+Flit * Flit::CreateCopy(Flit* f)
+{
+  Flit* r = New();
+
+  r->dest_network_cluster = f->dest_network_cluster;
+  r->source_network_cluster = f->source_network_cluster;
+  r->going_up_clusters = f->going_up_clusters;
+  r->ring_par = f->ring_par;
+  r->cluster_hops = f->cluster_hops;
+  r->cluster_hops_taken = f->cluster_hops_taken;
+  r->epoch = f->epoch;
+  r->try_again_after_time = f->try_again_after_time;
+  r->reservation_size = f->reservation_size;
+  r->bottleneck_channel_choices.assign(f->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.end());
+  r->reservation_vector.assign(f->reservation_vector.begin(), f->reservation_vector.end());
+  r->payload = f->payload;
+  r->packet_size = f->packet_size;
+  r->reservation_size = f->reservation_size;
+  r->ring_par = f->ring_par;
+  
+  r->walkin = f->walkin;
+  r->fecn = f->fecn;
+  r->becn = f->becn;
+  r->head = f->head;
+  r->tail = f->tail;
+  r->ntime = f->ntime;
+  r->atime = f->atime;
+  r->src = f->src;
+  r->dest = f->dest;
+  r->pri = f->pri;
+  r->hops = f->hops;
+  r->watch = f->watch;
+  r->subnetwork = f->subnetwork;
+  r->intm = f->intm;
+  r->ph = f->intm;
+  r->minimal = f->minimal;
+  
+  r->exptime = f->exptime;
+  
+  r->flid  = f->flid;
+  r->flbid = f->flbid;
+  r->id    = f->id;
+  r->pid   = f->pid;
+
+  r->watch = f->watch;
+  r->subnetwork = f->subnetwork;
+  r->src    = f->src;
+  r->time   = f->time;
+
+  r->record = f->record;
+  r->cl     = f->cl;
+  r->sn     = f->sn;
+
+  
+  r->type   = f->type;
+  r->pri    = f->pri;
+  r->head_sn  = f->head_sn;
+  r->res_type = f->res_type;
+  r->walkin = f->walkin;
+
+  r->vc = f->vc;
+  return r;
+}
+
+// This is customized, and thus different than createcopy.
 Flit * Flit::Replicate(Flit* f){
   Flit* r = New();
 

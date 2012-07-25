@@ -29,8 +29,9 @@
 #define _FLIT_HPP_
 
 #include <iostream>
+#include <vector>
+#include <list>
 #include <stack>
-#include <queue>
 
 #include "booksim.hpp"
 
@@ -51,22 +52,26 @@ public:
   int exptime;
   int  sn;
   int flid;
-  int payload; 
+  int payload;
   //res = reservation size
   //grant = time
   //tail = tail reservation
   //body = expected arrival time
+  vector<bool> reservation_vector;
 
+  int try_again_after_time; // If a grant is not possible now, try again after this timestamp.
   short packet_size;
+  int reservation_size;
   //head: packet valid
   //body: compression 
 
   int dest_network_cluster;
   int source_network_cluster;
+  list<int> bottleneck_channel_choices;
   int original_destination;
   bool going_up_clusters;
   int cluster_hops;
-  queue<int> bottleneck_channel_choices;
+  int cluster_hops_taken;
 
   int head_sn;
   mutable int ring_par;
@@ -94,6 +99,8 @@ public:
   int  pid;
   //  int  tid;
 
+  int epoch;
+
   bool record;
 
   short  src;
@@ -120,7 +127,8 @@ public:
 
   void Reset();
 
-  static Flit * Replicate( Flit *);
+  static Flit * Replicate(Flit * f);
+  static Flit * CreateCopy(Flit* f);
   static Flit * New();
   void Free();
   static void FreeAll();

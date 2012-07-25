@@ -73,7 +73,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["reservation_always_succeed"] = 0;
   _float_map["reservation_rtt"] = 1.0;
   _float_map["reservation_overhead_factor"] = 1.05;
-  _int_map["reservation_control_overhead"] = 0;
+  //_int_map["reservation_control_overhead"] = 0; // Obsolete.
   _int_map["reservation_walkin_overhead"] = 0;
   _int_map["fast_reservation_transmit"] = 0;
   _int_map["reservation_packet_threshold"] = 128;
@@ -83,6 +83,11 @@ BookSimConfig::BookSimConfig( )
   _int_map["reservation_post_wait"]= 0;
   _int_map["reservation_spec_voq"] = 0;
   _int_map["reservation_tail_reserve"]=0;
+  
+  _int_map["bit_vector_length"] = 24;
+  _int_map["cycles_into_the_future"] = 4096;
+  _int_map["enable_multi_SRP"] = 1;
+  _int_map["how_many_time_slots_to_reserve"] = 3;
   
   _int_map["adaptively_speculate"] = 0; // Based on NACKs/ACKs and other parameters, adaptively decide whether to speculate.
   _int_map["speculation_decision_threshold"] = 4; // How many NACKS to receive before switching to speculation mode, and vice versa.

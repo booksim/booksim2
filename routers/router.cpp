@@ -60,7 +60,9 @@ TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
   _input_speedup    = config.GetInt( "input_speedup" );
   _output_speedup   = config.GetInt( "output_speedup" );
   _internal_speedup = config.GetFloat( "internal_speedup" );
+  _hotspot_nodes = config.GetIntArray("hotspot_nodes");
   _is_transition_router = false;
+  _hotspot_nodes.clear();
   _destination_this_serves = -1;
 }
 
@@ -113,6 +115,10 @@ void Router::AddTransitionOutputChannel( FlitChannel *channel, CreditChannel *ba
 void Router::DestinationThisServes(int dest)
 {
   _destination_this_serves = dest;
+  for (vector<int>::iterator i = _hotspot_nodes.begin(); i != _hotspot_nodes.end(); i++)
+  {
+    assert(*i != dest); // We don't want to assign transition routers to be hotspots as well.
+  }
 }
 
 int Router::GetDestinationThisServes() const

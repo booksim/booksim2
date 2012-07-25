@@ -50,8 +50,6 @@
 #include "large_roundrobin_arb.hpp"
 #include "reservation.hpp"
 
-
-
 #define FLOW_MIX_SINGLE 0
 #define FLOW_MIX_RANGE 1
 #define FLOW_MIX_BIMOD 2
@@ -80,6 +78,17 @@ protected:
   int _flow_mix_mode;
 
   vector<int>    _packet_size;
+  
+  vector<int> * _bit_vectors;
+  int _cycles_into_the_future, _bit_vector_length, _cycles_per_element, _current_epoch, _counter_max;
+  void CheckToIncrementEpoch();
+  void ShiftNodeVector(int node);
+  int EarliestAvailability(int node, int size) const;
+  void ClearVectors();
+  void IncrementVectors(int size, int node);
+  int ReserveVectors(int size, int node, vector<bool> flit_vector);
+  
+  map<int, list<int>*> _channel_choices;
 
   /*false means all packet types are the same length "const_flits_per_packet"
    *All packets uses all VCS
@@ -174,7 +183,6 @@ protected:
   vector<map<int, FlowROB*> > _rob; 
   vector<list<Flit *> > _reservation_packets;
   vector<list<Flit *> > _response_packets;
-  vector<int> _reservation_schedule;
 
   //sender
   vector<flow*> _pending_flow;
@@ -274,6 +282,7 @@ protected:
   int _time;
   int _stat_time;
 
+  
   set<int> _flits_to_watch;
   set<int> _packets_to_watch;
   set<int> _transactions_to_watch;
@@ -289,9 +298,13 @@ protected:
   ostream * _stats_out;
 
   ostream * _flow_out;
+  
 
   // ============ Internal methods ============ 
 protected:
+    
+  bool _enable_multi_SRP;
+  
   void _RetireFlit( Flit *f, int dest );
 
   void _Inject();
@@ -325,6 +338,8 @@ public:
 
   bool Run( );
 
+  static int DefineEpoch(int time, int cycles_per_element);
+  
   void DisplayStats( ostream & os = cout );
 
   const Stats * GetOverallLatency(int c = 0) { return _overall_avg_plat[c]; }

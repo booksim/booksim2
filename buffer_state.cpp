@@ -183,6 +183,7 @@ void BufferState::TakeBuffer( int vc )
 
   if ( _in_use[vc] ) {
     Error( "Buffer taken while in use" );
+    assert(false);
   }
   _in_use[vc]    = true;
   _tail_sent[vc] = false;

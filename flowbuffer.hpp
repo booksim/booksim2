@@ -64,7 +64,9 @@ public:
 
   bool ack(int sn);
   bool nack(int sn);
-  void grant(int time, int lat);
+  void grant(int time, int try_again, int lat);
+  void Reactivate();
+  void ReconstructFlit();
 
   bool eligible();
   bool send_norm_ready();
@@ -90,6 +92,8 @@ public:
   }
 
   bool _active;
+  bool _was_reset;
+  int  _last_payload;
 
   bool _adaptively_speculate;
   int _speculate_in_the_future;

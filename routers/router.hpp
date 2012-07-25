@@ -96,6 +96,8 @@ public:
   vector<int> _vc_activity;
   int _holds;
   int _hold_cancels;
+  
+  vector<int> _hotspot_nodes;
 
 public:
   Router( const Configuration& config,

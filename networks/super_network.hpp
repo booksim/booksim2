@@ -45,7 +45,6 @@
 
 typedef Channel<Credit> CreditChannel;
 
-
 class SuperNetwork : public TimedModule {
 protected:
 
@@ -56,9 +55,14 @@ protected:
   int _bottleneck_channels, _bottleneck_channels_total;
   int _transition_channels_per_cluster;
   int _transition_channel_latency;
-  
+  int _cycles_into_the_future, _bit_vector_length, _cycles_per_element, _current_epoch;
+  bool _enable_multi_SRP;
+  int _how_many_time_slots_to_reserve, _counter_max;
+  bool **_already_sent;
+ 
   vector<Network *> _networks;
 
+  vector<pair<int, vector<pair<int,int> > > > **_bit_vectors; // First int is remaining, second is a vector of flow ids a reservation was made for.
   vector<FlitChannel *> *_input_transition_chan;
   vector<CreditChannel *> *_input_transition_chan_cred;
   vector<FlitChannel *> *_output_transition_chan;
@@ -76,12 +80,32 @@ protected:
   void AllocateSubnets(const Configuration & config, const string & name);
   void ConnectTransitionChannels();
   void CalculateChannelsPerCluster();
+  void IncrementClusterHops(Flit *f);
+  void SendTransitionFlits(Flit *f, Credit *c, int net, int chan);
+  
+  void IncrementEpoch(int new_epoch);
+  void ReserveBitVector(Flit *f, int net, int chan);
+  void HandleResGrantFlits(Flit *f, int n, int i);
+  void HandleGrantFlits(Flit *f, int net, int chan);
+  int BelongsInThatTimeSlot(int timestamp, int is_valid) const;
+  int MaxTimestampCovered() const;
+  bool HasAnOpening(int net, int chan, int vector_index, int size) const;
+  void HandleNonResFlits(Flit *f, int net, int chan);
+  
+  int GetNextCluster(int net, int chan) const;
 
 public:
   SuperNetwork( const Configuration &config, const string & name );
   virtual ~SuperNetwork( );
 
   static SuperNetwork *NewNetwork( const Configuration &config, const string & name );
+  
+  static void InitializeBitVector(Flit *f, int bit_vector_length, int cycles_per_element);
+  static void InitializeBitVector(vector<pair<int, vector<pair<int,int> > > >* vec, int bit_vector_length, int counter_max);
+  static void ShiftBitVector(vector<pair<int, vector<pair<int,int> > > > *vec, int bit_vector_length, int counter_max);
+  static void ShiftBitVector(vector<bool> *vec, int bit_vector_length);
+  
+  void RouteFlit(Flit* f, int network_cluster, bool is_injection);
   
   //virtual Flit* GetSpecial(FlitChannel* fc, int vc); // This is called from routers, so it won't propagate beyond the network class.
   virtual void WriteSpecialFlit(Flit*f, int source);
@@ -93,7 +117,6 @@ public:
 
   inline int NumNodes( ) const {return _nodes;}
   
-  void RouteFlit(Flit* f, int network_cluster, bool is_injection = false);
 
   virtual void InsertRandomFaults( const Configuration &config );
   void OutChannelFault( int r, int c, bool fault = true );

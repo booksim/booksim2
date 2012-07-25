@@ -91,8 +91,8 @@ float RESERVATION_OVERHEAD_FACTOR = 1.05;
 float RESERVATION_RTT = 1.0;
 //flows with flits fewer than this is ignored by reservation
 int RESERVATION_PACKET_THRESHOLD=64;
-//each reservation only account for this many flits
-int RESERVATION_CHUNK_LIMIT=256;
+//each reservation only accounts for this many flits
+int RESERVATION_eHUNK_LIMIT=256;
 //debug, resrvation gtrant time is always zero (always succeed)
 bool RESERVATION_ALWAYS_SUCCEED=false;
 //debug, no speculation is ever set
@@ -106,10 +106,12 @@ bool RESERVATION_BUFFER_SIZE_DROP=false;
 bool RESERVATION_TAIL_RESERVE=false;
 //instead or in addition to the reservaiton overhead factor, control packet also update the 
 //reservaitons scheduling, this tires to eliminate the reservaiton overhead
-int RESERVATION_CONTROL_OVERHEAD = 0;
+//int RESERVATION_CONTROL_OVERHEAD = 0;
 //When small packets are mixed in, they do not rquire reservations, we need to account for 
 //their bandwidth
 bool RESERVATION_WALKIN_OVERHEAD= false;
+
+int RESERVATION_CHUNK_LIMIT = -1;
 
 //expiration timer for IRD
 int IRD_RESET_TIMER=1000;
@@ -215,6 +217,127 @@ vector<int> gStatNodeReady;
 
 map<int, int> gStatFlowSizes;
 
+int TrafficManager::DefineEpoch(int time, int cycles_per_epoch)
+{
+  const int epochs = 4;
+  int return_value = time % (epochs * cycles_per_epoch);
+  return_value /= cycles_per_epoch;
+  return return_value;
+}
+
+void TrafficManager::ShiftNodeVector(int node)
+{
+  _bit_vectors[node].erase(_bit_vectors[node].begin());
+  _bit_vectors[node].push_back(_counter_max);
+  assert((int)_bit_vectors[node].size() == _bit_vector_length);
+}
+
+void TrafficManager::CheckToIncrementEpoch()
+{
+  int new_epoch = TrafficManager::DefineEpoch(_time, _cycles_per_element);
+  if (new_epoch != _current_epoch)
+  {
+    assert(new_epoch == 0 || abs(new_epoch - _current_epoch) == 1);
+    _current_epoch = new_epoch;
+    for (int n = 0; n < _nodes; n++)
+    {
+      ShiftNodeVector(n);
+    }
+  }
+}
+
+int TrafficManager::EarliestAvailability(int node, int size) const
+{
+  size = int(ceil(float(size)*RESERVATION_OVERHEAD_FACTOR));
+  int return_value = -1;
+  int remaining  = size;
+  assert((int)_bit_vectors[node].size() == _bit_vector_length);
+  for (int i = 0; i < _bit_vector_length; i++)
+  {
+    if (_bit_vectors[node][i] > 0)
+    {
+      remaining -= _bit_vectors[node][i];
+      if (i + 1 < _bit_vector_length && remaining > 0 && _bit_vectors[node][i+1] > 0)
+      {
+        remaining -= _bit_vectors[node][i+1];
+      }
+      if (remaining <= 0)
+      {
+        return_value = _time + i * _cycles_per_element + _cycles_per_element - _bit_vectors[node][i];
+        break;
+      }
+    }
+  }
+  assert(return_value >= -1);
+  return return_value;
+}
+
+// To be called for small packets. Simply reserves the specified number of slots without caring about placement.
+void TrafficManager::IncrementVectors(int size, int node)
+{
+  int reduction_amount;
+  size += 4;
+  for (int i = 0; i < _bit_vector_length; i++)
+  {
+    if ( _bit_vectors[node][i] > 0)
+    {
+      reduction_amount = MIN(size, _bit_vectors[node][i]);
+      _bit_vectors[node][i] -= reduction_amount;
+      size -= reduction_amount;
+      assert(size >= 0);
+      if (size == 0)
+      {
+        break;
+      }
+    }
+  }
+}
+
+// Reserves enough slots in back to back slots and returns the earliest timestamp.
+int TrafficManager::ReserveVectors(int size, int node, vector<bool> flit_vector)
+{
+  int return_value = -1;
+  int remaining;
+  size = int(ceil(float(size)*RESERVATION_OVERHEAD_FACTOR));
+  bool went_second = false;
+  for (int i = 0; i < _bit_vector_length; i++)
+  {
+    if (_bit_vectors[node][i] > 0)
+    {
+      remaining = size - _bit_vectors[node][i];
+      if (i + 1 < _bit_vector_length && remaining > 0 && _bit_vectors[node][i+1] > 0)
+      {
+        remaining -= _bit_vectors[node][i+1];
+        went_second = true;
+      }
+      assert(_enable_multi_SRP > 1 || i + 1 < _bit_vector_length || _bit_vectors[node][i+1] > 0);
+      if (remaining <= 0) // Found an opening.
+      {
+        return_value = _time + i * _cycles_per_element + _cycles_per_element - _bit_vectors[node][i];
+        int decrease = MIN(size, _bit_vectors[node][i]);
+        _bit_vectors[node][i] -= decrease;
+        decrease = size - decrease;
+        if (decrease > 0)
+        {
+          assert(i + 1 < _bit_vector_length && _bit_vectors[node][i+1] >= decrease && went_second == true);
+          _bit_vectors[node][i+1] -= decrease;
+        }
+        break;
+      }
+    }
+  }
+  return return_value;
+}
+
+void TrafficManager::ClearVectors()
+{
+  for (int node = 0; node < _nodes; node++)
+  {
+    _bit_vectors[node].clear();
+    _bit_vectors[node].resize(_bit_vector_length, _counter_max);
+  }
+}
+
 TrafficManager::TrafficManager( const Configuration &config, const vector<SuperNetwork *> & net )
   : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0),_stat_time(0)
 {
@@ -227,6 +350,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<SuperN
   _routers = _net[0]->NumRouters( );
   _num_vcs = config.GetInt("num_vcs");
   _network_clusters = config.GetInt("network_clusters");
+ 
 
   _max_flow_buffers = config.GetInt("flow_buffers");
   _max_flow_buffers = (_max_flow_buffers==0)?_nodes:_max_flow_buffers;
@@ -260,7 +384,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<SuperN
 
   
   _rob.resize(_nodes);
-  _reservation_schedule.resize(_nodes, 0);
   _response_packets.resize(_nodes);
 
   _cur_flid = 0;
@@ -318,7 +441,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<SuperN
 
   FAST_RESERVATION_TRANSMIT = (config.GetInt("fast_reservation_transmit"));
   RESERVATION_OVERHEAD_FACTOR = config.GetFloat("reservation_overhead_factor");
-  RESERVATION_CONTROL_OVERHEAD = config.GetInt("reservation_control_overhead");
   RESERVATION_WALKIN_OVERHEAD =  (config.GetInt("reservation_walkin_overhead")==1);
   RESERVATION_RTT=config.GetFloat("reservation_rtt");
   RESERVATION_PACKET_THRESHOLD = config.GetInt("reservation_packet_threshold");
@@ -956,6 +1078,19 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<SuperN
 
   _adaptively_speculate = config.GetInt("adaptively_speculate") > 0;
   _speculation_decision_threshold = config.GetInt("speculation_decision_threshold");
+  
+  _bit_vectors = new vector<int> [_nodes];
+  _cycles_into_the_future = config.GetInt("cycles_into_the_future");
+  _bit_vector_length = config.GetInt("bit_vector_length");
+  _cycles_per_element = int(ceil(float(_cycles_into_the_future) / float(_bit_vector_length)));
+  _current_epoch = 0;
+  _counter_max = _cycles_per_element;
+  assert(_cycles_per_element > 0);
+  for (int n = 0; n < _nodes; n++)
+  {
+    _bit_vectors[n].resize(_bit_vector_length, _counter_max);
+  }
+  _enable_multi_SRP = config.GetInt("enable_multi_SRP") > 0;
 }
 
 TrafficManager::~TrafficManager( )
@@ -963,6 +1098,8 @@ TrafficManager::~TrafficManager( )
   delete gStatSpecCount;
   delete  retired_s ;
   delete  retired_n ;
+  
+  delete [] _bit_vectors;
 
   for(int i = 0; i<_nodes; i++){
     delete _flow_buffer_arb[i];
@@ -1089,6 +1226,7 @@ TrafficManager::~TrafficManager( )
 
 Flit* TrafficManager::IssueSpecial(int src, Flit* ff){
   Flit * f  = Flit::New();
+  assert(f->bottleneck_channel_choices.empty() == true);
   f->packet_size=1;
   f->flid = ff->flid;
   f->sn = ff->sn;
@@ -1104,6 +1242,7 @@ Flit* TrafficManager::IssueSpecial(int src, Flit* ff){
   f->vc = 0;
   f->flbid = ff->flbid;
   f->ph = 0;
+  f->try_again_after_time = ff->try_again_after_time;
   return f;
 }
 
@@ -1136,6 +1275,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       gStatAckLatency->AddSample(_time-f->time);
       gStatAckReceived[dest]++;
 #endif
+      assert(f->reservation_vector.empty() == true && f->epoch == -1);
       receive_flow_buffer = _flow_buffer[dest][f->flbid];
       if( receive_flow_buffer!=NULL &&
 	  receive_flow_buffer->active() && 
@@ -1164,19 +1304,15 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	    //Reactivate the flow, assign vc, and insertinto the correct queues
 	    receive_flow_buffer->Reset();
 	    _FlowVC(receive_flow_buffer);
-	    if(receive_flow_buffer->send_spec_ready())
-	      {		
-		_reservation_set[dest].insert(receive_flow_buffer);
-	      }
+	    if(gReservation && receive_flow_buffer->send_spec_ready())
+	    {		
+	      _reservation_set[dest].insert(receive_flow_buffer);
+	    }
 	  }
 	}
       }
       f->Free();
       
-      if(RESERVATION_CONTROL_OVERHEAD!=0){
-	_reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
-	_reservation_schedule[dest]+=RESERVATION_CONTROL_OVERHEAD;
-      }      
     } else if(gECN){
 #ifdef ENABLE_STATS
       gStatAckLatency->AddSample(_time-f->time);
@@ -1206,6 +1342,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     gStatNackByPacket->AddSample(f->sn);
     gStatNackReceived[dest]++;
 #endif
+    assert(f->reservation_vector.empty() == true &&  f->epoch == -1);
     receive_flow_buffer = _flow_buffer[dest][f->flbid];
     if( receive_flow_buffer!=NULL &&
 	receive_flow_buffer->active() && 
@@ -1217,37 +1354,36 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 #endif
     }
     f->Free();
-
-    if(RESERVATION_CONTROL_OVERHEAD!=0){
-      _reservation_schedule[dest]+=RESERVATION_CONTROL_OVERHEAD;
-     }     
+   
     return;
     break;
-  case RES_TYPE_GRANT: 
+  case RES_TYPE_GRANT:
 #ifdef ENABLE_STATS
     gStatGrantLatency->AddSample(_time-f->time);
     gStatGrantReceived[dest]++;
 #endif
+    assert(f->reservation_vector.empty() == true && f->epoch == -1);
     receive_flow_buffer = _flow_buffer[dest][f->flbid];
     assert(receive_flow_buffer->active());
     if( receive_flow_buffer!=NULL &&
 	receive_flow_buffer->fl->flid == f->flid){
 
 #ifdef ENABLE_STATS
-      if(f->payload>_time){
+      if(f->try_again_after_time == -1 && f->payload>_time){
 	gStatGrantTimeFuture[dest]->AddSample(f->payload-_time);
       } else {
 	gStatGrantTimeNow[dest]->AddSample(_time-f->payload);
       }
 #endif
-      
-      receive_flow_buffer->grant(f->payload,
+
+      receive_flow_buffer->grant(f->payload, f->try_again_after_time,
 				 int(ceil(RESERVATION_RTT*float(_time-f->ntime))));
+      if (f->try_again_after_time != -1)
+      {
+        _last_sent_spec_buffer[dest] = 0;
+      }
     }
-    f->Free();
-    if(RESERVATION_CONTROL_OVERHEAD!=0){
-      _reservation_schedule[dest]+=RESERVATION_CONTROL_OVERHEAD;
-    }     
+    f->Free(); 
     return;
     break;
   case RES_TYPE_RES:
@@ -1263,39 +1399,77 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
     f = receive_rob->insert(f);
     if(f){
+        assert(f->head == true && f->tail == true);
+        if (f->try_again_after_time != -1)
+      if (f->epoch == -1)
+      {
+        assert(f->res_type == RES_TYPE_RES);
+        SuperNetwork::InitializeBitVector(f, _bit_vector_length, _cycles_per_element);
+      }
+      else if (f->epoch != _current_epoch)
+      {
+        SuperNetwork::ShiftBitVector(&(f->reservation_vector), _bit_vector_length);
+        f->epoch = _current_epoch;
+      }
+      int earliest_availability = EarliestAvailability(dest, f->payload);
       ff = IssueSpecial(dest,f);
       ff->id=999;
       if(f->flid == WATCH_FLID){
 	cout<<"Reservation received"<<endl;
 	ff->watch = true;
+        if (f->try_again_after_time != -1 && ff->watch == true)
+        {
+          cout << "But it's a dud! Try again after time: " << f->try_again_after_time << endl;
+        }
       }
 #ifdef ENABLE_STATS
-      if(_reservation_schedule[dest]>_time){
-	gStatReservationTimeFuture[dest]->AddSample(_reservation_schedule[dest]-_time);
-      } else {
-	gStatReservationTimeNow[dest]->AddSample(_time-_reservation_schedule[dest]);
+      if (f->try_again_after_time == -1 && earliest_availability >= 0)
+      {
+        if(earliest_availability>_time){
+	  gStatReservationTimeFuture[dest]->AddSample(earliest_availability-_time);
+        } else {
+	  gStatReservationTimeNow[dest]->AddSample(_time-earliest_availability);
+        }
       }
 #endif
-      //the return time is offset by the reservation packet latency 
-      //to prevent schedule fragmentation
-      _reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
-      ff->payload  =_reservation_schedule[dest];
-      //this functionality has been moved tot he source
-      //-int(ceil(RESERVATION_RTT*float(_time-f->ntime)));
+      if (f->try_again_after_time == -1)
+      {
+        //the return time is offset by the reservation packet latency 
+        //to prevent schedule fragmentation
+        //this functionality has been moved tot he source
+        //-int(ceil(RESERVATION_RTT*float(_time-f->ntime)));
 
-      _reservation_schedule[dest] += int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
-
+        int reservation = ReserveVectors(f->payload, dest, f->reservation_vector);
+        ff->payload = reservation;
+        assert(reservation == earliest_availability);
+        if (reservation == -1)
+        {
+          ff->try_again_after_time = _time + _bit_vector_length * _cycles_per_element;
+          ff->reservation_size = -1;
+        }
+        else
+        {
+          ff->reservation_size = f->payload;
+          ff->try_again_after_time = -1;
+        }
+      }
+      else
+      {
+        ff->payload = -1;
+        assert(ff->try_again_after_time != -1);
+      }
       ff->res_type = RES_TYPE_GRANT;
       assert(ff->bottleneck_channel_choices.empty() == true);
-      ff->bottleneck_channel_choices = f->bottleneck_channel_choices;
+      assert((_network_clusters > 1 && (f->bottleneck_channel_choices.empty() == false || f->cluster_hops == -1)) || (_network_clusters == 1 && f->bottleneck_channel_choices.empty() == true));
+      if (_network_clusters > 1)
+      {
+        ff->bottleneck_channel_choices.insert(ff->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.end());
+      }
       ff->pri = FLIT_PRI_GRANT;
       ff->vc = 1+gAuxVCs;
       _response_packets[dest].push_back(ff);
     }
-
-    if(RESERVATION_CONTROL_OVERHEAD!=0){
-      _reservation_schedule[dest]+=RESERVATION_CONTROL_OVERHEAD;
-    }     
+  
     break;
   case RES_TYPE_SPEC:
 #ifdef ENABLE_STATS
@@ -1305,6 +1479,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     //in these cases robs can mistakenly retire flits that are associated with the
     //next reservation
 
+    assert(f->reservation_vector.empty() == true && f->epoch == -1);
     if(_rob[dest].count(f->flid)==0 || !_rob[dest][f->flid]->sn_check(f->sn)){
       if(f->flid == WATCH_FLID){
 	cout<<"spec destination nack sn "<<f->sn<<"\n";
@@ -1343,6 +1518,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	}
 #endif
       }
+      if (f != 0 && f->head)
+      {
+        list<int>* choices = new list<int>;
+        choices->assign(f->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.end());
+        _channel_choices.insert(_channel_choices.end(), pair<int, list<int>*>(f->pid, choices));
+      }
       //ACK
       if(f!=NULL && f->tail){
 #ifdef ENABLE_STATS
@@ -1352,7 +1533,16 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	ff->sn = f->head_sn;
 	ff->res_type = RES_TYPE_ACK;
         assert(ff->bottleneck_channel_choices.empty() == true);
-        ff->bottleneck_channel_choices = f->bottleneck_channel_choices;
+        map<int, list<int>*>::iterator iter = _channel_choices.find(f->pid);
+        assert(iter != _channel_choices.end());
+        list<int> *choices = iter->second;
+        assert((_network_clusters > 1 && (choices->empty() == false || f->cluster_hops == -1)) || (_network_clusters == 1 && choices->empty() == true));
+        if (_network_clusters > 1)
+        {
+          ff->bottleneck_channel_choices.insert(ff->bottleneck_channel_choices.begin(), choices->begin(), choices->end());
+        }
+        _channel_choices.erase(iter);
+        delete choices;
 	ff->pri  = FLIT_PRI_ACK;
 	ff->vc =  1+gAuxVCs;;
 	_response_packets[dest].push_back(ff);
@@ -1364,9 +1554,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     gStatNormReceived[dest]++;
 #endif
     
+    assert(f->reservation_vector.empty() == true && f->epoch == -1 && f->try_again_after_time == -1);
     if(gReservation && RESERVATION_WALKIN_OVERHEAD && f->walkin && f->head){      
-      _reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
-      _reservation_schedule[dest] +=  f->packet_size+4;
+      IncrementVectors(f->packet_size, dest);
     }
     if(gReservation && !f->walkin){
       //find or create a reorder buffer
@@ -1403,25 +1593,36 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	    cout<<"End rservation Reservation received"<<endl;
 	    ff->watch = true;
 	  }
+          int earliest_availability = EarliestAvailability(dest, f->payload);
 #ifdef ENABLE_STATS
-	  if(_reservation_schedule[dest]>_time){
-	    gStatReservationTimeFuture[dest]->AddSample(_reservation_schedule[dest]-_time);
+	  if(earliest_availability>_time){
+	    gStatReservationTimeFuture[dest]->AddSample(earliest_availability-_time);
 	  } else {
-	    gStatReservationTimeNow[dest]->AddSample(_time-_reservation_schedule[dest]);
+	    gStatReservationTimeNow[dest]->AddSample(_time-earliest_availability);
 	  }
 #endif
 	  //the return time is offset by the reservation packet latency 
 	  //to prevent schedule fragmentation
-	  _reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
-	  ff->payload  =_reservation_schedule[dest];
+	  ff->reservation_size = f->payload;
 	  //this functionality has been moved tot he source
 	  //-int(ceil(RESERVATION_RTT*float(_time-f->ntime)));
 
-	  _reservation_schedule[dest] += int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
+          int reservation = ReserveVectors(f->payload, dest, f->reservation_vector);
+          ff->payload = reservation;
+          assert(reservation == earliest_availability);
+          
+          if (reservation == -1)
+          {
+            ff->try_again_after_time = _time + _bit_vector_length * _cycles_per_element;
+          }
 
 	  ff->res_type = RES_TYPE_GRANT;
           assert(ff->bottleneck_channel_choices.empty() == true);
-          ff->bottleneck_channel_choices = f->bottleneck_channel_choices;
+          assert((_network_clusters > 1 && (f->bottleneck_channel_choices.empty() == false || f->cluster_hops == -1)) || (_network_clusters == 1 && f->bottleneck_channel_choices.empty() == true));
+          if (_network_clusters > 1)
+          {
+            ff->bottleneck_channel_choices.insert(ff->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.end());
+          }
 	  ff->pri = FLIT_PRI_GRANT;
 	  ff->vc = 1+gAuxVCs;;
 	  _response_packets[dest].push_back(ff);
@@ -1448,6 +1649,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 #endif
       if(f->head &&
 	 f->fecn){
+	assert(f->reservation_vector.empty() == true && f->epoch == -1);
 	if(TRANSIENT_ENABLE){
 	  int accepted_index = int(float(_time-transient_start+transient_prestart)/float(transient_granularity));
 	  if(accepted_index>=0 && accepted_index < transient_record_duration){
@@ -1461,7 +1663,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	ff->sn = f->head_sn;
 	ff->res_type = RES_TYPE_ACK;
         assert(ff->bottleneck_channel_choices.empty() == true);
-        ff->bottleneck_channel_choices = f->bottleneck_channel_choices;
+        assert((_network_clusters > 1 && (f->bottleneck_channel_choices.empty() == false || f->cluster_hops == -1)) || (_network_clusters == 1 && f->bottleneck_channel_choices.empty() == true));
+        if (_network_clusters > 1)
+        {
+          ff->bottleneck_channel_choices.insert(ff->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.end());
+        }
 	ff->pri  = FLIT_PRI_ACK;
 	ff->vc =  0;
 	ff->becn = f->fecn;
@@ -1683,7 +1889,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   if(f->head && !f->tail) {
     _retired_packets[f->cl].insert(make_pair(f->pid, f));
   } else {
-    f->Free();  
+    assert(f->head == true || f->bottleneck_channel_choices.empty() == true);
+    f->Free();
   }
 }
 
@@ -2150,7 +2357,7 @@ void TrafficManager::_Step( )
 	  ready_flow_buffer =  flb;
 	}
       } else {
-	assert(false);
+	assert(false); // Already sent previously.
       }
     }
 
@@ -2171,13 +2378,18 @@ void TrafficManager::_Step( )
 	 (flb->send_norm_ready())){
 	_FlowVC( flb);
       }
-      if(flb->_vc == -1 &&
-	 flb->send_spec_ready()){
+      if(flb->send_spec_ready() && flb->_vc == -1){
 	_FlowVC( flb);
 	if(!RESERVATION_TAIL_RESERVE){
 	  _reservation_set[source].insert(flb);
 	}
       }
+      else if (flb->send_spec_ready() && !RESERVATION_TAIL_RESERVE && flb->_was_reset == true)
+      {
+        flb->_was_reset = false;
+        _reservation_set[source].insert(flb);
+      }
+      
       if(gECN){
 	flb->ecn_update();
       }
@@ -2227,12 +2439,14 @@ void TrafficManager::_Step( )
       assert(f);
       //vc bookkeeping
       if(f->res_type== RES_TYPE_RES){
+        assert(f->try_again_after_time == -1 && f->epoch == -1);
 	if(dest_buf->IsAvailableFor(0) &&
 	   dest_buf->HasCreditFor(0)){
 	  dest_buf->TakeBuffer(0); 
 	  dest_buf->SendingFlit(f);
-	  assert(_reservation_set[source].erase(ready_flow_buffer));
-	  //create rob at the destiantion
+          int erased = _reservation_set[source].erase(ready_flow_buffer);
+	  assert(erased > 0);
+	  //create rob at the destination.
 	  if(f->sn==0){
 	    _rob[f->dest].insert(pair<int, FlowROB*>(f->flid, new FlowROB(ready_flow_buffer->fl->flow_size)));
 	  }
@@ -2266,7 +2480,7 @@ void TrafficManager::_Step( )
 	      
 	      FlowBuffer* flb = _flow_buffer[source][id];
 	      Flit* rf =  flb->send();
-	      assert(rf->res_type==RES_TYPE_RES);
+	      assert(rf->res_type==RES_TYPE_RES && rf->epoch == -1);
 	      if(rf->sn==0){
 		_rob[rf->dest].insert(pair<int, FlowROB*>(rf->flid, new FlowROB(flb->fl->flow_size)));
 	      }
@@ -2274,7 +2488,8 @@ void TrafficManager::_Step( )
 	      rf->ntime = _time;
 	      _net[0]->WriteSpecialFlit(rf, source);
 	      _sent_flits[0][source]->AddSample(1);
-	      assert(_reservation_set[source].erase(flb));
+              int erased = _reservation_set[source].erase(flb);
+	      assert(erased > 0);
 	    }
 	  }   
 	}
@@ -2283,7 +2498,7 @@ void TrafficManager::_Step( )
 	}
 	f->vc = vc;
 	dest_buf->SendingFlit(f);
-      }    
+      }
       //VC bookkeeping completed success
       if(f){
 	//actual the actual packet to send
@@ -2391,6 +2606,7 @@ void TrafficManager::_Step( )
 
   ++_stat_time;
   ++_time;
+  CheckToIncrementEpoch();
     gStatSpecCount->AddSample(TOTAL_SPEC_BUFFER);
   if(_time%10000==0){
 
@@ -3153,8 +3369,7 @@ bool TrafficManager::_SingleSim( )
       _rob.resize(_nodes);
       _response_packets.clear();
       _response_packets.resize(_nodes);
-      _reservation_schedule.clear();
-      _reservation_schedule.resize(_nodes, 0);
+      ClearVectors();
       _pending_flow.clear();
       _pending_flow.resize(_nodes,NULL);
       _flow_buffer.clear();

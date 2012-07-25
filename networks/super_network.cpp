@@ -35,6 +35,7 @@
 #include <cassert>
 #include <sstream>
 #include <stdlib.h>
+#include <math.h>
 
 #include "booksim.hpp"
 #include "super_network.hpp"
@@ -48,8 +49,15 @@
 #include "fattree.hpp"
 #include "anynet.hpp"
 #include "dragonfly.hpp"
+#include "trafficmanager.hpp"
 
-// TODO We can either do SRP in this class, or mark the channels that need SRP and have the routers do it. The latter is more realistic.
+#define MIN(X,Y) ((X)<(Y)?(X):(Y))
+#define MAX(X,Y) ((X)>(Y)?(X):(Y))
+
+extern int RESERVATION_CHUNK_LIMIT;
+extern int cycles_per_epoch;
+extern float RESERVATION_OVERHEAD_FACTOR;
+
 SuperNetwork::SuperNetwork( const Configuration &config, const string & name ) :// The original network was a timed module. This doesn't need to be.
   TimedModule( 0, name ), _network_clusters(-1)
 {
@@ -62,6 +70,18 @@ SuperNetwork::SuperNetwork( const Configuration &config, const string & name ) :
   _networks.resize(_network_clusters, 0);
   _bottleneck_channels = config.GetInt("bottleneck_channels");
   _bottleneck_channels_total = _transition_channels_per_cluster * _network_clusters * 2; // Times two because each channel is basically two flitchannel objects.
+  _cycles_into_the_future = config.GetInt("cycles_into_the_future");
+  _bit_vector_length = config.GetInt("bit_vector_length");
+  _enable_multi_SRP = config.GetInt("enable_multi_SRP") > 0;
+  assert(_enable_multi_SRP == false || (gReservation == true && gECN == false));
+  _how_many_time_slots_to_reserve = config.GetInt("how_many_time_slots_to_reserve");
+  _cycles_per_element = int(ceil(float(_cycles_into_the_future) / float(_bit_vector_length)));
+  _current_epoch = 0;
+  //_counter_max = int(ceil(float(_cycles_per_element) / float(RESERVATION_CHUNK_LIMIT)));
+  _counter_max = _cycles_per_element; // We keep track of cycles fine-grain.
+  
+  // Cycles per element needs to be big enough for the boundary conditions between time slots to not matter much.
+  assert(_cycles_per_element > 0);
   
   CalculateChannelsPerCluster();
   
@@ -70,10 +90,13 @@ SuperNetwork::SuperNetwork( const Configuration &config, const string & name ) :
   _input_transition_chan_cred = new vector<CreditChannel *> [_network_clusters];
   _output_transition_chan = new vector<FlitChannel *> [_network_clusters];
   _output_transition_chan_cred = new vector<CreditChannel *> [_network_clusters];
+  _bit_vectors = new vector<pair<int, vector<pair<int,int> > > > *[_network_clusters];
   _temp_channels = new Flit** [_network_clusters];
   _temp_credits = new Credit**[_network_clusters];
+  _already_sent = new bool *[_network_clusters];
   int half_latency = (int)(_transition_channel_latency / 2);
   ostringstream temp_name;
+  assert(_transition_channels_per_cluster % 2 == 0);
   for (int i = 0; i < _network_clusters; ++i)
   {
     _temp_channels[i] = new Flit*[_transition_channels_per_cluster];
@@ -81,11 +104,15 @@ SuperNetwork::SuperNetwork( const Configuration &config, const string & name ) :
     _input_transition_chan[i].resize(_transition_channels_per_cluster, 0);
     _input_transition_chan_cred[i].resize(_transition_channels_per_cluster, 0);
     _output_transition_chan[i].resize(_transition_channels_per_cluster, 0);
-    _output_transition_chan_cred[i].resize(_transition_channels_per_cluster, 0);    
+    _output_transition_chan_cred[i].resize(_transition_channels_per_cluster, 0);
+    _bit_vectors[i] = new vector<pair<int, vector<pair<int,int> > > > [_transition_channels_per_cluster];
+    _already_sent[i] = new bool [_transition_channels_per_cluster];
     for (int c = 0; c < _transition_channels_per_cluster; c++)
     {
+      InitializeBitVector(&(_bit_vectors[i][c]), _bit_vector_length, _counter_max);
       _temp_channels[i][c] = 0;
       _temp_credits[i][c] = 0;
+      _already_sent[i][c] = false;
       temp_name.str("");
       temp_name << "Input transition flit channel for network " << i << " index " << c;
       _input_transition_chan[i][c] = new FlitChannel(this, temp_name.str(), classes);
@@ -126,7 +153,10 @@ SuperNetwork::~SuperNetwork( )
       delete _output_transition_chan[n][c];
       delete _output_transition_chan_cred[n][c];
     }
+    delete [] _bit_vectors[n];
+    delete [] _already_sent[n];
   }
+  delete [] _bit_vectors;
   delete [] _input_transition_chan;
   delete [] _input_transition_chan_cred;
   delete [] _output_transition_chan;
@@ -134,6 +164,7 @@ SuperNetwork::~SuperNetwork( )
   delete [] _transition_routers;
   delete [] _temp_channels;
   delete [] _temp_credits;
+  delete [] _already_sent;
 }
 
 SuperNetwork * SuperNetwork::NewNetwork(const Configuration & config, const string & name)
@@ -150,6 +181,294 @@ void SuperNetwork::AllocateSubnets(const Configuration & config, const string & 
   }
   _size = _networks[0]->NumRouters() * _network_clusters;
   _nodes = _networks[0]->NumNodes() * _network_clusters;
+}
+
+void SuperNetwork::IncrementClusterHops(Flit *f)
+{
+  if (f != 0)
+  {
+    f->cluster_hops_taken++;
+    assert(f->head == false || (f->cluster_hops_taken <= f->cluster_hops && f->cluster_hops_taken <= _network_clusters));
+  }
+}
+
+// This should be called when a flit arrives at the first reservation point.
+void SuperNetwork::InitializeBitVector(Flit *f, int bit_vector_length, int cycles_per_element)
+{
+  assert(f->reservation_vector.empty() == true && f->res_type == RES_TYPE_RES && f->epoch == -1);
+  // The flits carry bit vectos that just say that "this time slot is an option" or not.
+  f->reservation_vector.resize(bit_vector_length, true);
+  f->epoch = TrafficManager::DefineEpoch(GetSimTime(), cycles_per_element);
+}
+
+// This should be called by the supernetwork class.
+void SuperNetwork::InitializeBitVector(vector<pair<int, vector<pair<int,int> > > > *vec, int bit_vector_length, int counter_max)
+{
+  vec->resize(bit_vector_length);
+  for (int i = 0; i < bit_vector_length; i++)
+  {
+    (*vec)[i].first = counter_max;
+    (*vec)[i].second.clear();
+  }
+}
+
+// For when an epoch changed. This is also used by flits which means that suddenly they gain more options even for reservation points that passed them.
+// That's ok though because it's unlikely that enough reservations will have to use the last slot to cause a problem, but even if so it will cause a retry which would had happened anyway.
+void SuperNetwork::ShiftBitVector(vector<pair<int, vector<pair<int,int> > > > *vec, int bit_vector_length, int counter_max)
+{
+  vec->erase(vec->begin());
+  vec->resize(bit_vector_length);
+  vec->back().first = counter_max;
+  assert(vec->back().second.empty() == true);
+}
+
+void SuperNetwork::ShiftBitVector(vector<bool> *vec, int bit_vector_length)
+{
+  vec->erase(vec->begin());
+  vec->push_back(true);
+  assert((int)vec->size() == bit_vector_length);
+}
+
+void SuperNetwork::IncrementEpoch(int new_epoch)
+{
+  assert(new_epoch == 0 || abs(new_epoch - _current_epoch) == 1);
+  _current_epoch = new_epoch;
+  for (int n = 0; n < _network_clusters; n++)
+  {
+    for (int c = 0; c < _transition_channels_per_cluster; c++)
+    {
+      ShiftBitVector(&(_bit_vectors[n][c]), _bit_vector_length, _counter_max);
+    }
+  }
+}
+
+void SuperNetwork::ReserveBitVector(Flit *f, int net, int chan)
+{
+  int slots_to_reserve = _how_many_time_slots_to_reserve;
+  bool all_falses = true;
+  assert(f && f->res_type == RES_TYPE_RES && f->payload > 0);
+  int payload = int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
+  assert(_enable_multi_SRP == true);
+  for (int i = 0; i < _bit_vector_length; i++)
+  {
+    assert(_bit_vectors[net][chan][i].first >= 0 && _bit_vectors[net][chan][i].first <= _counter_max);
+    bool opening = HasAnOpening(net, chan, i, payload);
+    if (f->reservation_vector[i] == true && opening == true) // Both agree
+    {
+      if (slots_to_reserve > 0)
+      {
+          
+        if (_bit_vectors[net][chan][i].first >= payload)
+        {
+          _bit_vectors[net][chan][i].first -= payload;
+          assert(_bit_vectors[net][chan][i].first >= 0);
+          slots_to_reserve--;
+        }
+        else if (i + 1 < _bit_vector_length && _bit_vectors[net][chan][i].first > 0 && _bit_vectors[net][chan][i].first + _bit_vectors[net][chan][i+1].first >= payload)
+        {
+          int reduction_amount = MIN(payload, _bit_vectors[net][chan][i].first);
+          int rest_of_reduction = payload - reduction_amount;
+          assert(rest_of_reduction > 0 && rest_of_reduction < _cycles_per_element && reduction_amount < _cycles_per_element && _bit_vectors[net][chan][i+1].first >= rest_of_reduction);
+          _bit_vectors[net][chan][i].first -= reduction_amount;
+          _bit_vectors[net][chan][i].second.push_back(make_pair<int,int>(f->flid,reduction_amount));
+          _bit_vectors[net][chan][i+1].first -= rest_of_reduction;
+          _bit_vectors[net][chan][i+1].second.push_back(make_pair<int,int>(f->flid,rest_of_reduction));
+          i++; // Don't reserve in that (i+1) slot again.
+          assert(i < _bit_vector_length);
+          f->reservation_vector[i] = false;
+          assert(_bit_vectors[net][chan][i].first >= 0 && _bit_vectors[net][chan][i+1].first >= 0);
+          slots_to_reserve--;
+        }
+        else
+        {
+          assert(false);
+        }
+      }
+    }
+    else if (f->reservation_vector[i] == true && opening == false) // Then no agreement
+    {
+      f->reservation_vector[i] = false;
+    }
+    if (f->reservation_vector[i] == true)
+    {
+      all_falses = false;
+    }
+  }
+  if (all_falses == true)
+  {
+    int old_value = f->try_again_after_time;
+    f->try_again_after_time = MaxTimestampCovered();
+    f->try_again_after_time = MAX(old_value, f->try_again_after_time);
+  }
+}
+
+bool SuperNetwork::HasAnOpening(int net, int chan, int vector_index, int size) const
+{
+  if (vector_index == -1)
+  {
+    return false;
+  }
+  assert(vector_index < _bit_vector_length && (int)_bit_vectors[net][chan].size() <= _bit_vector_length);
+  int reservation_size = size;
+  reservation_size -= _bit_vectors[net][chan][vector_index].first;
+  if (vector_index + 1 < _bit_vector_length && reservation_size > 0)
+  {
+    reservation_size -= _bit_vectors[net][chan][vector_index + 1].first;
+  }
+  return reservation_size <= 0 && _bit_vectors[net][chan][vector_index].first > 0;
+}
+
+// What timeslot in the bit vector the specified timestamp belongs in
+int SuperNetwork::BelongsInThatTimeSlot(int timestamp, int is_valid) const
+{
+  if (is_valid != -1)
+  {
+    return -2;
+  }
+  int relative_timestamp = timestamp - GetSimTime();
+  if (relative_timestamp <= -1 * _cycles_per_element)
+  {
+    return -2;
+  }
+  else if (relative_timestamp < 0)
+  {
+    return -1; // So that if a reservation was made at the first cell of the bit vector, it will be released.
+  }
+  int return_value = (int)(relative_timestamp / _cycles_per_element);
+  assert(return_value < _bit_vector_length);
+  return return_value;
+}
+
+int SuperNetwork::MaxTimestampCovered() const
+{
+  return GetSimTime() - GetSimTime() % _cycles_per_element + _bit_vector_length * _cycles_per_element;
+}
+
+// Frees any slots it had reserved for this flow id. Be careful though that grant flits carry timestamps, they don't use bit vectors any more.
+void SuperNetwork::HandleGrantFlits(Flit *f, int net, int chan)
+{
+  int size;
+  bool found_flow;
+  assert(f && f->res_type == RES_TYPE_GRANT);
+  int timeslot_it_belongs = BelongsInThatTimeSlot(f->payload, f->try_again_after_time);
+  for (int i = 0; i < _bit_vector_length; i++)
+  {
+    size = _bit_vectors[net][chan][i].second.size();
+    found_flow = false;
+    assert(_bit_vectors[net][chan][i].first >= 0 && _bit_vectors[net][chan][i].first <= _counter_max);
+    for (int c = 0; c < size; c++)
+    {
+      if (_bit_vectors[net][chan][i].second[c].first == f->flid)
+      {
+        assert(found_flow == false);
+        found_flow = true;
+        if (timeslot_it_belongs != i && !(timeslot_it_belongs == -1 && i == 0))
+        {
+          _bit_vectors[net][chan][i].first += _bit_vectors[net][chan][i].second[c].second; // Restore the bit that was reserved for this flow but wasn't granted.
+          _bit_vectors[net][chan][i].second.erase(_bit_vectors[net][chan][i].second.begin() + c);
+          // There should be only one entry per flid so we can break the inner for loop here.
+          break;
+        }
+        else if (timeslot_it_belongs == i || (timeslot_it_belongs == -1 && i == 0))
+        {
+          // If timeslot_it_belongs is -1 it means that the timestamp is on the time slot that just got shifted. In that case don't erase any reservations in the bit vector of slot 0.
+          // In case those bit should had been erased, speculative packets will use that bandwidth.
+          // Doesn't really matter if we delete it or not. Might as well to speed up future searches.
+          _bit_vectors[net][chan][i].second.erase(_bit_vectors[net][chan][i].second.begin() + c);
+          if (i + 1 < _bit_vector_length && !(timeslot_it_belongs == -1 && i == 0))
+          {
+            // We also go in to the next time slot and delete the leftover fraction so it doesn't get released.
+            for (vector<pair<int,int> >::iterator a = _bit_vectors[net][chan][i+1].second.begin(); a != _bit_vectors[net][chan][i+1].second.end(); a++)
+            {
+              if ((*a).first == f->flid)
+              {
+                _bit_vectors[net][chan][i+1].second.erase(a);
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+    // If the bit wasn't reserved for this flow at this channel but the granted timestamp belongs in a time slot which is all taken (bits zero), transform the grant into a try again.
+    // We could just preempt some other reserved bit, but that is identical to not reserving in the first place
+    if (found_flow == false && timeslot_it_belongs == i)
+    {
+      // If the grant was for this slot, let's see if the timestamps can accommodate us or not.
+      bool has_opening = HasAnOpening(net, chan, timeslot_it_belongs, f->payload);
+      if (has_opening == false)
+      {
+        // Can't accommodate us. Must generate a retry response.
+        int old_value = f->try_again_after_time;
+        f->try_again_after_time = MaxTimestampCovered();
+        f->try_again_after_time = MAX(old_value, f->try_again_after_time);
+        assert(_enable_multi_SRP == true);
+      }
+      else
+      {
+        int reduction = MIN(f->payload, _bit_vectors[net][chan][i].first);
+        assert(reduction > 0 && _bit_vectors[net][chan][i].first > 0);
+        _bit_vectors[net][chan][i].first -= reduction;
+        reduction = f->payload - reduction;
+        assert(reduction == 0 || i + 1 < _bit_vector_length);
+        if (reduction > 0)
+        {
+          _bit_vectors[net][chan][i+1].first -= reduction;
+          assert(_bit_vectors[net][chan][i].first == 0);
+        }
+      }
+
+    }
+  }
+}
+
+void SuperNetwork::HandleNonResFlits(Flit *f, int net, int chan)
+{
+  if (f == 0 || f->res_type != RES_TYPE_NORM)
+  {
+    return;
+  }
+  int size = f->packet_size + 4;
+  for (int a = 0; a < _bit_vector_length && size > 0; a++)
+  {
+    if (_bit_vectors[net][chan][a].first > 0)
+    {
+      int reduction_amount = MIN(size, _bit_vectors[net][chan][a].first);
+      _bit_vectors[net][chan][a].first -= reduction_amount;
+      size -= reduction_amount;
+      assert(size >= 0);
+    }
+  }
+}
+
+void SuperNetwork::HandleResGrantFlits(Flit *f, int n, int i)
+{
+  if (f == 0)
+  {
+    return;
+  }
+  if (f->res_type == RES_TYPE_RES)
+  {
+    assert(f->head == true && f->tail == true);
+    if (f->epoch == -1)
+    {
+      InitializeBitVector(f, _bit_vector_length, _cycles_per_element);
+    }
+    else if (f->epoch != _current_epoch)
+    {
+      ShiftBitVector(&(f->reservation_vector), _bit_vector_length);
+      f->epoch = _current_epoch;
+    }
+    if (_enable_multi_SRP == true)
+    {
+      ReserveBitVector(f, n, i);
+    }
+  }
+  else if (f->res_type == RES_TYPE_GRANT)
+  {
+    assert(f->head == true && f->tail == true);
+    HandleGrantFlits(f, n, i);
+  }
 }
 
 void SuperNetwork::ConnectTransitionChannels()
@@ -197,7 +516,7 @@ void SuperNetwork::ConnectTransitionChannels()
         _transition_routers[target_net][index]->AddTransitionInputChannel(_input_transition_chan[target_net][index], _input_transition_chan_cred[target_net][index]);
         index++;
       }
-      
+
       target_net = target_net == _network_clusters - 1 ? 0 : target_net + 1;
       if (_network_clusters == 2)
       {
@@ -211,6 +530,7 @@ void SuperNetwork::ConnectTransitionChannels()
     {
       temp_size = _transition_routers[net].size();
       temp_size2 = _transition_routers[target_net].size(); 
+      
       // For example if we connect cluster 0 with 1 with two channels, channel 0 and 1 go from 0 to 1, and channels 2 and 3 go from 1 to 0.
       // Also, the bottom half of each _transition_routers vector is for routers to go to a higher-numbered cluster.
       // This connects target_net (the higher number) with net.
@@ -260,7 +580,7 @@ void SuperNetwork::RouteFlit(Flit* f, int network_cluster, bool is_injection)
   }
   else
   {
-    assert(f->original_destination == -1 && f->source_network_cluster == -1);
+    assert(f->original_destination == -1 && f->source_network_cluster == -1 && f->cluster_hops_taken == 0);
     f->source_network_cluster = network_cluster;
     f->original_destination = f->dest;
     assert(_nodes % _network_clusters == 0); // Make them nice and round please.
@@ -272,9 +592,28 @@ void SuperNetwork::RouteFlit(Flit* f, int network_cluster, bool is_injection)
     }
     else
     {
-      int going_up = abs(f->dest_network_cluster - network_cluster);
-      int going_down = abs(network_cluster - f->dest_network_cluster);
-      if ((network_cluster < f->dest_network_cluster && _network_clusters == 2) || going_up < going_down)
+      int going_up;
+      if (f->dest_network_cluster >= network_cluster)
+      {
+        going_up = f->dest_network_cluster - network_cluster;
+      }
+      else
+      {
+        going_up = f->dest_network_cluster + _network_clusters - network_cluster;
+      }
+      int going_down = _network_clusters - going_up;
+      if (going_down == going_up) // If distances are equal, randomize the choice.
+      {
+        if (RandomInt(1) == 1)
+        {
+          going_down--;
+        }
+        else
+        {
+          going_up++;
+        }
+      }
+      if ((network_cluster < f->dest_network_cluster && _network_clusters == 2) || (going_up < going_down && _network_clusters > 2))
       {
         f->going_up_clusters = true;
         f->cluster_hops = going_up;
@@ -287,7 +626,7 @@ void SuperNetwork::RouteFlit(Flit* f, int network_cluster, bool is_injection)
       assert(f->cluster_hops > 0);
     }
   }
-  assert(f->dest_network_cluster != -1 && f->dest_network_cluster != network_cluster);
+  assert(f->dest_network_cluster != -1 && f->source_network_cluster != -1);
   if (f->dest_network_cluster == network_cluster)
   { // The cluster it's going to is the destination one.
     f->dest = f->original_destination % nodes_per_cluster; 
@@ -298,15 +637,17 @@ void SuperNetwork::RouteFlit(Flit* f, int network_cluster, bool is_injection)
     int choice;
     if (!(f->res_type == RES_TYPE_GRANT || f->res_type == RES_TYPE_ACK))
     {
+      assert(is_injection == true ||f->bottleneck_channel_choices.empty() == false);
       choice = RandomInt(_bottleneck_channels - 1); // Choose the next bottleneck channel randomly.
-      f->bottleneck_channel_choices.push(choice);
-      assert((int)f->bottleneck_channel_choices.size() <= f->cluster_hops);
+      f->bottleneck_channel_choices.push_back(choice);
+      int size_list = (int)f->bottleneck_channel_choices.size();
+      assert(size_list <= f->cluster_hops);
     }
     else
     {
       assert(f->bottleneck_channel_choices.empty() == false);
       choice = f->bottleneck_channel_choices.front();
-      f->bottleneck_channel_choices.pop();
+      f->bottleneck_channel_choices.pop_front();
     }
     int next_cluster;
     if (f->going_up_clusters) // It has more hops to go.
@@ -373,6 +714,8 @@ void SuperNetwork::ReadInputs( )
       _output_transition_chan_cred[n][i]->ReadInputs(); // Read inputs first and then receive.
       _temp_channels[n][i] = _output_transition_chan[n][i]->Receive();
       _temp_credits[n][i] = _output_transition_chan_cred[n][i]->Receive();
+      assert(_already_sent[n][i] == true || GetSimTime() == 0);
+      _already_sent[n][i] = false;
     }
   }
 }
@@ -382,14 +725,30 @@ void SuperNetwork::Evaluate( )
   for (int n = 0; n < _network_clusters; n++)
   {
     _networks[n]->Evaluate();
-    // TODO Do stuff to the flits in transit to implement reservation and such.
     for (int i = 0; i < _transition_channels_per_cluster; i++)
     {
       _input_transition_chan[n][i]->Evaluate();
       _input_transition_chan_cred[n][i]->Evaluate();
       _output_transition_chan[n][i]->Evaluate();
       _output_transition_chan_cred[n][i]->Evaluate();
+      Flit *f = _temp_channels[n][i];
+      if (_enable_multi_SRP == true)
+      {
+        HandleResGrantFlits(f, n, i);
+	HandleNonResFlits(f, n, i);
+      }
+      IncrementClusterHops(f);
+      if (f != 0)
+      {
+        assert(f->head == false || f->dest_network_cluster != f->source_network_cluster);
+        RouteFlit(f, GetNextCluster(n, i), false);
+      }
     }
+  }
+  int new_epoch = TrafficManager::DefineEpoch(GetSimTime(), _cycles_per_element);
+  if (new_epoch != _current_epoch)
+  {
+    IncrementEpoch(new_epoch);    
   }
 }
 
@@ -407,12 +766,43 @@ void SuperNetwork::WriteOutputs( )
       _input_transition_chan_cred[n][i]->WriteOutputs();
       _output_transition_chan[n][i]->WriteOutputs();
       _output_transition_chan_cred[n][i]->WriteOutputs();
-      _input_transition_chan[n][i]->Send(_temp_channels[n][i]);
-      _input_transition_chan_cred[n][i]->Send(_temp_credits[n][i]);
+      SendTransitionFlits(_temp_channels[n][i], _temp_credits[n][i], n, i);
       _temp_channels[n][i] = 0;
       _temp_credits[n][i] = 0;
     }
   }
+}
+
+int SuperNetwork::GetNextCluster(int net, int chan) const
+{
+  int other_net = -1;
+  if (_network_clusters == 2)
+  {
+    other_net = net == 1 ? 0 : 1;
+  }
+  else
+  {
+    if (chan < _transition_channels_per_cluster / 2)
+    {
+      other_net = net == _network_clusters - 1 ? 0 : net + 1;
+    }
+    else
+    {
+      other_net = net == 0 ? _network_clusters - 1 : net - 1;
+    }
+  }
+  assert(other_net >= 0);
+  return other_net;
+}
+
+void SuperNetwork::SendTransitionFlits(Flit *f, Credit *c, int net, int chan)
+{
+  assert(_network_clusters > 1);
+  int other_net = GetNextCluster(net, chan);
+  _input_transition_chan[other_net][chan]->Send(f);
+  _input_transition_chan_cred[other_net][chan]->Send(c);
+  assert(_already_sent[other_net][chan] == false);
+  _already_sent[other_net][chan] = true;
 }
 
 // This is for the purposes of trafficmanager-network communication, not routing.

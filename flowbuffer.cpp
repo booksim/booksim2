@@ -84,6 +84,7 @@ void FlowBuffer::Deactivate(){
 void FlowBuffer::Init( flow* f){
   fl = f;
   _ready = 0;
+  _was_reset = false;
 
   _dest = f->dest;
   _reserved_time = -1;
@@ -91,6 +92,7 @@ void FlowBuffer::Init( flow* f){
   _expected_latency=0;
   _reservation_check = false;
   _vc = -1;
+  _last_payload = -1;
   _last_sn = -1;
   _tail_sent = true;
   _guarantee_sent = 0;
@@ -164,6 +166,8 @@ void FlowBuffer::Init( flow* f){
   _stats.clear();
   _stats.resize(FLOW_STAT_LIFETIME+1,0);
   _stats[FLOW_STAT_LIFETIME]=GetSimTime()-fl->create_time;
+  
+  _speculate_in_the_future = 0;
 }
 
 
@@ -269,59 +273,66 @@ void FlowBuffer::active_update(){
 	gStatResEarly_NEG->AddSample(-sample);  
       }
 
-
-      if(fl->flow_size-_total_reserved_slots<RESERVATION_CHUNK_LIMIT){
-	_reserved_slots = fl->flow_size-_total_reserved_slots;
-      } else {
-	_reserved_slots = RESERVATION_CHUNK_LIMIT; 
-      }
-
-      if(!RESERVATION_TAIL_RESERVE){
-	_reservation_flit  = Flit::New();
-	_reservation_flit->packet_size=1;
-	_reservation_flit->src = _src;
-	_reservation_flit->dest = fl->dest;
-	_reservation_flit->flid = fl->flid;
-	_reservation_flit->flbid = _id;
-	_reservation_flit->sn = _total_reserved_slots;
-	_reservation_flit->id = -1;
-	_reservation_flit->subnetwork = 0;
-	_reservation_flit->cl = 0;
-	_reservation_flit->type = Flit::ANY_TYPE;
-	_reservation_flit->head = true;
-	_reservation_flit->tail = true;
-	_reservation_flit->vc = 0;
-	_reservation_flit->res_type = RES_TYPE_RES;
-	_reservation_flit->pri = FLIT_PRI_RES;
-
-	_res_sent = false;
-	_res_outstanding=false;
-	if(fl->flow_size-_total_reserved_slots<RESERVATION_CHUNK_LIMIT){
-	  _reservation_flit->payload = fl->flow_size-_total_reserved_slots;
-	} else {
-	  _reservation_flit->payload = RESERVATION_CHUNK_LIMIT; 
-	}
-
-      } else {
-	_res_sent = true;
-	_res_outstanding=false;
-      }
-      _status= FLOW_STATUS_SPEC;
-      _last_sn = _total_reserved_slots-1;
-      _total_reserved_slots+=_reserved_slots; 
-      _vc = -1;
-      _reserved_time=-1;
-      _reservation_check = false;
-      if(_future_reserved_time!=-1){
-	_reserved_time = _future_reserved_time;
-	_reservation_check = true;
-	_status = FLOW_STATUS_WAIT;
-      }
-      _future_reserved_time=-1;
+      Reactivate();
     }
   }
 }
 
+void FlowBuffer::ReconstructFlit()
+{
+  if(!RESERVATION_TAIL_RESERVE){
+    _reservation_flit  = Flit::New();
+    _reservation_flit->packet_size=1;
+    _reservation_flit->src = _src;
+    _reservation_flit->dest = fl->dest;
+    _reservation_flit->flid = fl->flid;
+    _reservation_flit->flbid = _id;
+    _reservation_flit->sn = _total_reserved_slots;
+    _reservation_flit->id = -1;
+    _reservation_flit->subnetwork = 0;
+    _reservation_flit->cl = 0;
+    _reservation_flit->type = Flit::ANY_TYPE;
+    _reservation_flit->head = true;
+    _reservation_flit->tail = true;
+    _reservation_flit->vc = 0;
+    _reservation_flit->res_type = RES_TYPE_RES;
+    _reservation_flit->pri = FLIT_PRI_RES;
+  }
+  else {
+    _res_sent = true;
+    _res_outstanding=false;
+  }
+}
+
+void FlowBuffer::Reactivate()
+{
+  if(fl->flow_size-_total_reserved_slots<RESERVATION_CHUNK_LIMIT){
+    _reserved_slots = fl->flow_size-_total_reserved_slots;
+   } else {
+    _reserved_slots = RESERVATION_CHUNK_LIMIT; 
+   }
+  
+   ReconstructFlit();
+   if(fl->flow_size-_total_reserved_slots<RESERVATION_CHUNK_LIMIT){
+     _reservation_flit->payload = fl->flow_size-_total_reserved_slots;
+   } else {
+     _reservation_flit->payload = RESERVATION_CHUNK_LIMIT; 
+   }
+
+   _status= FLOW_STATUS_SPEC;
+   _last_sn = _total_reserved_slots-1;
+   _total_reserved_slots+=_reserved_slots; 
+   _vc = -1;
+   _reserved_time=-1;
+   _reservation_check = false;
+   if(_future_reserved_time!=-1){
+     _reserved_time = _future_reserved_time;
+     _reservation_check = true;
+     _status = FLOW_STATUS_WAIT;
+    }
+    _future_reserved_time=-1;
+    _was_reset = false;
+}
   
 void FlowBuffer::ecn_update(){
   /////////////////////////////////////////
@@ -466,36 +477,57 @@ bool FlowBuffer::nack(int sn){
 }
 
 //only one grant can return
-void FlowBuffer::grant(int time,int lat){
+void FlowBuffer::grant(int time, int try_again, int lat){
   assert(_mode == RES_MODE);
   if(_watch){
     cout<<"flow "<<fl->flid
 	<<" received grant at time "<<time<<endl;
   }
-  if (_speculate_in_the_future > 0)
+  if (_speculate_in_the_future > 0 && try_again == -1)
   {
     _speculate_in_the_future--; // Bias towards speculating again.
   }
   assert(RESERVATION_TAIL_RESERVE || _reserved_time == -1);
-  if( _reserved_time == -1){
-    _reserved_time = time;
-    _expected_latency=lat;
-    _reservation_check = true;
-    _res_outstanding=false;
-    if(_tail_sent){
-      _vc=-1;
-      _status = FLOW_STATUS_WAIT;
+  if (try_again == -1)
+  {
+    if( _reserved_time == -1){
+      _reserved_time = time;
+      _expected_latency=lat;
+      _reservation_check = true;
+      _res_outstanding=false;
+      if(_tail_sent){
+        _vc=-1;
+        _status = FLOW_STATUS_WAIT;
+      } else {
+        _status = FLOW_STATUS_GRANT_TRANSITION;
+      }
     } else {
-      _status = FLOW_STATUS_GRANT_TRANSITION;
+      _future_reserved_time=time;
     }
-  } else {
-    _future_reserved_time=time;
+  }
+  else
+  {
+    ReconstructFlit();
+    assert(_last_payload > 0);
+    _reservation_flit->payload = _last_payload;
+    _reservation_check = false;
+    _res_outstanding = false;
+    _res_sent = false;
+    _was_reset = true;
+    _last_payload = -1;
+    _sleep_time = try_again - lat; // This is optimistic but we don't know where is the bottleneck and arriving a little early is not a problem.
+    if (_sleep_time < 0)
+    {
+      _sleep_time = 0;
+    }
+    assert(_reservation_flit->res_type == RES_TYPE_RES);
+    assert(_status == FLOW_STATUS_SPEC || _status == FLOW_STATUS_NACK || _status == FLOW_STATUS_NACK_TRANSITION);
   }
 }
 
 Flit* FlowBuffer::front(){
   Flit* f = NULL;
-
+  assert(_was_reset == false);
   switch(_status){
   case FLOW_STATUS_NORM:
     //not in the middle of a packet
@@ -538,6 +570,7 @@ Flit* FlowBuffer::front(){
   case FLOW_STATUS_SPEC:
     if(!_res_sent){
       f = _reservation_flit;
+      assert(f && f->res_type == RES_TYPE_RES);
     } else {
       if(_flit_buffer.count(_last_sn+1)!=0){
 	f = _flit_buffer[_last_sn+1];
@@ -556,7 +589,7 @@ Flit* FlowBuffer::front(){
 
 Flit* FlowBuffer::send(){
   Flit* f = NULL;
-
+  assert(_was_reset == false);
 
   switch(_status){
   case FLOW_STATUS_NORM:
@@ -652,16 +685,19 @@ Flit* FlowBuffer::send(){
       _reservation_flit->vc=0;
       _reservation_flit->time = GetSimTime();
       f = _reservation_flit;
+      assert(f->res_type == RES_TYPE_RES);
       _res_sent = true;
       _res_outstanding=true;
+      assert(_last_payload == -1);
+      _last_payload = f->payload;
+      _reservation_flit = 0;
     } else {
       if(_flit_buffer.count(_last_sn+1)!=0){
 	Flit* original = _flit_buffer[_last_sn+1];
 	if( !original->tail && _flit_buffer[_last_sn+2] ==NULL){
 	  _flit_buffer[_last_sn+2]  = Flit::Replicate(original);//body flit decompression
 	}
-	f = Flit::New();
-	memcpy(f,original, sizeof(Flit));
+        f = Flit::CreateCopy(original);
 	_flit_status[_last_sn+1] = FLIT_SPEC;
 	f->res_type = RES_TYPE_SPEC;
 	f->pri = FLIT_PRI_SPEC;
@@ -671,6 +707,7 @@ Flit* FlowBuffer::send(){
 	TOTAL_SPEC_BUFFER++;
 	_last_sn = f->sn;
 	_tail_sent = f->tail;
+        assert(f->head == true || f->bottleneck_channel_choices.empty() == true);
 
 
 

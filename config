@@ -44,17 +44,14 @@ sim_power = 1;
 tech_file = techfile;
 power_output_file = power;
 
-//topology = fattree;
-//k  = 16;
-//routing_function = nca;
-topology = flatfly;
-k = 4;
-c = 4;
+topology = fattree;
+k  = 16;
+routing_function = nca;
+//c = 4;
 x = 4;
 y = 4;
 xr = 2;
 yr = 2;
-routing_function = ran_min;
 
 n = 2;
 default_channel_latency=5;
@@ -72,6 +69,11 @@ reservation_spec_off = 0;
 adaptively_speculate = 0; // Whether to decide adaptively whether to speculate or not.
 speculation_decision_threshold = 4; // How many NACKs must a flow receive in order to stop trying to speculate again.
 
-network_clusters = 1; // How many clusters.
+network_clusters = 4; // How many clusters.
 bottleneck_channels = 4; // How many channels connect a cluster with another.
 transition_channel_latency = 10; // The latency of the transition channels. Make this an even number or else it will be one less cycle.
+
+cycles_into_the_future = 4096; // How many cycles ahead will the reservation system in each of the resources reserve for.
+bit_vector_length = 24; // How many bits in the bit vector which is passed around for the reservations.
+enable_multi_SRP = 1; // If we want to enable reserving the bottleneck channels.
+how_many_time_slots_to_reserve = 3; // How many time slots closest to now to reserve for a passing reservation request before a grant comes back.
