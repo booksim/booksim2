@@ -602,7 +602,7 @@ void SuperNetwork::RouteFlit(Flit* f, int network_cluster, bool is_injection)
         going_up = f->dest_network_cluster + _network_clusters - network_cluster;
       }
       int going_down = _network_clusters - going_up;
-      if (going_down == going_up) // If distances are equal, randomize the choice.
+      if (going_down == going_up && _network_clusters > 2) // If distances are equal, randomize the choice.
       {
         if (RandomInt(1) == 1)
         {
