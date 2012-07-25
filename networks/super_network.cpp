@@ -83,6 +83,8 @@ SuperNetwork::SuperNetwork( const Configuration &config, const string & name ) :
   // Cycles per element needs to be big enough for the boundary conditions between time slots to not matter much.
   assert(_cycles_per_element > 0);
   
+  assert(_cycles_per_element * 2 > RESERVATION_CHUNK_LIMIT);
+  
   CalculateChannelsPerCluster();
   
   _transition_routers = new vector<Router *> [_network_clusters];

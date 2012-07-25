@@ -250,10 +250,11 @@ int TrafficManager::EarliestAvailability(int node, int size) const
 {
   size = int(ceil(float(size)*RESERVATION_OVERHEAD_FACTOR));
   int return_value = -1;
-  int remaining  = size;
+  int remaining;
   assert((int)_bit_vectors[node].size() == _bit_vector_length);
   for (int i = 0; i < _bit_vector_length; i++)
   {
+    remaining = size;
     if (_bit_vectors[node][i] > 0)
     {
       remaining -= _bit_vectors[node][i];
@@ -310,7 +311,6 @@ int TrafficManager::ReserveVectors(int size, int node, vector<bool> flit_vector)
         remaining -= _bit_vectors[node][i+1];
         went_second = true;
       }
-      assert(_enable_multi_SRP > 1 || i + 1 < _bit_vector_length || _bit_vectors[node][i+1] > 0);
       if (remaining <= 0) // Found an opening.
       {
         return_value = _time + i * _cycles_per_element + _cycles_per_element - _bit_vectors[node][i];
@@ -350,7 +350,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<SuperN
   _routers = _net[0]->NumRouters( );
   _num_vcs = config.GetInt("num_vcs");
   _network_clusters = config.GetInt("network_clusters");
- 
 
   _max_flow_buffers = config.GetInt("flow_buffers");
   _max_flow_buffers = (_max_flow_buffers==0)?_nodes:_max_flow_buffers;
@@ -803,6 +802,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<SuperN
 
   // ============ Statistics ============ 
 
+  _retries.resize(_nodes, 0);
+  _revivals.resize(_nodes, 0);
 
   _plat_stats.resize(_classes);
   _overall_min_plat.resize(_classes);
@@ -1381,6 +1382,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       if (f->try_again_after_time != -1)
       {
         _last_sent_spec_buffer[dest] = 0;
+        _retries[dest]++;
       }
     }
     f->Free(); 
@@ -2388,6 +2390,7 @@ void TrafficManager::_Step( )
       {
         flb->_was_reset = false;
         _reservation_set[source].insert(flb);
+        _revivals[source]++;
       }
       
       if(gECN){
@@ -3496,6 +3499,23 @@ void TrafficManager::DisplayStats( ostream & os ) {
     _ComputeStats( _accepted_flits[c], NULL, NULL, &max );
     os << "Overall max accepted rate = " <<max << endl;
     
+    os << endl << "Total retries per node." << endl << "[";
+    int sum = 0;
+    for (int i = 0; i < _nodes; i++)
+    {
+      sum += _retries[i];
+      os << _retries[i] << ", ";
+    }
+    os << "];" << endl << "Total retries: " << sum << endl;
+    sum = 0;
+    for (int i = 0; i < _nodes; i++)
+    {
+      sum += _revivals[i];
+      os << _revivals[i] << ", ";
+    }
+    os << "];" << endl << "Total revivals: " << sum << endl;
+    
+    
     float mean=0.0;
     float nim =numeric_limits<float>::max();
     float xam =-numeric_limits<float>::max();
@@ -3519,6 +3539,7 @@ void TrafficManager::DisplayStats( ostream & os ) {
        << " (" << _hop_stats[c]->NumSamples( ) << " samples)" << endl;
 
     os << "Slowest flit = " << _slowest_flit[c] << endl;
+   
     
 #ifdef ENABLE_STATS
     double ecn_sum = 0.0;

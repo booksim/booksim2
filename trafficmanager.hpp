@@ -219,6 +219,9 @@ protected:
   vector<Stats *> _overall_min_frag;
   vector<Stats *> _overall_avg_frag;
   vector<Stats *> _overall_max_frag;
+  
+  vector<int> _retries;
+  vector<int> _revivals;
 
   vector<vector<Stats *> > _pair_plat;
   vector<vector<Stats *> > _pair_tlat;

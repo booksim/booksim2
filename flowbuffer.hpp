@@ -93,6 +93,7 @@ public:
 
   bool _active;
   bool _was_reset;
+  bool _was_reset_sometime;
   int  _last_payload;
 
   bool _adaptively_speculate;

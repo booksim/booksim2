@@ -85,6 +85,7 @@ void FlowBuffer::Init( flow* f){
   fl = f;
   _ready = 0;
   _was_reset = false;
+  _was_reset_sometime = false;
 
   _dest = f->dest;
   _reserved_time = -1;
@@ -332,6 +333,7 @@ void FlowBuffer::Reactivate()
     }
     _future_reserved_time=-1;
     _was_reset = false;
+    _was_reset_sometime = false;
 }
   
 void FlowBuffer::ecn_update(){
@@ -513,7 +515,9 @@ void FlowBuffer::grant(int time, int try_again, int lat){
     _reservation_check = false;
     _res_outstanding = false;
     _res_sent = false;
+    assert(_was_reset == false);
     _was_reset = true;
+    _was_reset_sometime = true;
     _last_payload = -1;
     _sleep_time = try_again - lat; // This is optimistic but we don't know where is the bottleneck and arriving a little early is not a problem.
     if (_sleep_time < 0)
@@ -590,7 +594,7 @@ Flit* FlowBuffer::front(){
 Flit* FlowBuffer::send(){
   Flit* f = NULL;
   assert(_was_reset == false);
-
+  
   switch(_status){
   case FLOW_STATUS_NORM:
     //not in the middle of a packet
