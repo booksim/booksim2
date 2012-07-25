@@ -45,7 +45,7 @@ void RRWavefront::AddRequest( int in, int out, int label,
 			      int in_pri, int out_pri )
 {
   Wavefront::AddRequest(in, out, label, in_pri, out_pri);
-  int offset = (in + (_square - out) + (_square - _pri)) % _square;
+  int offset = (in + out + (_square - _pri)) % _square;
   if(offset < _skip_diags) {
     _skip_diags = offset;
   }

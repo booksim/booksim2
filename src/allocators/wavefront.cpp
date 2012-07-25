@@ -75,9 +75,8 @@ void Wavefront::Allocate( )
 	iter != _priorities.rend(); ++iter) {
       
       for ( int p = 0; p < _square; ++p ) {
-	for ( int q = 0; q < _square; ++q ) {
-	  int input = ( ( _pri + p ) + ( _square - q ) ) % _square;
-	  int output = q;
+	for ( int output = 0; output < _square; ++output ) {
+	  int input = ( ( _pri + p ) + ( _square - output ) ) % _square;
 	  
 	  if ( ( input < _inputs ) && ( output < _outputs ) && 
 	       ( _inmatch[input] == -1 ) && ( _outmatch[output] == -1 ) &&
