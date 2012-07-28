@@ -227,11 +227,11 @@ void DenseAllocator::PrintRequests( ostream * os ) const
       const sRequest & req = _request[input][output];
       if ( req.label >= 0 ) {
 	print = true;
-	ss << req.port << "@" << req.in_pri << " ";
+	ss << output << "@" << req.in_pri << " ";
       }
     }
     if(print) {
-      *os << input << " -> [ " << ss << "]  ";
+      *os << input << " -> [ " << ss.str() << "]  ";
     }
   }
   *os << "], output requests = [ ";
@@ -242,11 +242,11 @@ void DenseAllocator::PrintRequests( ostream * os ) const
       const sRequest & req = _request[input][output];
       if ( req.label >= 0 ) {
 	print = true;
-	ss << req.port << "@" << req.out_pri << " ";
+	ss << input << "@" << req.out_pri << " ";
       }
     }
     if(print) {
-      *os << output << " -> [ " << ss << "]  ";
+      *os << output << " -> [ " << ss.str() << "]  ";
     }
   }
   *os << "]." << endl;
