@@ -38,7 +38,6 @@
 #include "islip.hpp"
 #include "loa.hpp"
 #include "wavefront.hpp"
-#include "rr_wavefront.hpp"
 #include "selalloc.hpp"
 #include "separable_input_first.hpp"
 #include "separable_output_first.hpp"
@@ -458,7 +457,7 @@ Allocator *Allocator::NewAllocator( Module *parent, const string& name,
   } else if ( alloc_name == "wavefront" ) {
     a = new Wavefront( parent, name, inputs, outputs );
   } else if ( alloc_name == "rr_wavefront" ) {
-    a = new RRWavefront( parent, name, inputs, outputs );
+    a = new Wavefront( parent, name, inputs, outputs, true );
   } else if ( alloc_name == "select" ) {
     int iters = param_str.empty() ? (config ? config->GetInt("alloc_iters") : 1) : atoi(param_str.c_str());
     a = new SelAlloc( parent, name, inputs, outputs, iters );
