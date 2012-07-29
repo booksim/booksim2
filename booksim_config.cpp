@@ -87,7 +87,9 @@ BookSimConfig::BookSimConfig( )
   _int_map["bit_vector_length"] = 24;
   _int_map["cycles_into_the_future"] = 4096;
   _int_map["enable_multi_SRP"] = 1;
+  _int_map["try_again_delay"] = 100;
   _int_map["how_many_time_slots_to_reserve"] = 3;
+  _int_map["time_slot_to_begin"] = 2;
   
   _int_map["adaptively_speculate"] = 0; // Based on NACKs/ACKs and other parameters, adaptively decide whether to speculate.
   _int_map["speculation_decision_threshold"] = 4; // How many NACKS to receive before switching to speculation mode, and vice versa.
@@ -307,7 +309,7 @@ BookSimConfig::BookSimConfig( )
   AddStrField("measure_stats", ""); // workaround to allow for vector specification
 
   // if avg. latency exceeds the threshold, assume unstable
-  _float_map["latency_thres"] = 500.0;
+  _float_map["latency_thres"] = 1000.0;
   AddStrField("latency_thres", ""); // workaround to allow for vector specification
 
   // consider warmed up once relative change in latency / throughput between successive iterations is smaller than this

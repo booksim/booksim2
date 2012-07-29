@@ -325,6 +325,7 @@ void FlowBuffer::Reactivate()
    _total_reserved_slots+=_reserved_slots; 
    _vc = -1;
    _reserved_time=-1;
+   _watch = false;
    _reservation_check = false;
    if(_future_reserved_time!=-1){
      _reserved_time = _future_reserved_time;
@@ -478,6 +479,7 @@ bool FlowBuffer::nack(int sn){
   return effective;
 }
 
+// TODO: When you receive the retry, perhaps also make the flow re-send the speculative packet.
 //only one grant can return
 void FlowBuffer::grant(int time, int try_again, int lat){
   assert(_mode == RES_MODE);
@@ -591,6 +593,7 @@ Flit* FlowBuffer::front(){
   return f;
 }
 
+// TODO If a flow sleeps, it mustn't block a speculative packet from being sent. That holds VCs for a long time.
 Flit* FlowBuffer::send(){
   Flit* f = NULL;
   assert(_was_reset == false);
@@ -736,6 +739,11 @@ Flit* FlowBuffer::send(){
   }
   if(f){
     _last_send_time=GetSimTime();
+  }
+  if (f->watch)
+  {
+    *gWatchOut << GetSimTime() << " | Flow " << _id << " is sending flit " << f->id << " with res type " << f->res_type << endl;
+    _watch = true;
   }
   return f;
 }

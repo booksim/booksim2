@@ -59,6 +59,8 @@ protected:
   bool _enable_multi_SRP;
   int _how_many_time_slots_to_reserve, _counter_max;
   bool **_already_sent;
+  int _try_again_delay;
+  int _time_slot_to_begin;
  
   vector<Network *> _networks;
 
@@ -82,6 +84,7 @@ protected:
   void CalculateChannelsPerCluster();
   void IncrementClusterHops(Flit *f);
   void SendTransitionFlits(Flit *f, Credit *c, int net, int chan);
+  int GetOtherChannel(int chan) const;
   
   void IncrementEpoch(int new_epoch);
   void ReserveBitVector(Flit *f, int net, int chan);

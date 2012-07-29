@@ -1019,7 +1019,7 @@ void IQRouter::_VCAllocEvaluate( )
     }
   }
 
-  if(watched) {
+  if(watched && !_voq) {
     *gWatchOut << GetSimTime() << " | " << _vc_allocator->FullName() << " | ";
     _vc_allocator->PrintRequests( gWatchOut );
   }
@@ -1031,7 +1031,7 @@ void IQRouter::_VCAllocEvaluate( )
 #endif
   }
 
-  if(watched) {
+  if(watched && !_voq) {
     *gWatchOut << GetSimTime() << " | " << _vc_allocator->FullName() << " | ";
     _vc_allocator->PrintGrants( gWatchOut );
   }

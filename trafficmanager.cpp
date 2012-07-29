@@ -252,7 +252,7 @@ int TrafficManager::EarliestAvailability(int node, int size) const
   int return_value = -1;
   int remaining;
   assert((int)_bit_vectors[node].size() == _bit_vector_length);
-  for (int i = 0; i < _bit_vector_length; i++)
+  for (int i = _time_slot_to_begin; i < _bit_vector_length; i++)
   {
     remaining = size;
     if (_bit_vectors[node][i] > 0)
@@ -301,12 +301,12 @@ int TrafficManager::ReserveVectors(int size, int node, vector<bool> flit_vector)
   int remaining;
   size = int(ceil(float(size)*RESERVATION_OVERHEAD_FACTOR));
   bool went_second = false;
-  for (int i = 0; i < _bit_vector_length; i++)
+  for (int i = _time_slot_to_begin; i < _bit_vector_length; i++)
   {
-    if (_bit_vectors[node][i] > 0)
+    if (_bit_vectors[node][i] > 0 && flit_vector[i] == true)
     {
       remaining = size - _bit_vectors[node][i];
-      if (i + 1 < _bit_vector_length && remaining > 0 && _bit_vectors[node][i+1] > 0)
+      if (i + 1 < _bit_vector_length && remaining > 0 && _bit_vectors[node][i+1] > 0 && flit_vector[i + 1] == true)
       {
         remaining -= _bit_vectors[node][i+1];
         went_second = true;
@@ -350,6 +350,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<SuperN
   _routers = _net[0]->NumRouters( );
   _num_vcs = config.GetInt("num_vcs");
   _network_clusters = config.GetInt("network_clusters");
+  _try_again_delay = config.GetInt("try_again_delay");
+  _time_slot_to_begin = config.GetInt("time_slot_to_begin");
 
   _max_flow_buffers = config.GetInt("flow_buffers");
   _max_flow_buffers = (_max_flow_buffers==0)?_nodes:_max_flow_buffers;
@@ -1092,6 +1094,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<SuperN
     _bit_vectors[n].resize(_bit_vector_length, _counter_max);
   }
   _enable_multi_SRP = config.GetInt("enable_multi_SRP") > 0;
+  assert(_time_slot_to_begin < _bit_vector_length);
 }
 
 TrafficManager::~TrafficManager( )
@@ -1401,8 +1404,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
     f = receive_rob->insert(f);
     if(f){
-        assert(f->head == true && f->tail == true);
-        if (f->try_again_after_time != -1)
+      assert(f->head == true && f->tail == true);
+      if (f->try_again_after_time != -1)
       if (f->epoch == -1)
       {
         assert(f->res_type == RES_TYPE_RES);
@@ -1424,16 +1427,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
           cout << "But it's a dud! Try again after time: " << f->try_again_after_time << endl;
         }
       }
-#ifdef ENABLE_STATS
-      if (f->try_again_after_time == -1 && earliest_availability >= 0)
-      {
-        if(earliest_availability>_time){
-	  gStatReservationTimeFuture[dest]->AddSample(earliest_availability-_time);
-        } else {
-	  gStatReservationTimeNow[dest]->AddSample(_time-earliest_availability);
-        }
-      }
-#endif
       if (f->try_again_after_time == -1)
       {
         //the return time is offset by the reservation packet latency 
@@ -1442,24 +1435,54 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
         //-int(ceil(RESERVATION_RTT*float(_time-f->ntime)));
 
         int reservation = ReserveVectors(f->payload, dest, f->reservation_vector);
-        ff->payload = reservation;
-        assert(reservation == earliest_availability);
-        if (reservation == -1)
+        if (reservation == -1 && earliest_availability != -1) // There is availability, but the flit vectors don't agree with the destination vectors.
         {
-          ff->try_again_after_time = _time + _bit_vector_length * _cycles_per_element;
+          ff->try_again_after_time = _time + _try_again_delay;
           ff->reservation_size = -1;
+          ff->payload = -1;
+        }
+        else if (reservation == -1 && earliest_availability == -1)
+        {
+          ff->payload = -1;
+          // If we can't fit it at all in the future, regardless of flit vectors, signify that.
+          ff->try_again_after_time = _time + _cycles_into_the_future - _cycles_per_element; // Make it a little earlier to account for propagation delay.       
+        }
+        else if (reservation != -1 && earliest_availability != -1)
+        {
+          ff->reservation_size = f->payload;
+          ff->payload = reservation;
+          ff->try_again_after_time = -1;
         }
         else
         {
-          ff->reservation_size = f->payload;
-          ff->try_again_after_time = -1;
+          assert(false);
         }
       }
       else
       {
         ff->payload = -1;
         assert(ff->try_again_after_time != -1);
+        if (earliest_availability == -1)
+        {
+          // If we can't fit it at all in the future, regardless of flit vectors, signify that.
+          ff->try_again_after_time = _time + _cycles_into_the_future - _cycles_per_element; // Make it a little earlier to account for propagation delay.
+        }
+        else
+        {
+          ff->try_again_after_time = f->try_again_after_time;
+        }
       }
+#ifdef ENABLE_STATS
+      if (ff->try_again_after_time == -1)
+      {
+        assert(earliest_availability >= 0);
+        if(earliest_availability>_time){
+	  gStatReservationTimeFuture[dest]->AddSample(earliest_availability-_time);
+        } else {
+	  gStatReservationTimeNow[dest]->AddSample(_time-earliest_availability);
+        }
+      }
+#endif
       ff->res_type = RES_TYPE_GRANT;
       assert(ff->bottleneck_channel_choices.empty() == true);
       assert((_network_clusters > 1 && (f->bottleneck_channel_choices.empty() == false || f->cluster_hops == -1)) || (_network_clusters == 1 && f->bottleneck_channel_choices.empty() == true));
@@ -1615,7 +1638,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
           
           if (reservation == -1)
           {
-            ff->try_again_after_time = _time + _bit_vector_length * _cycles_per_element;
+            ff->try_again_after_time = _time + _try_again_delay;
           }
 
 	  ff->res_type = RES_TYPE_GRANT;
@@ -2609,6 +2632,7 @@ void TrafficManager::_Step( )
 
   ++_stat_time;
   ++_time;
+  //_DisplayRemaining(); // XXX
   CheckToIncrementEpoch();
     gStatSpecCount->AddSample(TOTAL_SPEC_BUFFER);
   if(_time%10000==0){
@@ -3281,7 +3305,7 @@ bool TrafficManager::_SingleSim( )
 
 	  ++empty_steps;
 	  
-	  if ( empty_steps % 1000 == 0 ) {
+	  if ( empty_steps % 1000 == 0) {
 	    
 	    int lat_exc_class = -1;
 	    
@@ -3347,7 +3371,7 @@ bool TrafficManager::_SingleSim( )
 
       ++empty_steps;
 
-      if ( empty_steps % 1000 == 0 ) {
+      if ( empty_steps % 1000 == 0) {
 	_DisplayRemaining( ); 
       }
       

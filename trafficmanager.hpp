@@ -81,6 +81,7 @@ protected:
   
   vector<int> * _bit_vectors;
   int _cycles_into_the_future, _bit_vector_length, _cycles_per_element, _current_epoch, _counter_max;
+  int _try_again_delay, _time_slot_to_begin;
   void CheckToIncrementEpoch();
   void ShiftNodeVector(int node);
   int EarliestAvailability(int node, int size) const;
