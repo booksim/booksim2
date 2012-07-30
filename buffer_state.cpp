@@ -92,6 +92,7 @@ Module( parent, name ), _shared_occupied(0), _active_vcs(0)
   _cut_through = (config.GetInt("cut_through")==1);
 
   _in_use.resize(_vcs, false);
+  _in_use_by.resize(_vcs, -2);
   _tail_sent.resize(_vcs, false);
   _cur_occupied.resize(_vcs, 0);
   _last_id.resize(_vcs, -1);
@@ -126,8 +127,9 @@ void BufferState::ProcessCredit( Credit const * const c )
       if ( _wait_for_tail_credit &&
 	   ( _cur_occupied[*iter] == 0 ) && 
 	   ( _tail_sent[*iter] ) ) {
-	assert(_in_use[*iter]);
+	assert(_in_use[*iter] && _in_use_by[*iter] > -2);
 	_in_use[*iter] = false;
+	_in_use_by[*iter] = -2;
 	assert(_active_vcs > 0);
 	--_active_vcs;
       }
@@ -157,13 +159,18 @@ void BufferState::SendingFlit( Flit const * const f )
       ++_shared_occupied;
     }
     ++_cur_occupied[f->vc];
-    
+    if (_in_use_by[f->vc] == -2)
+    {
+      assert(f->head == true);
+      _in_use_by[f->vc] = f->id;
+    }  
     if ( f->tail ) {
       _tail_sent[f->vc] = true;
       
       if ( !_wait_for_tail_credit ) {
-	assert(_in_use[f->vc]);
+	assert(_in_use[f->vc] && _in_use_by[f->vc] > -2);
 	_in_use[f->vc] = false;
+	_in_use_by[f->vc] = -2;
 	assert(_active_vcs > 0);
 	--_active_vcs;
       }
@@ -174,7 +181,7 @@ void BufferState::SendingFlit( Flit const * const f )
   _sharing_policy->SendingFlit(f);
 }
 
-void BufferState::TakeBuffer( int vc )
+void BufferState::TakeBuffer( int vc, int id )
 {
   if(!( ( vc >= 0 ) && ( vc < _vcs ) )){
     cout<<vc<<endl;
@@ -182,10 +189,12 @@ void BufferState::TakeBuffer( int vc )
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
 
   if ( _in_use[vc] ) {
+    assert(_in_use_by[vc] > -1);
     Error( "Buffer taken while in use" );
     assert(false);
   }
   _in_use[vc]    = true;
+  _in_use_by[vc] = id;
   _tail_sent[vc] = false;
   assert(_active_vcs < _vcs);
   ++_active_vcs;
@@ -220,12 +229,13 @@ bool BufferState::IsAvailableFor( int vc,int size) const
     return false;
   } else {
     //duplicate isfullfir with minor  chanles
+    int occupied = _cur_occupied[vc];
     if(gReservation){
       if(vc==RES_RESERVED_VCS){
-	return (_cur_occupied[vc]+size <= _spec_vc_buf_size);
+	return (occupied+size <= _spec_vc_buf_size);
       } 
     }
-    return( _cur_occupied[vc]+size <= _vc_buf_size ) ;
+    return( occupied+size <= _vc_buf_size ) ;
   }
 
 }
@@ -271,7 +281,8 @@ void BufferState::Display( ostream & os ) const
   os << " shared_occupied = " << _shared_occupied << endl;
   for ( int v = 0; v < _vcs; ++v ) {
     os << "  buffer class " << v << endl;
-    os << "    in_use = " << _in_use[v] 
+    os << "    in_use = " << _in_use[v]
+       << "    by flit id = " << _in_use_by[v]
        << " tail_sent = " << _tail_sent[v] << endl;
     os << "    occupied = " << _cur_occupied[v] << endl;
   }

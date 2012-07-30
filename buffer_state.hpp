@@ -96,6 +96,7 @@ class BufferState : public Module {
   SharingPolicy * _sharing_policy;
   
   vector<bool> _in_use;
+  vector<int> _in_use_by;
   vector<bool> _tail_sent;
   vector<int> _cur_occupied;
   vector<int> _last_id;
@@ -111,13 +112,18 @@ public:
   void ProcessCredit( Credit const * const c );
   void SendingFlit( Flit const * const f );
 
-  void TakeBuffer( int vc = 0 );
+  void TakeBuffer( int vc = 0, int id = -2 );
 
   bool IsFullFor( int vc = 0 ) const;
   bool IsEmptyFor( int vc = 0 ) const;
   bool IsAvailableFor( int vc,int size) const;
   bool IsAvailableFor( int vc = 0 ) const;
   bool HasCreditFor( int vc = 0 ) const;
+
+  inline int GetFlitID(int vc) const
+  {
+    return _in_use_by[vc];
+  }
   
   inline int Size (int vc = 0) const {
     assert((vc >= 0) && (vc < _vcs));

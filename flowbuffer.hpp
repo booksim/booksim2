@@ -94,6 +94,7 @@ public:
   bool _active;
   bool _was_reset;
   bool _was_reset_sometime;
+  int _time_to_send_res;
 
   int  _last_payload;
 

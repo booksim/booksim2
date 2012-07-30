@@ -420,11 +420,15 @@ void SuperNetwork::HandleGrantFlits(Flit *f, int net, int chan)
           if (i + 1 < _bit_vector_length && !(timeslot_it_belongs == -1 && i == 0))
           {
             // We also go in to the next time slot and delete the leftover fraction so it doesn't get released.
-            for (vector<pair<int,int> >::iterator a = _bit_vectors[net][chan][i+1].second.begin(); a != _bit_vectors[net][chan][i+1].second.end(); a++)
+            for (vector<pair<int,int> >::iterator a = _bit_vectors[net][chan][i+1].second.begin(); a != _bit_vectors[net][chan][i+1].second.end();)
             {
               if ((*a).first == f->flid)
               {
-                _bit_vectors[net][chan][i+1].second.erase(a);
+                a = _bit_vectors[net][chan][i+1].second.erase(a);
+              }
+              else
+              {
+                a++;
               }
             }
           }

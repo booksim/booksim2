@@ -49,6 +49,7 @@ void FlowBuffer::Activate(int src, int id,  int mode, flow* f){
   }
 
   _sleep_time = -1;
+  _time_to_send_res = -1;
   _active= true;
   _src = src;
   _id = id;
@@ -86,6 +87,7 @@ void FlowBuffer::Init( flow* f){
   _ready = 0;
   _was_reset = false;
   _was_reset_sometime = false;
+  _time_to_send_res = -1;
 
   _dest = f->dest;
   _reserved_time = -1;
@@ -521,11 +523,7 @@ void FlowBuffer::grant(int time, int try_again, int lat){
     _was_reset = true;
     _was_reset_sometime = true;
     _last_payload = -1;
-    _sleep_time = try_again - lat; // This is optimistic but we don't know where is the bottleneck and arriving a little early is not a problem.
-    if (_sleep_time < 0)
-    {
-      _sleep_time = 0;
-    }
+    _time_to_send_res = try_again - lat; // This is optimistic but we don't know where is the bottleneck and arriving a little early is not a problem.
     assert(_reservation_flit->res_type == RES_TYPE_RES);
     assert(_status == FLOW_STATUS_SPEC || _status == FLOW_STATUS_NACK || _status == FLOW_STATUS_NACK_TRANSITION);
   }
@@ -533,7 +531,6 @@ void FlowBuffer::grant(int time, int try_again, int lat){
 
 Flit* FlowBuffer::front(){
   Flit* f = NULL;
-  assert(_was_reset == false);
   switch(_status){
   case FLOW_STATUS_NORM:
     //not in the middle of a packet
@@ -574,9 +571,10 @@ Flit* FlowBuffer::front(){
   case FLOW_STATUS_NACK_TRANSITION:
   case FLOW_STATUS_GRANT_TRANSITION:
   case FLOW_STATUS_SPEC:
-    if(!_res_sent){
+    if(!_res_sent && _time_to_send_res <= GetSimTime()){
       f = _reservation_flit;
       assert(f && f->res_type == RES_TYPE_RES);
+      _time_to_send_res = -1;
     } else {
       if(_flit_buffer.count(_last_sn+1)!=0){
 	f = _flit_buffer[_last_sn+1];
@@ -593,11 +591,9 @@ Flit* FlowBuffer::front(){
   return f;
 }
 
-// TODO If a flow sleeps, it mustn't block a speculative packet from being sent. That holds VCs for a long time.
 Flit* FlowBuffer::send(){
   Flit* f = NULL;
   assert(_was_reset == false);
-  
   switch(_status){
   case FLOW_STATUS_NORM:
     //not in the middle of a packet
@@ -688,7 +684,7 @@ Flit* FlowBuffer::send(){
   case FLOW_STATUS_GRANT_TRANSITION:
   case FLOW_STATUS_SPEC:
     //first send the spec packet
-    if(!_res_sent){
+    if(!_res_sent && _time_to_send_res <= GetSimTime()){
       _reservation_flit->vc=0;
       _reservation_flit->time = GetSimTime();
       f = _reservation_flit;
@@ -714,9 +710,11 @@ Flit* FlowBuffer::send(){
 	TOTAL_SPEC_BUFFER++;
 	_last_sn = f->sn;
 	_tail_sent = f->tail;
+        if (f->tail == true && _time_to_send_res > -1 && _id == 36)
+        {
+          _was_reset = true;
+        }
         assert(f->head == true || f->bottleneck_channel_choices.empty() == true);
-
-
 
       } else {
 	assert(false);
@@ -801,7 +799,7 @@ bool FlowBuffer::send_spec_ready(){
   case FLOW_STATUS_SPEC:
     if(GetSimTime()<_sleep_time)
       return false;
-    if(!_res_sent){
+    if(!_res_sent && _time_to_send_res <= GetSimTime()){
       return true;
     } else if(!_tail_sent){
       return true;
@@ -837,6 +835,7 @@ void FlowBuffer::Reset(){
   
   //only update sleep time here becuas there is a flow ready to go
   //statistically this should be a rare problem 
+  _time_to_send_res = -1;
   if(RESERVATION_POST_WAIT && _mode==RES_MODE)
     _sleep_time = _reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size);
   

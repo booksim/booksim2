@@ -2362,7 +2362,7 @@ void TrafficManager::_Step( )
     }
    
     //first check dangling  flowbuffer
-    //this check lways occurs until a tail flit is sent, this prevents
+    //this check always occurs until a tail flit is sent, this prevents
     //starvation
     if(_last_sent_norm_buffer[source]!=NULL){
       FlowBuffer* flb = _last_sent_norm_buffer[source];
@@ -2397,6 +2397,11 @@ void TrafficManager::_Step( )
 	i++){
       FlowBuffer* flb = *i;
       flb->active_update();
+      if (flb->_was_reset == true)
+      {
+        _revivals[source]++;
+      }
+      flb->_was_reset = false;
 
 
       if(flb->_vc == -1 &&
@@ -2408,12 +2413,11 @@ void TrafficManager::_Step( )
 	if(!RESERVATION_TAIL_RESERVE){
 	  _reservation_set[source].insert(flb);
 	}
+        assert(flb->front()->res_type == RES_TYPE_RES);
       }
-      else if (flb->send_spec_ready() && !RESERVATION_TAIL_RESERVE && flb->_was_reset == true)
+      else if (flb->send_spec_ready() && !RESERVATION_TAIL_RESERVE && flb->front()->res_type == RES_TYPE_RES)
       {
-        flb->_was_reset = false;
         _reservation_set[source].insert(flb);
-        _revivals[source]++;
       }
       
       if(gECN){
@@ -2495,7 +2499,7 @@ void TrafficManager::_Step( )
 	      FlowBuffer* flb = *i;
 	      assert(flb && flb->active());
 	      //this can be false if post_wait is on
-	      if(flb->send_spec_ready() ) {
+	      if(flb->send_spec_ready()) {
 		_reservation_arb[source]->AddRequest(flb->_dest, flb->_dest, 1);
 	      }
 	    }
@@ -2632,7 +2636,8 @@ void TrafficManager::_Step( )
 
   ++_stat_time;
   ++_time;
-  //_DisplayRemaining(); // XXX
+  if (_time % 10 == 0)
+    _DisplayRemaining(); // XXX
   CheckToIncrementEpoch();
     gStatSpecCount->AddSample(TOTAL_SPEC_BUFFER);
   if(_time%10000==0){

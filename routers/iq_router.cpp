@@ -986,6 +986,10 @@ void IQRouter::_VCAllocEvaluate( )
       // reflected in "in_priority". On the output side, if multiple VCs are 
       // requesting the same output VC, the priority of VCs is based on the 
       // actual packet priorities, which is reflected in "out_priority".
+      if (f->watch)
+      {
+          int a= 5; // XXX
+      }
 
 
       if(( _cut_through && dest_buf->IsAvailableFor(out_vc,cur_buf->FrontFlit(vc)->packet_size))||
@@ -1013,7 +1017,7 @@ void IQRouter::_VCAllocEvaluate( )
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  VC " << out_vc 
 		     << " at output " << out_port 
-		     << " is busy." << endl;
+		     << " is busy by flit id " << dest_buf->GetFlitID(out_vc) << "." << endl;
       }
       
     }
@@ -1230,7 +1234,7 @@ void IQRouter::_VCAllocUpdate( )
       }
 
    
-      if(!tail_dropped){ //mark the vc entrace to drop futher flits
+      if(!tail_dropped){ //mark the vc entrance to drop futher flits
 	dropped_pid[input][f->vc]=pid_drop;
       }
    
@@ -1274,7 +1278,7 @@ void IQRouter::_VCAllocUpdate( )
       assert(( _cut_through && dest_buf->IsAvailableFor(match_vc,cur_buf->FrontFlit(vc)->packet_size))||
 	     (!_cut_through && dest_buf->IsAvailableFor(match_vc)));
       
-      dest_buf->TakeBuffer(match_vc);
+      dest_buf->TakeBuffer(match_vc, f->id);
       
       cur_buf->SetOutput(vc, match_output, match_vc);
       cur_buf->SetState(vc, VC::active);
@@ -2201,7 +2205,7 @@ void IQRouter::_SWAllocUpdate( )
 
 	cur_buf->SetState(vc, VC::active);
 	cur_buf->SetOutput(vc, output, match_vc);
-	dest_buf->TakeBuffer(match_vc);
+	dest_buf->TakeBuffer(match_vc, f->id);
 
 	_vc_rr_offset[output*_classes+cl] = (match_vc + 1) % (_special_vcs+_data_vcs);
 
