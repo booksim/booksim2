@@ -64,9 +64,6 @@ protected:
 
   vector<SuperNetwork *> _net;
   vector<vector<Router *> > _router;
-  
-  bool _adaptively_speculate;
-  int _speculation_decision_threshold;
 
   // ============ Traffic ============ 
 

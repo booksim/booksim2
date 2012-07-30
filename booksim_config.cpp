@@ -91,8 +91,6 @@ BookSimConfig::BookSimConfig( )
   _int_map["how_many_time_slots_to_reserve"] = 3;
   _int_map["time_slot_to_begin"] = 2;
   
-  _int_map["adaptively_speculate"] = 0; // Based on NACKs/ACKs and other parameters, adaptively decide whether to speculate.
-  _int_map["speculation_decision_threshold"] = 4; // How many NACKS to receive before switching to speculation mode, and vice versa.
   _int_map["network_clusters"] = 1; // This defines how many "clusters" of networks there are. The rest of the configuration file parameters define a single of those networks.
   _int_map["bottleneck_channels"] = 8; // How many channels between clusters there are. This is between neighboring clusters (i with i+1 and 0 with max).
 

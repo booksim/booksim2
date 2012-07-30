@@ -27,16 +27,13 @@ extern int TOTAL_SPEC_BUFFER;
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 
 
-FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id,int mode, bool adaptively_speculate, int speculation_decision_threshold, flow* f){
+FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id,int mode, flow* f){
   parent = p;
   _dest=-1;
   _IRD = 0; 
   _IRD_timer = 0;
   _IRD_wait = 0;
   _total_wait = 0;
-  _adaptively_speculate = adaptively_speculate;
-  _speculate_in_the_future = 0;
-  _speculation_decision_threshold = speculation_decision_threshold;
   Activate(src,id, mode,f);
 }
 
@@ -169,8 +166,6 @@ void FlowBuffer::Init( flow* f){
   _stats.clear();
   _stats.resize(FLOW_STAT_LIFETIME+1,0);
   _stats[FLOW_STAT_LIFETIME]=GetSimTime()-fl->create_time;
-  
-  _speculate_in_the_future = 0;
 }
 
 
@@ -390,10 +385,6 @@ bool FlowBuffer::ack(int sn){
       if(tail)
 	break;
     }
-    if (_speculate_in_the_future > 0)
-    {
-      _speculate_in_the_future--; // Bias towards speculating again.
-    }
   } else if(_mode == ECN_MODE){
     //if BECN is off
     if(sn ==0){
@@ -433,16 +424,6 @@ bool FlowBuffer::ack(int sn){
 //flow buffer status only change when in spec mode
 bool FlowBuffer::nack(int sn){
   assert(_mode == RES_MODE);
-  assert(_speculate_in_the_future >= 0);
-  if (_speculate_in_the_future < 2 * _speculation_decision_threshold)
-  {
-    _speculate_in_the_future++; // Bias towards not speculating again.
-    // Random backoff time.
-    if (_speculate_in_the_future == _speculation_decision_threshold) // Just turned off reservations
-    {
-        _speculate_in_the_future += RandomInt(_speculation_decision_threshold - 1);
-    }
-  }
   bool effective = false;
   if(_watch){
     cout<<"flow "<<fl->flid
@@ -481,17 +462,12 @@ bool FlowBuffer::nack(int sn){
   return effective;
 }
 
-// TODO: When you receive the retry, perhaps also make the flow re-send the speculative packet.
 //only one grant can return
 void FlowBuffer::grant(int time, int try_again, int lat){
   assert(_mode == RES_MODE);
   if(_watch){
     cout<<"flow "<<fl->flid
 	<<" received grant at time "<<time<<endl;
-  }
-  if (_speculate_in_the_future > 0 && try_again == -1)
-  {
-    _speculate_in_the_future--; // Bias towards speculating again.
   }
   assert(RESERVATION_TAIL_RESERVE || _reserved_time == -1);
   if (try_again == -1)
@@ -804,8 +780,7 @@ bool FlowBuffer::send_spec_ready(){
     } else if(!_tail_sent){
       return true;
     } else{
-      if(RESERVATION_SPEC_OFF || (_adaptively_speculate == true &&
-              (_speculate_in_the_future >= _speculation_decision_threshold))){
+      if(RESERVATION_SPEC_OFF){
 	return false;
       }  else {
 	return (_ready>0 && _reserved_slots>0);

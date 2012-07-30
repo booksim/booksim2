@@ -1078,9 +1078,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<SuperN
   } else {
     _flow_out = new ofstream(flow_out_file.c_str());
   }
-
-  _adaptively_speculate = config.GetInt("adaptively_speculate") > 0;
-  _speculation_decision_threshold = config.GetInt("speculation_decision_threshold");
   
   _bit_vectors = new vector<int> [_nodes];
   _cycles_into_the_future = config.GetInt("cycles_into_the_future");
@@ -2258,7 +2255,7 @@ void TrafficManager::_Inject(){
 	    _flow_buffer[input][empty_flow]->Activate(input, empty_flow, mode, _pending_flow[input]);
 	  } else {
 	    _flow_buffer[input][empty_flow] = 
-	      new FlowBuffer(this, input, empty_flow, mode, _adaptively_speculate, _speculation_decision_threshold, _pending_flow[input]);
+	      new FlowBuffer(this, input, empty_flow, mode, _pending_flow[input]);
 	  }
 	  
 	  //assign VC from the start
@@ -2636,8 +2633,8 @@ void TrafficManager::_Step( )
 
   ++_stat_time;
   ++_time;
-  if (_time % 10 == 0)
-    _DisplayRemaining(); // XXX
+  //if (_time % 10 == 0)
+    //_DisplayRemaining(); // XXX
   CheckToIncrementEpoch();
     gStatSpecCount->AddSample(TOTAL_SPEC_BUFFER);
   if(_time%10000==0){

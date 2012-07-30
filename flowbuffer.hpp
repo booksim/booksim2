@@ -53,7 +53,7 @@ struct flow{
 
 class FlowBuffer{
 public:
-  FlowBuffer(TrafficManager* p, int src, int id, int mode, bool adaptively_speculate, int speculation_decision_threshold, flow* fl);
+  FlowBuffer(TrafficManager* p, int src, int id, int mode, flow* fl);
   ~FlowBuffer();
   //activate directly behaves as the constructor
   void Activate(int src, int id, int mode, flow* fl);
@@ -98,9 +98,6 @@ public:
 
   int  _last_payload;
 
-  bool _adaptively_speculate;
-  int _speculate_in_the_future;
-  int _speculation_decision_threshold;
   TrafficManager* parent;
   map<int, int> _flit_status;
   map<int, Flit*> _flit_buffer;
