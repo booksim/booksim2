@@ -74,56 +74,9 @@ int gWriteReplyBeginVC, gWriteReplyEndVC;
 // Including the reservation VCs.
 void ChooseVC (const Flit *f, int *vc_beg, int *vc_en, bool inject)
 {
- int vcBegin = 0, vcEnd = gNumVCs - 1;
- if(gECN){
-    if(f->type == RES_TYPE_ACK){
-      vcBegin = 0;
-      vcEnd = ECN_RESERVED_VCS-1;
-    } else {
-      vcBegin = (ECN_RESERVED_VCS);
-      vcEnd = (gNumVCs-1);
-    }
-  }else if(gReservation){
-    if(f->res_type == RES_TYPE_RES){//special packets
-      //even though res type res always go on vc 0, it is the first flit
-      //popped from the flow buffer and handles the vc assignment for the whole buffer
-      //
-      if(inject){
-        vcBegin = RES_RESERVED_VCS;
-        vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
-      } else {
-        vcBegin =0;
-        vcEnd = 0;
-      }
-    } else if(f->res_type == RES_TYPE_GRANT){
-      vcBegin = 1;
-      vcEnd = 1;
-    } else if(f->res_type == RES_TYPE_NORM){ //normal packets
-      vcBegin = (RES_RESERVED_VCS+gResVCs);
-      vcEnd = (gNumVCs-1);
-    } else if(f->res_type == RES_TYPE_SPEC){
-      vcBegin = RES_RESERVED_VCS;
-      vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
-    } else { //ack, nack, grant
-      vcBegin = RES_RESERVED_VCS-1;
-      vcEnd = RES_RESERVED_VCS-1;
-    }
-
-  }else{
-    if ( f->type == Flit::READ_REQUEST ) {
-      vcBegin = gReadReqBeginVC;
-      vcEnd = gReadReqEndVC;
-    } else if ( f->type == Flit::WRITE_REQUEST ) {
-      vcBegin = gWriteReqBeginVC;
-      vcEnd = gWriteReqEndVC;
-    } else if ( f->type ==  Flit::READ_REPLY ) {
-      vcBegin = gReadReplyBeginVC;
-      vcEnd = gReadReplyEndVC;
-    } else if ( f->type ==  Flit::WRITE_REPLY ) {
-      vcBegin = gWriteReplyBeginVC;
-      vcEnd = gWriteReplyEndVC;
-    }
-  }
+  int vcBegin = 0, vcEnd = gNumVCs - 1;
+  vcBegin = TrafficManager::ReturnVC(f->res_type, f->cluster_hops_taken);
+  vcEnd = vcBegin;
   *vc_beg = vcBegin;
   *vc_en = vcEnd;
 }
@@ -1615,6 +1568,10 @@ void InitializeRoutingMap( const Configuration & config )
 
   gAdaptVCs = config.GetInt("adapt_vc");
   gAuxVCs = config.GetInt("aux_vc");
+  if (gAuxVCs == 0)
+  {
+    gAuxVCs = config.GetInt("network_clusters") - 1;
+  }
   gNumVCs = config.GetInt( "num_vcs" );
   gResVCs = config.GetInt( "res_vcs" );
   if(config.GetInt("hotspot_reservation")==1){

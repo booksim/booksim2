@@ -94,7 +94,7 @@ void Router::AddTransitionInputChannel( FlitChannel *channel, CreditChannel *bac
   channel->SetSink( this, _input_channels.size() - 1 ) ;
   _channel_faults.push_back( false );
   _already_connected_input = true;
-  assert((int)_input_channels.size() == _max_inputs);
+  assert((int)_input_channels.size() == _max_inputs && _input_credits.size() == _max_inputs);
 }
 
 void Router::AddTransitionOutputChannel( FlitChannel *channel, CreditChannel *backchannel )
@@ -107,9 +107,8 @@ void Router::AddTransitionOutputChannel( FlitChannel *channel, CreditChannel *ba
   _output_credits.push_back( backchannel );
   _channel_faults.push_back( false );
   channel->SetSource( this, _output_channels.size() - 1 ) ;
-  _channel_faults.push_back( false );
   _already_connected_output = true;
-  assert((int)_output_channels.size() == _max_outputs);
+  assert((int)_output_channels.size() == _max_outputs && _output_credits.size() == _max_outputs);
 }
 
 void Router::DestinationThisServes(int dest)

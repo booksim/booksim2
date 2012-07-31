@@ -202,10 +202,10 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   if(_voq){
     //voq currently only works for single vc
     if(gReservation){
-      _ctrl_vcs = RES_RESERVED_VCS+2*gAuxVCs;
+      _ctrl_vcs = RES_RESERVED_VCS+RES_RESERVED_VCS*gAuxVCs;
       _special_vcs = _ctrl_vcs + 1 + gAuxVCs + gAdaptVCs;
     } else if(gECN){
-      _ctrl_vcs=ECN_RESERVED_VCS+gAuxVCs;;
+      _ctrl_vcs=ECN_RESERVED_VCS+gAuxVCs;
       _special_vcs=_ctrl_vcs;
     } else {
       _ctrl_vcs= 0;
@@ -222,7 +222,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   } else {
     _vcs         = config.GetInt( "num_vcs" );
   }
-  
+  assert(_vcs >= (gAuxVCs+1) * 4);
   _vc_activity.resize(inputs*_vcs,0);
   _holds = 0;
   _hold_cancels = 0;
@@ -274,7 +274,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     ostringstream module_name;
     module_name << "buf_" << i;
     if(_voq){
-      _buf[i] = new VOQ_Buffer(config, _outputs, this, module_name.str( ) );
+      _buf[i] = new VOQ_Buffer(config, _outputs, this, module_name.str( ), _ctrl_vcs, _special_vcs, _data_vcs );
     } else {
       _buf[i] = new Buffer(config, _outputs, this, module_name.str( ) );
     }
@@ -986,11 +986,6 @@ void IQRouter::_VCAllocEvaluate( )
       // reflected in "in_priority". On the output side, if multiple VCs are 
       // requesting the same output VC, the priority of VCs is based on the 
       // actual packet priorities, which is reflected in "out_priority".
-      if (f->watch)
-      {
-          int a= 5; // XXX
-      }
-
 
       if(( _cut_through && dest_buf->IsAvailableFor(out_vc,cur_buf->FrontFlit(vc)->packet_size))||
 	 (!_cut_through && dest_buf->IsAvailableFor(out_vc))) {

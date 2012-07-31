@@ -56,6 +56,8 @@
 //register the requests to a node
 class PacketReplyInfo;
 
+typedef void (*tRoutingFunction)( const Router *, const Flit *, int in_channel, OutputSet *, bool );
+
 class TrafficManager : public Module {
 protected:
   int _nodes;
@@ -334,6 +336,7 @@ public:
   int _GeneratePacket(flow* fl, int n);
 
   Flit* DropPacket(int source, Flit* f, int network_cluster);
+  static int ReturnVC(int res_type, int dateline);
   TrafficManager( const Configuration &config, const vector<SuperNetwork *> & net );
   ~TrafficManager( );
 

@@ -313,7 +313,7 @@ int TrafficManager::ReserveVectors(int size, int node, vector<bool> flit_vector)
       }
       if (remaining <= 0) // Found an opening.
       {
-        return_value = _time + i * _cycles_per_element + _cycles_per_element - _bit_vectors[node][i];
+        return_value = _time - _time % _cycles_per_element + i * _cycles_per_element + _cycles_per_element - _bit_vectors[node][i];
         int decrease = MIN(size, _bit_vectors[node][i]);
         _bit_vectors[node][i] -= decrease;
         decrease = size - decrease;
@@ -326,6 +326,7 @@ int TrafficManager::ReserveVectors(int size, int node, vector<bool> flit_vector)
       }
     }
   }
+  assert(return_value >= -1 && return_value < _time - _time % _cycles_per_element + _cycles_into_the_future);
   return return_value;
 }
 
@@ -1240,7 +1241,7 @@ Flit* TrafficManager::IssueSpecial(int src, Flit* ff){
   f->type = Flit::ANY_TYPE;
   f->head = true;
   f->tail = true;
-  f->vc = 0;
+  f->vc = -1;
   f->flbid = ff->flbid;
   f->ph = 0;
   f->try_again_after_time = ff->try_again_after_time;
@@ -1251,7 +1252,7 @@ Flit* TrafficManager::DropPacket(int src, Flit* f, int network_cluster){
   Flit* ff = IssueSpecial(f->src, f);
   ff->res_type = RES_TYPE_NACK;
   ff->pri = FLIT_PRI_NACK;
-  ff->vc = 1+gAuxVCs;
+  ff->vc = ReturnVC(ff->res_type, 0);
   if(f->watch){
     ff->watch=true;
   }
@@ -1259,15 +1260,69 @@ Flit* TrafficManager::DropPacket(int src, Flit* f, int network_cluster){
   return ff;
 }
 
-
+int TrafficManager::ReturnVC(int res_type, int dateline)
+{
+  assert(dateline <= gAuxVCs);
+  int vc = -1;
+  switch (res_type)
+  {
+    case RES_TYPE_RES:
+      vc = dateline;
+      break;
+    case RES_TYPE_NACK:
+    case RES_TYPE_ACK:
+    case RES_TYPE_GRANT:
+      if (gECN)
+      {
+        vc = dateline;
+      }
+      else
+      {
+        vc = gAuxVCs + 1 + dateline;
+      }
+      break;
+    case RES_TYPE_SPEC:
+      if (gECN)
+      {
+        vc = dateline;
+      }
+      else
+      {
+        vc = dateline + RES_RESERVED_VCS + RES_RESERVED_VCS * gAuxVCs;
+        assert(vc >= 2 * (gAuxVCs + 1));
+      }
+      break;
+    case RES_TYPE_NORM:
+      if (gECN)
+      {
+        vc = dateline + ECN_RESERVED_VCS + 1;
+      }
+      else if (gReservation)
+      {
+        vc = dateline + RES_RESERVED_VCS + RES_RESERVED_VCS * gAuxVCs + gAuxVCs + 1; // This used to have adaptive vcs as well.
+      }
+      else
+      {
+        vc = dateline;
+      }
+      break;
+    default:
+      vc = -1;
+      break;
+  }
+  assert(vc >= 0 && vc < gNumVCs);
+  return vc;
+}
 
 void TrafficManager::_RetireFlit( Flit *f, int dest )
 {
   Flit* ff;
   FlowROB* receive_rob = NULL;
   FlowBuffer* receive_flow_buffer  = NULL;
+  bool rob_erased;
   
   assert(_network_clusters == 1 || f->head == false || (f->original_destination == dest && f->dest == dest));
+  assert(f->type == Flit::ANY_TYPE);
 
   switch(f->res_type){
   case RES_TYPE_ACK:
@@ -1363,11 +1418,19 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     gStatGrantLatency->AddSample(_time-f->time);
     gStatGrantReceived[dest]++;
 #endif
-    assert(f->reservation_vector.empty() == true && f->epoch == -1);
+    assert(f->reservation_vector.empty() == true && f->bottleneck_channel_choices.empty() == true && f->epoch == -1);
     receive_flow_buffer = _flow_buffer[dest][f->flbid];
-    assert(receive_flow_buffer->active());
+    if (receive_flow_buffer->active() == false)
+    {
+      rob_erased = true;
+    }
+    else
+    {
+      rob_erased = false;
+    }
     if( receive_flow_buffer!=NULL &&
-	receive_flow_buffer->fl->flid == f->flid){
+	receive_flow_buffer->fl->flid == f->flid &&
+        rob_erased == false){
 
 #ifdef ENABLE_STATS
       if(f->try_again_after_time == -1 && f->payload>_time){
@@ -1395,14 +1458,22 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     gStatReservationReceived[dest]++;
 #endif
     //find or create a reorder buffer
-    //this maybe error IF spec shows up before reservaiton and frees the rob
-    assert(_rob[dest].count(f->flid)!=0);    
-    receive_rob = _rob[dest][f->flid];
+    //this maybe error IF spec shows up before reservation and frees the rob
+    rob_erased = false;
+    if (_rob[dest].count(f->flid) == 0)
+    {
+      rob_erased = true;
+      // Even if the packet arrived speculatively we should send the grant as a retry to release intermediate reservations.
+    }
+    else
+    {
+      //assert(_rob[dest].count(f->flid)!=0);
+      receive_rob = _rob[dest][f->flid];
+      f = receive_rob->insert(f);
+    }
 
-    f = receive_rob->insert(f);
     if(f){
       assert(f->head == true && f->tail == true);
-      if (f->try_again_after_time != -1)
       if (f->epoch == -1)
       {
         assert(f->res_type == RES_TYPE_RES);
@@ -1424,7 +1495,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
           cout << "But it's a dud! Try again after time: " << f->try_again_after_time << endl;
         }
       }
-      if (f->try_again_after_time == -1)
+      if (f->try_again_after_time == -1 && rob_erased == false)
       {
         //the return time is offset by the reservation packet latency 
         //to prevent schedule fragmentation
@@ -1459,7 +1530,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       {
         ff->payload = -1;
         assert(ff->try_again_after_time != -1);
-        if (earliest_availability == -1)
+        if (earliest_availability == -1 || rob_erased == true)
         {
           // If we can't fit it at all in the future, regardless of flit vectors, signify that.
           ff->try_again_after_time = _time + _cycles_into_the_future - _cycles_per_element; // Make it a little earlier to account for propagation delay.
@@ -1481,6 +1552,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       }
 #endif
       ff->res_type = RES_TYPE_GRANT;
+      ff->vc = ReturnVC(ff->res_type, ff->cluster_hops_taken);
       assert(ff->bottleneck_channel_choices.empty() == true);
       assert((_network_clusters > 1 && (f->bottleneck_channel_choices.empty() == false || f->cluster_hops == -1)) || (_network_clusters == 1 && f->bottleneck_channel_choices.empty() == true));
       if (_network_clusters > 1)
@@ -1488,10 +1560,13 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
         ff->bottleneck_channel_choices.insert(ff->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.end());
       }
       ff->pri = FLIT_PRI_GRANT;
-      ff->vc = 1+gAuxVCs;
       _response_packets[dest].push_back(ff);
     }
   
+    if (rob_erased == true)
+    {
+      f->Free();
+    }
     break;
   case RES_TYPE_SPEC:
 #ifdef ENABLE_STATS
@@ -1513,8 +1588,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 #endif
 	ff = IssueSpecial(dest,f);
 	ff->res_type = RES_TYPE_NACK;
+        ff->vc = ReturnVC(ff->res_type, ff->cluster_hops_taken);
 	ff->pri = FLIT_PRI_NACK;
-	ff->vc = 1+gAuxVCs;
 	_response_packets[dest].push_back(ff);
       } 
       f->Free();
@@ -1554,6 +1629,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	ff = IssueSpecial(dest,f);
 	ff->sn = f->head_sn;
 	ff->res_type = RES_TYPE_ACK;
+        ff->vc = ReturnVC(ff->res_type, ff->cluster_hops_taken);
         assert(ff->bottleneck_channel_choices.empty() == true);
         map<int, list<int>*>::iterator iter = _channel_choices.find(f->pid);
         assert(iter != _channel_choices.end());
@@ -1566,7 +1642,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
         _channel_choices.erase(iter);
         delete choices;
 	ff->pri  = FLIT_PRI_ACK;
-	ff->vc =  1+gAuxVCs;;
 	_response_packets[dest].push_back(ff);
       }
     }
@@ -1639,6 +1714,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
           }
 
 	  ff->res_type = RES_TYPE_GRANT;
+          ff->vc = ReturnVC(ff->res_type, ff->cluster_hops_taken);
           assert(ff->bottleneck_channel_choices.empty() == true);
           assert((_network_clusters > 1 && (f->bottleneck_channel_choices.empty() == false || f->cluster_hops == -1)) || (_network_clusters == 1 && f->bottleneck_channel_choices.empty() == true));
           if (_network_clusters > 1)
@@ -1646,7 +1722,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
             ff->bottleneck_channel_choices.insert(ff->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.end());
           }
 	  ff->pri = FLIT_PRI_GRANT;
-	  ff->vc = 1+gAuxVCs;;
 	  _response_packets[dest].push_back(ff);
 	}
 	
@@ -1691,7 +1766,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
           ff->bottleneck_channel_choices.insert(ff->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.end());
         }
 	ff->pri  = FLIT_PRI_ACK;
-	ff->vc =  0;
+	ff->vc = ReturnVC(ff->res_type, ff->cluster_hops_taken);
 	ff->becn = f->fecn;
 	_response_packets[dest].push_back(ff);
       }
@@ -2171,24 +2246,35 @@ void TrafficManager::_GenerateFlow( int source, int stype, int cl, int time ){
 }
 
 void TrafficManager::_FlowVC(FlowBuffer* flb){
-
 	 
   Flit* f = flb->front();
   assert(f);
   assert(f->head);
-  _rf(NULL, f, 0, _flow_route_set, true);
-  OutputSet::sSetElement se = _flow_route_set->GetSet();
-  assert(se.output_port == 0);
-  int const & vc_start = se.vc_start;
-  int const & vc_end = se.vc_end;
-  int const vc_count = vc_end - vc_start + 1;
-  //VC assignment is randomized instead of round robined!!!
-  int rvc = RandomInt(vc_count-1);
-  int const vc = vc_start + rvc;
+  int vc_start = -1;
+  int vc_end = -1;
+  if (f->res_type == RES_TYPE_RES)
+  {
+    vc_start = ReturnVC(RES_TYPE_SPEC, f->cluster_hops_taken);
+    vc_end = vc_start;
+  }
+  else
+  {
+    _rf(NULL, f, 0, _flow_route_set, true);
+    OutputSet::sSetElement se = _flow_route_set->GetSet();
+    assert(se.output_port == 0);
+    vc_start = se.vc_start;
+    vc_end = se.vc_end;
+    int vc_count = vc_end - vc_start + 1;
+    //VC assignment is randomized instead of round robined!!!
+    int rvc = RandomInt(vc_count-1);
+    vc_start = vc_start + rvc;
+    vc_end = vc_start;
+  }
+
 #ifdef ENABLE_STATS
-  gStatInjectVCDist[f->src][vc]++;
+  gStatInjectVCDist[f->src][vc_start]++;
 #endif
-  flb->_vc = vc; 
+  flb->_vc = vc_start; 
 
 }
 

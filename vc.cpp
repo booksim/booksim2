@@ -280,54 +280,9 @@ void VC::CallRoutingFunction(tRoutingFunction rf, const Router* router, const Fl
     assert(router->IsTransitionRouter());
     int vcBegin = 0, vcEnd = gNumVCs-1;
 
-    if(gECN){
-      if(f->type == RES_TYPE_ACK){
-        vcBegin = 0;
-        vcEnd = ECN_RESERVED_VCS-1;
-      } else {
-        vcBegin = (ECN_RESERVED_VCS);
-        vcEnd = (gNumVCs-1);
-      }
-    }
-    else if(gReservation){
-      if(f->res_type == RES_TYPE_RES){//special packets
-      //even though res type res always go on vc 0, it is the first flit
-      //popped from the flow buffer and handles the vc assignment for the whole buffer
-      //
-        vcBegin =0;
-        vcEnd = 0;
-      }
-      else if(f->res_type == RES_TYPE_GRANT){
-        vcBegin = 1;
-        vcEnd = 1;
-      }
-      else if(f->res_type == RES_TYPE_NORM){ //normal packets
-        vcBegin = (RES_RESERVED_VCS+gResVCs);
-        vcEnd = (gNumVCs-1);
-      } else if(f->res_type == RES_TYPE_SPEC){
-        vcBegin = RES_RESERVED_VCS;
-        vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
-      } else { //ack, nack, grant
-        vcBegin = RES_RESERVED_VCS-1;
-        vcEnd = RES_RESERVED_VCS-1;
-    }
+    vcBegin = TrafficManager::ReturnVC(f->res_type, f->cluster_hops_taken);
+    vcEnd = vcBegin;
 
-    }
-    else{
-      if ( f->type == Flit::READ_REQUEST ) {
-        vcBegin = gReadReqBeginVC;
-        vcEnd = gReadReqEndVC;
-      } else if ( f->type == Flit::WRITE_REQUEST ) {
-        vcBegin = gWriteReqBeginVC;
-        vcEnd = gWriteReqEndVC;
-      } else if ( f->type ==  Flit::READ_REPLY ) {
-        vcBegin = gReadReplyBeginVC;
-        vcEnd = gReadReplyEndVC;
-      } else if ( f->type ==  Flit::WRITE_REPLY ) {
-        vcBegin = gWriteReplyBeginVC;
-        vcEnd = gWriteReplyEndVC;
-      }
-    }
     int out_port = router->NumOutputs() - 1;
     o->Clear( );
     o->AddRange( out_port, vcBegin, vcEnd );

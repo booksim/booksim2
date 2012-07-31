@@ -753,7 +753,7 @@ void SuperNetwork::ReadInputs( )
       _output_transition_chan[n][i]->ReadInputs();
       _output_transition_chan_cred[n][i]->ReadInputs(); // Read inputs first and then receive.
       _temp_channels[n][i] = _output_transition_chan[n][i]->Receive();
-      _temp_credits[n][i] = _output_transition_chan_cred[n][i]->Receive();
+      _temp_credits[n][i] = _input_transition_chan_cred[n][i]->Receive();
       assert(_already_sent[n][i] == true || GetSimTime() == 0);
       _already_sent[n][i] = false;
     }
@@ -841,7 +841,7 @@ void SuperNetwork::SendTransitionFlits(Flit *f, Credit *c, int net, int chan)
   assert(_network_clusters > 1);
   int other_net = GetNextCluster(net, chan);
   _input_transition_chan[other_net][chan]->Send(f);
-  _input_transition_chan_cred[other_net][chan]->Send(c);
+  _output_transition_chan_cred[other_net][chan]->Send(c);
   assert(_already_sent[other_net][chan] == false);
   _already_sent[other_net][chan] = true;
 }

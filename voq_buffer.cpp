@@ -6,23 +6,8 @@
 #include "routefunc.hpp"
 
 VOQ_Buffer::VOQ_Buffer(const Configuration& config, int outputs,
-		       Module *parent, const string& name ):Buffer( parent, name ){
+		       Module *parent, const string& name, int ctrl_vcs, int special_vcs, int data_vcs ):Buffer( parent, name ){
   assert(config.GetInt("voq")==1);
-  int data_vcs         = config.GetInt( "num_vcs" );
-  int ctrl_vcs;
-  int special_vcs;
-  //voq currently only works for single vc
-  if(gReservation){
-    ctrl_vcs = RES_RESERVED_VCS+2*gAuxVCs;
-    special_vcs = ctrl_vcs + 1 + gAuxVCs + gAdaptVCs;
-  } else if(gECN){
-    ctrl_vcs=ECN_RESERVED_VCS+gAuxVCs;;
-    special_vcs=ctrl_vcs;
-  } else {
-    ctrl_vcs= 0;
-    special_vcs = 0;
-  }
-  data_vcs-=special_vcs;
   int num_vcs = special_vcs + outputs*data_vcs;
 
   _vc_size = config.GetInt( "vc_buf_size" );

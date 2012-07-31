@@ -34,6 +34,7 @@
 #include "outputset.hpp"
 #include "routefunc.hpp"
 #include "config_utils.hpp"
+#include "trafficmanager.hpp"
 
 class VC : public Module {
 public:

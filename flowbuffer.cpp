@@ -111,7 +111,7 @@ void FlowBuffer::Init( flow* f){
     _reservation_flit->type = Flit::ANY_TYPE;
     _reservation_flit->head = true;
     _reservation_flit->tail = true;
-    _reservation_flit->vc = 0;
+    _reservation_flit->vc = TrafficManager::ReturnVC(RES_TYPE_RES, _reservation_flit->cluster_hops_taken);
     _reservation_flit->res_type = RES_TYPE_RES;
     _reservation_flit->pri = FLIT_PRI_RES;
     _reservation_flit->payload = fl->flow_size;
@@ -292,7 +292,7 @@ void FlowBuffer::ReconstructFlit()
     _reservation_flit->type = Flit::ANY_TYPE;
     _reservation_flit->head = true;
     _reservation_flit->tail = true;
-    _reservation_flit->vc = 0;
+    _reservation_flit->vc = TrafficManager::ReturnVC(RES_TYPE_RES, _reservation_flit->cluster_hops_taken);
     _reservation_flit->res_type = RES_TYPE_RES;
     _reservation_flit->pri = FLIT_PRI_RES;
   }
