@@ -1,0 +1,13 @@
+topology = dragonflynew;
+
+k  = 4;
+n  = 1;
+
+
+routing_function = min;
+remove_credit_rtt=1;
+track_routing_commitment=1;
+
+aux_vc=1;
+adapt_vc=0;
+num_vcs=8;

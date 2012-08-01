@@ -607,6 +607,13 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _traffic_function.clear();
   for(int c = 0; c < _classes; ++c) {
+    if(_traffic[c]=="rand_noself_hotspot"){
+      int rand_hotspot_src = config.GetInt("rand_hotspot_src");
+      int rand_hotspot_dst = config.GetInt("rand_hotspot_dst");
+      cout<<"Random hotspot, generating "<<rand_hotspot_src 
+	  <<" destinations and "<< rand_hotspot_dst <<" sources"<<endl;
+      GenerateRandomHotspot(_nodes, rand_hotspot_src, rand_hotspot_dst );
+    }
     map<string, tTrafficFunction>::const_iterator iter = gTrafficFunctionMap.find(_traffic[c]);
     if(iter == gTrafficFunctionMap.end()) {
       Error("Invalid traffic function: " + _traffic[c]);
@@ -1358,7 +1365,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     
     if(gReservation && RESERVATION_WALKIN_OVERHEAD && f->walkin && f->head){      
       _reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
-      _reservation_schedule[dest] +=  f->packet_size+4;
+      _reservation_schedule[dest] +=  f->packet_size+2;
     }
     if(gReservation && !f->walkin){
       //find or create a reorder buffer
@@ -2096,6 +2103,7 @@ void TrafficManager::_Step( )
     BufferState * const dest_buf = _buf_states[source][0];
     FlowBuffer* ready_flow_buffer = NULL;
     //each cycle a special packet and a data packet can be insertedf
+    bool inject_special = false;
     if(gReservation || gECN){
 #ifdef ENABLE_STATS
       gStatResponseBuffer->AddSample((int)_response_packets[source].size());
@@ -2107,12 +2115,7 @@ void TrafficManager::_Step( )
 	if(((!_cut_through && dest_buf->IsAvailableFor(f->vc)) || 
 	    ( _cut_through && dest_buf->IsAvailableFor(f->vc,f->packet_size))) &&
 	   dest_buf->HasCreditFor(f->vc)){
-	  dest_buf->TakeBuffer(f->vc); 
-	  dest_buf->SendingFlit(f);
-	  f->ntime = _time;
-	  _sent_flits[0][source]->AddSample(1);
-	  _net[0]->WriteSpecialFlit(f, source);
-	  _response_packets[source].pop_front();
+	  inject_special=true;
 	}
       }
     }
@@ -2219,6 +2222,7 @@ void TrafficManager::_Step( )
 	   dest_buf->HasCreditFor(0)){
 	  dest_buf->TakeBuffer(0); 
 	  dest_buf->SendingFlit(f);
+	  inject_special = false; //only 1 flit can inject, res take priority
 	  assert(_reservation_set[source].erase(ready_flow_buffer));
 	  //create rob at the destiantion
 	  if(f->sn==0){
@@ -2261,16 +2265,23 @@ void TrafficManager::_Step( )
 	      dest_buf->SendingFlit(rf);
 	      rf->ntime = _time;
 	      _net[0]->WriteSpecialFlit(rf, source);
+	      inject_special = false; //only 1 flit can inject, res take priority
 	      _sent_flits[0][source]->AddSample(1);
 	      assert(_reservation_set[source].erase(flb));
 	    }
 	  }   
+	  f= NULL;
+	} else {
+	  if(inject_special){ //only 1 flit can inject, special has priority
+	    f=NULL;
+	  } else {
+	    if(f->head){
+	      dest_buf->TakeBuffer(vc); 
+	    }
+	    f->vc = vc;
+	    dest_buf->SendingFlit(f);
+	  }
 	}
-	if(f->head){
-	  dest_buf->TakeBuffer(vc); 
-	}
-	f->vc = vc;
-	dest_buf->SendingFlit(f);
       }    
       //VC bookkeeping completed success
       if(f){
@@ -2284,8 +2295,9 @@ void TrafficManager::_Step( )
 	//flit network traffic time
 	f->ntime = _time;
 	_net[0]->WriteSpecialFlit(f, source);
-	_sent_flits[0][source]->AddSample(1);
 
+	_sent_flits[0][source]->AddSample(1);
+	
 	//flow continuation book keeping
 	if(f->tail){
 	  if(f->res_type==RES_TYPE_SPEC){
@@ -2348,7 +2360,20 @@ void TrafficManager::_Step( )
 	}
       }
     }
-  } 
+
+    if(inject_special){
+#ifdef ENABLE_STATS
+      gStatResponseBuffer->AddSample((int)_response_packets[source].size());
+#endif
+      Flit* f = _response_packets[source].front();
+      dest_buf->TakeBuffer(f->vc); 
+      dest_buf->SendingFlit(f);
+      f->ntime = _time;
+      _sent_flits[0][source]->AddSample(1);
+      _net[0]->WriteSpecialFlit(f, source);
+      _response_packets[source].pop_front();
+    }
+  }
   
 
   vector<int> ejected_flits(_subnets*_nodes);
@@ -2381,9 +2406,6 @@ void TrafficManager::_Step( )
   ++_time;
     gStatSpecCount->AddSample(TOTAL_SPEC_BUFFER);
   if(_time%10000==0){
-
-
-
     gStatMonitorTransient[0]->push_back(retired_s->NumSamples()+retired_n->NumSamples());
     gStatMonitorTransient[1]->push_back(retired_s->Average());
     gStatMonitorTransient[2]->push_back(retired_n->Average());
@@ -2397,17 +2419,20 @@ void TrafficManager::_Step( )
 	<<" spec_lat "<<retired_s->Average()
 	<<" norm_lat "<<retired_n->Average()
 	<<" ("<<float(retired_s->NumSamples())/retired_n->NumSamples()<<")"<<endl
-	<<" mismatch "<<((gStatReservationMismatch_POS->Average()*gStatReservationMismatch_POS->NumSamples())-(gStatReservationMismatch_NEG->Average()*gStatReservationMismatch_NEG->NumSamples()))/(gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples())<<"("<<gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples()<<")"
-	<<" early "<<((gStatResEarly_POS->Average()*gStatResEarly_POS->NumSamples())-(gStatResEarly_NEG->Average()*gStatResEarly_NEG->NumSamples()))/(gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples())<<"("<<gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples()<<")"<<endl;
+	<<" nonspec-arrive-mismatch "<<((gStatReservationMismatch_POS->Average()*gStatReservationMismatch_POS->NumSamples())-(gStatReservationMismatch_NEG->Average()*gStatReservationMismatch_NEG->NumSamples()))/(gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples())<<"("<<gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples()<<")"
+	<<" res-deact-mismatch "<<((gStatResEarly_POS->Average()*gStatResEarly_POS->NumSamples())-(gStatResEarly_NEG->Average()*gStatResEarly_NEG->NumSamples()))/(gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples())<<"("<<gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples()<<")"<<endl;
     cout<<"\t%spec "<<float(gStatSpecLatency->NumSamples())/_plat_stats[0]->NumSamples()*100<<endl; 
-    //gStatResEarly_POS->Clear();
-    //gStatResEarly_NEG->Clear();
-    //gStatReservationMismatch_POS->Clear();
-    //gStatReservationMismatch_NEG->Clear();
+
     retired_s->Clear();
     retired_n->Clear();
-    //gStatSpecLatency->Clear();
-    //_plat_stats[0]->Clear();
+    ///*
+    gStatResEarly_POS->Clear();
+    gStatResEarly_NEG->Clear();
+    gStatReservationMismatch_POS->Clear();
+    gStatReservationMismatch_NEG->Clear();
+    gStatSpecLatency->Clear();
+    _plat_stats[0]->Clear();
+    //*/
   }
 
   assert(_time);

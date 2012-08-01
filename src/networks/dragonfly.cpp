@@ -437,7 +437,7 @@ int SRP_VC_CONVERTER(int ph, int res_type){
     if(gECN){
       return ph;
     } else {
-      return ph+1; //skip resVC
+      return ph+1+gAuxVCs; //skip resVC + AuxVC
     }
     break;
   case RES_TYPE_RES:
@@ -445,7 +445,7 @@ int SRP_VC_CONVERTER(int ph, int res_type){
     break;
   case RES_TYPE_SPEC:
     if(gReservation){
-      return ph+RES_RESERVED_VCS + 2 ;//+ctrl + ctrl_aux
+      return ph+RES_RESERVED_VCS + RES_RESERVED_VCS*gAuxVCs ;//+ctrl + ctrl_aux
     } else {
       return ph;
     }
@@ -454,7 +454,7 @@ int SRP_VC_CONVERTER(int ph, int res_type){
     if(gECN){
       return ph+ECN_RESERVED_VCS+1; //skip ctrl + ctrl_aux
     } else if(gReservation){
-      return ph+RES_RESERVED_VCS + 2 + 1 + 1 + gAdaptVCs;//+ctrl + ctrl_aux+spec+spec_aux+adap
+      return ph+RES_RESERVED_VCS + RES_RESERVED_VCS*gAuxVCs + 1+gAuxVCs + gAdaptVCs;//+ctrl + ctrl_aux+spec+spec_aux+adap
     } else {
       return ph;
     }

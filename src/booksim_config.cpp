@@ -37,6 +37,12 @@
 
 BookSimConfig::BookSimConfig( )
 { 
+
+  //hotspot related
+
+  _int_map["rand_hotspot_src"] = 2;
+  _int_map["rand_hotspot_dst"] = 1;
+
   //0 for most networks, 1 for dragonfly
   _int_map["aux_vc"] = 0;
   //min=0, val/uga=1, prog=2 

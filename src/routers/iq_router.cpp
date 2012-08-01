@@ -197,7 +197,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   if(_voq){
     //voq currently only works for single vc
     if(gReservation){
-      _ctrl_vcs = RES_RESERVED_VCS+2*gAuxVCs;
+      _ctrl_vcs = RES_RESERVED_VCS+RES_RESERVED_VCS*gAuxVCs;
       _special_vcs = _ctrl_vcs + 1 + gAuxVCs + gAdaptVCs;
     } else if(gECN){
       _ctrl_vcs=ECN_RESERVED_VCS+gAuxVCs;;

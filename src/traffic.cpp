@@ -42,6 +42,22 @@ static int gStepTraffic  = 0;
 
 static int _xr = 1;
 
+
+
+//=============================================================
+
+static int _hs_max_val;
+
+static vector<pair<int, int> > _hs_elems;
+set<int> hs_lookup;
+bool hs_send_all = false;
+set<int> hs_senders;
+int bystander_sender;
+int bystander_receiver;
+
+int rand_hotspot_src =0;
+int rand_hotspot_dst =0;
+
 void src_dest_bin( int source, int dest, int lg )
 {
   int b, t;
@@ -192,9 +208,55 @@ int neighbor( int source, int total_nodes )
 }
 
 //=============================================================
+static int gPermSeed;
+
+void GenerateRandomHotspot( int total_nodes, int num_src, int num_dst){
+
+  //seed business
+  unsigned long prev_rand = RandomIntLong( );
+  //erase previous hotspots 
+  hs_lookup.clear();
+  hs_senders.clear();
+  _hs_elems.clear();
+  hs_send_all = false;
+
+  //assign sources
+  cout<<"Src:";
+  while(hs_senders.size()<(size_t)num_src){
+    hs_senders.insert(RandomInt(total_nodes-1));
+  }
+  for(set<int>::iterator i = hs_senders.begin(); i != hs_senders.end(); i++){
+    cout<<*i<<"\t";
+  }
+  cout<<endl;
+  //assign dests
+  set<int> temp_dest;
+  while(temp_dest.size()<(size_t)num_dst){
+    int temp = RandomInt(total_nodes-1);
+    if(hs_senders.count(temp)==0){
+      temp_dest.insert(temp);
+    }
+  }
+
+  //assign dest rate
+  _hs_max_val = -1;
+  cout<<"Dst:";
+  for(set<int>::iterator i = temp_dest.begin(); i != temp_dest.end(); i++){
+    //this is fixed at equal rate for all destiantion
+    int rate = 1;
+    _hs_elems.push_back(make_pair(rate,(*i)));
+    _hs_max_val += rate;
+    hs_lookup.insert((*i));
+
+    cout<<*i<<"\t";
+  }
+  cout<<endl;
+
+  RandomSeed( prev_rand );
+}
 
 static vector<int> gPerm;
-static int gPermSeed;
+
 
 void GenerateRandomPerm( int total_nodes )
 {
@@ -322,22 +384,31 @@ int badperm_dflynew( int source, int total_nodes )
   return dest;
 }
 
+
+int badhot_dflynew( int source, int total_nodes )
+{
+  //hotspot + bad dragonfly traffic
+
+  int grp_size_routers = 2*(gK);
+  int grp_size_nodes = grp_size_routers * (gK);
+
+  int group;
+  int dest;
+
+  int hot_index = RandomInt(_hs_elems.size() - 1);
+
+  group = (int) (source / grp_size_nodes);
+  dest =  ((_hs_elems[hot_index].second)%grp_size_nodes + (group+1)*grp_size_nodes ) %  total_nodes;
+
+  return dest;
+}
+
+
 int badperm_yarc(int source, int total_nodes){
   int row = (int)(source/(_xr*gK));
   
   return RandomInt((_xr*gK)-1)*(_xr*gK)+row;
 }
-
-//=============================================================
-
-static int _hs_max_val;
-
-static vector<pair<int, int> > _hs_elems;
-set<int> hs_lookup;
-bool hs_send_all = false;
-set<int> hs_senders;
-int bystander_sender;
-int bystander_receiver;
 
 int background_uniform(int source, int total_nodes){
   int e = RandomInt(total_nodes-1);
@@ -441,10 +512,13 @@ void InitializeTrafficMap( const Configuration & config )
   gTrafficFunctionMap["taper64"]    = &taper64;
 
   gTrafficFunctionMap["bad_dragon"]   = &badperm_dflynew;
+  gTrafficFunctionMap["badhot_dragon"]   = &badhot_dflynew;
+
   gTrafficFunctionMap["badperm_yarc"] = &badperm_yarc;
 
   gTrafficFunctionMap["hotspot"]  = &hotspot;
   gTrafficFunctionMap["noself_hotspot"]  = &noself_hotspot;
+  gTrafficFunctionMap["rand_noself_hotspot"]  = &noself_hotspot;
 
   gTrafficFunctionMap["combined"] = &combined;
   gTrafficFunctionMap["background_uniform"] = &background_uniform;
@@ -456,7 +530,7 @@ void InitializeTrafficMap( const Configuration & config )
   bystander_sender = config.GetInt("bystander_sender");
   bystander_receiver = config.GetInt("bystander_receiver");
   
-
+  //hotspot
   vector<int> hotspot_nodes = config.GetIntArray("hotspot_nodes");
   vector<int> hotspot_rates = config.GetIntArray("hotspot_rates");
   vector<int> hotspot_senders = config.GetIntArray("hotspot_senders");
@@ -475,9 +549,10 @@ void InitializeTrafficMap( const Configuration & config )
     _hs_max_val += rate;
     hs_lookup.insert(hotspot_nodes[i]);
   }
-  
-  map<string, tTrafficFunction>::const_iterator match;
+  //random hotspot is handled by trafficmanager
 
+  //combined 
+  map<string, tTrafficFunction>::const_iterator match;
   vector<string> combined_patterns = config.GetStrArray("combined_patterns");
   vector<int> combined_rates = config.GetIntArray("combined_rates");
   combined_rates.resize(combined_patterns.size(), combined_rates.empty() ? 1 : combined_rates.back());
@@ -492,6 +567,8 @@ void InitializeTrafficMap( const Configuration & config )
     _cp_elems.push_back(make_pair(rate, match->second));
     _cp_max_val += rate;
   }
+
+
 
 
 }
