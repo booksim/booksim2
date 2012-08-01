@@ -706,7 +706,7 @@ void SuperNetwork::RouteFlit(Flit* f, int network_cluster, bool is_injection)
 
 const vector<FlitChannel *> & SuperNetwork::GetChannels()
 {
-  assert(_get_channels_return_value.empty());
+  _get_channels_return_value.clear();
   for (int n = 0; n < _network_clusters; n++)
   {
     vector<FlitChannel *> temp = _networks[n]->GetChannels();
@@ -717,7 +717,7 @@ const vector<FlitChannel *> & SuperNetwork::GetChannels()
 
 const vector<Router *> & SuperNetwork::GetRouters()
 {
-  assert(_get_routers_return_value.empty());
+  _get_routers_return_value.clear();
   for (int n = 0; n < _network_clusters; n++)
   {
     vector<Router *> temp = _networks[n]->GetRouters();

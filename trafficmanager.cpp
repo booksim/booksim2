@@ -3611,21 +3611,21 @@ void TrafficManager::DisplayStats( ostream & os ) {
     _ComputeStats( _accepted_flits[c], NULL, NULL, &max );
     os << "Overall max accepted rate = " <<max << endl;
     
-    os << endl << "Total retries per node." << endl << "[";
+    *_stats_out << endl << "Total retries per node." << endl << "[";
     int sum = 0;
     for (int i = 0; i < _nodes; i++)
     {
       sum += _retries[i];
-      os << _retries[i] << ", ";
+      *_stats_out << _retries[i] << ", ";
     }
-    os << "];" << endl << "Total retries: " << sum << endl;
+    *_stats_out << "];" << endl << "Total retries: " << sum << endl;
     sum = 0;
     for (int i = 0; i < _nodes; i++)
     {
       sum += _revivals[i];
-      os << _revivals[i] << ", ";
+      *_stats_out << _revivals[i] << ", ";
     }
-    os << "];" << endl << "Total revivals: " << sum << endl;
+    *_stats_out << "];" << endl << "Total revivals: " << sum << endl;
     
     
     float mean=0.0;
