@@ -96,6 +96,7 @@ ostream * gWatchOut;
 
 bool gReservation = false;
 bool gECN = false;
+int gClusters = -1;
 
 #ifdef USE_GUI
 bool gGUIMode = false;
@@ -215,6 +216,7 @@ int main( int argc, char **argv )
   }
   
   gReservation = (config.GetInt("hotspot_reservation")==1);
+  gClusters = config.GetInt("network_clusters");
   gECN = (config.GetInt("ECN")==1);
   if((gReservation && gECN)){
     cout<<"can't turn on ECN and reservation at the same time\n";

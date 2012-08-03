@@ -18,12 +18,11 @@ reservation_packet_threshold=0;
 reservation_chunk_limit=512;
 
 reservation_overhead_factor=1.05;
-hotspot_reservation=1;
 
 fast_reservation_transmit=1;
 voq=1;
 
-//seed = 54321;
+seed = 54321;
 
 vc_busy_when_full=1;
 reservation_buffer_size_drop=1;
@@ -55,15 +54,22 @@ yr = 2;
 n = 2;
 default_channel_latency=5;
 
-traffic       = uniform;
-injection_rate=0.5;
-
-flow_size = {8,8};
-classes=2;
-injection_rate = {0.2,0.2};
-injection_process={bernoulli,hotspot_test};
-traffic       = {background_uniform,noself_hotspot};
+//flow_size = {8,8};
+//classes = 2;
+//injection_rate = {0.5,1.0};
+//injection_process={bernoulli,hotspot_test};
+//traffic       = {background_uniform_clusters,noself_hotspot};
 hotspot_nodes={32,64,128,196,210,252,280,320,360,410,450,490};
+
+// Options: uniform_different_cluster. background_uniform_clusters. noself_hotspot_clusters, noself_hotspot, uniform, background_uniform
+//traffic       = uniform_different_cluster;
+flow_size = 8;
+classes = 1;
+injection_rate = 0.5;
+//injection_process = hotspot_test;
+//traffic = background_uniform_clusters;
+//hotspot_nodes={32,64,128,196,210,252};
+
 //hotspot_rates={1,1,1,1};
 
 stats_out = stats;
@@ -74,7 +80,7 @@ drain_measured_only=1;
 const_flits_per_packet = 32;
 
 //flow_size=4;
-sample_period=10000;
+sample_period=20000;
 
 reservation_spec_off = 0;
 
@@ -85,9 +91,11 @@ network_clusters = 2; // How many clusters.
 bottleneck_channels = 4; // How many channels connect a cluster with another.
 transition_channel_latency = 10; // The latency of the transition channels. Make this an even number or else it will be one less cycle.
 
+hotspot_reservation = 0;
+ECN = 0;
+enable_multi_SRP = 0; // If we want to enable reserving the bottleneck channels.
 cycles_into_the_future = 16000; // How many cycles ahead will the reservation system in each of the resources reserve for.
 bit_vector_length = 32; // How many bits in the bit vector which is passed around for the reservations.
-enable_multi_SRP = 1; // If we want to enable reserving the bottleneck channels.
 how_many_time_slots_to_reserve = 1; // How many time slots closest to now to reserve for a passing reservation request before a grant comes back.
-try_again_delay = 100; // How many cycles to wait until a retry is issued.
+try_again_delay = 30; // How many cycles to wait until a retry is issued. That is only for retries because of vector disagreement.
 time_slot_to_begin = 0; // The timeslot to begin reserving in. If you reserve as soon as possible (0), the vector gets shifted and it's too late to change.

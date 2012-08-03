@@ -42,6 +42,8 @@ static int gStepTraffic  = 0;
 
 static int _xr = 1;
 
+extern int gClusters;
+
 void src_dest_bin( int source, int dest, int lg )
 {
   int b, t;
@@ -339,12 +341,84 @@ set<int> hs_senders;
 int bystander_sender;
 int bystander_receiver;
 
+int uniform_different_cluster( int source, int total_nodes )
+{
+  assert(gClusters > 1);
+  int nodes_per_cluster = total_nodes / gClusters;
+  int source_cluster = source / nodes_per_cluster;
+  int destination = -1;
+  int destination_cluster;
+  do {
+    destination = RandomInt( total_nodes - 1 );
+    destination_cluster = destination / nodes_per_cluster;
+  } while (source_cluster == destination_cluster);
+  return destination;
+}
+
+
 int background_uniform(int source, int total_nodes){
   int e = RandomInt(total_nodes-1);
   while(hs_lookup.count(e)!=0){
     e = RandomInt(total_nodes-1);
   }
   return e;
+}
+
+// Sends only to nodes in the same cluster
+int background_uniform_clusters(int source, int total_nodes){
+  int nodes_per_cluster = total_nodes / gClusters;
+  int source_cluster = source / nodes_per_cluster;
+  int e;
+  do {
+    e = RandomInt(total_nodes-1);
+    e = e % nodes_per_cluster + source_cluster * nodes_per_cluster;
+  } while(hs_lookup.count(e)!=0);
+  return e;
+}
+
+// Does not send to a hotspot in the same cluster.
+int hotspot_clusters(int source, int total_nodes);
+
+int noself_hotspot_clusters(int source, int total_nodes){
+  assert(gClusters > 1);
+  assert( hs_send_all || hs_senders.count(source)!=0);
+  if(hs_lookup.count(source)!=0){
+    return background_uniform( source,  total_nodes);
+  } else {
+    return hotspot_clusters( source,  total_nodes);
+  }
+}
+
+int hotspot_clusters(int source, int total_nodes){
+  if(!hs_send_all && hs_senders.count(source) == 0){
+    return background_uniform( source,  total_nodes);
+  } else {
+    int nodes_per_cluster = total_nodes / gClusters;
+    int source_cluster = source / nodes_per_cluster;
+    int destination_cluster;
+    int destination;
+    int pct;
+    do {
+      destination = -1;
+      pct = RandomInt(_hs_max_val);
+      for(size_t i = 0; i < (_hs_elems.size()-1); ++i) {
+        int limit = _hs_elems[i].first;
+        if(limit > pct) {
+          destination = _hs_elems[i].second;
+	  break;
+        } else {
+          pct -= limit;
+        }
+      }
+      assert(_hs_elems.back().first > pct);
+      if (destination == -1) {
+        destination = _hs_elems.back().second;
+      }
+      assert(destination != -1);
+      destination_cluster = destination / nodes_per_cluster;
+    } while (source_cluster == destination_cluster);
+    return destination;
+  }
 }
 
 int hotspot(int source, int total_nodes){
@@ -419,6 +493,7 @@ void InitializeTrafficMap( const Configuration & config )
   /* Register Traffic functions here */
 
   gTrafficFunctionMap["uniform"] = &uniform;
+  gTrafficFunctionMap["uniform_different_cluster"] = &uniform_different_cluster;
 
   // "Bit" patterns
 
@@ -445,9 +520,11 @@ void InitializeTrafficMap( const Configuration & config )
 
   gTrafficFunctionMap["hotspot"]  = &hotspot;
   gTrafficFunctionMap["noself_hotspot"]  = &noself_hotspot;
+  gTrafficFunctionMap["noself_hotspot_clusters"]  = &noself_hotspot_clusters;
 
   gTrafficFunctionMap["combined"] = &combined;
   gTrafficFunctionMap["background_uniform"] = &background_uniform;
+  gTrafficFunctionMap["background_uniform_clusters"] = &background_uniform_clusters;
 
 
   gTrafficFunctionMap["congestion_test"] = &traffic_congestion_test;
