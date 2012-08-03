@@ -5,6 +5,6 @@ const_flits_per_packet = 32;
 classes=2;
 injection_rate = {0.2,1.0};
 injection_process={bernoulli,hotspot_test};
-traffic       = {background_uniform,noself_hotspot};
+traffic       = {background_uniform,rand_noself_hotspot};
 hotspot_nodes={32};
 hotspot_rates={1};

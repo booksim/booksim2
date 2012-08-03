@@ -48,6 +48,10 @@ class Allocator;
 class SwitchMonitor;
 class BufferMonitor;
 
+
+class VCTag;
+
+
 class IQRouter : public Router {
 
   int _packet_size;
@@ -98,10 +102,10 @@ class IQRouter : public Router {
 
   deque<pair<int, pair<Credit *, int> > > _proc_credits;
 
-  deque<pair<int, pair<int, int> > > _route_vcs;
-  deque<pair<int, pair<pair<int, int>, int> > > _vc_alloc_vcs;  
-  deque<pair<int, pair<pair<int, int>, int> > > _sw_hold_vcs;
-  deque<pair<int, pair<pair<int, int>, int> > > _sw_alloc_vcs;
+  deque<VCTag* > _route_vcs;
+  deque<VCTag* > _vc_alloc_vcs;  
+  deque<VCTag* > _sw_hold_vcs;
+  deque<VCTag* > _sw_alloc_vcs;
 
   deque<pair<int, pair<Flit *, pair<int, int> > > > _crossbar_flits;
 
@@ -132,6 +136,8 @@ class IQRouter : public Router {
   vector<int> _switch_hold_in;
   vector<int> _switch_hold_out;
   vector<int> _switch_hold_vc;
+
+  vector<int> _input_head_time ;
 
   Flit* _ExpirationCheck(Flit* f, int input);
   bool _ReceiveFlits( );
@@ -198,6 +204,30 @@ public:
   SwitchMonitor const * const GetSwitchMonitor() const {return _switchMonitor;}
   BufferMonitor const * const GetBufferMonitor() const {return _bufferMonitor;}
 
+};
+
+//replaces the router _vcs queue clusterF
+class VCTag{
+public:
+  int _id;
+  int _time;
+  int _input;
+  int _vc;
+  int _output;
+  bool _use;
+  static VCTag* New(int t, int i, int v, int o);
+  static VCTag* New();
+  static VCTag* New(VCTag* old);
+  void Free();
+  void Reset();
+  void ResetTO();
+  void Set(int t, int i, int v, int o);
+private:
+  VCTag();
+  ~VCTag();
+  static stack<VCTag *> _all;
+  static stack<VCTag *> _free;
+  static int _cur_id;
 };
 
 #endif

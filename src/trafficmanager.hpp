@@ -116,9 +116,11 @@ protected:
   vector<vector<vector<int> > > _last_vc;
   vector<vector<vector<int> > > _last_interm;
 
-  vector<int> _last_reservation_flow_buffer;
   vector<FlowBuffer*> _last_sent_spec_buffer;
   vector<FlowBuffer*> _last_sent_norm_buffer;
+  
+  vector<bool> _sent_data_tail;
+
 
   // ============ Routing ============ 
 

@@ -69,7 +69,8 @@ CPP_SRCS = main.cpp \
    buffer_monitor.cpp \
    flowbuffer.cpp \
 	flowrob.cpp\
-	voq_buffer.cpp
+	voq_buffer.cpp\
+output_buffer.cpp
 
 ifeq ($(DEFINE) , $(DEFINE_TEST))
 	CPP_SRCS += \

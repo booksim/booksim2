@@ -214,6 +214,7 @@ void GenerateRandomHotspot( int total_nodes, int num_src, int num_dst){
 
   //seed business
   unsigned long prev_rand = RandomIntLong( );
+  RandomSeed(gPermSeed);
   //erase previous hotspots 
   hs_lookup.clear();
   hs_senders.clear();

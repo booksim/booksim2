@@ -58,6 +58,9 @@ extern map<int, vector<int> > gDropInStats;
 extern map<int, vector<int> > gDropOutStats;
 extern map<int, vector<int> > gChanDropStats;
 extern Stats* gStatDropLateness;
+extern Stats* gStatSpecInHopFrag;
+extern Stats* gStatSpecOutHopFrag;
+
 
 extern bool RESERVATION_QUEUING_DROP;
 extern bool VC_ALLOC_DROP;
@@ -377,6 +380,8 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _stored_flits.resize(_inputs, 0);
   _active_packets.resize(_inputs, 0);
   
+  _input_head_time.resize(_inputs, 0);
+
   dropped_pid = new int*[_inputs];
   for(int i = 0; i<_inputs; i++){
     dropped_pid[i] = new int[_vcs];
@@ -388,16 +393,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 IQRouter::~IQRouter( )
 {
 
-  int sum=0; 
-  int max=0;
-  /*
-  for(size_t i = 0; i<_next_bandwidth_commitment.size(); i++){
-    if(_next_bandwidth_commitment[i] > max)
-      max = _next_bandwidth_commitment[i];
-    sum+=_next_bandwidth_commitment[i];
-  }
-  cout<<Name()<<"\t"<<max<<"\t"<<sum/_outputs<<endl;
-  */
   if(gPrintActivity) {
     cout << Name() << ".bufferMonitor:" << endl ; 
     cout << *_bufferMonitor << endl ;
@@ -607,10 +602,20 @@ bool IQRouter::_ReceiveFlits( )
       Flit * f;
       for(int vc = 0; vc< (_special_vcs+_data_vcs); vc++){
 	f = net[0]->GetSpecial( _input_channels[input],vc);
+
 	if(gReservation){
 	  f = _ExpirationCheck(f, input);
 	}
 	if(f){
+	 
+	  if(f->res_type==RES_TYPE_SPEC && f->tail){
+	    //debug
+	    gStatSpecInHopFrag->AddSample(GetSimTime()-_input_head_time[input]);
+	  }
+	  if(f->res_type==RES_TYPE_SPEC && f->head){
+	    //debug
+	    _input_head_time[input]= GetSimTime();
+	  }
 	  _in_queue_flits.insert(make_pair(input, f));
 	  activity = true;
 	}
@@ -720,7 +725,8 @@ void IQRouter::_InputQueuing( )
       assert(_switch_hold_vc[input*_input_speedup + vc%_input_speedup] != vc);
       if(_routing_delay) {
 	cur_buf->SetState(vc, VC::routing);
-	_route_vcs.push_back(make_pair(-1, make_pair(input, vc)));
+	VCTag* tag = VCTag::New(-1, input, vc, -1);
+	_route_vcs.push_back(tag);
       } else {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -737,22 +743,22 @@ void IQRouter::_InputQueuing( )
 	}
 	cur_buf->SetState(vc, VC::vc_alloc);
 	if(_speculative) {
-	  _sw_alloc_vcs.push_back(make_pair(-1, make_pair(make_pair(input, vc),
-							  -1)));
+	  VCTag* tag = VCTag::New(-1, input, vc, -1);
+	  _sw_alloc_vcs.push_back(tag);
 	}
 	if(_vc_allocator ||  _VOQArbs  ) {
-	  _vc_alloc_vcs.push_back(make_pair(-1, make_pair(make_pair(input, vc), 
-							  -1)));
+	  VCTag* tag = VCTag::New(-1, input, vc, -1);
+	  _vc_alloc_vcs.push_back(tag);
 	}
       }
     } else if((cur_buf->GetState(vc) == VC::active) &&
 	      (cur_buf->FrontFlit(vc) == f)) {
       if(_switch_hold_vc[input*_input_speedup + vc%_input_speedup] == vc) {
-	_sw_hold_vcs.push_back(make_pair(-1, make_pair(make_pair(input, vc),
-						       -1)));
+	VCTag* tag = VCTag::New(-1, input, vc, -1);
+	_sw_hold_vcs.push_back(tag);
       } else {
-	_sw_alloc_vcs.push_back(make_pair(-1, make_pair(make_pair(input, vc), 
-							-1)));
+	VCTag* tag = VCTag::New(-1, input, vc, -1);
+	_sw_alloc_vcs.push_back(tag);
       }
     }
   }
@@ -788,19 +794,19 @@ void IQRouter::_InputQueuing( )
 
 void IQRouter::_RouteEvaluate( )
 {
-  for(deque<pair<int, pair<int, int> > >::iterator iter = _route_vcs.begin();
+  for(deque<VCTag*>::iterator iter = _route_vcs.begin();
       iter != _route_vcs.end();
       ++iter) {
-    
-    int const & time = iter->first;
+    VCTag* tag = *iter;
+    int const & time = tag->_time;
     if(time >= 0) {
       break;
     }
-    iter->first = GetSimTime() + _routing_delay - 1;
+    tag->_time = GetSimTime() + _routing_delay - 1;
     
-    int const & input = iter->second.first;
+    int const & input = tag->_input;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = iter->second.second;
+    int const & vc = tag->_vc;
     assert((vc >= 0) && (vc < _vcs));
 
     Buffer const * const cur_buf = _buf[input];
@@ -824,18 +830,19 @@ void IQRouter::_RouteEvaluate( )
 void IQRouter::_RouteUpdate( )
 {
   while(!_route_vcs.empty()) {
+   VCTag * tag = _route_vcs.front();
 
-    pair<int, pair<int, int> > const & item = _route_vcs.front();
 
-    int const & time = item.first;
+
+   int const & time = tag->_time;
     if((time < 0) || (GetSimTime() < time)) {
       break;
     }
     assert(GetSimTime() == time);
 
-    int const & input = item.second.first;
+    int const & input = tag->_input;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = item.second.second;
+    int const & vc = tag->_vc;
     assert((vc >= 0) && (vc < _vcs));
     
     Buffer * const cur_buf = _buf[input];
@@ -861,12 +868,16 @@ void IQRouter::_RouteUpdate( )
     }
     cur_buf->SetState(vc, VC::vc_alloc);
     if(_speculative) {
-      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second, -1)));
+      VCTag* ntag = VCTag::New(tag);
+      ntag->ResetTO();
+      _sw_alloc_vcs.push_back(ntag);
     }
     if(_vc_allocator ||  _VOQArbs  ) {
-      _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second, -1)));
+      VCTag* ntag = VCTag::New(tag);
+      ntag->ResetTO();
+      _vc_alloc_vcs.push_back(ntag);
     }
-
+    tag->Free();
     _route_vcs.pop_front();
   }
 }
@@ -880,18 +891,19 @@ void IQRouter::_VCAllocEvaluate( )
 {
   bool watched = false;
 
-  for(deque<pair<int, pair<pair<int, int>, int> > >::const_iterator iter = _vc_alloc_vcs.begin();
+  for(deque<VCTag*>::const_iterator iter = _vc_alloc_vcs.begin();
       iter != _vc_alloc_vcs.end();
       ++iter) {
+    VCTag* tag = *iter;
 
-    int const & time = iter->first;
+    int const & time = tag->_time;
     if(time >= 0) {
       break;
     }
 
-    int const & input = iter->second.first.first;
+    int const & input = tag->_input;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = iter->second.first.second;
+    int const & vc = tag->_vc;
     assert((vc >= 0) && (vc < _vcs));
 
     Buffer *cur_buf = _buf[input];
@@ -1019,22 +1031,23 @@ void IQRouter::_VCAllocEvaluate( )
     _vc_allocator->PrintGrants( gWatchOut );
   }
 
-  for(deque<pair<int, pair<pair<int, int>, int> > >::iterator iter = _vc_alloc_vcs.begin();
+  for(deque<VCTag*>::iterator iter = _vc_alloc_vcs.begin();
       iter != _vc_alloc_vcs.end();
       ++iter) {
+    VCTag* tag = *iter;
 
-    int const & time = iter->first;
+    int const & time = tag->_time;
     if(time >= 0) {
       break;
     }
-    iter->first = GetSimTime() + _vc_alloc_delay - 1;
+    tag->_time = GetSimTime() + _vc_alloc_delay - 1;
 
-    int const & input = iter->second.first.first;
+    int const & input = tag->_input;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = iter->second.first.second;
+    int const & vc = tag->_vc;
     assert((vc >= 0) && (vc < _vcs));
 
-    int & output_and_vc = iter->second.second;
+    int & output_and_vc = tag->_output;
     if(!_voq){
       output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
     } else {
@@ -1089,17 +1102,18 @@ void IQRouter::_VCAllocEvaluate( )
     return;
   }
 
-  for(deque<pair<int, pair<pair<int, int>, int> > >::iterator iter = _vc_alloc_vcs.begin();
+  for(deque<VCTag*>::iterator iter = _vc_alloc_vcs.begin();
       iter != _vc_alloc_vcs.end();
       ++iter) {
-    
-    int const & time = iter->first;
+    VCTag* tag = *iter;
+     
+    int const & time = tag->_time;
     assert(time >= 0);
     if(GetSimTime() < time) {
       break;
     }
     
-    int const & output_and_vc = iter->second.second;
+    int const & output_and_vc = tag->_output;
     
     if(output_and_vc >= 0) {
       
@@ -1112,9 +1126,9 @@ void IQRouter::_VCAllocEvaluate( )
       
       if(!dest_buf->IsAvailableFor(match_vc)) {
 	assert(!_cut_through);
-	int const & input = iter->second.first.first;
+	int const & input = tag->_input;
 	assert((input >= 0) && (input < _inputs));
-	int const & vc = iter->second.first.second;
+	int const & vc = tag->_vc;
 	assert((vc >= 0) && (vc < _vcs));
 	
 	Buffer const * const cur_buf = _buf[input];
@@ -1134,7 +1148,7 @@ void IQRouter::_VCAllocEvaluate( )
 		     << " at output " << match_output
 		     << " is no longer available." << endl;
 	}
-	iter->second.second = -1;
+	tag->_output = -1;
       }
     }
   }
@@ -1144,17 +1158,18 @@ void IQRouter::_VCAllocUpdate( )
 {
   while(!_vc_alloc_vcs.empty()) {
 
-    pair<int, pair<pair<int, int>, int> > const & item = _vc_alloc_vcs.front();
+   VCTag* tag = _vc_alloc_vcs.front();
 
-    int const & time = item.first;
+
+    int const & time =  tag->_time;
     if((time < 0) || (GetSimTime() < time)) {
       break;
     }
     assert(GetSimTime() == time);
 
-    int const & input = item.second.first.first;
+    int const & input =  tag->_input;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = item.second.first.second;
+    int const & vc =  tag->_vc;
     assert((vc >= 0) && (vc < _vcs));
     
     Buffer * const cur_buf = _buf[input];
@@ -1225,7 +1240,10 @@ void IQRouter::_VCAllocUpdate( )
       cur_buf->Route(vc, _rf, this, drop_f, input);
       _UpdateCommitment(input, vc, drop_f, cur_buf->GetRouteSet(vc));
       cur_buf->ResetExpected(vc);
-      _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first, -1)));
+      VCTag* ntag = VCTag::New(tag);
+      ntag->ResetTO();
+      _vc_alloc_vcs.push_back(ntag);
+      tag->Free();
       _vc_alloc_vcs.pop_front();
       continue;
     }
@@ -1237,7 +1255,7 @@ void IQRouter::_VCAllocUpdate( )
 		 << ")." << endl;
     }
     
-    int const & output_and_vc = item.second.second;
+    int const & output_and_vc =  tag->_output;
     
     if(output_and_vc >= 0) {
       
@@ -1262,15 +1280,20 @@ void IQRouter::_VCAllocUpdate( )
       cur_buf->SetOutput(vc, match_output, match_vc);
       cur_buf->SetState(vc, VC::active);
       if(!_speculative) {
-	_sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first, -1)));
+	VCTag* ntag = VCTag::New(tag);
+	ntag->ResetTO();
+	_sw_alloc_vcs.push_back(ntag);
       }
     } else {
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "  No output VC allocated." << endl;
       }
-      _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first, -1)));
+     VCTag* ntag = VCTag::New(tag);
+      ntag->ResetTO();
+      _vc_alloc_vcs.push_back(ntag);
     }
+    tag->Free();
     _vc_alloc_vcs.pop_front();
   }
 }
@@ -1286,19 +1309,20 @@ void IQRouter::_SWHoldEvaluate( )
     return;
   }
 
-  for(deque<pair<int, pair<pair<int, int>, int> > >::iterator iter = _sw_hold_vcs.begin();
+  for(deque<VCTag*>::iterator iter = _sw_hold_vcs.begin();
       iter != _sw_hold_vcs.end();
       ++iter) {
-    
-    int const & time = iter->first;
+    VCTag* tag = *iter;
+
+    int const & time = tag->_time;
     if(time >= 0) {
       break;
     }
-    iter->first = GetSimTime();
+    tag->_time = GetSimTime();
     
-    int const & input = iter->second.first.first;
+    int const & input = tag->_input;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = iter->second.first.second;
+    int const & vc = tag->_vc;
     assert((vc >= 0) && (vc < _vcs));
     
     Buffer const * const cur_buf = _buf[input];
@@ -1344,7 +1368,7 @@ void IQRouter::_SWHoldEvaluate( )
 		   << "." << (expanded_output % _output_speedup)
 		   << ": No credit available." << endl;
       }
-      iter->second.second = -1;
+      tag->_output = -1;
     } else {
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -1354,7 +1378,7 @@ void IQRouter::_SWHoldEvaluate( )
 		   << "." << (expanded_output % _output_speedup)
 		   << "." << endl;
       }
-      iter->second.second = expanded_output;
+      tag->_output = expanded_output;
     }
   }
 }
@@ -1362,18 +1386,18 @@ void IQRouter::_SWHoldEvaluate( )
 void IQRouter::_SWHoldUpdate( )
 {
   while(!_sw_hold_vcs.empty()) {
+      VCTag* tag =  _sw_hold_vcs.front();
+
     
-    pair<int, pair<pair<int, int>, int> > const & item = _sw_hold_vcs.front();
-    
-    int const & time = item.first;
+      int const & time = tag->_time;
     if(time < 0) {
       break;
     }
     assert(GetSimTime() == time);
     
-    int const & input = item.second.first.first;
+    int const & input = tag->_input;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = item.second.first.second;
+    int const & vc = tag->_vc;
     assert((vc >= 0) && (vc < _vcs));
     
     Buffer * const cur_buf = _buf[input];
@@ -1398,15 +1422,17 @@ void IQRouter::_SWHoldUpdate( )
     if(_switch_hold_in_skip[expanded_input]){
       skip = true;
     }
-    int const & expanded_output = item.second.second;
+    int const & expanded_output = tag->_output;
     if(expanded_output >= 0  && _switch_hold_out_skip[expanded_output]){
       skip = true;
     }    
     if(skip){   
       _switch_hold_in_skip[expanded_input]=false;
       _switch_hold_out_skip[expanded_output]=false;
-      _sw_hold_vcs.push_back(make_pair(-1, make_pair(item.second.first,
-						     -1)));
+      VCTag* ntag = VCTag::New(tag);
+      ntag->ResetTO();
+      _sw_hold_vcs.push_back(ntag);
+      tag->Free();
       _sw_hold_vcs.pop_front();
       continue;
     }
@@ -1505,7 +1531,9 @@ void IQRouter::_SWHoldUpdate( )
 	  _switch_hold_out[expanded_output] = -1;
 	  if(_routing_delay) {
 	    cur_buf->SetState(vc, VC::routing);
-	    _route_vcs.push_back(make_pair(-1, item.second.first));
+	    VCTag* ntag = VCTag::New(tag);
+	    ntag->ResetTO();
+	    _route_vcs.push_back(ntag);
 	  } else {
 	    if(nf->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -1522,17 +1550,20 @@ void IQRouter::_SWHoldUpdate( )
 	    }
 	    cur_buf->SetState(vc, VC::vc_alloc);
 	    if(_speculative) {
-	      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
-							      -1)));
+	      VCTag* ntag = VCTag::New(tag);
+	      ntag->ResetTO();
+	      _sw_alloc_vcs.push_back(ntag);
 	    }
 	    if(_vc_allocator || _VOQArbs) {
-	      _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
-							      -1)));
+	      VCTag* ntag = VCTag::New(tag);
+	      ntag->ResetTO();
+	      _vc_alloc_vcs.push_back(ntag);
 	    }
 	  }
 	} else {
-	  _sw_hold_vcs.push_back(make_pair(-1, make_pair(item.second.first,
-							 -1)));
+	  VCTag* ntag = VCTag::New(tag);
+	  ntag->ResetTO();
+	  _sw_hold_vcs.push_back(ntag);
 	}
       }
     } else {
@@ -1555,9 +1586,11 @@ void IQRouter::_SWHoldUpdate( )
       _switch_hold_vc[expanded_input] = -1;
       _switch_hold_in[expanded_input] = -1;
       _switch_hold_out[held_expanded_output] = -1;
-      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
-						      -1)));
-    }
+   VCTag* ntag = VCTag::New(tag);
+      ntag->ResetTO();
+      _sw_alloc_vcs.push_back(ntag);
+
+    }    tag->Free();
     _sw_hold_vcs.pop_front();
   }
 }
@@ -1670,18 +1703,19 @@ void IQRouter::_SWAllocEvaluate( )
 {
   bool watched = false;
 
-  for(deque<pair<int, pair<pair<int, int>, int> > >::const_iterator iter = _sw_alloc_vcs.begin();
+  for(deque<VCTag* >::const_iterator iter = _sw_alloc_vcs.begin();
       iter != _sw_alloc_vcs.end();
       ++iter) {
+    VCTag* tag = *iter;
 
-    int const & time = iter->first;
+    int const & time = tag->_time;
     if(time >= 0) {
       break;
     }
 
-    int const & input = iter->second.first.first;
+    int const & input = tag->_input;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = iter->second.first.second;
+    int const & vc = tag->_vc;
     assert((vc >= 0) && (vc < _vcs));
     
     assert(_switch_hold_vc[input * _input_speedup + vc % _input_speedup] != vc);
@@ -1821,19 +1855,19 @@ void IQRouter::_SWAllocEvaluate( )
     }
   }
   
-  for(deque<pair<int, pair<pair<int, int>, int> > >::iterator iter = _sw_alloc_vcs.begin();
+  for(deque<VCTag* >::iterator iter = _sw_alloc_vcs.begin();
       iter != _sw_alloc_vcs.end();
       ++iter) {
-
-    int const & time = iter->first;
+    VCTag* tag = *iter;
+    int const & time = tag->_time;
     if(time >= 0) {
       break;
     }
-    iter->first = GetSimTime() + _sw_alloc_delay - 1;
+    tag->_time = GetSimTime() + _sw_alloc_delay - 1;
 
-    int const & input = iter->second.first.first;
+    int const & input = tag->_input;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = iter->second.first.second;
+    int const & vc = tag->_vc;
     assert((vc >= 0) && (vc < _vcs));
 
     Buffer const * const cur_buf = _buf[input];
@@ -1846,7 +1880,7 @@ void IQRouter::_SWAllocEvaluate( )
     
     int const expanded_input = input * _input_speedup + vc % _input_speedup;
 
-    int & expanded_output = iter->second.second;
+    int & expanded_output = tag->_output;
     expanded_output = _sw_allocator->OutputAssigned(expanded_input);
 
     if(expanded_output >= 0) {
@@ -1916,17 +1950,17 @@ void IQRouter::_SWAllocEvaluate( )
     return;
   }
 
-  for(deque<pair<int, pair<pair<int, int>, int> > >::iterator iter = _sw_alloc_vcs.begin();
+  for(deque<VCTag*>::iterator iter = _sw_alloc_vcs.begin();
       iter != _sw_alloc_vcs.end();
       ++iter) {
-
-    int const & time = iter->first;
+    VCTag* tag = *iter;
+    int const & time = tag->_time;
     assert(time >= 0);
     if(GetSimTime() < time) {
       break;
     }
 
-    int const & expanded_output = iter->second.second;
+    int const & expanded_output = tag->_output;
     
     if(expanded_output >= 0) {
       
@@ -1935,10 +1969,10 @@ void IQRouter::_SWAllocEvaluate( )
       
       BufferState const * const dest_buf = _next_buf[output];
       
-      int const & input = iter->second.first.first;
+      int const & input =tag->_input;
       assert((input >= 0) && (input < _inputs));
       assert((input % _output_speedup) == (expanded_output % _output_speedup));
-      int const & vc = iter->second.first.second;
+      int const & vc = tag->_vc;
       assert((vc >= 0) && (vc < (_special_vcs+_data_vcs)));
       
       int const expanded_input = input * _input_speedup + vc % _input_speedup;
@@ -1974,7 +2008,8 @@ void IQRouter::_SWAllocEvaluate( )
 	  }
 	  *gWatchOut << "." << endl;
 	}
-	iter->second.second = -1;
+	tag->_output = -1;
+
       } else if(_speculative && (cur_buf->GetState(vc) == VC::vc_alloc)) {
 	assert(false);
 	assert(f->head);
@@ -1992,7 +2027,7 @@ void IQRouter::_SWAllocEvaluate( )
 			 << "." << (expanded_output % _output_speedup)
 			 << " due to misspeculation." << endl;
 	    }
-	    iter->second.second = -1;
+	tag->_output = -1;
 	  } else if((output_and_vc / (_special_vcs+_data_vcs)) != output) {
 	    if(f->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -2002,7 +2037,8 @@ void IQRouter::_SWAllocEvaluate( )
 			 << "." << (expanded_output % _output_speedup)
 			 << " due to port mismatch between VC and switch allocator." << endl;
 	    }
-	    iter->second.second = -1;
+	tag->_output = -1;
+
 	  } else if(!dest_buf->HasCreditFor((output_and_vc % (_special_vcs+_data_vcs)))) {
 	    assert(!_cut_through);
 	    if(f->watch) {
@@ -2013,7 +2049,8 @@ void IQRouter::_SWAllocEvaluate( )
 			 << "." << (expanded_output % _output_speedup)
 			 << " due to lack of credit." << endl;
 	    }
-	    iter->second.second = -1;
+	    tag->_output = -1;
+
 	  }
 
 	} else { // VC allocation is piggybacked onto switch allocation
@@ -2052,7 +2089,8 @@ void IQRouter::_SWAllocEvaluate( )
 			 << "." << (expanded_output % _output_speedup)
 			 << " because no suitable output VC for piggyback allocation is available." << endl;
 	    }
-	    iter->second.second = -1;
+   tag->_output = -1;
+
 	  }
 
 	}
@@ -2073,7 +2111,7 @@ void IQRouter::_SWAllocEvaluate( )
 		       << "." << (expanded_output % _output_speedup)
 		       << " due to lack of credit." << endl;
 	  }
-	  iter->second.second = -1;
+   tag->_output = -1;
 	} else {
 	  if(_hold_switch_for_packet && is_control_vc(vc)){
 	    if(_switch_hold_in[expanded_input]>=0)
@@ -2090,18 +2128,18 @@ void IQRouter::_SWAllocEvaluate( )
 void IQRouter::_SWAllocUpdate( )
 {
   while(!_sw_alloc_vcs.empty()) {
+   VCTag* tag = _sw_alloc_vcs.front();
+   
 
-    pair<int, pair<pair<int, int>, int> > const & item = _sw_alloc_vcs.front();
-
-    int const & time = item.first;
+   int const & time = tag->_time;
     if((time < 0) || (GetSimTime() < time)) {
       break;
     }
     assert(GetSimTime() == time);
 
-    int const & input = item.second.first.first;
+    int const & input = tag->_input;
     assert((input >= 0) && (input < _inputs));
-    int const & vc = item.second.first.second;
+    int const & vc = tag->_vc;
     assert((vc >= 0) && (vc < _vcs));
     
     Buffer * const cur_buf = _buf[input];
@@ -2120,7 +2158,7 @@ void IQRouter::_SWAllocUpdate( )
 		 << ")." << endl;
     }
     
-    int const & expanded_output = item.second.second;
+    int const & expanded_output = tag->_output;
     
     if(expanded_output >= 0) {
       
@@ -2254,7 +2292,9 @@ void IQRouter::_SWAllocUpdate( )
 	  assert(nf->head);
 	  if(_routing_delay) {
 	    cur_buf->SetState(vc, VC::routing);
-	    _route_vcs.push_back(make_pair(-1, item.second.first));
+	    VCTag* ntag = VCTag::New(tag);
+	    ntag->ResetTO();
+	    _route_vcs.push_back(ntag);
 	  } else {
 	    if(nf->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -2271,11 +2311,13 @@ void IQRouter::_SWAllocUpdate( )
 	    }
 	    cur_buf->SetState(vc, VC::vc_alloc);
 	    if(_speculative) {
-	      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
-							      -1)));
+	      VCTag* ntag = VCTag::New(tag);
+	      ntag->ResetTO();
+	      _sw_alloc_vcs.push_back(ntag);
 	    }
-	    _vc_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
-							    -1)));
+	    VCTag* ntag = VCTag::New(tag);
+	    ntag->ResetTO();
+	    _vc_alloc_vcs.push_back(ntag);
 	  }
 	} else {
 	  if(_hold_switch_for_packet && !is_control_vc(vc)) {
@@ -2292,11 +2334,13 @@ void IQRouter::_SWAllocUpdate( )
 	    _switch_hold_vc[expanded_input] = vc;
 	    _switch_hold_in[expanded_input] = expanded_output;
 	    _switch_hold_out[expanded_output] = expanded_input;
-	    _sw_hold_vcs.push_back(make_pair(-1, make_pair(item.second.first,
-							   -1)));
+	    VCTag* ntag = VCTag::New(tag);
+	    ntag->ResetTO();
+	    _sw_hold_vcs.push_back(ntag);
 	  } else {
-	    _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first,
-							    -1)));
+	    VCTag* ntag = VCTag::New(tag);
+	    ntag->ResetTO();
+	    _sw_alloc_vcs.push_back(ntag);
 	  }
 	}
       }
@@ -2305,8 +2349,11 @@ void IQRouter::_SWAllocUpdate( )
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "  No output port allocated." << endl;
       }
-      _sw_alloc_vcs.push_back(make_pair(-1, make_pair(item.second.first, -1)));
+      VCTag* ntag = VCTag::New(tag);
+      ntag->ResetTO();
+      _sw_alloc_vcs.push_back(ntag);
     }
+    tag->Free();
     _sw_alloc_vcs.pop_front();
   }
 }
@@ -2590,3 +2637,61 @@ void IQRouter::_UpdateCommitment(int input, int vc, const Flit* f, const OutputS
   _next_bandwidth_commitment[output]+=f->packet_size;
 
 }
+
+
+
+stack<VCTag *> VCTag::_all;
+stack<VCTag *> VCTag::_free;
+int VCTag::_cur_id = 0;
+VCTag::VCTag(){
+  Reset();
+  _use = false;
+}
+void VCTag::Free() {
+  _free.push(this);
+  _use = false;
+}
+VCTag * VCTag::New(VCTag* old) {
+  return New(old->_time,
+	     old->_input,
+	     old->_vc,
+	     old->_output);
+}
+VCTag * VCTag::New() {
+  return New(-1, -1, -1, -1);
+}
+VCTag * VCTag::New(int t, int i, int v, int o) {
+  VCTag * tag;
+  if(_free.empty()) {
+    tag = new VCTag;
+    _all.push(tag);
+  } else {
+    tag = _free.top();
+    _free.pop();
+  }
+
+  assert(!tag->_use);
+  tag->_use = true;
+  tag->_id = _cur_id++;
+  tag->Set(t,i,v,o);
+  return tag;
+}
+void VCTag::Set(int t, int i, int v, int o){
+  _time = t;
+  _input = i;
+  _vc = v;
+  _output = o;
+}
+void VCTag::Reset(){
+  _time = -1;
+  _input= -1;
+  _vc   = -1;
+  _output=-1;
+}
+void VCTag::ResetTO(){
+  _time = -1;
+  _output=-1;
+}
+
+
+
