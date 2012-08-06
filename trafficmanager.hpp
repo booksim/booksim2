@@ -313,7 +313,7 @@ protected:
   void _Inject();
   void _Step( );
 
-  bool _PacketsOutstanding( ) const;
+  bool _PacketsOutstanding( int remaining_class = -1 ) const;
   
   int  _IssuePacket( int source, int cl );
   void _GenerateFlow( int source, int size, int cl, int time );

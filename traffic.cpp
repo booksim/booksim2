@@ -370,8 +370,8 @@ int background_uniform_clusters(int source, int total_nodes){
   int source_cluster = source / nodes_per_cluster;
   int e;
   do {
-    e = RandomInt(total_nodes-1);
-    e = e % nodes_per_cluster + source_cluster * nodes_per_cluster;
+    e = RandomInt(nodes_per_cluster - 1);
+    e = e + source_cluster * nodes_per_cluster;
   } while(hs_lookup.count(e)!=0);
   return e;
 }
@@ -443,7 +443,7 @@ int hotspot(int source, int total_nodes){
 int noself_hotspot(int source, int total_nodes){
   assert( hs_send_all || hs_senders.count(source)!=0);
   if(hs_lookup.count(source)!=0){
-    return background_uniform( source,  total_nodes);
+    return background_uniform_clusters( source,  total_nodes);
   } else {
     return hotspot( source,  total_nodes);
   }

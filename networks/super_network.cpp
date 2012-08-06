@@ -100,7 +100,7 @@ SuperNetwork::SuperNetwork( const Configuration &config, const string & name ) :
   _already_sent = new bool *[_network_clusters];
   int half_latency = (int)(_transition_channel_latency / 2);
   ostringstream temp_name;
-  assert(_transition_channels_per_cluster % 2 == 0);
+  assert(_transition_channels_per_cluster % 2 == 0 || _transition_channels_per_cluster == 1);
   for (int i = 0; i < _network_clusters; ++i)
   {
     _temp_channels[i] = new Flit*[_transition_channels_per_cluster];

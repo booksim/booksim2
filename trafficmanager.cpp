@@ -1428,6 +1428,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     {
       rob_erased = false;
     }
+    if (f->try_again_after_time != -1)
+    {
+      _last_sent_spec_buffer[dest] = 0;
+      _retries[dest]++;
+    }
     if( receive_flow_buffer!=NULL &&
 	receive_flow_buffer->fl->flid == f->flid &&
         rob_erased == false){
@@ -1442,11 +1447,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
       receive_flow_buffer->grant(f->payload, f->try_again_after_time,
 				 int(ceil(RESERVATION_RTT*float(_time-f->ntime))));
-      if (f->try_again_after_time != -1)
-      {
-        _last_sent_spec_buffer[dest] = 0;
-        _retries[dest]++;
-      }
     }
     f->Free(); 
     return;
@@ -2217,7 +2217,7 @@ void TrafficManager::_GenerateFlow( int source, int stype, int cl, int time ){
 
   if ((packet_destination <0) || (packet_destination >= _nodes)) {
     ostringstream err;
-    err << "Incorrect packet destination " << packet_destination;
+    err << "Incorrect packet destination " << packet_destination << " total nodes " << _nodes;
     Error( err.str( ) );
   }
 
@@ -2409,7 +2409,7 @@ void TrafficManager::_Step( )
       }
       if( ( _sim_state == warming_up ) || ( _sim_state == running ) ) {
 	for(int c = 0; c < _classes; ++c) {
-	  _accepted_flits[c][dest]->AddSample( (f && (f->cl == c)) ? 1 : 0 );
+	  _accepted_flits[c][dest]->AddSample( (f && (f->cl == c) ) ? 1 : 0 );
 	}
       }
     }
@@ -2759,11 +2759,11 @@ void TrafficManager::_Step( )
   }
 }
   
-bool TrafficManager::_PacketsOutstanding( ) const
+bool TrafficManager::_PacketsOutstanding( int remaining_class ) const
 {
   bool outstanding = false;
 
-  for ( int c = 0; c < _classes; ++c ) {
+  for ( int c = remaining_class == -1 ? 0 : remaining_class; c < _classes; ++c ) {
     
     if ( _measured_in_flight_flits[c].empty() ) {
 
@@ -2784,7 +2784,7 @@ bool TrafficManager::_PacketsOutstanding( ) const
       outstanding = true;
     }
 
-    if ( outstanding ) { break; }
+    if ( outstanding || remaining_class != -1) { break; }
   }
 
   return outstanding;
@@ -3351,7 +3351,7 @@ bool TrafficManager::_SingleSim( )
       }
 
       // Fail safe for latency mode, throughput will ust continue
-      if ( ( _sim_mode == latency ) && ( lat_exc_class >= 0 ) ) {
+      if ( ( _sim_mode == latency ) && ( lat_exc_class == 0 ) ) { // XXX Used to be >= 0.
 
 	cout << "Average latency for class " << lat_exc_class <<" is "<<lat_exc_value<< " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
 	converged = 0; 
@@ -3388,7 +3388,7 @@ bool TrafficManager::_SingleSim( )
 	_sim_state  = draining;
 	_drain_time = _time;
 	int empty_steps = 0;
-	while( _PacketsOutstanding( ) ) { 
+	while( _PacketsOutstanding(0)) {
 	  _Step( ); 
 
 	  ++empty_steps;
@@ -3423,7 +3423,7 @@ bool TrafficManager::_SingleSim( )
 	      }
 	    }
 	    
-	    if(lat_exc_class >= 0) {
+	    if(lat_exc_class == 0) { // XXX Used to be >= 0.
 	      cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
 	      converged = 0; 
 	      _sim_state = warming_up;
@@ -3454,7 +3454,7 @@ bool TrafficManager::_SingleSim( )
     }
     packets_left = packets_left && !_no_drain;
 
-    while( packets_left ) { 
+    while( packets_left && 0) { // XXX. Edit here if you want to not wait for measured packets of classes other than 0.
       _Step( ); 
 
       ++empty_steps;
@@ -3611,21 +3611,24 @@ void TrafficManager::DisplayStats( ostream & os ) {
     _ComputeStats( _accepted_flits[c], NULL, NULL, &max );
     os << "Overall max accepted rate = " <<max << endl;
     
-    *_stats_out << endl << "Total retries per node." << endl << "[";
-    int sum = 0;
-    for (int i = 0; i < _nodes; i++)
+    if (_stats_out != NULL)
     {
-      sum += _retries[i];
-      *_stats_out << _retries[i] << ", ";
+      *_stats_out << endl << "Total retries per node." << endl << "[";
+      int sum = 0;
+      for (int i = 0; i < _nodes; i++)
+      {
+        sum += _retries[i];
+        *_stats_out << _retries[i] << ", ";
+      }
+      *_stats_out << "];" << endl << "Total retries: " << sum << endl;
+      sum = 0;
+      for (int i = 0; i < _nodes; i++)
+      {
+        sum += _revivals[i];
+        *_stats_out << _revivals[i] << ", ";
+      }
+      *_stats_out << "];" << endl << "Total revivals: " << sum << endl;
     }
-    *_stats_out << "];" << endl << "Total retries: " << sum << endl;
-    sum = 0;
-    for (int i = 0; i < _nodes; i++)
-    {
-      sum += _revivals[i];
-      *_stats_out << _revivals[i] << ", ";
-    }
-    *_stats_out << "];" << endl << "Total revivals: " << sum << endl;
     
     
     float mean=0.0;
