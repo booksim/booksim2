@@ -642,12 +642,20 @@ void IQRouter::_VCAllocEvaluate( )
 	if(!dest_buf->IsAvailableFor(out_vc)) {
 	  if(f->watch) {
 	    int const use_input_and_vc = dest_buf->UsedBy(out_vc);
+	    int const use_input = use_input_and_vc % _vcs;
+	    int const use_vc = use_input_and_vc / _vcs;
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		       << "  VC " << out_vc 
 		       << " at output " << out_port 
-		       << " is in use by VC " << (use_input_and_vc % _vcs)
-		       << " at input " << (use_input_and_vc / _vcs)
-		       << "." << endl;
+		       << " is in use by VC " << use_vc
+		       << " at input " << use_input;
+	    Flit * cf = _buf[use_input]->FrontFlit(use_vc);
+	    if(cf) {
+	      *gWatchOut << " (front flit: " << cf->id << ")";
+	    } else {
+	      *gWatchOut << " (empty)";
+	    }
+	    *gWatchOut << "." << endl;
 	  }
 	} else {
 	  elig = true;
