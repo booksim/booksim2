@@ -164,7 +164,7 @@ class BufferState : public Module {
   
   BufferPolicy * _buffer_policy;
   
-  vector<bool> _in_use;
+  vector<int> _in_use_by;
   vector<bool> _tail_sent;
   vector<int> _last_id;
   vector<int> _last_pid;
@@ -189,7 +189,7 @@ public:
   void ProcessCredit( Credit const * const c );
   void SendingFlit( Flit const * const f );
 
-  void TakeBuffer( int vc = 0 );
+  void TakeBuffer( int vc = 0, int tag = 0 );
 
   inline bool IsFull() const {
     return (_occupancy < _size);
@@ -209,9 +209,13 @@ public:
   }
   inline bool IsAvailableFor( int vc = 0 ) const {
     assert( ( vc >= 0 ) && ( vc < _vcs ) );
-    return !_in_use[vc];
+    return _in_use_by[vc] < 0;
   }
-  
+  inline int UsedBy(int vc = 0) const {
+    assert( ( vc >= 0 ) && ( vc < _vcs ) );
+    return _in_use_by[vc];
+  }
+    
   inline int Occupancy() const {
     return _occupancy;
   }
