@@ -640,11 +640,15 @@ void IQRouter::_VCAllocEvaluate( )
 	// actual packet priorities, which is reflected in "out_priority".
 	
 	if(!dest_buf->IsAvailableFor(out_vc)) {
-	  if(f->watch)
+	  if(f->watch) {
+	    int const use_input_and_vc = dest_buf->UsedBy(out_vc);
 	    *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		       << "  VC " << out_vc 
 		       << " at output " << out_port 
-		       << " is busy." << endl;
+		       << " is in use by VC " << (use_input_and_vc % _vcs)
+		       << " at input " << (use_input_and_vc / _vcs)
+		       << "." << endl;
+	  }
 	} else {
 	  elig = true;
 	  if(_vc_busy_when_full && dest_buf->IsFullFor(out_vc)) {
@@ -877,7 +881,7 @@ void IQRouter::_VCAllocUpdate( )
       BufferState * const dest_buf = _next_buf[match_output];
       assert(dest_buf->IsAvailableFor(match_vc));
       
-      dest_buf->TakeBuffer(match_vc);
+      dest_buf->TakeBuffer(match_vc, input*_vcs + vc);
 	
       cur_buf->SetOutput(vc, match_output, match_vc);
       cur_buf->SetState(vc, VC::active);
@@ -1936,7 +1940,7 @@ void IQRouter::_SWAllocUpdate( )
 
 	cur_buf->SetState(vc, VC::active);
 	cur_buf->SetOutput(vc, output, match_vc);
-	dest_buf->TakeBuffer(match_vc);
+	dest_buf->TakeBuffer(match_vc, input*_vcs + vc);
 
 	_vc_rr_offset[output*_classes+cl] = (match_vc + 1) % _vcs;
 
