@@ -45,12 +45,12 @@ class BufferState : public Module {
     BufferPolicy(Configuration const & config, BufferState * parent, 
 		 const string & name);
     virtual void SetMinLatency(int min_latency) {}
-    virtual void TakeBuffer(int vc);
+    virtual void TakeBuffer(int vc = 0);
     virtual void SendingFlit(Flit const * const f);
-    virtual void FreeSlotFor(int vc);
-    virtual bool IsFullFor(int vc) const = 0;
-    virtual int AvailableFor(int vc) const = 0;
-    virtual int LimitFor(int vc) const = 0;
+    virtual void FreeSlotFor(int vc = 0);
+    virtual bool IsFullFor(int vc = 0) const = 0;
+    virtual int AvailableFor(int vc = 0) const = 0;
+    virtual int LimitFor(int vc = 0) const = 0;
 
     static BufferPolicy * New(Configuration const & config, 
 			      BufferState * parent, const string & name);
