@@ -198,7 +198,7 @@ void SuperNetwork::IncrementClusterHops(Flit *f)
   if (f != 0)
   {
     f->cluster_hops_taken++;
-    assert(f->head == false || (f->cluster_hops_taken <= f->cluster_hops && f->cluster_hops_taken <= _network_clusters));
+    assert(f->head == false || (f->cluster_hops_taken <= f->cluster_hops && f->cluster_hops_taken < _network_clusters));
   }
 }
 
