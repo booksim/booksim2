@@ -452,10 +452,10 @@ void SuperNetwork::HandleGrantFlits(Flit *f, int net, int chan)
       }
       else
       {
-        int reduction = MIN(f->payload, _bit_vectors[net][chan][i].first);
+        int reduction = MIN(f->reservation_size, _bit_vectors[net][chan][i].first);
         assert(reduction > 0 && _bit_vectors[net][chan][i].first > 0);
         _bit_vectors[net][chan][i].first -= reduction;
-        reduction = f->payload - reduction;
+        reduction = f->reservation_size - reduction;
         assert(reduction == 0 || i + 1 < _bit_vector_length);
         if (reduction > 0)
         {
