@@ -31,6 +31,7 @@
 #include <vector>
 #include <stack>
 #include <set>
+#include "flit.hpp"
 
 class Credit {
 
@@ -41,6 +42,7 @@ public:
   // these are only used by the event router
   bool head, tail;
   int  id;
+  Flit* _flit;
 
   void Reset();
   

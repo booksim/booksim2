@@ -58,7 +58,7 @@ protected:
   int _cycles_into_the_future, _bit_vector_length, _cycles_per_element, _current_epoch;
   bool _enable_multi_SRP;
   int _how_many_time_slots_to_reserve, _counter_max;
-  bool **_already_sent;
+  bool **_already_sent, **_already_sent_credit;
   int _try_again_delay;
   int _time_slot_to_begin;
  
@@ -96,6 +96,7 @@ protected:
   void HandleNonResFlits(Flit *f, int net, int chan);
   
   int GetNextCluster(int net, int chan) const;
+  int GetNextClusterCredit(int net, int chan) const;
 
 public:
   SuperNetwork( const Configuration &config, const string & name );

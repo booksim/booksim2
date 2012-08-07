@@ -2709,6 +2709,7 @@ void TrafficManager::_Step( )
 	}
 	Credit * const c = Credit::New();
 	c->vc.push_back(f->vc);
+        c->_flit = (Flit*)1;
 	_net[subnet]->WriteCredit(c, dest);
 	_RetireFlit(f, dest);
       }

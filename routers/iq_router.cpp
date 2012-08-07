@@ -603,6 +603,7 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
 	}
 	_out_queue_credits.find(input)->second->id=666;
 	_out_queue_credits.find(input)->second->vc.push_back(f->vc);
+        _out_queue_credits.find(input)->second->_flit = f;
       }
 
       f->Free();
@@ -793,6 +794,7 @@ void IQRouter::_InputQueuing( )
     BufferState * const dest_buf = _next_buf[output];
     
     dest_buf->ProcessCredit(c);
+
     c->Free();
     _proc_credits.pop_front();
   }
@@ -1220,6 +1222,7 @@ void IQRouter::_VCAllocUpdate( )
 	  }
 	  _out_queue_credits.find(input)->second->id=888;
 	  _out_queue_credits.find(input)->second->vc.push_back(f->vc);
+          _out_queue_credits.find(input)->second->_flit = f;
 	}
 	cur_buf->RemoveFlit(vc);
 	f->Free();
@@ -1479,6 +1482,7 @@ void IQRouter::_SWHoldUpdate( )
 	int vvc = voq2vc(rvc,_outputs);
 	_out_queue_credits.find(input)->second->id=777;
 	_out_queue_credits.find(input)->second->vc.push_back(vvc);
+        _out_queue_credits.find(input)->second->_flit = f;
       } else {
 	_out_queue_credits.find(input)->second->vc.push_back(vc);
       }
@@ -2256,6 +2260,7 @@ void IQRouter::_SWAllocUpdate( )
 		}*/
 	_out_queue_credits.find(input)->second->id=777;
 	_out_queue_credits.find(input)->second->vc.push_back(vvc);
+        _out_queue_credits.find(input)->second->_flit = f;
       } else {
 	_out_queue_credits.find(input)->second->vc.push_back(vc);
       }

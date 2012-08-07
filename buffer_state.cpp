@@ -110,31 +110,32 @@ void BufferState::ProcessCredit( Credit const * const c )
   assert( c );
   vector<int>::const_iterator iter = c->vc.begin();
   while(iter != c->vc.end()) {
+    int vc = *iter;
 
-    assert( ( *iter >= 0 ) && ( *iter < _vcs ) );
+    assert( ( vc >= 0 ) && ( vc < _vcs ) );
 
     if ( ( _wait_for_tail_credit ) && 
-	 ( !_in_use[*iter] ) ) {
+	 ( !_in_use[vc] ) ) {
       Error( "Received credit for idle buffer" );
     }
 
-    if ( _cur_occupied[*iter] > 0 ) {
-      if(_cur_occupied[*iter] > _vc_buf_size) {
+    if ( _cur_occupied[vc] > 0 ) {
+      if(_cur_occupied[vc] > _vc_buf_size) {
 	--_shared_occupied;
       }
-      --_cur_occupied[*iter];
+      --_cur_occupied[vc];
 
       if ( _wait_for_tail_credit &&
-	   ( _cur_occupied[*iter] == 0 ) && 
-	   ( _tail_sent[*iter] ) ) {
-	assert(_in_use[*iter] && _in_use_by[*iter] > -2);
-	_in_use[*iter] = false;
-	_in_use_by[*iter] = -2;
+	   ( _cur_occupied[vc] == 0 ) && 
+	   ( _tail_sent[vc] ) ) {
+	assert(_in_use[vc] && _in_use_by[vc] > -2);
+	_in_use[vc] = false;
+	_in_use_by[vc] = -2;
 	assert(_active_vcs > 0);
 	--_active_vcs;
       }
     } else {
-      cout << "VC = " << *iter << endl;
+      cout << "VC = " << vc << endl;
       cout<< "Buffer occupancy fell below zero" ;
       assert(false);
       //      Error( "Buffer occupancy fell below zero" );

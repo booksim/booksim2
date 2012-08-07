@@ -98,6 +98,7 @@ SuperNetwork::SuperNetwork( const Configuration &config, const string & name ) :
   _temp_channels = new Flit** [_network_clusters];
   _temp_credits = new Credit**[_network_clusters];
   _already_sent = new bool *[_network_clusters];
+  _already_sent_credit = new bool *[_network_clusters];
   int half_latency = (int)(_transition_channel_latency / 2);
   ostringstream temp_name;
   assert(_transition_channels_per_cluster % 2 == 0 || _transition_channels_per_cluster == 1);
@@ -111,12 +112,14 @@ SuperNetwork::SuperNetwork( const Configuration &config, const string & name ) :
     _output_transition_chan_cred[i].resize(_transition_channels_per_cluster, 0);
     _bit_vectors[i] = new vector<pair<int, vector<pair<int,int> > > > [_transition_channels_per_cluster];
     _already_sent[i] = new bool [_transition_channels_per_cluster];
+    _already_sent_credit[i] = new bool [_transition_channels_per_cluster];
     for (int c = 0; c < _transition_channels_per_cluster; c++)
     {
       InitializeBitVector(&(_bit_vectors[i][c]), _bit_vector_length, _counter_max);
       _temp_channels[i][c] = 0;
       _temp_credits[i][c] = 0;
       _already_sent[i][c] = false;
+      _already_sent_credit[i][c] = false;
       temp_name.str("");
       temp_name << "Input transition flit channel for network " << i << " index " << c;
       _input_transition_chan[i][c] = new FlitChannel(this, temp_name.str(), classes);
@@ -160,6 +163,7 @@ SuperNetwork::~SuperNetwork( )
     }
     delete [] _bit_vectors[n];
     delete [] _already_sent[n];
+    delete [] _already_sent_credit[n];
   }
   delete [] _bit_vectors;
   delete [] _input_transition_chan;
@@ -170,6 +174,7 @@ SuperNetwork::~SuperNetwork( )
   delete [] _temp_channels;
   delete [] _temp_credits;
   delete [] _already_sent;
+  delete [] _already_sent_credit;
 }
 
 SuperNetwork * SuperNetwork::NewNetwork(const Configuration & config, const string & name)
@@ -754,8 +759,9 @@ void SuperNetwork::ReadInputs( )
       _output_transition_chan_cred[n][i]->ReadInputs(); // Read inputs first and then receive.
       _temp_channels[n][i] = _output_transition_chan[n][i]->Receive();
       _temp_credits[n][i] = _input_transition_chan_cred[n][i]->Receive();
-      assert(_already_sent[n][i] == true || GetSimTime() == 0);
+      assert((_already_sent[n][i] == true && _already_sent_credit[n][i] == true) || GetSimTime() == 0);
       _already_sent[n][i] = false;
+      _already_sent_credit[n][i] = false;
     }
   }
 }
@@ -836,14 +842,39 @@ int SuperNetwork::GetNextCluster(int net, int chan) const
   return other_net;
 }
 
+int SuperNetwork::GetNextClusterCredit(int net, int chan) const
+{
+  int other_net = -1;
+  if (_network_clusters == 2)
+  {
+    other_net = net == 1 ? 0 : 1;
+  }
+  else
+  {
+    if (chan >= _transition_channels_per_cluster / 2)
+    {
+      other_net = net == _network_clusters - 1 ? 0 : net + 1;
+    }
+    else
+    {
+      other_net = net == 0 ? _network_clusters - 1 : net - 1;
+    }
+  }
+  assert(other_net >= 0);
+  return other_net;
+}
+
 void SuperNetwork::SendTransitionFlits(Flit *f, Credit *c, int net, int chan)
 {
   assert(_network_clusters > 1);
   int other_net = GetNextCluster(net, chan);
-  _input_transition_chan[other_net][chan]->Send(f);
-  _output_transition_chan_cred[other_net][chan]->Send(c);
   assert(_already_sent[other_net][chan] == false);
   _already_sent[other_net][chan] = true;
+  _input_transition_chan[other_net][chan]->Send(f);
+  other_net = GetNextClusterCredit(net, chan);
+  assert(_already_sent_credit[other_net][chan] == false);
+  _already_sent_credit[other_net][chan] = true;
+  _output_transition_chan_cred[other_net][chan]->Send(c);
 }
 
 // This is for the purposes of trafficmanager-network communication, not routing.
