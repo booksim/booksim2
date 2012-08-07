@@ -380,7 +380,7 @@ int SuperNetwork::GetOtherChannel(int chan) const
 // Frees any slots it had reserved for this flow id. Be careful though that grant flits carry timestamps, they don't use bit vectors any more.
 void SuperNetwork::HandleGrantFlits(Flit *f, int net, int chan)
 {
-  if (f->try_again_after_time != -1)
+  if (f->try_again_after_time != -1 || f->reservation_size == -1)
   {
     return;
   }

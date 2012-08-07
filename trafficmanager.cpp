@@ -1512,6 +1512,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
         else if (reservation == -1 && earliest_availability == -1)
         {
           ff->payload = -1;
+          ff->reservation_size = -1;
           // If we can't fit it at all in the future, regardless of flit vectors, signify that.
           ff->try_again_after_time = _time + _cycles_into_the_future - _cycles_per_element; // Make it a little earlier to account for propagation delay.       
         }
@@ -1700,7 +1701,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 #endif
 	  //the return time is offset by the reservation packet latency 
 	  //to prevent schedule fragmentation
-	  ff->reservation_size = int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));;
+	  ff->reservation_size = -1;
 	  //this functionality has been moved tot he source
 	  //-int(ceil(RESERVATION_RTT*float(_time-f->ntime)));
 
