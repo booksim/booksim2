@@ -217,15 +217,15 @@ void Network::WriteOutputs( )
 Flit* Network::GetSpecial(FlitChannel* fc, int vc){
   Flit* f = _special_inject[fc ][vc];
   _special_inject[fc ][vc] = NULL;
-    return f;
+  return f;
 }
 void Network::WriteSpecialFlit( Flit *f, int source )
 {
 
-  assert( ( source >= 0 ) && ( source < _nodes ) );
-  assert( _special_inject[ _inject[source] ][f->vc]==NULL);
-  _special_inject[ _inject[source] ][f->vc] = f;
-  // _inject[source]->Send(f);
+  //assert( ( source >= 0 ) && ( source < _nodes ) );
+  //assert( _special_inject[ _inject[source] ][f->vc]==NULL);
+  //_special_inject[ _inject[source] ][f->vc] = f;
+   _inject[source]->Send(f);
 }
 
 void Network::WriteFlit( Flit *f, int source )

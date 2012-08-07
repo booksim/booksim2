@@ -1657,9 +1657,10 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
       }
 #ifdef ENABLE_STATS
-      if(head->res_type==RES_TYPE_SPEC)
+      if(head->res_type==RES_TYPE_SPEC){
 	gStatSpecNetworkLatency[f->cl]->AddSample( f->atime - head->ntime);
-      
+
+      }
       gStatPureNetworkLatency[f->cl]->AddSample( f->atime - head->ntime);
 #endif
       if(f->res_type==RES_TYPE_SPEC){
@@ -1830,17 +1831,19 @@ int TrafficManager::_GeneratePacket( flow* fl, int n)
       f ->flid = fl->flid;
       assert(_cur_id);
       f->pid    = pid;
+   
       f->watch  = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
+      //watch watch
+      if(f->id == -1){
+	f->watch = true;
+      }
       f->subnetwork = subnetwork;
       f->src    = fl->src;
       f->time   = fl->create_time;
       f->record = record;
       f->cl     = fl->cl;
       f->sn = fl->sn++;
-      //watchwatch
-      if(f->id == -1){
-	f->watch=true;;
-      }
+
       _total_in_flight_flits[f->cl].insert(f->id);
       if(record) {
 	_measured_in_flight_flits[f->cl].insert(f->id);

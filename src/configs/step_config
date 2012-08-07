@@ -11,9 +11,7 @@ transient_stat_size=6666;
 
 injection_rate = {0.4,1.0};
 injection_process={bernoulli,hotspot_test};
-traffic       = {background_uniform,noself_hotspot};
-hotspot_nodes={32};
-hotspot_rates={1};
+traffic       = {background_uniform,rand_noself_hotspot};
 
 const_flits_per_packet = 32;
 sample_period=250000;
@@ -21,3 +19,7 @@ sample_period=250000;
 sim_count=1;
 max_samples=1;
 drain_measured_only=1;
+
+rand_hotspot_src=20;
+rand_hotspot_dst=2;
+perm_seed=1;

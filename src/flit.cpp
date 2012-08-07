@@ -114,7 +114,7 @@ Flit * Flit::Replicate(Flit* f){
   r->packet_size = f->packet_size-1;
   f->packet_size = 0;
 
-  r->watch = f->watch;
+  //r->watch = f->watch;
   r->subnetwork = f->subnetwork;
   r->src    = f->src;
   r->time   = f->time;

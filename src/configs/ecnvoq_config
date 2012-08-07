@@ -6,7 +6,7 @@ alloc_iters  = 1;
 
 priority = other;
 
-output_buffer_size=64;
+output_buffer_size=2;
 internal_speedup=2.0;
 vc_buf_size = 512;
 

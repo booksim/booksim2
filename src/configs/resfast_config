@@ -3,7 +3,7 @@ sw_allocator = separable_input_first;
 alloc_iters  = 1;
 
 
-output_buffer_size=64;
+output_buffer_size=2;
 internal_speedup  = 2.0;
 vc_buf_size = 512;
 	

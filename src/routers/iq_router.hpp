@@ -34,6 +34,7 @@
 #include <set>
 #include <map>
 
+#include "output_buffer.hpp"
 #include "router.hpp"
 #include "routefunc.hpp"
 #include "large_roundrobin_arb.hpp"
@@ -124,9 +125,7 @@ class IQRouter : public Router {
 
   tRoutingFunction   _rf;
 
-  vector<queue<Flit *> > _output_control_buffer;
-  vector<queue<Flit *> > _output_buffer;
-  int _output_buffer_size;
+  vector<OutputBuffer*> _output_buffer;
 
   vector<queue<Credit *> > _credit_buffer;
 
@@ -218,13 +217,14 @@ public:
   static VCTag* New(int t, int i, int v, int o);
   static VCTag* New();
   static VCTag* New(VCTag* old);
+  static void FreeAll();
   void Free();
   void Reset();
   void ResetTO();
   void Set(int t, int i, int v, int o);
 private:
   VCTag();
-  ~VCTag();
+  ~VCTag(){}
   static stack<VCTag *> _all;
   static stack<VCTag *> _free;
   static int _cur_id;

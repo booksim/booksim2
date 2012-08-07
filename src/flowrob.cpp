@@ -12,7 +12,6 @@ FlowROB::FlowROB(int flow_size){
 }
 
 FlowROB::~FlowROB(){
-
 }
 
 bool FlowROB::sn_check(int sn){

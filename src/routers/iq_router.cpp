@@ -81,15 +81,7 @@ extern int DEFAULT_CHANNEL_LATENCY;
 int IQRouter::voq2vc(int vvc, int outputs){
   assert(_voq);
   assert(outputs!=-1);
-  /*if(_spec_voq){
-    if(vvc<RES_RESERVED_VCS){
-    return vvc;
-    } else if(vvc<RES_RESERVED_VCS+_outputs){ //spec
-    return vvc-output;
-    } else{ //data
-    return vvc-output-(_outputs-1);
-    }
-    } else*/
+
 
   if(vvc<_special_vcs){
     return vvc;
@@ -108,13 +100,7 @@ bool IQRouter::is_control_vc(int vc){
 }
 bool IQRouter::is_voq_vc(int vc){
   assert(_voq);
-  /*if(_spec_voq){
-    if(vc<RES_RESERVED_VCS){
-    return false;
-    } else{ //data and spec
-    return true;
-    }
-    } else*/
+
   if(vc<_special_vcs){
     return false;
   } else { //data
@@ -123,21 +109,7 @@ bool IQRouter::is_voq_vc(int vc){
 }
 int IQRouter::vc2voq(int vc, int output){
   assert(_voq);
-  /*  if(_spec_voq){
-      if(vc<RES_RESERVED_VCS){
-      return vc;
-      } else if(vc<RES_RESERVED_VCS+1){//spec
-      if(output==-1)
-      return -1;
-      else 
-      return vc+output;
-      } else { //data
-      if(output==-1)
-      return -1;
-      else 
-      return vc+output+(_outputs-1);
-      }
-      } else */
+
   if(vc<_special_vcs){
     return vc;
   } else { //data
@@ -150,15 +122,7 @@ int IQRouter::vc2voq(int vc, int output){
 }
 int IQRouter::voqport(int vc){
   assert(_voq);
-  /*if(_spec_voq){
-    if(vc<RES_RESERVED_VCS){
-    return -1;
-    } else if(vc<RES_RESERVED_VCS+_outputs){
-    return vc-(RES_RESERVED_VCS);
-    } else { 
-    return vc-(RES_RESERVED_VCS)-_outputs;
-    }
-    } else */
+
     
   if(vc<_special_vcs){
     return -1;
@@ -193,7 +157,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   assert(!_cut_through || (config.GetInt("vc_busy_when_full")==1));
   _use_voq_size=(config.GetInt("use_voq_size")==1);
   _voq = (config.GetInt("voq") ==1);
-  //_spec_voq=(config.GetInt("reservation_spec_voq") ==1);
   _data_vcs         = config.GetInt( "num_vcs" );
   
 
@@ -202,6 +165,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     if(gReservation){
       _ctrl_vcs = RES_RESERVED_VCS+RES_RESERVED_VCS*gAuxVCs;
       _special_vcs = _ctrl_vcs + 1 + gAuxVCs + gAdaptVCs;
+ 
     } else if(gECN){
       _ctrl_vcs=ECN_RESERVED_VCS+gAuxVCs;;
       _special_vcs=_ctrl_vcs;
@@ -358,11 +322,14 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     _sw_rr_offset[i] = i % _input_speedup;
   
   // Output queues
-  _output_buffer_size = config.GetInt("output_buffer_size");
   _output_buffer.resize(_outputs); 
-  if(gReservation || gECN){
-    _output_control_buffer.resize(_outputs);
+  for(int o = 0; o<_outputs; o++){
+    _output_buffer[o] = new OutputBuffer(config, this, "output_buffer");
   }
+  for(int i = _ctrl_vcs; i< _special_vcs; i++){
+    OutputBuffer::SetSpecVC(i);
+  }
+
   _credit_buffer.resize(_inputs); 
 
   // Switch configuration (when held for multiple cycles)
@@ -427,6 +394,7 @@ IQRouter::~IQRouter( )
 
   delete _bufferMonitor;
   delete _switchMonitor;
+  VCTag::FreeAll();
 }
   
 void IQRouter::ReadInputs( )
@@ -600,8 +568,9 @@ bool IQRouter::_ReceiveFlits( )
   for(int input = 0; input < _inputs; ++input) { 
     if( _input_channels[input]->GetSource() == -1){
       Flit * f;
-      for(int vc = 0; vc< (_special_vcs+_data_vcs); vc++){
-	f = net[0]->GetSpecial( _input_channels[input],vc);
+      //for(int vc = 0; vc< (_special_vcs+_data_vcs); vc++){
+      //f = net[0]->GetSpecial( _input_channels[input],vc);
+      f = _input_channels[input]->Receive();
 
 	if(gReservation){
 	  f = _ExpirationCheck(f, input);
@@ -619,7 +588,7 @@ bool IQRouter::_ReceiveFlits( )
 	  _in_queue_flits.insert(make_pair(input, f));
 	  activity = true;
 	}
-      }
+	//}
     } else {
       Flit *  f = _input_channels[input]->Receive();
       if(gReservation)
@@ -1014,7 +983,7 @@ void IQRouter::_VCAllocEvaluate( )
     }
   }
 
-  if(watched) {
+  if( _vc_allocator && watched) {
     *gWatchOut << GetSimTime() << " | " << _vc_allocator->FullName() << " | ";
     _vc_allocator->PrintRequests( gWatchOut );
   }
@@ -1026,7 +995,7 @@ void IQRouter::_VCAllocEvaluate( )
 #endif
   }
 
-  if(watched) {
+  if( _vc_allocator && watched) {
     *gWatchOut << GetSimTime() << " | " << _vc_allocator->FullName() << " | ";
     _vc_allocator->PrintGrants( gWatchOut );
   }
@@ -1276,7 +1245,7 @@ void IQRouter::_VCAllocUpdate( )
 	     (!_cut_through && dest_buf->IsAvailableFor(match_vc)));
       
       dest_buf->TakeBuffer(match_vc);
-      
+
       cur_buf->SetOutput(vc, match_output, match_vc);
       cur_buf->SetState(vc, VC::active);
       if(!_speculative) {
@@ -1437,8 +1406,8 @@ void IQRouter::_SWHoldUpdate( )
       continue;
     }
 
-    if(expanded_output >= 0  && ( _output_buffer_size==-1 || _output_buffer[expanded_output].size()<size_t(_output_buffer_size))) {
-
+    int out_vc = cur_buf->GetOutputVC(vc);
+    if(expanded_output >= 0  &&  !_output_buffer[expanded_output]->Full(out_vc)) {
       assert(_switch_hold_in[expanded_input] == expanded_output);
       assert(_switch_hold_out[expanded_output] == expanded_input);
       
@@ -1566,8 +1535,8 @@ void IQRouter::_SWHoldUpdate( )
 	  _sw_hold_vcs.push_back(ntag);
 	}
       }
-    } else {
-      
+    } else {      
+      //this cancel can be caused by output buffer, output buffer frag
       int const held_expanded_output = _switch_hold_in[expanded_input];
       assert(held_expanded_output >= 0);
       
@@ -1746,11 +1715,11 @@ void IQRouter::_SWAllocEvaluate( )
       
       BufferState const * const dest_buf = _next_buf[dest_output];
   
-
+      
       if( (gReservation||gECN) &&
 	  is_control_vc(dest_vc) && 
-	  (!dest_buf->HasCreditFor(dest_vc) || ( _output_buffer_size!=-1  && _output_control_buffer[dest_output].size()>=(size_t)(_output_buffer_size)))){
-
+	  (!dest_buf->HasCreditFor(dest_vc) ||_output_buffer[dest_output]->ControlFull())){
+	
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  VC control" << dest_vc 
@@ -1758,7 +1727,7 @@ void IQRouter::_SWAllocEvaluate( )
 		     << " is full." << endl;
 	}
 	continue;
-      } else if(!dest_buf->HasCreditFor(dest_vc) || ( _output_buffer_size!=-1  && _output_buffer[dest_output].size()>=(size_t)(_output_buffer_size))) {
+      } else if(!dest_buf->HasCreditFor(dest_vc) || _output_buffer[dest_output]->Full(dest_vc)) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  VC " << dest_vc 
@@ -1807,11 +1776,13 @@ void IQRouter::_SWAllocEvaluate( )
 	assert((dest_vc >= 0) && (dest_vc < (_special_vcs+_data_vcs)));
 	if( (gReservation||gECN) &&
 	    is_control_vc(dest_vc) && 
-	    (dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_control_buffer[dest_output].size()<(size_t)(_output_buffer_size))) ){
+	    (dest_buf->IsAvailableFor(dest_vc) && 
+	     !_output_buffer[dest_output]->ControlFull())){
 
 	  do_request = true;
 	  break;
-	} else if(dest_buf->IsAvailableFor(dest_vc) && ( _output_buffer_size==-1 || _output_buffer[dest_output].size()<(size_t)(_output_buffer_size))) {
+	} else if(dest_buf->IsAvailableFor(dest_vc) && 
+		  !_output_buffer[dest_output]->Full(dest_vc)) {
 	  do_request = true;
 	  break;
 	}
@@ -2223,7 +2194,6 @@ void IQRouter::_SWAllocUpdate( )
 	cur_buf->SetState(vc, VC::active);
 	cur_buf->SetOutput(vc, output, match_vc);
 	dest_buf->TakeBuffer(match_vc);
-
 	_vc_rr_offset[output*_classes+cl] = (match_vc + 1) % (_special_vcs+_data_vcs);
 
       } else {
@@ -2434,12 +2404,10 @@ void IQRouter::_SwitchUpdate( )
     }
     if( (gECN || gReservation) &&
 	is_control_vc(f->vc)){ 
-      _output_control_buffer[output].push(f);
+      _output_buffer[output]->QueueControlFlit(f);
     } else {
-      _output_buffer[output].push(f);
+      _output_buffer[output]->QueueFlit(f->vc, f);
     }
-
-
     _crossbar_flits.pop_front();
   }
 }
@@ -2488,61 +2456,32 @@ void IQRouter::_SendFlits( )
 	}
       } else {
 	if(_output_hysteresis[i]){
-	  _output_hysteresis[i] = (_output_buffer[i].size() >=((size_t)ECN_CONGEST_THRESHOLD-ECN_BUFFER_HYSTERESIS));
+	  _output_hysteresis[i] = (_output_buffer[i]->DataSize() >=((size_t)ECN_CONGEST_THRESHOLD-ECN_BUFFER_HYSTERESIS));
 	} else {
-	  _output_hysteresis[i] = (_output_buffer[i].size() >=((size_t)ECN_CONGEST_THRESHOLD+ECN_BUFFER_HYSTERESIS));
+	  _output_hysteresis[i] = (_output_buffer[i]->DataSize() >=((size_t)ECN_CONGEST_THRESHOLD+ECN_BUFFER_HYSTERESIS));
 	}
       }
       for(int j = 0; j<(_special_vcs+_data_vcs); j++){
 	BufferState * const dest_buf = _next_buf[i];
 	if(_credit_hysteresis[i*(_special_vcs+_data_vcs)+j]){
-	  _credit_hysteresis[i*(_special_vcs+_data_vcs)+j] = ( (dest_buf->Size(j)-_output_buffer[i].size()) < ECN_BUFFER_THRESHOLD+ECN_CREDIT_HYSTERESIS);
+	  _credit_hysteresis[i*(_special_vcs+_data_vcs)+j] = ( (dest_buf->Size(j)-_output_buffer[i]->DataSize()) < ECN_BUFFER_THRESHOLD+ECN_CREDIT_HYSTERESIS);
 	} else {
-	  _credit_hysteresis[i*(_special_vcs+_data_vcs)+j] = ( (dest_buf->Size(j)-_output_buffer[i].size()) < ECN_BUFFER_THRESHOLD-ECN_CREDIT_HYSTERESIS);
+	  _credit_hysteresis[i*(_special_vcs+_data_vcs)+j] = ( (dest_buf->Size(j)-_output_buffer[i]->DataSize()) < ECN_BUFFER_THRESHOLD-ECN_CREDIT_HYSTERESIS);
 	}
       }
     }
   }
   for ( int output = 0; output < _outputs; ++output ) {
-    if((gECN||gReservation) &&
-       !_output_control_buffer[output].empty( )) {
-      Flit * const f = _output_control_buffer[output].front( );
-      assert(f);     
+    Flit * f = _output_buffer[output]->SendFlit();
+    if(f){
+     ++_sent_flits[output];
 
-      _output_control_buffer[output].pop( );
-      ++_sent_flits[output];
-      if(f->watch)
-	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		   << "Sending control flit " << f->id
-		   << " to channel at output " << output
-		   << "." << endl;
-      if(gTrace) {
-	cout << "Outport " << output << endl << "Stop Mark" << endl;
-      }
-      _output_channels[output]->Send( f );
-    } else    if ( !_output_buffer[output].empty( ) ) {
-      Flit * const f = _output_buffer[output].front( );
-
-      assert(f);      
-      //      BufferState * const dest_buf = _next_buf[output];
-      if(gECN && f->head && !f->fecn ){	
+      if(gECN && f->head && f->res_type==RES_TYPE_NORM && !f->fecn ){	
 	if(_output_hysteresis[output] &&
 	   _credit_hysteresis[output*(_special_vcs+_data_vcs)+f->vc]){
 	  _ECN_activated[output*(_special_vcs+_data_vcs)+f->vc]++;
 	  f->fecn= true; 
 	}
-      }
-	
-
-      _output_buffer[output].pop( );
-      ++_sent_flits[output];
-      if(f->watch)
-	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		   << "Sending flit " << f->id
-		   << " to channel at output " << output
-		   << "." << endl;
-      if(gTrace) {
-	cout << "Outport " << output << endl << "Stop Mark" << endl;
       }
       _output_channels[output]->Send( f );
     }
@@ -2651,6 +2590,15 @@ void VCTag::Free() {
   _free.push(this);
   _use = false;
 }
+void VCTag::FreeAll(){
+  if(!_all.empty()){
+    cout<<_all.size()<<" maximum VCTag evenets"<<endl;
+    while(!_all.empty()){
+      delete _all.top();
+      _all.pop();
+    }
+  }
+}
 VCTag * VCTag::New(VCTag* old) {
   return New(old->_time,
 	     old->_input,
@@ -2692,6 +2640,7 @@ void VCTag::ResetTO(){
   _time = -1;
   _output=-1;
 }
+
 
 
 
