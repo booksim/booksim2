@@ -77,6 +77,7 @@ void FlowBuffer::Deactivate(){
   }
   _flit_status.clear();
   _flit_buffer.clear();
+  _watch = false;
 }
 
 void FlowBuffer::Init( flow* f){
@@ -686,7 +687,7 @@ Flit* FlowBuffer::send(){
 	TOTAL_SPEC_BUFFER++;
 	_last_sn = f->sn;
 	_tail_sent = f->tail;
-        if (f->tail == true && _time_to_send_res > -1 && _id == 36)
+        if (f->tail == true && _time_to_send_res > -1)
         {
           _was_reset = true;
         }

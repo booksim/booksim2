@@ -2574,7 +2574,7 @@ void TrafficManager::_Step( )
 	   !_reservation_set[source].empty()){
 	  if(dest_buf->IsAvailableFor(0) &&
 	     dest_buf->HasCreditFor(0)){
-	    dest_buf->TakeBuffer(0); 
+	    dest_buf->TakeBuffer(0);
 
 	    _reservation_arb[source]->Clear();
 	    for(set<FlowBuffer*>::iterator i=_reservation_set[source].begin();
