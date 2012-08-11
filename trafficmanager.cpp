@@ -1433,9 +1433,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       _last_sent_spec_buffer[dest] = 0;
       _retries[dest]++;
     }
-    if( receive_flow_buffer!=NULL &&
-	receive_flow_buffer->fl->flid == f->flid &&
-        rob_erased == false){
+    if( receive_flow_buffer!=NULL && rob_erased == false &&
+	receive_flow_buffer->fl->flid == f->flid){
 
 #ifdef ENABLE_STATS
       if(f->try_again_after_time == -1 && f->payload>_time){
@@ -1469,7 +1468,10 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     {
       //assert(_rob[dest].count(f->flid)!=0);
       receive_rob = _rob[dest][f->flid];
-      f = receive_rob->insert(f);
+      if (f->is_resend == false)
+      {
+        f = receive_rob->insert(f);
+      }
     }
 
     if(f){
@@ -1495,7 +1497,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
           cout << "But it's a dud! Try again after time: " << f->try_again_after_time << endl;
         }
       }
-      if (f->try_again_after_time == -1 && rob_erased == false)
+      if (f->try_again_after_time == -1)
       {
         //the return time is offset by the reservation packet latency 
         //to prevent schedule fragmentation
@@ -1531,7 +1533,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       {
         ff->payload = -1;
         assert(ff->try_again_after_time != -1);
-        if (earliest_availability == -1 || rob_erased == true)
+        if (earliest_availability == -1)
         {
           // If we can't fit it at all in the future, regardless of flit vectors, signify that.
           ff->try_again_after_time = _time + _cycles_into_the_future - _cycles_per_element; // Make it a little earlier to account for propagation delay.
@@ -1561,6 +1563,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
         ff->bottleneck_channel_choices.insert(ff->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.begin(), f->bottleneck_channel_choices.end());
       }
       ff->pri = FLIT_PRI_GRANT;
+      ff->is_resend = f->is_resend;
       _response_packets[dest].push_back(ff);
     }
   
@@ -2140,7 +2143,7 @@ int TrafficManager::_GeneratePacket( flow* fl, int n)
       f->sn = fl->sn++;
       //watchwatch
       if(f->id == -1){
-	f->watch=true;;
+	f->watch=true;
       }
       _total_in_flight_flits[f->cl].insert(f->id);
       if(record) {

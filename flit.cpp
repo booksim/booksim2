@@ -112,6 +112,7 @@ void Flit::Reset()
   epoch = -1;
   try_again_after_time = -1;
   reservation_size = -1;
+  is_resend = false;
   bottleneck_channel_choices.clear();
   reservation_vector.clear();
 }  

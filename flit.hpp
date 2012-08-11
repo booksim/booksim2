@@ -72,6 +72,7 @@ public:
   bool going_up_clusters;
   int cluster_hops;
   int cluster_hops_taken;
+  bool is_resend;
 
   int head_sn;
   mutable int ring_par;

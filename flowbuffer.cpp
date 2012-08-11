@@ -493,6 +493,7 @@ void FlowBuffer::grant(int time, int try_again, int lat){
     ReconstructFlit();
     assert(_last_payload > 0);
     _reservation_flit->payload = _last_payload;
+    _reservation_flit->is_resend = true;
     _reservation_check = false;
     _res_outstanding = false;
     _res_sent = false;
