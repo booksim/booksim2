@@ -1490,8 +1490,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       ff = IssueSpecial(dest,f);
       ff->id=999;
       if(f->flid == WATCH_FLID){
-	cout<<"Reservation received"<<endl;
-	ff->watch = true;
+	cout<<"Flow ID " << f->flid << " reservation received"<<endl;
         if (f->try_again_after_time != -1 && ff->watch == true)
         {
           cout << "But it's a dud! Try again after time: " << f->try_again_after_time << endl;
@@ -1692,7 +1691,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	  ff->id=666;
 	  if(f->flid == WATCH_FLID){
 	    cout<<"End rservation Reservation received"<<endl;
-	    ff->watch = true;
 	  }
           int earliest_availability = EarliestAvailability(dest, f->payload);
 #ifdef ENABLE_STATS
@@ -2490,7 +2488,6 @@ void TrafficManager::_Step( )
       }
       flb->_was_reset = false;
 
-
       if(flb->_vc == -1 &&
 	 (flb->send_norm_ready())){
 	_FlowVC( flb);
@@ -2502,7 +2499,7 @@ void TrafficManager::_Step( )
 	}
         assert(flb->front()->res_type == RES_TYPE_RES);
       }
-      else if (flb->send_spec_ready() && !RESERVATION_TAIL_RESERVE && flb->front()->res_type == RES_TYPE_RES)
+      else if ((flb->front() != 0 && flb->front()->res_type == RES_TYPE_RES) && !RESERVATION_TAIL_RESERVE)
       {
         _reservation_set[source].insert(flb);
       }

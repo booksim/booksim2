@@ -310,6 +310,7 @@ void SuperNetwork::ReserveBitVector(Flit *f, int net, int chan)
     int old_value = f->try_again_after_time;
     f->try_again_after_time = GetSimTime() + _try_again_delay;
     f->try_again_after_time = MAX(old_value, f->try_again_after_time);
+    f->payload = -1;
   }
 }
 
@@ -453,6 +454,7 @@ void SuperNetwork::HandleGrantFlits(Flit *f, int net, int chan)
         int old_value = f->try_again_after_time;
         f->try_again_after_time = GetSimTime() + _try_again_delay;
         f->try_again_after_time = MAX(old_value, f->try_again_after_time);
+        f->payload = -1;
         assert(_enable_multi_SRP == true);
       }
       else

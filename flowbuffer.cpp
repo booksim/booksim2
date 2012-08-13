@@ -558,11 +558,16 @@ Flit* FlowBuffer::front(){
 	f = _flit_buffer[_last_sn+1];
 	f->res_type = RES_TYPE_SPEC;
       }  else {
-	assert(false);
+          ; // Used to have assert(false) but now it's possible since line 2517 of trafficmanager.cpp changed.
       }
     }
     break;
-  case FLOW_STATUS_NACK:
+  case FLOW_STATUS_NACK: // We may be in the NACK state if the first reply was a retry and we also got some NACKs.
+    if(!_res_sent && _time_to_send_res <= GetSimTime()){
+      f = _reservation_flit;
+      assert(f && f->res_type == RES_TYPE_RES);
+      _time_to_send_res = -1;
+    }
   default:
     break;
   }
@@ -700,6 +705,17 @@ Flit* FlowBuffer::send(){
     }
     break;
   case FLOW_STATUS_NACK:
+    if(!_res_sent && _time_to_send_res <= GetSimTime()){
+      _reservation_flit->vc=0;
+      _reservation_flit->time = GetSimTime();
+      f = _reservation_flit;
+      assert(f->res_type == RES_TYPE_RES);
+      _res_sent = true;
+      _res_outstanding=true;
+      assert(_last_payload == -1);
+      _last_payload = f->payload;
+      _reservation_flit = 0;
+    }
   default:
     break;
   }
@@ -731,7 +747,7 @@ Flit* FlowBuffer::send(){
 bool FlowBuffer::eligible(){
   return _active && _vc!=-1 &&
     (send_norm_ready() ||
-     send_spec_ready());
+     send_spec_ready() || (_status == FLOW_STATUS_NACK && front() != 0 && front()->res_type == RES_TYPE_RES));
 }
 
 
