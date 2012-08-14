@@ -137,7 +137,7 @@ bool ECN_AIMD = false;
 
 int DEFAULT_CHANNEL_LATENCY;
 
-#define WATCH_FLID -1
+#define WATCH_FLID 688
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 
@@ -1530,8 +1530,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       }
       else
       {
-        ff->payload = -1;
-        assert(ff->try_again_after_time != -1);
+        assert(ff->payload == -1);
         if (earliest_availability == -1)
         {
           // If we can't fit it at all in the future, regardless of flit vectors, signify that.
@@ -1539,7 +1538,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
         }
         else
         {
-          ff->try_again_after_time = f->try_again_after_time;
+          ff->try_again_after_time = MAX(f->try_again_after_time, earliest_availability);
         }
       }
 #ifdef ENABLE_STATS
@@ -3317,7 +3316,7 @@ bool TrafficManager::_SingleSim( )
 	*/
 	
 	if((_sim_state != warming_up || !_forced_warmup) &&
-	   (lat_exc_class < 0) &&
+	   (lat_exc_class < 0) && c == 0 && // XXX Added c == 0.
 	   (_latency_thres[c] >= 0.0) &&
 	   ((latency / count) > _latency_thres[c])) {
 	  lat_exc_class = c;
@@ -3419,7 +3418,7 @@ bool TrafficManager::_SingleSim( )
 		acc_count++;
 	      }
 	      */
-	      if((acc_latency / acc_count) > threshold) {
+	      if((acc_latency / acc_count) > threshold && c == 0) { // XXX. Added c == 0.
 		lat_exc_class = c;
 		break;
 	      }

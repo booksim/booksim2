@@ -468,9 +468,10 @@ void FlowBuffer::grant(int time, int try_again, int lat){
   assert(_mode == RES_MODE);
   if(_watch){
     cout<<"flow "<<fl->flid
-	<<" received grant at time "<<time<<endl;
+	<<" received grant at time "<<time <<" simulation time " << GetSimTime() <<endl;
   }
   assert(RESERVATION_TAIL_RESERVE || _reserved_time == -1);
+  assert(time != -1 || try_again != -1);
   if (try_again == -1)
   {
     if( _reserved_time == -1){
