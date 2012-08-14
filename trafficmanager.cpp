@@ -137,7 +137,7 @@ bool ECN_AIMD = false;
 
 int DEFAULT_CHANNEL_LATENCY;
 
-#define WATCH_FLID 688
+#define WATCH_FLID -1
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 

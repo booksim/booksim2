@@ -468,7 +468,7 @@ void FlowBuffer::grant(int time, int try_again, int lat){
   assert(_mode == RES_MODE);
   if(_watch){
     cout<<"flow "<<fl->flid
-	<<" received grant at time "<<time <<" simulation time " << GetSimTime() <<endl;
+	<<" received grant at time "<<time <<" retry is " << try_again <<" simulation time " << GetSimTime() <<endl;
   }
   assert(RESERVATION_TAIL_RESERVE || _reserved_time == -1);
   assert(time != -1 || try_again != -1);
@@ -578,6 +578,7 @@ Flit* FlowBuffer::front(){
 Flit* FlowBuffer::send(){
   Flit* f = NULL;
   assert(_was_reset == false);
+  assert(GetSimTime()>=_sleep_time);
   switch(_status){
   case FLOW_STATUS_NORM:
     //not in the middle of a packet
@@ -805,6 +806,14 @@ bool FlowBuffer::send_spec_ready(){
 	return (_ready>0 && _reserved_slots>0);
       }
     }
+    break;
+  case FLOW_STATUS_NACK: // XXX Make sure it works.
+    if(GetSimTime()<_sleep_time)
+      return false;
+    if(!_res_sent && _time_to_send_res <= GetSimTime()){
+      return true;
+    }
+    break;
   default:
     break;
   } 
