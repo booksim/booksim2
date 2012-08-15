@@ -64,6 +64,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["cut_through"]=0;
 
   _int_map["transient_granularity"] = 1;
+  _int_map["transient_prestart"] = 50000;
   _int_map["transient_start"] = 100000;
   _int_map["transient_burst"] = 0;
   _int_map["transient_enable"] = 0;

@@ -65,9 +65,13 @@ double** transient_ecn;
 long** transient_ird;
 
 int** transient_count;
+//time period to capture before transient
 int transient_prestart = 50000;
+//transient event length
 int transient_duration  = 1;
+//size of the stat capture array (prestart+duration)/granularity
 int transient_record_duration  = 1000;
+//beginning of transient event
 int transient_start  = 100000;
 float transient_rate = 1.0;
 int transient_class = 1;
@@ -190,6 +194,7 @@ Stats* gStatROBRange;
 Stats* gStatFlowSenderLatency;
 Stats* gStatFlowLatency;
 Stats* gStatActiveFlowBuffers;
+Stats* gStatNormActiveFlowBuffers;
 Stats* gStatReadyFlowBuffers;
 Stats* gStatResponseBuffer;
 
@@ -275,6 +280,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   TRANSIENT_ENABLE = (config.GetInt("transient_enable")==1);
   transient_duration  = config.GetInt("transient_duration");
   transient_start  = config.GetInt("transient_start");
+  transient_prestart = config.GetInt("transient_prestart");
   transient_granularity  = config.GetInt("transient_granularity");
   transient_record_duration=config.GetInt("transient_stat_size");
   transient_data_file=config.GetStr("transient_data");
@@ -427,7 +433,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   
   gStatFlowSenderLatency =  new Stats( this, "flow_sender_latency" , 5.0, 1000 );
   gStatFlowLatency=  new Stats( this, "flow_latency" , 10.0, 5000 );
-  gStatActiveFlowBuffers=  new Stats( this, "sender_active_flows" , 1.0, 10 );
+  gStatActiveFlowBuffers=  new Stats( this, "active_flows" , 1.0, 10 );
+  gStatNormActiveFlowBuffers=  new Stats( this, "normal_active_flows" , 1.0, 10 );
   gStatReadyFlowBuffers=  new Stats( this, "sender_ready_flows" , 1.0, 10 );
   gStatResponseBuffer=  new Stats( this, "response_range" , 1.0, 10 );
   
@@ -1075,6 +1082,7 @@ TrafficManager::~TrafficManager( )
   delete gStatFlowSenderLatency;
   delete gStatFlowLatency;
   delete gStatActiveFlowBuffers;
+  delete gStatNormActiveFlowBuffers;
   delete  gStatReadyFlowBuffers;
   delete  gStatResponseBuffer;
   
@@ -1241,8 +1249,8 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 #endif
     receive_flow_buffer = _flow_buffer[dest][f->flbid];
 
-    if( receive_flow_buffer->active()&&
-	receive_flow_buffer!=NULL &&
+    if( receive_flow_buffer!=NULL &&
+	receive_flow_buffer->active()&&
 	receive_flow_buffer->fl->flid == f->flid){
 
 #ifdef ENABLE_STATS
@@ -2168,12 +2176,18 @@ void TrafficManager::_Step( )
       _flow_buffer_arb[source]->Clear();  
     }
 
+    int eligible_flows = 0;
+    int normal_flows = 0;
     bool node_ready = false;
     for(set<FlowBuffer*>::iterator i = _active_set[source].begin();
 	i!=_active_set[source].end();
 	i++){
       FlowBuffer* flb = *i;
       flb->active_update();
+
+
+
+
 
       if(flb->_vc == -1 &&
 	 (flb->send_norm_ready())){
@@ -2189,6 +2203,11 @@ void TrafficManager::_Step( )
       if(gECN){
 	flb->ecn_update();
       }
+      if(flb->send_norm_ready())
+	normal_flows++;
+      if(flb->eligible()){
+	eligible_flows ++;
+      }	
       node_ready = 	node_ready || flb->eligible();
       if(ready_flow_buffer==NULL){
 	if(flb->eligible() &&
@@ -2205,14 +2224,14 @@ void TrafficManager::_Step( )
       int id = _flow_buffer_arb[source]->Arbitrate();
       _flow_buffer_arb[source]->UpdateState();
       ready_flow_buffer = _flow_buffer[source][id];
-
-
     }
 
 #ifdef ENABLE_STATS
     gStatNodeReady[source]+=int(node_ready);
-    //this stat may not be accurate, flows can be in both queues
-    gStatActiveFlowBuffers->AddSample(int(_active_set[source].size()));  
+    if(eligible_flows)
+      gStatActiveFlowBuffers->AddSample(eligible_flows);  
+    if(normal_flows)
+      gStatNormActiveFlowBuffers->AddSample(normal_flows);  
 #endif
 
     
@@ -2468,8 +2487,8 @@ void TrafficManager::_Step( )
     ///*
     gStatResEarly_POS->Clear();
     gStatResEarly_NEG->Clear();
-    gStatReservationMismatch_POS->Clear();
-    gStatReservationMismatch_NEG->Clear();
+    //gStatReservationMismatch_POS->Clear();
+    //gStatReservationMismatch_NEG->Clear();
     //*/
   }
 
@@ -2637,6 +2656,7 @@ void TrafficManager::_ClearStats( )
   gStatFlowSenderLatency->Clear();
   gStatFlowLatency->Clear();
   gStatActiveFlowBuffers->Clear();
+  gStatNormActiveFlowBuffers->Clear();
   gStatReadyFlowBuffers->Clear();
   gStatResponseBuffer->Clear();
 
@@ -3508,6 +3528,8 @@ void TrafficManager::_DisplayTedsShit(){
 	       <<*gStatFlowLatency <<"];\n";
     *_stats_out<< "active_flows = ["
 	       <<*gStatActiveFlowBuffers <<"];\n";
+    *_stats_out<< "normal_active_flows = ["
+	       <<*gStatNormActiveFlowBuffers <<"];\n";
     *_stats_out<< "ready_flows = ["
 	       <<*gStatReadyFlowBuffers <<"];\n";
     *_stats_out<< "response_range = ["
@@ -3606,27 +3628,45 @@ void TrafficManager::_DisplayTedsShit(){
     } else if(TRANSIENT_ENABLE && transient_data_file!=""){
       ofstream tfile;
       tfile.open(transient_data_file.c_str());
-      
-      for(int i = 0; i<transient_record_duration; i++){
-	tfile<<transient_stat[0][0][i]<<" "<<transient_count[0][i]<<" ";
-	tfile<<transient_stat[1][0][i]<<" "<<transient_count[1][i]<<" ";
-      }
-      for(int i = 0; i<transient_record_duration; i++){
-	tfile<<transient_stat[0][1][i]<<" "<<transient_count[0][i]<<" ";
+      //class 0 network latency
+      for(int i = 0; i<transient_record_duration; i++)
+	tfile<<transient_stat[0][0][i]<<" ";
+      //class 0 latency
+      for(int i = 0; i<transient_record_duration; i++)
+	tfile<<transient_stat[0][1][i]<<" ";
+      //class 0 accepted
+      for(int i = 0; i<transient_record_duration; i++)
 	tfile<<transient_stat[0][2][i]<<" ";
-	tfile<<transient_stat[1][1][i]<<" "<<transient_count[1][i]<<" ";
+      //class 0 packet count
+      for(int i = 0; i<transient_record_duration; i++)
+	tfile<<transient_count[0][i]<<" ";
+
+      //class 1 network latency
+      for(int i = 0; i<transient_record_duration; i++)
+	tfile<<transient_stat[1][0][i]<<" ";
+      //class 1 latency
+      for(int i = 0; i<transient_record_duration; i++)
+	tfile<<transient_stat[1][1][i]<<" ";
+      //class 1 accepted
+      for(int i = 0; i<transient_record_duration; i++)
 	tfile<<transient_stat[1][2][i]<<" ";
-      }
+      //class 1 packet count
+      for(int i = 0; i<transient_record_duration; i++)
+	tfile<<transient_count[1][i]<<" ";
+
+
+      
       if(gECN){
-	for(int i = 0; i<transient_record_duration; i++){
+	for(int i = 0; i<transient_record_duration; i++)
 	  tfile<<transient_ecn[0][i]<<" ";
+	for(int i = 0; i<transient_record_duration; i++)
 	  tfile<<transient_ecn[1][i]<<" ";
-	}
-	for(int i = 0; i<transient_record_duration; i++){
+	for(int i = 0; i<transient_record_duration; i++)
 	  tfile<<transient_ird[0][i]<<" ";
+	for(int i = 0; i<transient_record_duration; i++)
 	  tfile<<transient_ird[1][i]<<" ";
-	}
       }
+      
       cout<<"test ";
       cout<<transient_stat[0][0][0]<<" "<<transient_count[0][0]<<" ";
       cout<<transient_stat[1][0][0]<<" "<<transient_count[1][0]<<" ";
@@ -3781,29 +3821,46 @@ void TrafficManager::_LoadTransient(const string & filename){
   string line;
   if(tfile.is_open()) {
     while(!tfile.eof()) {
-      for(int i = 0; i<transient_record_duration; i++){
+      //class 0 network latency
+      for(int i = 0; i<transient_record_duration; i++)
 	tfile>>transient_stat[0][0][i];
-	tfile>>transient_count[0][i];
-	tfile>>transient_stat[1][0][i];
-	tfile>>transient_count[1][i];
-      }
-      for(int i = 0; i<transient_record_duration; i++){
+      //class 0 latency
+      for(int i = 0; i<transient_record_duration; i++)
 	tfile>>transient_stat[0][1][i];
-	tfile>>transient_count[0][i];
+      //class 0 accepted
+      for(int i = 0; i<transient_record_duration; i++)
 	tfile>>transient_stat[0][2][i];
+      //class 0 packet count
+      for(int i = 0; i<transient_record_duration; i++)
+	tfile>>transient_count[0][i];
+
+
+      //class 1 network latency
+      for(int i = 0; i<transient_record_duration; i++)
+	tfile>>transient_stat[1][0][i];
+      //class 1 latency
+      for(int i = 0; i<transient_record_duration; i++)
 	tfile>>transient_stat[1][1][i];
-	tfile>>transient_count[1][i];
+      //class 1 accepted
+      for(int i = 0; i<transient_record_duration; i++)
 	tfile>>transient_stat[1][2][i];
-      }
+      //class 1 packet count
+      for(int i = 0; i<transient_record_duration; i++)
+	tfile>>transient_count[1][i];
+
+
+      
       if(gECN){
-	for(int i = 0; i<transient_record_duration; i++){
+	for(int i = 0; i<transient_record_duration; i++)
 	  tfile>>transient_ecn[0][i];
+	for(int i = 0; i<transient_record_duration; i++)
 	  tfile>>transient_ecn[1][i];
-	}
-	for(int i = 0; i<transient_record_duration; i++){
+	
+	for(int i = 0; i<transient_record_duration; i++)
 	  tfile>>transient_ird[0][i];
+	for(int i = 0; i<transient_record_duration; i++)
 	  tfile>>transient_ird[1][i];
-	}
+	
       }
     }
     cout<<"test ";

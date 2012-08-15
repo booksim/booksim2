@@ -33,10 +33,11 @@ struct flow{
   short cl;
 
   int sn;
+  queue<Flit*>* buffer;
+
   flow(){
     buffer=NULL;
   }
-  queue<Flit*>* buffer;
   ~flow(){
     if(buffer){
       while(!buffer->empty()){

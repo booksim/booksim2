@@ -154,6 +154,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _next_bandwidth_commitment.resize(outputs,0);
 
   _cut_through = (config.GetInt("cut_through")==1);
+  assert(_cut_through); //all the output buffer changes requires this
   assert(!_cut_through || (config.GetInt("vc_busy_when_full")==1));
   _use_voq_size=(config.GetInt("use_voq_size")==1);
   _voq = (config.GetInt("voq") ==1);
@@ -952,8 +953,10 @@ void IQRouter::_VCAllocEvaluate( )
       // actual packet priorities, which is reflected in "out_priority".
 
 
-      if(( _cut_through && dest_buf->IsAvailableFor(out_vc,cur_buf->FrontFlit(vc)->packet_size))||
-	 (!_cut_through && dest_buf->IsAvailableFor(out_vc))) {
+      if(_cut_through && 
+	 dest_buf->IsAvailableFor(out_vc,cur_buf->FrontFlit(vc)->packet_size) &&
+	 !_output_buffer[out_port]->Full(out_vc)){
+	 //	 (!_cut_through && dest_buf->IsAvailableFor(out_vc))) {
 	if(f->watch){
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  Requesting VC " << out_vc
@@ -1232,6 +1235,7 @@ void IQRouter::_VCAllocUpdate( )
       assert((match_output >= 0) && (match_output < _outputs));
       int const match_vc = output_and_vc % (_special_vcs+_data_vcs);
       assert((match_vc >= 0) && (match_vc < (_special_vcs+_data_vcs)));
+
       
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -1245,6 +1249,9 @@ void IQRouter::_VCAllocUpdate( )
 	     (!_cut_through && dest_buf->IsAvailableFor(match_vc)));
       
       dest_buf->TakeBuffer(match_vc);
+      if(!is_control_vc(match_vc)){
+	_output_buffer[match_output]->Take(match_vc);
+      }
 
       cur_buf->SetOutput(vc, match_output, match_vc);
       cur_buf->SetState(vc, VC::active);
@@ -1406,8 +1413,7 @@ void IQRouter::_SWHoldUpdate( )
       continue;
     }
 
-    int out_vc = cur_buf->GetOutputVC(vc);
-    if(expanded_output >= 0  &&  !_output_buffer[expanded_output]->Full(out_vc)) {
+    if(expanded_output >= 0) {
       assert(_switch_hold_in[expanded_input] == expanded_output);
       assert(_switch_hold_out[expanded_output] == expanded_input);
       
@@ -1446,6 +1452,7 @@ void IQRouter::_SWHoldUpdate( )
       _next_bandwidth_commitment[output]--;
 
       dest_buf->SendingFlit(f);
+  
       _input_grant[expanded_input]++;
 
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
@@ -1727,7 +1734,7 @@ void IQRouter::_SWAllocEvaluate( )
 		     << " is full." << endl;
 	}
 	continue;
-      } else if(!dest_buf->HasCreditFor(dest_vc) || _output_buffer[dest_output]->Full(dest_vc)) {
+      } else if(!dest_buf->HasCreditFor(dest_vc)) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  VC " << dest_vc 
@@ -1735,7 +1742,7 @@ void IQRouter::_SWAllocEvaluate( )
 		     << " is full." << endl;
 	}
 	continue;
-      }
+      } 
       bool const requested = _SWAllocAddReq(input, vc, dest_output);
       watched |= requested && f->watch;
       continue;
@@ -1782,7 +1789,8 @@ void IQRouter::_SWAllocEvaluate( )
 	  do_request = true;
 	  break;
 	} else if(dest_buf->IsAvailableFor(dest_vc) && 
-		  !_output_buffer[dest_output]->Full(dest_vc)) {
+		  (!f->head || !_output_buffer[dest_output]->Full(dest_vc))) {
+	  assert(false);
 	  do_request = true;
 	  break;
 	}
@@ -2588,6 +2596,7 @@ VCTag::VCTag(){
 }
 void VCTag::Free() {
   _free.push(this);
+  assert(_use);
   _use = false;
 }
 void VCTag::FreeAll(){
