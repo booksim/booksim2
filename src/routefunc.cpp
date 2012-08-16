@@ -303,7 +303,7 @@ void fattree_nca( const Router *r, const Flit *f,
 
 
  if(gECN){
-    if(f->type == RES_TYPE_ACK){
+    if(f->res_type == RES_TYPE_ACK){
       vcBegin = 0;
       vcEnd = ECN_RESERVED_VCS-1;
     } else {

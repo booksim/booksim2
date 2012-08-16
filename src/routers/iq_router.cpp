@@ -328,7 +328,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     _output_buffer[o] = new OutputBuffer(config, this, "output_buffer");
   }
   for(int i = _ctrl_vcs; i< _special_vcs; i++){
-    OutputBuffer::SetSpecVC(i);
+    OutputBuffer::SetSpecVC(i, config.GetInt("spec_output_buffer_size"));
   }
 
   _credit_buffer.resize(_inputs); 
@@ -480,17 +480,6 @@ void IQRouter::_InternalStep( )
 
   _bufferMonitor->cycle( );
   _switchMonitor->cycle( );
-
-  if(_active && !switch_active){
-    _dead_lock++;
-    if(_dead_lock>100){
-      //      cout<<"Router "<<FullName()<<" deadlock"<<endl;
-      _dead_lock = 0;
-    }
-  } else {
-    _dead_lock = 0;
-  }
-
 }
 
 void IQRouter::WriteOutputs( )
@@ -952,11 +941,11 @@ void IQRouter::_VCAllocEvaluate( )
       // requesting the same output VC, the priority of VCs is based on the 
       // actual packet priorities, which is reflected in "out_priority".
 
+   
 
       if(_cut_through && 
 	 dest_buf->IsAvailableFor(out_vc,cur_buf->FrontFlit(vc)->packet_size) &&
 	 !_output_buffer[out_port]->Full(out_vc)){
-	 //	 (!_cut_through && dest_buf->IsAvailableFor(out_vc))) {
 	if(f->watch){
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  Requesting VC " << out_vc
@@ -1735,6 +1724,7 @@ void IQRouter::_SWAllocEvaluate( )
 	}
 	continue;
       } else if(!dest_buf->HasCreditFor(dest_vc)) {
+	assert(!_cut_through);
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  VC " << dest_vc 
@@ -2410,6 +2400,7 @@ void IQRouter::_SwitchUpdate( )
 		 << " at output " << output
 		 << "." << endl;
     }
+
     if( (gECN || gReservation) &&
 	is_control_vc(f->vc)){ 
       _output_buffer[output]->QueueControlFlit(f);
@@ -2455,7 +2446,7 @@ void IQRouter::_SendFlits( )
       if(_voq && _use_voq_size){
 	int voq_size =0;
 	for(int j = 0;  j<_inputs; j++){
-	  voq_size+=_buf[j]->GetSize(vc2voq(ECN_RESERVED_VCS,i));
+	  voq_size+=_buf[j]->GetSize(vc2voq(ECN_RESERVED_VCS,i));//this assumes 1 data vc
 	}	
 	if(_output_hysteresis[i]){
 	  _output_hysteresis[i] = (voq_size >=((size_t)ECN_CONGEST_THRESHOLD-ECN_BUFFER_HYSTERESIS));
@@ -2463,22 +2454,19 @@ void IQRouter::_SendFlits( )
 	  _output_hysteresis[i] = (voq_size >=((size_t)ECN_CONGEST_THRESHOLD+ECN_BUFFER_HYSTERESIS));
 	}
       } else {
-	if(_output_hysteresis[i]){
-	  _output_hysteresis[i] = (_output_buffer[i]->DataSize() >=((size_t)ECN_CONGEST_THRESHOLD-ECN_BUFFER_HYSTERESIS));
-	} else {
-	  _output_hysteresis[i] = (_output_buffer[i]->DataSize() >=((size_t)ECN_CONGEST_THRESHOLD+ECN_BUFFER_HYSTERESIS));
-	}
+	assert(_voq);
       }
       for(int j = 0; j<(_special_vcs+_data_vcs); j++){
 	BufferState * const dest_buf = _next_buf[i];
 	if(_credit_hysteresis[i*(_special_vcs+_data_vcs)+j]){
-	  _credit_hysteresis[i*(_special_vcs+_data_vcs)+j] = ( (dest_buf->Size(j)-_output_buffer[i]->DataSize()) < ECN_BUFFER_THRESHOLD+ECN_CREDIT_HYSTERESIS);
+	  _credit_hysteresis[i*(_special_vcs+_data_vcs)+j] = ( (dest_buf->Size(j)-_output_buffer[i]->Size(j)) < ECN_BUFFER_THRESHOLD+ECN_CREDIT_HYSTERESIS);
 	} else {
-	  _credit_hysteresis[i*(_special_vcs+_data_vcs)+j] = ( (dest_buf->Size(j)-_output_buffer[i]->DataSize()) < ECN_BUFFER_THRESHOLD-ECN_CREDIT_HYSTERESIS);
+	  _credit_hysteresis[i*(_special_vcs+_data_vcs)+j] = ( (dest_buf->Size(j)-_output_buffer[i]->Size(j)) < ECN_BUFFER_THRESHOLD-ECN_CREDIT_HYSTERESIS);
 	}
       }
     }
   }
+
   for ( int output = 0; output < _outputs; ++output ) {
     Flit * f = _output_buffer[output]->SendFlit();
     if(f){

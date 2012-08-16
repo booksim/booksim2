@@ -59,12 +59,10 @@ Flit* OutputBuffer::SendFlit(){
   //Check normal buffers
   if(f==NULL){
     int buf_idx = -1;
-
     //check continuation
     if(!_buffer_tail[_last_buffer] && !_buffers[_last_buffer].empty()){
       buf_idx = _last_buffer;
     } else {//oldest
-
       int age =numeric_limits<int>::max();
       for(int i = 0; i<_vcs; i++){
 	int idx = (i+_last_buffer)%_vcs;	
@@ -109,7 +107,6 @@ Flit* OutputBuffer::SendFlit(){
       if(f->watch){
 	_watch--;
       }
-      _data_size--;
     }
   }
   return f;
@@ -130,11 +127,10 @@ void OutputBuffer::QueueFlit(int vc, Flit* f){
   if(f->head){
     _buffer_time[vc].push(GetSimTime());
   }
-  _data_size++;
 
   if(f->watch){
     *gWatchOut<<"Queuing VC "<<vc<<" size "<<_buffers[vc].size()
-	<<" time "<<GetSimTime()<<" total size "<<_data_size<<endl;
+	      <<" time "<<GetSimTime()<<endl;
   }
 }
 
@@ -155,10 +151,7 @@ int OutputBuffer::Size(int vc){
   return _buffers[vc].size();
 }
 
-//for ECN, number of data flits at the output buffer
-int OutputBuffer::DataSize(){
-  return _data_size;
-}
+
 
 //taking a packet slot form the output buffer, done at the end of VC allocation
 void OutputBuffer::Take(int vc){
@@ -183,7 +176,7 @@ bool OutputBuffer::Full(int vc){
   assert(_nonspec_slots>=0);
   //speculative vc is "Full" if there is pending nonspeculative packets
   if(_spec_vc[vc]){
-    return (_buffer_slots[vc] >= _buffer_capacity[vc]) || _nonspec_slots!=0;
+    return (_buffer_slots[vc] >= _buffer_capacity[vc]) || _nonspec_slots!=0; //this secondary condition needs to be changed
   } else {
     return (_buffer_slots[vc] >= _buffer_capacity[vc]);
   }
@@ -198,9 +191,9 @@ bool OutputBuffer::ControlFull(){
 //static function called by iq_router to set the speculative vc
 void OutputBuffer::SetSpecVC(int vc, int size){
   assert(size_t(vc) < _buffer_capacity.size());
+  _spec_vc[vc] = true;
   if(_buffer_capacity[vc]!=size){
     cout<<"Output buffer:Spec vc "<<vc<<" size set to "<<size<<endl;
-    _spec_vc[vc] = true;
     _buffer_capacity[vc] = size;
   }
 }

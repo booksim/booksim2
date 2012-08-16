@@ -52,10 +52,12 @@ Stats* gStatResEarly_NEG;
 Stats* gStatReservationMismatch_POS;
 Stats* gStatReservationMismatch_NEG;
 
+
 deque<float>** gStatMonitorTransient;
 
 
 #define ENABLE_STATS
+//#define ENBALE_MONITOR_TRANSIENT
 
 /*transient shit*/
 bool TRANSIENT_BURST = true;
@@ -211,6 +213,8 @@ Stats* gStatSourceLatency;
 Stats* gStatNackByPacket;
 
 Stats* gStatFastRetransmit;
+
+int gStatBECN;
 
 vector<long> gStatFlowStats;
 
@@ -381,12 +385,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   gStatResEarly_NEG = new Stats(this, "reservation too early", 10.0, 100);
   gStatReservationMismatch_POS = new Stats(this, "res mismatch", 10.0, 100);
   gStatReservationMismatch_NEG = new Stats(this, "res mismatch", 10.0, 100);
-  
+#ifdef ENABLE_MONITOR_TRANSIENT
   gStatMonitorTransient=new deque<float>* [6];
   for(int i = 0; i<6; i++){
     gStatMonitorTransient[i]=new deque<float>;
   }
-
+#endif
   gStatGrantTimeNow=new Stats*[_nodes];
   gStatGrantTimeFuture=new Stats*[_nodes];
   gStatReservationTimeNow=new Stats*[_nodes];
@@ -457,6 +461,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   gStatFastRetransmit=  new Stats( this, "fast_retransmit" , 1.0,  100);
   gStatNackArrival = new Stats(this, "nack_arrival",1.0, 1000);
+
+  gStatBECN = 0;
 #endif
 
   //nodes higher than limit do not produce or receive packets
@@ -1150,11 +1156,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
   switch(f->res_type){
   case RES_TYPE_ACK:
-    if(gReservation){
 #ifdef ENABLE_STATS
       gStatAckLatency->AddSample(_time-f->time);
       gStatAckReceived[dest]++;
 #endif
+    if(gReservation){
       receive_flow_buffer = _flow_buffer[dest][f->flbid];
       if( receive_flow_buffer!=NULL &&
 	  receive_flow_buffer->active() && 
@@ -1197,14 +1203,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	_reservation_schedule[dest]+=RESERVATION_CONTROL_OVERHEAD;
       }      
     } else if(gECN){
-#ifdef ENABLE_STATS
-      gStatAckLatency->AddSample(_time-f->time);
-      gStatAckReceived[dest]++;
-#endif
       receive_flow_buffer = _flow_buffer[dest][f->flbid];
       if( receive_flow_buffer!=NULL &&
 	  receive_flow_buffer->_dest == f->src){
 #ifdef ENABLE_STATS
+	gStatBECN += (f->becn)?1:0;
 	gStatAckEffective[dest]+= (f->becn)?1:0;
 #endif
 	receive_flow_buffer->ack(f->becn);	
@@ -2465,13 +2468,14 @@ void TrafficManager::_Step( )
   ++_time;
   gStatSpecCount->AddSample(TOTAL_SPEC_BUFFER);
   if(_time%10000==0){
+#ifdef ENABLE_MONITOR_TRANSIENT
     gStatMonitorTransient[0]->push_back(retired_s->NumSamples()+retired_n->NumSamples());
     gStatMonitorTransient[1]->push_back(retired_s->Average());
     gStatMonitorTransient[2]->push_back(retired_n->Average());
     gStatMonitorTransient[3]->push_back(((gStatReservationMismatch_POS->Average()*gStatReservationMismatch_POS->NumSamples())-(gStatReservationMismatch_NEG->Average()*gStatReservationMismatch_NEG->NumSamples()))/(gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples()));
     gStatMonitorTransient[4]->push_back(((gStatResEarly_POS->Average()*gStatResEarly_POS->NumSamples())-(gStatResEarly_NEG->Average()*gStatResEarly_NEG->NumSamples()))/(gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples()));
     gStatMonitorTransient[5]->push_back(float(gStatSpecLatency->NumSamples())/_plat_stats[0]->NumSamples()*100);
-
+#endif
 
     cout<<" Retired "<<retired_s->NumSamples()+retired_n->NumSamples()
 	<<" Adaptive "<<float(_nonmin_plat_stats->NumSamples())/(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples())
@@ -2480,13 +2484,16 @@ void TrafficManager::_Step( )
 	<<" ("<<float(retired_s->NumSamples())/retired_n->NumSamples()<<")"<<endl
 	<<" nonspec-arrive-mismatch "<<((gStatReservationMismatch_POS->Average()*gStatReservationMismatch_POS->NumSamples())-(gStatReservationMismatch_NEG->Average()*gStatReservationMismatch_NEG->NumSamples()))/(gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples())<<"("<<gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples()<<")"
 	<<" res-deact-mismatch "<<((gStatResEarly_POS->Average()*gStatResEarly_POS->NumSamples())-(gStatResEarly_NEG->Average()*gStatResEarly_NEG->NumSamples()))/(gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples())<<"("<<gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples()<<")"<<endl;
-    cout<<"\t%spec "<<float(gStatSpecLatency->NumSamples())/_plat_stats[0]->NumSamples()*100<<endl; 
+    cout<<"\t%spec "<<float(gStatSpecLatency->NumSamples())/_plat_stats[0]->NumSamples()*100
+	<<"\t BECN count "<<gStatBECN<<endl; 
+  
 
     retired_s->Clear();
     retired_n->Clear();
     ///*
     gStatResEarly_POS->Clear();
     gStatResEarly_NEG->Clear();
+    gStatBECN=0;
     //gStatReservationMismatch_POS->Clear();
     //gStatReservationMismatch_NEG->Clear();
     //*/
@@ -3491,6 +3498,7 @@ void TrafficManager::_DisplayTedsShit(){
     *_stats_out<<"reservation_mismatch_pos =["
 	       <<*gStatReservationMismatch_POS <<"];\n";
 
+#ifdef ENABLE_MONITOR_TRANSIENT
     for(int i = 0; i<6; i++){
       *_stats_out<<"monitor_transient("<<i+1<<",:)=[";
       for(size_t j = 0; j<gStatMonitorTransient[i]->size(); j++){
@@ -3498,6 +3506,7 @@ void TrafficManager::_DisplayTedsShit(){
       }
       *_stats_out<<"];\n";
     }
+#endif
 
     for(int i = 0; i<_nodes; i++){
       *_stats_out<<"inject_vc_dist("<<i+1<<",:)=["

@@ -20,7 +20,6 @@ protected:
 
   //denies speculative VC allocation is nonspeculative packets is available
   int _nonspec_slots;
-  int _data_size;
   //output buffer is serviced packet contingously
   int _last_buffer;
   
@@ -41,7 +40,14 @@ public:
 
   int ControlSize();
   int Size(int vc);
-  int DataSize();
+  int AllSize(){
+    int sum = 0;
+    for(size_t i = 0; i<_buffers.size(); i++){
+      sum+=_buffers[i].size();
+    }
+    return sum;
+  }
+
 
   bool Full(int vc);
   void Take(int vc);

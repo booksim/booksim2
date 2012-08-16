@@ -46,6 +46,8 @@ stack<VC::VCData*> VC::VCData::_all;
 stack<VC::VCData*> VC::VCData::_free;
 
 void VC::VCData::Free(){
+  assert(_use);
+  _use=false;
   _free.push(this);
 }
 VC::VCData* VC::VCData::New(){
@@ -57,6 +59,8 @@ VC::VCData* VC::VCData::New(){
    vcd = _free.top();
    _free.pop();
   }
+  assert(!vcd->_use);
+  vcd->_use= true;
   return vcd;
 }
 

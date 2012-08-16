@@ -48,13 +48,14 @@ private:
 
   class VCData{
   public:
+    bool _use;
     deque<int> _time_stamp;
     deque<Flit *> _flit;
     deque<OutputSet *> _route_set;
     static VC::VCData * New();
     void Free();
   private:
-    VCData() {}
+    VCData() {_use=false;}
     ~VCData() {}
     static stack<VC::VCData *> _all;
     static stack<VC::VCData *> _free;
@@ -129,7 +130,7 @@ public:
 
   inline bool Full( ) const
   {
-    return _buffer==NULL?false: (int)_buffer->_flit.size( ) == _max_size;
+    return _buffer==NULL?false: _cur_size == _max_size;
   }
 
   inline VC::eVCState GetState( ) const
@@ -172,7 +173,7 @@ public:
 
   inline int GetSize() const
   {
-    return _buffer==NULL?0:(int)_buffer->_flit.size();
+    return _buffer==NULL?0:_cur_size;
   }
 
     

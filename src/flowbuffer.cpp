@@ -379,20 +379,9 @@ bool FlowBuffer::ack(int sn){
       }
     }else {
       if(ECN_AIMD){
-	if(_IRD==0){
-	  _IRD=ECN_IRD_INCREASE;
-	} else {
-	  _IRD*=2;
-	  if(_IRD>ECN_IRD_LIMIT)
-	    _IRD=ECN_IRD_LIMIT;
-	}
+	assert(false);
       } else {
-	if(_IRD<ECN_IRD_LIMIT){
-	  //IRD increase ECN on
-	  _IRD+=ECN_IRD_INCREASE;
-	  if(_IRD>ECN_IRD_LIMIT)
-	    _IRD=ECN_IRD_LIMIT;
-	}
+	_IRD=MIN(ECN_IRD_LIMIT, _IRD+ECN_IRD_INCREASE);
       }
       gStatIRD[_src]->AddSample(_IRD);
     }

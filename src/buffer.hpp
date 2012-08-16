@@ -152,6 +152,13 @@ public:
   {
     return _vc[vc]->GetSize( );
   }
+  inline int GetAllSize() const
+  {
+    int sum = 0; 
+    for(size_t i= 0; i<_vc.size(); i++)
+      sum+=_vc[i]->GetSize();
+    return sum;
+  }
   
   inline void SetDrop(int vc){
     _vc[vc]->SetDrop();

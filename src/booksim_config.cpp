@@ -170,6 +170,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["credit_delay"] = 0;
   _float_map["internal_speedup"] = 1.0;
   _int_map["output_buffer_size"] = 2; //packet granularity
+  _int_map["spec_output_buffer_size"] = 1; //packet granularity
   _int_map["output_buffer_control_size"] = 32; //packet granularity
 
   //==== Input-queued ======================================
