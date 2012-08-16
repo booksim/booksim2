@@ -807,7 +807,7 @@ bool FlowBuffer::send_spec_ready(){
       }
     }
     break;
-  case FLOW_STATUS_NACK: // XXX Make sure it works.
+  case FLOW_STATUS_NACK:
     if(GetSimTime()<_sleep_time)
       return false;
     if(!_res_sent && _time_to_send_res <= GetSimTime()){
