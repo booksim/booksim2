@@ -248,6 +248,7 @@ void TrafficManager::CheckToIncrementEpoch()
 
 int TrafficManager::EarliestAvailability(int node, int size) const
 {
+  assert(size > 0);
   size = int(ceil(float(size)*RESERVATION_OVERHEAD_FACTOR));
   int return_value = -1;
   int remaining;

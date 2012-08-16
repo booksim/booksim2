@@ -257,6 +257,10 @@ void SuperNetwork::ReserveBitVector(Flit *f, int net, int chan)
   int slots_to_reserve = _how_many_time_slots_to_reserve;
   bool all_falses = true;
   assert(f && f->res_type == RES_TYPE_RES && f->payload > 0);
+  if (f->try_again_after_time != -1)
+  {
+    return;
+  }
   int payload = int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
   assert(_enable_multi_SRP == true);
   for (int i = _time_slot_to_begin; i < _bit_vector_length; i++)
@@ -310,7 +314,7 @@ void SuperNetwork::ReserveBitVector(Flit *f, int net, int chan)
     int old_value = f->try_again_after_time;
     f->try_again_after_time = GetSimTime() + _try_again_delay;
     f->try_again_after_time = MAX(old_value, f->try_again_after_time);
-    f->payload = -1;
+    // We can't set payload to -1 because the trafficmanager needs that information to decide what retry to issue.
   }
 }
 
