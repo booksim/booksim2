@@ -1321,6 +1321,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   FlowROB* receive_rob = NULL;
   FlowBuffer* receive_flow_buffer  = NULL;
   bool rob_erased;
+  int flow_id;
   
   assert(_network_clusters == 1 || f->head == false || (f->original_destination == dest && f->dest == dest));
   assert(f->type == Flit::ANY_TYPE);
@@ -1578,9 +1579,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     //for very large flows sometimes spec packets can jump infront of res packet
     //in these cases robs can mistakenly retire flits that are associated with the
     //next reservation
-
     assert(f->reservation_vector.empty() == true && f->epoch == -1);
-    if(_rob[dest].count(f->flid)==0 || !_rob[dest][f->flid]->sn_check(f->sn)){
+    flow_id = f->flid;
+    if(_rob[dest].count(flow_id)==0 || !_rob[dest][flow_id]->sn_check(f->sn)){
       if(f->flid == WATCH_FLID){
 	cout<<"spec destination nack sn "<<f->sn<<"\n";
       }
@@ -1598,10 +1599,10 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       f->Free();
       f = NULL;
     } else {
-      if(f->flid == WATCH_FLID){
+      if(flow_id == WATCH_FLID){
 	cout<<"spec insert sn "<<f->sn<<"\n";
       }
-      receive_rob = _rob[dest][f->flid];
+      receive_rob = _rob[dest][flow_id];
       f = receive_rob->insert(f);
       if(f==NULL){
 #ifdef ENABLE_STATS
@@ -1625,7 +1626,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
         _channel_choices.insert(_channel_choices.end(), pair<int, list<int>*>(f->pid, choices));
       }
       //ACK
-      if(f!=NULL && f->tail){
+      if(f!=NULL && f->tail && _channel_choices.find(f->pid) != _channel_choices.end()){
 #ifdef ENABLE_STATS
 	gStatAckSent[dest]++;
 #endif
