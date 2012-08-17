@@ -44,55 +44,64 @@
 
 //time benchmarks
 #include <sys/time.h>
+
+//period update stats
 Stats* retired_s; 
 Stats* retired_n;
 
+//expected flow trasnmission time vs actual
 Stats* gStatResEarly_POS;
 Stats* gStatResEarly_NEG;
+//expected nonspeculative arrival time vs actual
 Stats* gStatReservationMismatch_POS;
 Stats* gStatReservationMismatch_NEG;
 
-
+//Debug using network transient, not confused with transient_stat
 deque<float>** gStatMonitorTransient;
-
 
 #define ENABLE_STATS
 //#define ENBALE_MONITOR_TRANSIENT
 
-/*transient shit*/
-bool TRANSIENT_BURST = true;
+//Stats for transient simulation
+bool TRANSIENT_BURST = false;
 bool TRANSIENT_ENABLE = false;
 double*** transient_stat;
 double** transient_ecn;
 long** transient_ird;
-
 int** transient_count;
-//time period to capture before transient
+
+//time period to capture before transient event
 int transient_prestart = 50000;
-//transient event length
+//transient event duration
 int transient_duration  = 1;
 //size of the stat capture array (prestart+duration)/granularity
 int transient_record_duration  = 1000;
 //beginning of transient event
 int transient_start  = 100000;
+//injection rate of the transient event
 float transient_rate = 1.0;
+//which of the two traffic class is the transient
 int transient_class = 1;
+//each element of the stat array covers this many cycles
 int transient_granularity = 1;
 string transient_data_file;
-bool transient_finalize = false;
+//write out the stats matlab file instead of the temp file
+bool transient_finalize = true;
 
 //transmit reservation before as soon as flow is at the head of the flow buffer
-bool FAST_RESERVATION_TRANSMIT=false;
+bool FAST_RESERVATION_TRANSMIT=true;
 //multiple flows to the same destination must share the same flow buffer
 bool FLOW_DEST_MERGE = true;
 //expiration check also occurs during VC allocation
 bool VC_ALLOC_DROP = true;
+//TODO implement packet drop while waiting for SW allocation,especially for multiVC
+bool SW_ALLOC_DROP= false;
 //expiration time only count queuing delays
-bool RESERVATION_QUEUING_DROP= false;
+bool RESERVATION_QUEUING_DROP= true;
 //retransmit unacked packets as soon as there is nothing else to send
 bool FAST_RETRANSMIT_ENABLE = false;
 //account for reservation overhead by increasing the reservation time by this factor
-float RESERVATION_OVERHEAD_FACTOR = 1.05;
+float RESERVATION_OVERHEAD_FACTOR = 1.00;
 //account for the reservation/grant rtt
 float RESERVATION_RTT = 1.0;
 //flows with flits fewer than this is ignored by reservation
@@ -107,40 +116,39 @@ bool RESERVATION_SPEC_OFF = false;
 //has passed
 bool RESERVATION_POST_WAIT = false;
 //use the next hop buffer occupancy to preemptively drop a speculative packet
-bool RESERVATION_BUFFER_SIZE_DROP=false;
+bool RESERVATION_BUFFER_SIZE_DROP=true;
 //send the reservation to the next segment with the last packet
 bool RESERVATION_TAIL_RESERVE=false;
 //instead or in addition to the reservaiton overhead factor, control packet also update the 
 //reservaitons scheduling, this tires to eliminate the reservaiton overhead
-int RESERVATION_CONTROL_OVERHEAD = 0;
+int RESERVATION_CONTROL_OVERHEAD = 5;
 //When small packets are mixed in, they do not rquire reservations, we need to account for 
 //their bandwidth
-bool RESERVATION_WALKIN_OVERHEAD= false;
+bool RESERVATION_WALKIN_OVERHEAD= true;
 
 
 //expiration timer for IRD
 int IRD_RESET_TIMER=1000;
-//unmarked acks also decreaser IRD
+//false = unmarked acks also decreaser IRD by 1
 bool ECN_TIMER_ONLY = true;
 //buffer threshold to enable congestion
-int ECN_BUFFER_THRESHOLD = 64;
+int ECN_BUFFER_THRESHOLD = 512;
 //channel congestion threshold to identify root
 int ECN_CONGEST_THRESHOLD=32;
 //each IRD value delays pakcet injection by this amount
-int IRD_SCALING_FACTOR = 1;
+int IRD_SCALING_FACTOR = 16;
 //increase function should higher than the decrease function
-int ECN_IRD_INCREASE = 1;
+int ECN_IRD_INCREASE = 16;
 //Maximum IRD
-int ECN_IRD_LIMIT = 0;
+int ECN_IRD_LIMIT = 1000;
 //hysteresis for ECN
 int ECN_BUFFER_HYSTERESIS=0;
 int ECN_CREDIT_HYSTERESIS=0;
 //ECN AIMD
 bool ECN_AIMD = false;
 
-
-
-int DEFAULT_CHANNEL_LATENCY;
+//only some topology uses this
+int DEFAULT_CHANNEL_LATENCY=5;
 
 #define WATCH_FLID -1
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
@@ -159,11 +167,9 @@ map<int, vector<int> > gChanDropStats;
 int gExpirationTime = 0;
 
 vector<int> gStatAckReceived;
-vector<int> gStatAckEffective;
 vector<int> gStatAckSent;
 
 vector<int> gStatNackReceived;
-vector<int> gStatNackEffective;
 vector<int> gStatNackSent;
 
 vector<int> gStatGrantReceived;
@@ -176,13 +182,12 @@ Stats** gStatReservationTimeFuture;
 
 vector<int> gStatSpecSent;
 vector<int> gStatSpecReceived;
-vector<int> gStatSpecDuplicate;
+int gStatSpecDuplicate;
 
 vector<int> gStatNormSent;
 vector<int> gStatNormReceived;
-vector<int> gStatNormDuplicate;
+int gStatNormDuplicate;
 
-vector<int> gStatLostPacket;
 
 vector<vector<int> > gStatInjectVCDist;
 vector<vector<int> > gStatEjectVCDist;
@@ -230,10 +235,10 @@ map<int, int> gStatFlowSizes;
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
   : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _last_id(-1), _last_pid(-1), _timed_mode(false), _warmup_time(-1), _drain_time(-1), _cur_id(0), _cur_pid(0), _cur_tid(0), _time(0),_stat_time(0)
 {
+  //sanity check, big flit = slow simulation
   cout<<"size of ";
   cout<<sizeof(Flit)<<endl;
 
-  gStatFlowStats.resize(FLOW_STAT_LIFETIME+1+1,0);
 
   _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
@@ -260,17 +265,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   for(int i = 0; i<_nodes; i++){
     _flow_buffer[i].resize(_max_flow_buffers,NULL);
-    //_flow_buffer_arb[i] = new RoundRobinArbiter(this, "inject_arb",_max_flow_buffers);
-    //_reservation_arb[i] = new RoundRobinArbiter(this, "reservation_arb",_max_flow_buffers);
     _flow_buffer_arb[i] = new LargeRoundRobinArbiter("inject_arb",_max_flow_buffers);
     _reservation_arb[i] = new LargeRoundRobinArbiter("reservation_arb",_max_flow_buffers);
     _flow_buffer_arb[i]->Clear();
     _reservation_arb[i]->Clear();
   }
- 
-
-
-
   
   _rob.resize(_nodes);
   _reservation_schedule.resize(_nodes, 0);
@@ -290,7 +289,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   transient_data_file=config.GetStr("transient_data");
   transient_finalize = (config.GetInt("transient_finalize")==1);
   
-  //transient
   transient_ecn = new double*[2];
   transient_ecn[0] = new double[transient_record_duration];
   transient_ecn[1] = new double[transient_record_duration];
@@ -313,10 +311,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   for(int i = 0; i<transient_record_duration ; i++){
     transient_ecn[0][i] = 0.0;
     transient_ecn[1][i] = 0.0;
-
     transient_ird[0][i] = 0;
     transient_ird[1][i] = 0;
-
     transient_stat[0][0][i] = 0.0;
     transient_stat[0][1][i] = 0.0;
     transient_stat[0][2][i] = 0.0;
@@ -325,10 +321,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     transient_stat[1][2][i] = 0.0;
     transient_count[0][i]= 0;
     transient_count[1][i]= 0;
-
   }
-
-  _LoadTransient(transient_data_file);
+  //multiple transient simulations are run independently using temp files
+  if(TRANSIENT_ENABLE){
+    _LoadTransient(transient_data_file);
+  }
 
   FAST_RESERVATION_TRANSMIT = (config.GetInt("fast_reservation_transmit"));
   RESERVATION_OVERHEAD_FACTOR = config.GetFloat("reservation_overhead_factor");
@@ -357,24 +354,18 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   ECN_BUFFER_HYSTERESIS=config.GetInt("ecn_buffer_hysteresis");
   ECN_CREDIT_HYSTERESIS=config.GetInt("ecn_credit_hysteresis");
   ECN_AIMD = (config.GetInt("ecn_aimd")==1);
-  cout<<"ECN_IRD_LIMIT "<<ECN_IRD_LIMIT<<endl;
 
 #ifdef ENABLE_STATS
 
+  gStatFlowStats.resize(FLOW_STAT_SIZE+1,0);
+
   gStatSpecCount= new Stats(this,"spec count",1.0, 1);
   gStatNodeReady.resize(_nodes,0);
-  
   gStatAckReceived.resize(_nodes,0);
-  gStatAckEffective.resize(_nodes,0);
   gStatAckSent.resize(_nodes,0);
-
   gStatNackReceived.resize(_nodes,0);
-  gStatNackEffective.resize(_nodes,0);
-
   gStatNackSent.resize(_nodes,0);
-
   gStatGrantReceived.resize(_nodes,0);
-
   gStatReservationReceived.resize(_nodes,0);
 
   gStatSurviveTTL = new  Stats(this, "spec drop too early", 1.0, gExpirationTime);
@@ -385,12 +376,14 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   gStatResEarly_NEG = new Stats(this, "reservation too early", 10.0, 100);
   gStatReservationMismatch_POS = new Stats(this, "res mismatch", 10.0, 100);
   gStatReservationMismatch_NEG = new Stats(this, "res mismatch", 10.0, 100);
+
 #ifdef ENABLE_MONITOR_TRANSIENT
   gStatMonitorTransient=new deque<float>* [6];
   for(int i = 0; i<6; i++){
     gStatMonitorTransient[i]=new deque<float>;
   }
 #endif
+
   gStatGrantTimeNow=new Stats*[_nodes];
   gStatGrantTimeFuture=new Stats*[_nodes];
   gStatReservationTimeNow=new Stats*[_nodes];
@@ -414,13 +407,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   gStatSpecSent.resize(_nodes,0);
   gStatSpecReceived.resize(_nodes,0);
-  gStatSpecDuplicate.resize(_nodes,0);
+  gStatSpecDuplicate=0;
 
   gStatNormSent.resize(_nodes,0);
   gStatNormReceived.resize(_nodes,0);
-  gStatNormDuplicate.resize(_nodes,0);
+  gStatNormDuplicate=0;
 
-  gStatLostPacket.resize(_nodes,0);
   gStatInjectVCDist.resize(_nodes);
   for(int i = 0; i<_nodes; i++){
     gStatInjectVCDist[i].resize(_num_vcs,0);
@@ -455,7 +447,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
  
   for(int i = 0; i<_nodes; i++){
     gStatECN.push_back( new Stats(this, "ecn", 1.0, 3));
-    gStatIRD.push_back( new Stats(this, "ird", 1.0,ECN_IRD_LIMIT) );
+    gStatIRD.push_back( new Stats(this, "ird", 1.0,MIN(ECN_IRD_LIMIT,100)) );
   }
   gStatNackByPacket = new Stats(this, "nack_by_sn", 1.0, 1000);
 
@@ -1165,15 +1157,13 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       if( receive_flow_buffer!=NULL &&
 	  receive_flow_buffer->active() && 
 	  receive_flow_buffer->fl->flid == f->flid){
-#ifdef ENABLE_STATS
-	gStatAckEffective[dest]+= receive_flow_buffer->ack(f->sn)?1:0;
-#endif
+	receive_flow_buffer->ack(f->sn);
 	int flow_done_status = receive_flow_buffer->done();
 	if(flow_done_status!=FLOW_DONE_NOT){
 #ifdef ENABLE_STATS
 	  if(receive_flow_buffer->fl->cl==0){
 	    for(size_t i = 0; i<gStatFlowStats.size()-1; i++){
-	      gStatFlowStats[i]+=receive_flow_buffer->_stats[i];
+	      gStatFlowStats[i]+=receive_flow_buffer->GetStat(i);
 	    }
 	    gStatFlowStats[gStatFlowStats.size()-1]++;
 	  }
@@ -1183,8 +1173,10 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	  if(flow_done_status==FLOW_DONE_DONE){
 	    //Flow is done
 	    _active_set[dest].erase(receive_flow_buffer);
-	    _deactive_set[dest].insert(receive_flow_buffer);
+	    //_deactive_set[dest].insert(receive_flow_buffer);
 	    _flow_buffer[dest][f->flbid]->Deactivate();
+	    delete _flow_buffer[dest][f->flbid];
+	    _flow_buffer[dest][f->flbid]=NULL;
 	  } else {
 	    //Reactivate the flow, assign vc, and insertinto the correct queues
 	    receive_flow_buffer->Reset();
@@ -1208,7 +1200,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	  receive_flow_buffer->_dest == f->src){
 #ifdef ENABLE_STATS
 	gStatBECN += (f->becn)?1:0;
-	gStatAckEffective[dest]+= (f->becn)?1:0;
 #endif
 	receive_flow_buffer->ack(f->becn);	
       }
@@ -1235,7 +1226,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       int temp = receive_flow_buffer->nack(f->sn)?1:0;
 #ifdef ENABLE_STATS
       gStatNackArrival->AddSample(_time-receive_flow_buffer->fl->create_time);
-      gStatNackEffective[dest]+= temp;
 #endif
     }
     f->Free();
@@ -1274,7 +1264,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     return;
     break;
   case RES_TYPE_RES:
-    //assert(f->vc==RES_PACKET_VC);
 #ifdef ENABLE_STATS
     gStatResLatency->AddSample(_time-f->time);
     gStatReservationReceived[dest]++;
@@ -1304,7 +1293,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       _reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
       ff->payload  =_reservation_schedule[dest];
       //this functionality has been moved tot he source
-      //-int(ceil(RESERVATION_RTT*float(_time-f->ntime)));
 
       _reservation_schedule[dest] += int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
 
@@ -1351,7 +1339,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       f = receive_rob->insert(f);
       if(f==NULL){
 #ifdef ENABLE_STATS
-	gStatSpecDuplicate[dest]++;
+	gStatSpecDuplicate++;
 #endif
       } else {
 	_sent_data_flits[f->cl][f->src]++;
@@ -1391,7 +1379,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       //find or create a reorder buffer
       if(_rob[dest].count(f->flid)==0){
 #ifdef ENABLE_STATS
-	gStatNormDuplicate[dest]++;
+	gStatNormDuplicate++;
 #endif
 	f->Free();
 	return;
@@ -1404,7 +1392,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       f = receive_rob->insert(f);
       if(f==NULL){
 #ifdef ENABLE_STATS
-	gStatNormDuplicate[dest]++;
+	gStatNormDuplicate++;
 #endif
       } else {
 	if(!f->head && f->payload!=-1){
@@ -1526,9 +1514,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   
 
   //this occurs, when the normal flit retires before the speculative
-  if(_total_in_flight_flits[f->cl].count(f->id) == 0){
-    //    gStatLostPacket[dest]++;
-    return;
+  if(_total_in_flight_flits[f->cl].count(f->id) == 0){    return;
   }
 
  
@@ -1586,8 +1572,6 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     if(f->head) {
       head = f;
     } else {
-      //TODO single packets fuck up if a second packet shows up really really late
-      //then it will try to be retired again??
       map<int, Flit *>::iterator iter = _retired_packets[f->cl].find(f->pid);
       assert(iter != _retired_packets[f->cl].end());
       head = iter->second;
@@ -1600,7 +1584,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 		 << "node" << dest << " | "
 		 << "Retiring packet " << f->pid 
 		 << " (lat = " << f->atime - head->time
-		 << ", frag = " << (f->atime - head->atime) - (f->id - head->id) // NB: In the spirit of solving problems using ugly hacks, we compute the packet length by taking advantage of the fact that the IDs of flits within a packet are contiguous.
+		 << ", frag = " << (f->atime - head->atime) - (f->id - head->id) 
 		 << ", src = " << head->src 
 		 << ", dest = " << head->dest
 		 << ")." << endl;
@@ -2225,6 +2209,7 @@ void TrafficManager::_Step( )
     
     if(flow_bids!=0){
       int id = _flow_buffer_arb[source]->Arbitrate();
+      _flow_buffer_arb[source]->Claim();
       _flow_buffer_arb[source]->UpdateState();
       ready_flow_buffer = _flow_buffer[source][id];
     }
@@ -2288,6 +2273,7 @@ void TrafficManager::_Step( )
 	  //round one
 	  if(_reservation_arb[source]->NumReqs()>0){
 	    int id = _reservation_arb[source]->Arbitrate();
+	    _reservation_arb[source]->Claim();
 	    _reservation_arb[source]->UpdateState() ;
 	    fast_res = _flow_buffer[source][id];
 	  }
@@ -2396,7 +2382,7 @@ void TrafficManager::_Step( )
 #ifdef ENABLE_STATS
 	  if(ready_flow_buffer->fl->cl==0){
 	    for(size_t i = 0; i<gStatFlowStats.size()-1; i++){
-	      gStatFlowStats[i]+=ready_flow_buffer->_stats[i];
+	      gStatFlowStats[i]+=ready_flow_buffer->GetStat(i);
 	    }
 	    gStatFlowStats[gStatFlowStats.size()-1]++;
 	  }
@@ -2409,7 +2395,9 @@ void TrafficManager::_Step( )
 	  if(flow_done_status==FLOW_DONE_DONE){
 	    _flow_buffer[source][f->flbid]->Deactivate();
 	    _active_set[source].erase(ready_flow_buffer);
-	    _deactive_set[source].insert(ready_flow_buffer);
+	    //_deactive_set[source].insert(ready_flow_buffer);
+	    delete ready_flow_buffer;
+	    _flow_buffer[source][f->flbid]=NULL;
 	  } else {
 	    ready_flow_buffer->Reset();
 	    _FlowVC(ready_flow_buffer);
@@ -2477,16 +2465,21 @@ void TrafficManager::_Step( )
     gStatMonitorTransient[5]->push_back(float(gStatSpecLatency->NumSamples())/_plat_stats[0]->NumSamples()*100);
 #endif
 
-    cout<<" Retired "<<retired_s->NumSamples()+retired_n->NumSamples()
+    cout<<"Retired "<<retired_s->NumSamples()+retired_n->NumSamples()<<endl
 	<<" Adaptive "<<float(_nonmin_plat_stats->NumSamples())/(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples())
-	<<" spec_lat "<<retired_s->Average()
-	<<" norm_lat "<<retired_n->Average()
-	<<" ("<<float(retired_s->NumSamples())/retired_n->NumSamples()<<")"<<endl
-	<<" nonspec-arrive-mismatch "<<((gStatReservationMismatch_POS->Average()*gStatReservationMismatch_POS->NumSamples())-(gStatReservationMismatch_NEG->Average()*gStatReservationMismatch_NEG->NumSamples()))/(gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples())<<"("<<gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples()<<")"
-	<<" res-deact-mismatch "<<((gStatResEarly_POS->Average()*gStatResEarly_POS->NumSamples())-(gStatResEarly_NEG->Average()*gStatResEarly_NEG->NumSamples()))/(gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples())<<"("<<gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples()<<")"<<endl;
-    cout<<"\t%spec "<<float(gStatSpecLatency->NumSamples())/_plat_stats[0]->NumSamples()*100
-	<<"\t BECN count "<<gStatBECN<<endl; 
-  
+	<<" norm_lat "<<retired_n->Average();
+    if(gReservation){
+      cout<<" spec_lat "<<retired_s->Average()
+	  <<" ("<<float(retired_s->NumSamples())/(retired_s->NumSamples()+retired_n->NumSamples())<<")"<<endl
+	  <<" nonspec-arrive-mismatch "<<((gStatReservationMismatch_POS->Average()*gStatReservationMismatch_POS->NumSamples())-(gStatReservationMismatch_NEG->Average()*gStatReservationMismatch_NEG->NumSamples()))/(gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples())<<"("<<gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples()<<")"
+	  <<" res-deact-mismatch "<<((gStatResEarly_POS->Average()*gStatResEarly_POS->NumSamples())-(gStatResEarly_NEG->Average()*gStatResEarly_NEG->NumSamples()))/(gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples())<<"("<<gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples()<<")"<<endl;
+    } else if(gECN){    
+      cout<<"\t BECN count "<<gStatBECN<<endl; 
+    } else {
+      cout<<endl;
+    }
+    cout<<" Alive flows "<<flow::_active<<endl;
+    
 
     retired_s->Clear();
     retired_n->Clear();
@@ -2600,15 +2593,11 @@ void TrafficManager::_ClearStats( )
 
   gStatAckReceived.clear();
   gStatAckReceived.resize(_nodes,0);
-  gStatAckEffective.clear();
-  gStatAckEffective.resize(_nodes,0);
   gStatAckSent.clear();
   gStatAckSent.resize(_nodes,0);
 
   gStatNackReceived.clear();
   gStatNackReceived.resize(_nodes,0);
-  gStatNackEffective.clear();
-  gStatNackEffective.resize(_nodes,0);
   gStatNackSent.clear();
   gStatNackSent.resize(_nodes,0);
 
@@ -2629,18 +2618,14 @@ void TrafficManager::_ClearStats( )
   gStatSpecSent.resize(_nodes,0);
   gStatSpecReceived.clear();
   gStatSpecReceived.resize(_nodes,0);
-  gStatSpecDuplicate.clear();
-  gStatSpecDuplicate.resize(_nodes,0);
+  gStatSpecDuplicate=0;
 
   gStatNormSent.clear();
   gStatNormSent.resize(_nodes,0);
   gStatNormReceived.clear();
   gStatNormReceived.resize(_nodes,0);
-  gStatNormDuplicate.clear();
-  gStatNormDuplicate.resize(_nodes,0);
+  gStatNormDuplicate=0;
 
-  gStatLostPacket.clear();
-  gStatLostPacket.resize(_nodes,0);
 
   gStatInjectVCDist.clear();
   gStatInjectVCDist.resize(_nodes);
@@ -2682,7 +2667,7 @@ void TrafficManager::_ClearStats( )
   gStatFastRetransmit->Clear();
   gStatNackArrival->Clear();
   gStatFlowStats.clear();
-  gStatFlowStats.resize(FLOW_STAT_LIFETIME+1+1,0);
+  gStatFlowStats.resize(FLOW_STAT_SIZE+1,0);
 #endif
 }
 
@@ -3414,6 +3399,7 @@ void TrafficManager::DisplayStats( ostream & os ) {
     }
     os<<"ECN ratio "<<ecn_sum/ecn_num<<endl;
     os<<"Flows created "<<_cur_flid<<endl;
+    os<<"Flows lost flits "<<flow::_lost_flits<<" (better be zero)"<<endl;
     os<<"Adaptive Ratio "<<float(_nonmin_plat_stats->NumSamples())/(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples())<<endl;
     _DisplayTedsShit();    
 #endif
@@ -3456,15 +3442,11 @@ void TrafficManager::_DisplayTedsShit(){
 	       << *gStatSurviveTTL<<"];\n";
     *_stats_out<< "ack_received = ["
 	       <<gStatAckReceived<<"];\n";
-    *_stats_out<< "ack_eff = ["
-	       <<gStatAckEffective<<"];\n";
     *_stats_out<< "ack_sent = ["
 	       <<gStatAckSent<<"];\n";
 
     *_stats_out<< "nack_received =[ "
 	       <<gStatNackReceived<<"];\n";
-    *_stats_out<< "nack_eff = ["
-	       <<gStatNackEffective<<"];\n";
     *_stats_out<< "nack_sent = ["
 	       <<gStatNackSent<<"];\n";
 
@@ -3487,8 +3469,7 @@ void TrafficManager::_DisplayTedsShit(){
     *_stats_out<< "norm_dup = ["
 	       <<gStatNormDuplicate<<"];\n";
 
-    *_stats_out<< "lost_flits = ["
-	       <<gStatLostPacket<<"];\n";
+
     *_stats_out<<"reservation_early_neg =["
 	       <<*gStatResEarly_NEG <<"];\n";
     *_stats_out<<"reservation_early_pos =["
@@ -3595,7 +3576,7 @@ void TrafficManager::_DisplayTedsShit(){
     *_stats_out<< "flow_in_lifetime =" 
 	       <<gStatFlowStats[FLOW_STAT_LIFETIME]<<";\n";
     *_stats_out<< "flow_count =" 
-	       <<gStatFlowStats[FLOW_STAT_LIFETIME+1]<<";\n";
+	       <<gStatFlowStats[FLOW_STAT_SIZE]<<";\n";
     *_stats_out<<"node_ready=["
 	       <<gStatNodeReady<<"];\n"<<endl;
     *_stats_out<<"spec_count="<<gStatSpecCount->Average()<<";\n";

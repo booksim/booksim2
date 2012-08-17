@@ -30,7 +30,7 @@
 
 #include <iostream>
 #include <stack>
-
+#include "reservation.hpp"
 #include "booksim.hpp"
 
 class Flit {
@@ -46,7 +46,7 @@ public:
                   ANY_TYPE      = 4 };
   FlitType type;
 
-  short res_type;
+  SRPFlitType res_type;
   int exptime;
   int  sn;
   int flid;

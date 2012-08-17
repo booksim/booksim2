@@ -60,7 +60,8 @@ Flit* OutputBuffer::SendFlit(){
   if(f==NULL){
     int buf_idx = -1;
     //check continuation
-    if(!_buffer_tail[_last_buffer] && !_buffers[_last_buffer].empty()){
+    if(!_buffer_tail[_last_buffer] && 
+       !_buffers[_last_buffer].empty()){
       buf_idx = _last_buffer;
     } else {//oldest
       int age =numeric_limits<int>::max();
@@ -75,7 +76,6 @@ Flit* OutputBuffer::SendFlit(){
 	    break;
 	  }
 	  //find the oldest
-	  assert(_buffer_time[idx].size());
 	  if(age>_buffer_time[idx].front()){
 	    age = _buffer_time[idx].front();
 	    buf_idx = idx;
@@ -176,7 +176,7 @@ bool OutputBuffer::Full(int vc){
   assert(_nonspec_slots>=0);
   //speculative vc is "Full" if there is pending nonspeculative packets
   if(_spec_vc[vc]){
-    return (_buffer_slots[vc] >= _buffer_capacity[vc]) || _nonspec_slots!=0; //this secondary condition needs to be changed
+    return (_buffer_slots[vc] >= _buffer_capacity[vc]);// || _nonspec_slots>2; //this secondary condition needs to be adjsuted
   } else {
     return (_buffer_slots[vc] >= _buffer_capacity[vc]);
   }

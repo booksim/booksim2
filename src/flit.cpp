@@ -69,7 +69,7 @@ void Flit::Reset()
   becn = false;
   flbid = -1;
   inuse = false;
-  res_type = 0;
+  res_type = RES_TYPE_SPEC;
   type      = ANY_TYPE ;
   vc        = -1 ;
   cl        = -1 ;

@@ -47,7 +47,7 @@ void LargeRoundRobinArbiter::PrintState() const  {
 
 void LargeRoundRobinArbiter::UpdateState() {
   // update priority matrix using last grant
-  if ( _selected > -1 ) 
+  if ( _selected > -1  && _claimed) 
     _pointer = ( _selected + 1 ) % _size ;
 }
 
@@ -66,12 +66,12 @@ void LargeRoundRobinArbiter::AddRequest( int input, int id, int pri )
 }
 
 int LargeRoundRobinArbiter::Arbitrate() {
-  
   _selected = _best_input;
-  _claimed=true;
-  assert((_selected >= 0) || (_num_reqs == 0));
-
   return _selected ;
+}
+
+void LargeRoundRobinArbiter::Claim(){
+  _claimed=true;
 }
 
 void LargeRoundRobinArbiter::Clear()
@@ -79,9 +79,8 @@ void LargeRoundRobinArbiter::Clear()
   _highest_pri = numeric_limits<int>::min();
   _best_input = -1;
   if(_num_reqs > 0){
-    assert(_claimed);
     _num_reqs = 0 ;
     _selected = -1;
-    _claimed=false;
   }
+  _claimed=false;
 }

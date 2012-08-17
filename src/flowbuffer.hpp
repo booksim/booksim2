@@ -8,19 +8,22 @@
 
 class TrafficManager;
 
-#define FLOW_STAT_SPEC 0
-#define FLOW_STAT_NACK 1
-#define FLOW_STAT_WAIT 2
-#define FLOW_STAT_NORM 3
-#define FLOW_STAT_NORM_READY 4
-#define FLOW_STAT_SPEC_READY 5
-#define FLOW_STAT_NOT_READY 6
-#define FLOW_STAT_FINAL_NOT_READY 7
-#define FLOW_STAT_LIFETIME 9
+enum FlowStatFiled{
+  FLOW_STAT_SPEC=0,
+  FLOW_STAT_NACK,
+  FLOW_STAT_WAIT,
+  FLOW_STAT_NORM,
+  FLOW_STAT_NORM_READY,
+  FLOW_STAT_SPEC_READY,
+  FLOW_STAT_NOT_READY,
+  FLOW_STAT_FINAL_NOT_READY,
+  FLOW_STAT_LIFETIME,
+  FLOW_STAT_SIZE};
 
-#define FLOW_DONE_NOT 0
-#define FLOW_DONE_DONE 1
-#define FLOW_DONE_MORE 2
+enum FlowDoneStatus{
+  FLOW_DONE_NOT=0, //more packets in flow
+  FLOW_DONE_DONE, //no more packets or flows
+  FLOW_DONE_MORE};//packets doneb but more flows
 
 struct flow{
   int flid;
@@ -35,14 +38,20 @@ struct flow{
   int sn;
   queue<Flit*>* buffer;
 
+  static int _active;
+  static int _lost_flits;
+
   flow(){
     buffer=NULL;
+    _active++;
   }
   ~flow(){
+    _active--;
     if(buffer){
       while(!buffer->empty()){
 	buffer->front()->Free();
 	buffer->pop();
+	_lost_flits++;
       }
       delete buffer;
       buffer = NULL;
@@ -107,7 +116,7 @@ public:
   int _mode;
 
   //spec mode
-  int _status;
+  FlowStatus _status;
   bool _tail_sent; //if the last flit sent was a tail
   int _last_sn;
   int _guarantee_sent;
@@ -128,6 +137,7 @@ public:
 
   //these variables for stat collection
   vector<int> _stats;
+  int GetStat(int field);
   int _no_retransmit_loss;
   int _fast_retransmit;
   bool _watch;

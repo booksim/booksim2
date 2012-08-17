@@ -2,6 +2,11 @@
 #include "trafficmanager.hpp"
 #include "stats.hpp"
 #include <vector>
+
+//There are for debugging, but really slows down simulation
+//#define ENABLE_FLOW_STATS
+//#define ENABLE_IRD_STATS
+
 //RES config stuff
 extern bool FAST_RETRANSMIT_ENABLE;
 extern int RESERVATION_PACKET_THRESHOLD;
@@ -25,6 +30,9 @@ extern Stats* gStatResEarly_NEG;
 extern int TOTAL_SPEC_BUFFER;
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
+
+int flow::_active=0;
+int flow::_lost_flits=0;
 
 FlowBuffer::FlowBuffer(TrafficManager* p, int src, int id,int mode, flow* f){
   parent = p;
@@ -52,9 +60,12 @@ void FlowBuffer::Activate(int src, int id,  int mode, flow* f){
 
   Init(f);  
 }
+
+
 void FlowBuffer::Deactivate(){
-  //  gStatResEarly->AddSample(_reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size)-1-GetSimTime());
-  if(_mode == RES_MODE && fl->flow_size>=RESERVATION_PACKET_THRESHOLD){
+  
+  if(_mode == RES_MODE && 
+     fl->flow_size>=RESERVATION_PACKET_THRESHOLD){
     int sample = _reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size)-1-_last_send_time;
     //negative early means late
     if(sample>=0){
@@ -91,7 +102,6 @@ void FlowBuffer::Init( flow* f){
   _tail_sent = true;
   _guarantee_sent = 0;
   if(_mode == RES_MODE && fl->flow_size>=RESERVATION_PACKET_THRESHOLD){
- 
     _reservation_flit  = Flit::New();
     _reservation_flit->packet_size=1;
     _reservation_flit->src = _src;
@@ -118,7 +128,6 @@ void FlowBuffer::Init( flow* f){
       _reserved_slots = RESERVATION_CHUNK_LIMIT; 
       _total_reserved_slots=RESERVATION_CHUNK_LIMIT; 
     }
-
   } else {
     _status =FLOW_STATUS_NORM;
     _res_sent = true;
@@ -157,9 +166,11 @@ void FlowBuffer::Init( flow* f){
   _fast_retransmit = 0;
   _no_retransmit_loss = 0;
   _spec_outstanding = 0;
+#ifdef ENABLE_FLOW_STATS
   _stats.clear();
-  _stats.resize(FLOW_STAT_LIFETIME+1,0);
+  _stats.resize(FLOW_STAT_SIZE,0);
   _stats[FLOW_STAT_LIFETIME]=GetSimTime()-fl->create_time;
+#endif
 }
 
 
@@ -196,6 +207,8 @@ void FlowBuffer::active_update(){
     break;
   }
 
+
+#ifdef ENABLE_FLOW_STATS
   ////////////////////////////////////
   //update stats
   _stats[FLOW_STAT_LIFETIME]++;
@@ -224,11 +237,12 @@ void FlowBuffer::active_update(){
   default:
     break;
   }
+#endif
 
   ///////////////////////
   //update the rest
-  if(_ready<4 && fl->data_to_generate!=0){
-
+  if(_ready<4 &&  // why 4? arbitrary
+     fl->data_to_generate!=0){
     int deduction =   parent->_GeneratePacket(fl,fl->data_to_generate);
     int packet_size = fl->buffer->front()->packet_size;
     int sn_start =  fl->buffer->front()->sn;
@@ -248,16 +262,19 @@ void FlowBuffer::active_update(){
       _flit_status[i]=FLIT_NORMAL;
       _ready++;
     }
-
   }
 
   //for large flows, reset and rereserve
-  if(_mode ==RES_MODE && fl->flow_size>=RESERVATION_PACKET_THRESHOLD){
-    if(_reserved_slots==0 && _ready!=0 && _spec_outstanding ==0 && !_res_outstanding && _tail_sent){
-      if(RESERVATION_POST_WAIT && _mode==RES_MODE)
+  if(_mode ==RES_MODE && 
+     fl->flow_size>=RESERVATION_PACKET_THRESHOLD){
+    if(_reserved_slots==0 && 
+       _ready!=0 && 
+       _spec_outstanding ==0 && 
+       !_res_outstanding && 
+       _tail_sent){
+      if(RESERVATION_POST_WAIT &&
+	 _mode==RES_MODE)
 	_sleep_time = _reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size);
-  
-      //gStatResEarly->AddSample(_reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size)-1-GetSimTime());
       int sample = _reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size)-1-_last_send_time;
       if(sample>=0){
 	gStatResEarly_POS->AddSample(sample);  
@@ -332,7 +349,9 @@ void FlowBuffer::ecn_update(){
   if(_mode == ECN_MODE && _IRD >0){
     _IRD_timer++;
     if(_IRD_timer>=IRD_RESET_TIMER){
+#ifdef ENABLE_IRD_STATS
       gStatIRD[_src]->AddSample(_IRD);
+#endif
       _IRD--;
       _IRD_timer = 0;
     }
@@ -383,7 +402,9 @@ bool FlowBuffer::ack(int sn){
       } else {
 	_IRD=MIN(ECN_IRD_LIMIT, _IRD+ECN_IRD_INCREASE);
       }
+#ifdef ENABLE_IRD_STATS
       gStatIRD[_src]->AddSample(_IRD);
+#endif
     }
   } else {
     assert(false);
@@ -420,7 +441,9 @@ bool FlowBuffer::nack(int sn){
 	break;
     }
     _last_nack_time=GetSimTime();
+#ifdef ENABLE_FLOW_STATS
     _stats[FLOW_STAT_FINAL_NOT_READY] += _no_retransmit_loss;
+#endif
     _no_retransmit_loss=0;
 
     //change buffer status
@@ -671,17 +694,15 @@ Flit* FlowBuffer::send(){
 
 //Is the flow buffer eligbible for injection arbitration
 bool FlowBuffer::eligible(){
-  return _active && _vc!=-1 &&
-    (send_norm_ready() ||
-     send_spec_ready());
+  return (_active && 
+	  _vc!=-1 &&
+	  (send_norm_ready() ||
+	   send_spec_ready()));
 }
-
-
 
 bool FlowBuffer::send_norm_ready(){
   switch(_status){
   case FLOW_STATUS_NORM:
-    assert(GetSimTime()>=_sleep_time);
     if(!_tail_sent){
       return true;
     } else if(_mode==ECN_MODE){
@@ -691,9 +712,8 @@ bool FlowBuffer::send_norm_ready(){
       } else {
 	return false;
       }
-    } else if(_mode==RES_MODE && fl->flow_size>=RESERVATION_PACKET_THRESHOLD){
-      
-      //fix this shit
+    } else if(_mode==RES_MODE && 
+	      fl->flow_size>=RESERVATION_PACKET_THRESHOLD){
       if( FAST_RETRANSMIT_ENABLE && _reserved_slots==0 && _spec_outstanding>0){
 	return front()!=NULL;
       } else if(_reserved_slots>0){
@@ -701,15 +721,12 @@ bool FlowBuffer::send_norm_ready(){
       } else {
 	return false;
       }
-
     } else {
       return (_ready>0);
     }
   default:
-    break;
+    return false;
   }
-
-  return false;
 }
 
 bool FlowBuffer::send_spec_ready(){
@@ -717,7 +734,8 @@ bool FlowBuffer::send_spec_ready(){
   case FLOW_STATUS_GRANT_TRANSITION:
   case FLOW_STATUS_NACK_TRANSITION:
   case FLOW_STATUS_SPEC:
-    if(GetSimTime()<_sleep_time)
+    if(RESERVATION_POST_WAIT &&
+       GetSimTime()<_sleep_time)
       return false;
     if(!_res_sent){
       return true;
@@ -731,14 +749,14 @@ bool FlowBuffer::send_spec_ready(){
       }
     }
   default:
-    break;
+    return false;
   } 
-  return false;
 }
 
 int FlowBuffer::done(){
-  int  d = (_guarantee_sent == fl->flow_size)?FLOW_DONE_DONE:FLOW_DONE_NOT;
-  if(_watch && d!=FLOW_DONE_NOT){
+  FlowDoneStatus  d = (_guarantee_sent == fl->flow_size)?FLOW_DONE_DONE:FLOW_DONE_NOT;
+  if(_watch && 
+     d!=FLOW_DONE_NOT){
     cout<<"flow "<<fl->flid
 	<<" ready to terminate\n";
   } 
@@ -748,17 +766,20 @@ int FlowBuffer::done(){
   return  d;
 }
 
+
 void FlowBuffer::Reset(){
   assert(_guarantee_sent == fl->flow_size);
   assert(!_flow_queue.empty());
   
   //only update sleep time here becuas there is a flow ready to go
   //statistically this should be a rare problem 
-  if(RESERVATION_POST_WAIT && _mode==RES_MODE)
+  if(RESERVATION_POST_WAIT && 
+     _mode==RES_MODE)
     _sleep_time = _reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size);
   
-  //gStatResEarly->AddSample(_reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size)-1-GetSimTime());
-  if(_mode == RES_MODE && fl->flow_size>=RESERVATION_PACKET_THRESHOLD){
+  //calculate how this flow performed against its reservation time
+  if(_mode == RES_MODE && 
+     fl->flow_size>=RESERVATION_PACKET_THRESHOLD){
     int sample = _reserved_time-_expected_latency+MIN(RESERVATION_CHUNK_LIMIT,fl->flow_size)-1-_last_send_time;
     if(sample>=0){
       gStatResEarly_POS->AddSample(sample);  
@@ -766,8 +787,17 @@ void FlowBuffer::Reset(){
       gStatResEarly_NEG->AddSample(-sample);  
     }
   }
+
   delete fl;
   Init(_flow_queue.front());
   _flow_queue.pop();
 }
 
+
+int FlowBuffer::GetStat(int field){
+#ifdef ENABLE_FLOW_STATS
+  return _stats[field];
+#else
+  return 0;
+#endif
+}

@@ -11,14 +11,14 @@ vc_buf_size = 512;
 	
 priority = other;
 
-num_vcs     = 4;
-res_vcs = 1;
-expiration_time = 400;
+num_vcs= 4;
+res_vcs=1;
+expiration_time = 600;
 reservation_packet_threshold=128;
 reservation_chunk_limit=256;
 
 reservation_overhead_factor=1.00;
-reservation_control_overhead=4;
+reservation_control_overhead=5;
 reservation_walkin_overhead=1;	
 hotspot_reservation=1;
 

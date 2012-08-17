@@ -20,7 +20,7 @@ ecn_timer_only =1;
 ecn_buffer_threshold=64;
 
 ird_reset_timer=40;
-ecn_ird_limit=2048;
+ecn_ird_limit=4096;
 ird_scaling_factor=1;
 ecn_ird_increase = 256;
 

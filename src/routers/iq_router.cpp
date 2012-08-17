@@ -120,17 +120,6 @@ int IQRouter::vc2voq(int vc, int output){
   }
 
 }
-int IQRouter::voqport(int vc){
-  assert(_voq);
-
-    
-  if(vc<_special_vcs){
-    return -1;
-  } else { 
-    return (vc-_special_vcs)%_outputs;
-  }
-}
-
 
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
@@ -467,7 +456,7 @@ void IQRouter::_InternalStep( )
     _SWAllocUpdate( );
     activity = activity || !_sw_alloc_vcs.empty();
   }
-  bool switch_active = !_crossbar_flits.empty() ;
+
   if(!_crossbar_flits.empty()) {
     _SwitchUpdate( );
     activity = activity || !_crossbar_flits.empty();
@@ -912,12 +901,11 @@ void IQRouter::_VCAllocEvaluate( )
 
     for(int out_vc = iset.vc_start; out_vc <= iset.vc_end; ++out_vc) {
       assert((out_vc >= 0) && (out_vc < _vcs));
-      assert( iset.vc_end-iset.vc_start==0 || !_voq);
       int const & in_priority = iset.pri;
 
-
       //speculative buffer check
-      if( RESERVATION_BUFFER_SIZE_DROP && VC_ALLOC_DROP && f && f->res_type == RES_TYPE_SPEC){
+      if( RESERVATION_BUFFER_SIZE_DROP && 
+	  VC_ALLOC_DROP && f && f->res_type == RES_TYPE_SPEC){
 	int next_size = dest_buf->Size(out_vc)-DEFAULT_CHANNEL_LATENCY*2;
 	next_size=MAX(next_size,0);
 
@@ -931,7 +919,7 @@ void IQRouter::_VCAllocEvaluate( )
 	  }
 	    
 	  cur_buf->SetDrop(vc);
-	  continue;
+	  break;
 	}
       }
 
@@ -1019,11 +1007,22 @@ void IQRouter::_VCAllocEvaluate( )
       assert(route_set);
       const OutputSet::sSetElement  iset = route_set->GetSet();
       int out_port = iset.output_port;
-      int out_vc = iset.vc_start;
-      if(_VOQArbs[ (_special_vcs+_data_vcs)*out_port+ out_vc]->Arbitrate()!=input * _vcs + vc){
-	output_and_vc = -1;
-      } else {
-	output_and_vc =  (_special_vcs+_data_vcs)*out_port+out_vc;
+      int vc_start = iset.vc_start;
+      int vc_end = iset.vc_end; 
+      int vc_count = vc_end-vc_start+1;
+      int rand_start = RandomInt(vc_count-1);
+      //Especially for mutliple data vc, start at a vc at random, then scan until found
+      for(int i = 0; i<vc_count; i++){
+	int vc_index = (rand_start+i)%vc_count;
+	int out_vc = vc_start+vc_index; //actual vc
+	if(_VOQArbs[(_special_vcs+_data_vcs)*out_port+out_vc]->Arbitrate()!=input*_vcs+vc){
+	  output_and_vc = -1;
+	} else {
+	  output_and_vc =  (_special_vcs+_data_vcs)*out_port+out_vc;
+	  //ensures ptr update
+	  _VOQArbs[ (_special_vcs+_data_vcs)*out_port+ out_vc]->Claim();
+	  break;
+	}
       }
 #else
       output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
