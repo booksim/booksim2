@@ -324,7 +324,7 @@ bool SuperNetwork::HasAnOpening(int net, int chan, int vector_index, int size) c
   {
     return false;
   }
-  assert(vector_index >= _time_slot_to_begin && vector_index < _bit_vector_length && (int)_bit_vectors[net][chan].size() <= _bit_vector_length);
+  assert(vector_index < _bit_vector_length && (int)_bit_vectors[net][chan].size() <= _bit_vector_length);
   int reservation_size = size;
   reservation_size -= _bit_vectors[net][chan][vector_index].first;
   if (vector_index + 1 < _bit_vector_length && reservation_size > 0)
