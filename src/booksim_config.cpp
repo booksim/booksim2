@@ -47,6 +47,8 @@ BookSimConfig::BookSimConfig( )
   _int_map["aux_vc"] = 0;
   //min=0, val/uga=1, prog=2 
   _int_map["adapt_vc"] = 0;
+
+  _float_map["adaptive_threshold"] = 6.0;
   _int_map["dragonfly_global_latency"] = 30;
   _int_map["dragonfly_local_latency"] = 5;
   _int_map["remove_credit_rtt"] = 0;
@@ -74,7 +76,6 @@ BookSimConfig::BookSimConfig( )
   AddStrField("transient_data","");
 
   _int_map["reservation_buffer_size_drop"] = 1;
-  _int_map["reservation_spec_vc_size"]=0;
   _int_map["reservation_spec_off"] = 0;
   _int_map["reservation_always_succeed"] = 0;
   _float_map["reservation_rtt"] = 1.0;

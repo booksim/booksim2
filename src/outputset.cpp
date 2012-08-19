@@ -108,8 +108,8 @@ bool OutputSet::OutputEmpty( int output_port ) const
 }
 
 
-const OutputSet::sSetElement OutputSet::GetSet() const{
-  return _outputs;
+const OutputSet::sSetElement* OutputSet::GetSet() const{
+  return &_outputs;
 }
 
 //legacy support, for performance, just use GetSet()

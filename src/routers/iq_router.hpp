@@ -55,31 +55,30 @@ class VCTag;
 
 class IQRouter : public Router {
 
-  int _packet_size;
+  //adaptive routing related
   bool _remove_credit_rtt;
   bool _track_routing_commitment;
   vector<int> _current_bandwidth_commitment;
   vector<int> _next_bandwidth_commitment;
+  
+  bool _cut_through; //true
 
-
-  bool _cut_through;
-  bool _use_voq_size;
-  bool _voq;
-  //  bool _spec_voq;
+  //voq
+  bool _ecn_use_voq_size;
+  bool _voq; //true
+  bool _spec_voq;
   vector<pair<int,int> > _voq_pid;
-  //this is dynamic for arriving packets
 
-
-  //this is static for a VOQ VC
-
+  //remembering a vc is marked for drop
   vector<bool> _res_voq_drop;
 
 
-  //(_ctrl_vcs<special_vcs + data_vcs) * voq = _vcs
-  int _ctrl_vcs;
-  int _special_vcs;
-  int _data_vcs; //problem when voq is used
-  int _vcs; //voq included
+
+  int _ctrl_vcs; //control
+  int _special_vcs; // vcs that do not voq
+  int _data_vcs; //vcs that voq
+  int _num_vcs; //same as config file?
+  int _vcs; //vc including voq
   int _classes;
 
   bool _speculative;
@@ -197,6 +196,7 @@ public:
   void Display( ostream & os = cout ) const;
 
   virtual int GetCredit(int out, int vc_begin=-1, int vc_end=-1 ) const;
+  virtual int GetCreditArray(int out, int* vcs, int vc_count, bool rtt, bool commit) const;
   virtual int GetBuffer(int i = -1) const;
   virtual vector<int> GetBuffers(int i = -1) const;
 
@@ -208,11 +208,12 @@ public:
 //replaces the router _vcs queue clusterF
 class VCTag{
 public:
-  int _id;
   int _time;
   int _input;
   int _vc;
   int _output;
+  const OutputSet::sSetElement*  _iset;
+
   bool _use;
   static VCTag* New(int t, int i, int v, int o);
   static VCTag* New();
@@ -227,7 +228,6 @@ private:
   ~VCTag(){}
   static stack<VCTag *> _all;
   static stack<VCTag *> _free;
-  static int _cur_id;
 };
 
 #endif

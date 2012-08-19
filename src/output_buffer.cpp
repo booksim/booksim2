@@ -176,7 +176,7 @@ bool OutputBuffer::Full(int vc){
   assert(_nonspec_slots>=0);
   //speculative vc is "Full" if there is pending nonspeculative packets
   if(_spec_vc[vc]){
-    return (_buffer_slots[vc] >= _buffer_capacity[vc]);// || _nonspec_slots>2; //this secondary condition needs to be adjsuted
+    return (_buffer_slots[vc] >= _buffer_capacity[vc]) || _nonspec_slots>0; //this secondary condition needs to be adjsuted
   } else {
     return (_buffer_slots[vc] >= _buffer_capacity[vc]);
   }

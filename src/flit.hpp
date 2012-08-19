@@ -45,10 +45,10 @@ public:
 		  WRITE_REPLY   = 3,
                   ANY_TYPE      = 4 };
   FlitType type;
-
   SRPFlitType res_type;
-  int exptime;
-  int  sn;
+
+  short exptime;
+  int sn;
   int flid;
   int payload; 
   //res = reservation size
@@ -77,14 +77,10 @@ public:
 
   int ntime;
   int  time;
-  //  int  ttime;
   int  atime;
-
-  //  int  rob_time;
 
   int  id;
   int  pid;
-  //  int  tid;
 
   bool record;
 
@@ -104,11 +100,6 @@ public:
   //mutable int dr;
   mutable short minimal; // == 1 minimal routing, == 0, nonminimal routing
 
-  // Which VC parition to use for deadlock avoidance in a ring
-  //mutable int ring_par;
-
-  // Fields for arbitrary data
-  //  void* data ;
 
   void Reset();
 

@@ -44,7 +44,6 @@ class LargeRoundRobinArbiter{
   bool _claimed;
   int  _pointer ;
   int  _size ;
-  int  _selected ;
   int _highest_pri;
   int _best_input;
   int  _num_reqs ;
@@ -65,12 +64,16 @@ public:
 
   // Arbitrate amongst requests. Returns winning input and 
   // updates pointers to metadata when valid pointers are passed
-  int Arbitrate() ;
+  inline int Arbitrate() {
+    return _best_input;
+  }
 
   void AddRequest( int input, int id, int pri ) ;
 
   void Clear();
-  void Claim();
+  inline void Claim(){
+    _claimed=true;
+  }
   static inline bool Supersedes(int input1, int pri1, int input2, int pri2, int offset, int size)
   {
     // in a round-robin scheme with the given number of positions and current 

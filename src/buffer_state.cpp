@@ -79,8 +79,7 @@ BufferState::BufferState( const Configuration& config,
 Module( parent, name ), _shared_occupied(0), _active_vcs(0)
 {
   _vc_buf_size     = config.GetInt( "vc_buf_size" );
-  _spec_vc_buf_size = config.GetInt("reservation_spec_vc_size");
-  _spec_vc_buf_size = (_spec_vc_buf_size==0)?_vc_buf_size:_spec_vc_buf_size;
+  _spec_vc_buf_size = _vc_buf_size;
   _shared_buf_size = config.GetInt( "shared_buf_size" );
   _vcs             = config.GetInt( "num_vcs" );
   

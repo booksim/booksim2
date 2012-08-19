@@ -43,8 +43,7 @@ Module( parent, name ), _shared_count(0)
 {
 
   _vc_size = config.GetInt( "vc_buf_size" );
-  _spec_vc_size = config.GetInt("reservation_spec_vc_size");
-  _spec_vc_size = (_spec_vc_size==0)?(_vc_size):(_spec_vc_size);
+  _spec_vc_size =  _vc_size;
   _shared_size = config.GetInt( "shared_buf_size" );
 
   int num_vcs = config.GetInt( "num_vcs" );

@@ -1223,7 +1223,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     if( receive_flow_buffer!=NULL &&
 	receive_flow_buffer->active() && 
 	receive_flow_buffer->fl->flid == f->flid){
-      int temp = receive_flow_buffer->nack(f->sn)?1:0;
+      receive_flow_buffer->nack(f->sn);
 #ifdef ENABLE_STATS
       gStatNackArrival->AddSample(_time-receive_flow_buffer->fl->create_time);
 #endif
@@ -1950,10 +1950,10 @@ void TrafficManager::_FlowVC(FlowBuffer* flb){
   assert(f);
   assert(f->head);
   _rf(NULL, f, 0, _flow_route_set, true);
-  OutputSet::sSetElement se = _flow_route_set->GetSet();
-  assert(se.output_port == 0);
-  int const & vc_start = se.vc_start;
-  int const & vc_end = se.vc_end;
+  const OutputSet::sSetElement* iset = _flow_route_set->GetSet();
+  assert(iset->output_port == 0);
+  int const & vc_start = iset->vc_start;
+  int const & vc_end = iset->vc_end;
   int const vc_count = vc_end - vc_start + 1;
   //VC assignment is randomized instead of round robined!!!
   int rvc = RandomInt(vc_count-1);
@@ -3399,7 +3399,7 @@ void TrafficManager::DisplayStats( ostream & os ) {
     }
     os<<"ECN ratio "<<ecn_sum/ecn_num<<endl;
     os<<"Flows created "<<_cur_flid<<endl;
-    os<<"Flows lost flits "<<flow::_lost_flits<<" (better be zero)"<<endl;
+    //os<<"Flows lost flits "<<flow::_lost_flits<<" (better be zero)"<<endl;
     os<<"Adaptive Ratio "<<float(_nonmin_plat_stats->NumSamples())/(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples())<<endl;
     _DisplayTedsShit();    
 #endif

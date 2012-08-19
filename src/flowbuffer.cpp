@@ -267,9 +267,9 @@ void FlowBuffer::active_update(){
   //for large flows, reset and rereserve
   if(_mode ==RES_MODE && 
      fl->flow_size>=RESERVATION_PACKET_THRESHOLD){
-    if(_reserved_slots==0 && 
+    if(_spec_outstanding ==0 && 
+       _reserved_slots==0 && 
        _ready!=0 && 
-       _spec_outstanding ==0 && 
        !_res_outstanding && 
        _tail_sent){
       if(RESERVATION_POST_WAIT &&

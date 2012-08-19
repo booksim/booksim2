@@ -42,6 +42,15 @@ int g_grp_num_routers=0;
 int g_grp_num_nodes=0;
 int g_network_size = 0;
 
+
+//UGAL getcredit vc listings
+//!gReservation !ECN
+int * vc_min_same;
+int * vc_nonmin_same;
+//gREservation
+int * vc_min_res_same;
+int * vc_nonmin_res_same;
+
 #define MAX(X,Y) ((X>Y)?(X):(Y))
 
 //calculate the hop count between src and estination
@@ -148,6 +157,47 @@ int dragonfly_port(int rID, int source, int dest){
   return out_port;
 }
 
+//Dragonfly VCs are assigned by phase (ph)
+//With SRP control vcs, different offsets are added infront of the phase
+//Currently control vc DONOT route adaptively
+//          Spec vc DO route adaptively
+int SRP_VC_CONVERTER(int ph, int res_type){
+  int vc= -1;
+  switch(res_type){
+  case RES_TYPE_NACK:
+  case RES_TYPE_GRANT:
+  case RES_TYPE_ACK:
+    if(gECN){
+      return ph;
+    } else {
+      return (ph+
+	      1+gAuxVCs); //offset: res_vc + aux
+    }
+    break;
+  case RES_TYPE_RES:
+    return ph; //reservation first set of vcs
+    break;
+  case RES_TYPE_SPEC:
+    return (ph+
+	    RES_RESERVED_VCS + RES_RESERVED_VCS*gAuxVCs);//offset: ctrl_vc + ctrl_aux
+    break;
+  case RES_TYPE_NORM:
+    if(gECN){
+      return (ph+
+	      ECN_RESERVED_VCS+ECN_RESERVED_VCS*gAuxVCs); //offset: ack_vc + ack_aux
+    } else if(gReservation){
+      return (ph+
+	      RES_RESERVED_VCS + RES_RESERVED_VCS*gAuxVCs+ //offset: ack_vc + ack_aux
+	      gResVCs + gAuxVCs + gAdaptVCs);// offset: spec_vc + spec_aux + spec_adaptive
+    } else {
+      return ph;
+    }
+    break;
+  default:
+    assert(false);
+  }
+  return vc;
+}
 
 DragonFlyNew::DragonFlyNew( const Configuration &config, const string & name ) :
   Network( config, name )
@@ -160,6 +210,34 @@ DragonFlyNew::DragonFlyNew( const Configuration &config, const string & name ) :
 
 void DragonFlyNew::_ComputeSize( const Configuration &config )
 {
+
+  gAdaptiveThreshold = config.GetFloat("adaptive_threshold");
+  
+  //These arrays are for ugal routing, hardcoded which VC to check for queu length
+  //ECN not supported y et
+  assert(!gECN);
+
+  vc_min_same = new int[2];
+  vc_min_same[0] = SRP_VC_CONVERTER(0,RES_TYPE_NORM); //min-min
+  vc_min_same[1] = SRP_VC_CONVERTER(4,RES_TYPE_NORM); //unsure-min
+  vc_nonmin_same =new int[1];
+  vc_nonmin_same[0] = SRP_VC_CONVERTER(2,RES_TYPE_NORM); //nonmin
+
+  vc_min_res_same = new int[8];
+  vc_min_res_same[0] = SRP_VC_CONVERTER(0,RES_TYPE_NORM);
+  vc_min_res_same[1] = SRP_VC_CONVERTER(4,RES_TYPE_NORM);
+  vc_min_res_same[2] = SRP_VC_CONVERTER(0,RES_TYPE_SPEC);
+  vc_min_res_same[3] = SRP_VC_CONVERTER(4,RES_TYPE_SPEC);
+  vc_min_res_same[4] = SRP_VC_CONVERTER(0,RES_TYPE_RES);
+  vc_min_res_same[5] = SRP_VC_CONVERTER(0,RES_TYPE_NACK);
+  vc_min_res_same[6] = SRP_VC_CONVERTER(0,RES_TYPE_ACK);
+  vc_min_res_same[7] = SRP_VC_CONVERTER(0,RES_TYPE_GRANT);
+
+  vc_nonmin_res_same = new int[2];
+  vc_min_res_same[0] = SRP_VC_CONVERTER(2,RES_TYPE_NORM);
+  vc_min_res_same[1] = SRP_VC_CONVERTER(2,RES_TYPE_SPEC);
+
+
 
   // LIMITATION
   //  -- only one dimension between the group
@@ -428,49 +506,16 @@ void DragonFlyNew::RegisterRoutingFunctions(){
   gRoutingFunctionMap["ugalprog_dragonflynew"] = &ugalprog_dragonflynew;
 }
 
-int SRP_VC_CONVERTER(int ph, int res_type){
-  int vc= -1;
-  switch(res_type){
-  case RES_TYPE_NACK:
-  case RES_TYPE_GRANT:
-  case RES_TYPE_ACK:
-    if(gECN){
-      return ph;
-    } else {
-      return ph+1+gAuxVCs; //skip resVC + AuxVC
-    }
-    break;
-  case RES_TYPE_RES:
-    return ph;
-    break;
-  case RES_TYPE_SPEC:
-    if(gReservation){
-      return ph+RES_RESERVED_VCS + RES_RESERVED_VCS*gAuxVCs ;//+ctrl + ctrl_aux
-    } else {
-      return ph;
-    }
-    break;
-  case RES_TYPE_NORM:
-    if(gECN){
-      return ph+ECN_RESERVED_VCS+1; //skip ctrl + ctrl_aux
-    } else if(gReservation){
-      return ph+RES_RESERVED_VCS + RES_RESERVED_VCS*gAuxVCs + 1+gAuxVCs + gAdaptVCs;//+ctrl + ctrl_aux+spec+spec_aux+adap
-    } else {
-      return ph;
-    }
-    break;
-  default:
-    assert(false);
-  }
-  return vc;
-}
+
+
 
 void min_dragonflynew( const Router *r, const Flit *f, int in_channel, 
 		       OutputSet *outputs, bool inject )
 {
   outputs->Clear( );
   if(inject) {
-    int inject_vc= SRP_VC_CONVERTER(0,f->res_type == RES_TYPE_RES?RES_TYPE_SPEC:f->res_type);
+    //injection && res_type_res means we are assigning VC for a speculative flow buffer
+    int inject_vc= SRP_VC_CONVERTER(0,(f->res_type == RES_TYPE_RES)?RES_TYPE_SPEC:f->res_type);
     outputs->AddRange(0,inject_vc, inject_vc);
     return;
   }
@@ -483,8 +528,6 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
   int debug = f->watch;
   int out_port = -1;
   int out_vc = 0;
-
-
 
   if ( in_channel < gP ) {
     f->ph = 0;
@@ -502,6 +545,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
   }  
   
   out_vc = SRP_VC_CONVERTER(f->ph,f->res_type);
+
   if (debug)
     *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
 	       << "	through output port : " << out_port 
@@ -522,8 +566,7 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
   outputs->Clear( );
   if(inject) {
-    
-    int inject_vc= SRP_VC_CONVERTER(0,f->res_type == RES_TYPE_RES?RES_TYPE_SPEC:f->res_type);
+    int inject_vc= SRP_VC_CONVERTER(0,(f->res_type == RES_TYPE_RES)?RES_TYPE_SPEC:f->res_type);
     outputs->AddRange(0,inject_vc, inject_vc);
     return;
   }
@@ -556,7 +599,7 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
       }
       //intermediate are in the same group
-      if(grp_ID == intm_grp_ID){
+      if(grp_ID == intm_grp_ID || dest_grp_ID == intm_grp_ID){
 	f->ph = 0;
 	f->minimal = 1;
       } else { 
@@ -594,7 +637,7 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
     f->ph = 1;
   }  
 
- //optical dateline
+ //optical dateline nonmin
   if (f->ph == 2 && out_port >=gP + (gA-1)) {
     f->ph = 3;
   }  
@@ -616,14 +659,14 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
   outputs->Clear( );
   if(inject) {
-    int inject_vc= SRP_VC_CONVERTER(0,f->res_type == RES_TYPE_RES?RES_TYPE_SPEC:f->res_type);
+    int inject_vc= SRP_VC_CONVERTER(0,(f->res_type == RES_TYPE_RES)?RES_TYPE_SPEC:f->res_type);
     outputs->AddRange(0,inject_vc, inject_vc);
     return;
   }
   
   //this constant biases the adaptive decision toward minimum routing
   //negative value woudl biases it towards nonminimum routing
-  int adaptive_threshold = 30;
+  int adaptive_threshold = int(float(f->packet_size)*gAdaptiveThreshold);
  
   int dest  = f->dest;
   int rID =  r->GetID(); 
@@ -736,18 +779,16 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
   //ph 1 dest
   //ph 2 nonmin source
   //ph 3 nonmin intm
-  //ph 4 unsure min
-
+  //ph 4 unsure source
 
   outputs->Clear( );
   if(inject) {
-   int inject_vc= SRP_VC_CONVERTER(0,f->res_type == RES_TYPE_RES?RES_TYPE_SPEC:f->res_type);
-
+    int inject_vc= SRP_VC_CONVERTER(0,(f->res_type == RES_TYPE_RES)?RES_TYPE_SPEC:f->res_type);
     outputs->AddRange(0,inject_vc, inject_vc);
     return;
   }
 
-  int adaptive_threshold = f->packet_size*6;
+  int adaptive_threshold = int(float(f->packet_size)*gAdaptiveThreshold);
 
  
   int dest  = f->dest;
@@ -758,15 +799,16 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
   int debug = f->watch;
   int out_port = -1;
   int out_vc = 0;
-  int min_queue_size, min_hopcnt;
-  int nonmin_queue_size, nonmin_hopcnt;
+
+  int min_router_output, min_queue_size;
+  int nonmin_router_output, nonmin_queue_size;
+
   int intm_grp_ID;
   int intm_rID;
 
   if(debug){
     cout<<"At router "<<rID<<endl;
   }
-  int min_router_output, nonmin_router_output;
   
   if ( in_channel < gP )   {
     //dest are in the same group
@@ -776,41 +818,43 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
     } else {
       //select a random node
       f->intm =RandomInt(g_network_size - 1);
-      intm_grp_ID = (int)(f->intm/g_grp_num_nodes);
+      intm_grp_ID = int(f->intm/g_grp_num_nodes);
       if (debug){
 	cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
       }
+
       //intermediate was useless are in the same group
       if(grp_ID == intm_grp_ID ||intm_grp_ID==dest_grp_ID ){
 	f->ph = 0;
 	f->minimal = 1;
       } else {
-
-	min_hopcnt = dragonflynew_hopcnt(f->src, f->dest);
 	min_router_output = dragonfly_port(rID, f->src, f->dest); 
-	nonmin_hopcnt = dragonflynew_hopcnt(f->src, f->intm) +
-	  dragonflynew_hopcnt(f->intm,f->dest);
 	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
 
 	//min and non-min output port could be identical, need to distinquish them
 	if(nonmin_router_output == min_router_output){
-	  //this is fucking hand coded VCs
+
 	  if(gReservation){
-	    
-	    min_queue_size = MAX(r->GetCredit(min_router_output,SRP_VC_CONVERTER(4,RES_TYPE_NORM)),0) 
-	      +MAX(r->GetCredit(min_router_output,SRP_VC_CONVERTER(4,RES_TYPE_SPEC)),0); 
-	    nonmin_queue_size = MAX(r->GetCredit(min_router_output,SRP_VC_CONVERTER(2,RES_TYPE_NORM)),0) 
-	      +MAX(r->GetCredit(min_router_output,SRP_VC_CONVERTER(2,RES_TYPE_SPEC)),0);
+	    min_queue_size = 
+	      r->GetCreditArray(min_router_output,
+				vc_min_res_same,8 ,false, false);
+	    nonmin_queue_size =
+	      r->GetCreditArray(nonmin_router_output,
+				vc_nonmin_res_same,2 ,false, false);
+
 	  } else {
-	    int min_vc = SRP_VC_CONVERTER(4,RES_TYPE_NORM);
-	    int nonmin_vc = SRP_VC_CONVERTER(2,RES_TYPE_NORM);
-	    min_queue_size = MAX(r->GetCredit(min_router_output,min_vc),0) ; 
-	    nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output,nonmin_vc),0);
+
+	    min_queue_size = 
+	      r->GetCreditArray(min_router_output,
+				vc_min_same,2,false, false);
+	    nonmin_queue_size = 
+	      r->GetCreditArray(nonmin_router_output,
+			   vc_nonmin_same,1,false, false);
 	  }
 
 	} else {	  
-	  min_queue_size = MAX(r->GetCredit(min_router_output),0) ; 
-	  nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output),0);
+	  min_queue_size = r->GetCredit(min_router_output); 
+	  nonmin_queue_size = r->GetCredit(nonmin_router_output);
 	}
 
 
@@ -833,27 +877,25 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
       cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
     }
     //intermediate are in the same group
-    if(grp_ID == intm_grp_ID){
+    if(grp_ID == intm_grp_ID ||intm_grp_ID==dest_grp_ID ){
+      //shoudl track this stat
     } else {
       //congestion metric using queue length
-      min_hopcnt = dragonflynew_hopcnt(f->src, f->dest);
       min_router_output = dragonfly_port(rID, f->src, f->dest); 
-      min_queue_size = MAX(r->GetCredit(min_router_output) ,0); 
+      min_queue_size = r->GetCredit(min_router_output); 
       
-      nonmin_hopcnt = dragonflynew_hopcnt(f->src, f->intm) +
-	dragonflynew_hopcnt(f->intm,f->dest);
+      
       nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
-      nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output),0);
-
-
-	if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {
-	} else {
-	  f->ph = 2;
-	  f->minimal = 2;
-	}
+      nonmin_queue_size = r->GetCredit(nonmin_router_output);
+      
+      if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {
+      } else {
+	f->ph = 2;
+	f->minimal = 2;
+      }
     }    
   }
-
+  
   //transition from nonminimal phase to minimal
   if(f->ph==2 || f->ph == 3){
     intm_rID= (int)(f->intm/gP);

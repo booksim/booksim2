@@ -50,7 +50,7 @@ public:
   bool OutputEmpty( int output_port ) const;
   int NumVCs( int output_port ) const;
   
-  const sSetElement GetSet() const;
+  const sSetElement* GetSet() const;
 
   int  GetVC( int output_port,  int vc_index, int *pri = 0 ) const;
   bool GetPortVC( int *out_port, int *out_vc ) const;

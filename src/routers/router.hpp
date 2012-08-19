@@ -122,6 +122,7 @@ public:
 
 
   virtual int GetCredit(int out, int vc_begin=-1, int vc_end=-1 ) const = 0;
+  virtual int GetCreditArray(int out, int* vcs, int vc_count, bool rtt, bool commit) const=0;
   virtual int GetBuffer(int i = -1) const = 0;
 
   inline vector<int> const & GetReceivedFlits() const {

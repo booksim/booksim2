@@ -81,14 +81,11 @@ extern int DEFAULT_CHANNEL_LATENCY;
 int IQRouter::voq2vc(int vvc, int outputs){
   assert(_voq);
   assert(outputs!=-1);
-
-
   if(vvc<_special_vcs){
     return vvc;
   } else { //data
     return (vvc-_special_vcs)/outputs+_special_vcs;
   }
-
 }
 
 bool IQRouter::is_control_vc(int vc){
@@ -113,7 +110,7 @@ int IQRouter::vc2voq(int vc, int output){
   if(vc<_special_vcs){
     return vc;
   } else { //data
-    if(output==-1)
+    if(output==-1) //?
       return -1;
     else  //deduct ctrl vc, scale by #voq, add output port + add ctrl vc back
       return (vc-_special_vcs)*_outputs+output+_special_vcs;
@@ -139,22 +136,30 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
   _remove_credit_rtt = (config.GetInt("remove_credit_rtt")==1);
   _track_routing_commitment = (config.GetInt("track_routing_commitment")==1);
-  _current_bandwidth_commitment.resize(outputs,0);
-  _next_bandwidth_commitment.resize(outputs,0);
+  if( _track_routing_commitment){
+    _current_bandwidth_commitment.resize(outputs,0);
+    _next_bandwidth_commitment.resize(outputs,0);
+  }
 
   _cut_through = (config.GetInt("cut_through")==1);
+
   assert(_cut_through); //all the output buffer changes requires this
   assert(!_cut_through || (config.GetInt("vc_busy_when_full")==1));
-  _use_voq_size=(config.GetInt("use_voq_size")==1);
+
+  _ecn_use_voq_size=(config.GetInt("use_voq_size")==1);
+
   _voq = (config.GetInt("voq") ==1);
-  _data_vcs         = config.GetInt( "num_vcs" );
-  
+  _spec_voq = config.GetInt("reservation_spec_voq");
+  _num_vcs=config.GetInt( "num_vcs" );
 
   if(_voq){
-    //voq currently only works for single vc
     if(gReservation){
       _ctrl_vcs = RES_RESERVED_VCS+RES_RESERVED_VCS*gAuxVCs;
-      _special_vcs = _ctrl_vcs + 1 + gAuxVCs + gAdaptVCs;
+      if(_spec_voq){
+	_special_vcs =  _ctrl_vcs; //spec gets included in data vc
+      } else {
+	_special_vcs = _ctrl_vcs + 1 + gAuxVCs + gAdaptVCs;
+      }
  
     } else if(gECN){
       _ctrl_vcs=ECN_RESERVED_VCS+gAuxVCs;;
@@ -163,12 +168,11 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
       _ctrl_vcs= 0;
       _special_vcs = 0;
     }
-    _data_vcs-=_special_vcs;
+    _data_vcs = _num_vcs -  _special_vcs;
 
     _vcs = _special_vcs + outputs*_data_vcs;
 
-
-    _voq_pid.resize(inputs*(_special_vcs+_data_vcs));
+    _voq_pid.resize(inputs*(_num_vcs));
     _res_voq_drop.resize(inputs*_vcs, false);
 
   } else {
@@ -191,7 +195,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   _output_hysteresis.resize(outputs,false);
   _credit_hysteresis.resize(_vcs*outputs,false);
   _vc_congested.resize(_vcs*outputs,0);
-  _ECN_activated.resize((_special_vcs+_data_vcs)*outputs,0);
+  _ECN_activated.resize((_num_vcs)*outputs,0);
   _input_request.resize(inputs,0);
   _input_grant.resize(outputs, 0);
   _vc_congested_sum.resize(_vcs*outputs,0);
@@ -259,20 +263,20 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     if(iters == 0) iters = config.GetInt("alloc_iters");
     if(_voq){
 #ifdef USE_LARGE_ARB
-      _vc_allocator = NULL;_VOQArbs = new LargeRoundRobinArbiter*[(_special_vcs+_data_vcs)*_outputs];
-      for(int i = 0; i<(_special_vcs+_data_vcs)*_outputs; i++){
+      _vc_allocator = NULL;_VOQArbs = new LargeRoundRobinArbiter*[_num_vcs*_outputs];
+      for(int i = 0; i<_num_vcs*_outputs; i++){
 	_VOQArbs[i] = new LargeRoundRobinArbiter("inject_arb",
 						 _vcs*_inputs);
       }
 #else
-      _VOQArbs = NULL;_vc_allocator = Allocator::NewAllocator( this, "vc_allocator", alloc_type,_vcs*_inputs, (_special_vcs+_data_vcs)*_outputs, iters, arb_type );
+      _VOQArbs = NULL;_vc_allocator = Allocator::NewAllocator( this, "vc_allocator", alloc_type,_vcs*_inputs, _num_vcs*_outputs, iters, arb_type );
 #endif	     
       
     } else {
       _vc_allocator = Allocator::NewAllocator( this, "vc_allocator", 
 					       alloc_type,
 					       _vcs*_inputs, 
-					       (_special_vcs+_data_vcs)*_outputs,
+					       _num_vcs*_outputs,
 					       iters, arb_type );
     }
     if ( !_vc_allocator && !_VOQArbs  ) {
@@ -316,8 +320,10 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   for(int o = 0; o<_outputs; o++){
     _output_buffer[o] = new OutputBuffer(config, this, "output_buffer");
   }
-  for(int i = _ctrl_vcs; i< _special_vcs; i++){
-    OutputBuffer::SetSpecVC(i, config.GetInt("spec_output_buffer_size"));
+  if(gReservation){
+    for(int i = RES_RESERVED_VCS; i< (RES_RESERVED_VCS+gResVCs); i++){
+      OutputBuffer::SetSpecVC(i, config.GetInt("spec_output_buffer_size"));
+    }
   }
 
   _credit_buffer.resize(_inputs); 
@@ -373,7 +379,7 @@ IQRouter::~IQRouter( )
   if(!_voq){
     delete _vc_allocator;
   } else {
-    for(int i = 0; i<(_special_vcs+_data_vcs)*_outputs; i++){
+    for(int i = 0; i<_num_vcs*_outputs; i++){
       delete _VOQArbs[i];
     }
     delete [] _VOQArbs;
@@ -389,9 +395,11 @@ IQRouter::~IQRouter( )
   
 void IQRouter::ReadInputs( )
 {
-  for(int i =0; i<_outputs; ++i){
-    _current_bandwidth_commitment[i] = 
-      _next_bandwidth_commitment[i];
+  if(  _track_routing_commitment){
+    for(int i =0; i<_outputs; ++i){
+      _current_bandwidth_commitment[i] = 
+	_next_bandwidth_commitment[i];
+    }
   }
  
   bool have_flits = _ReceiveFlits( );
@@ -415,7 +423,7 @@ void IQRouter::_InternalStep( )
       _vc_allocator->Clear();
     } else {
 #ifdef USE_LARGE_ARB
-      for(int i = 0; i<(_special_vcs+_data_vcs)*_outputs; i++){
+      for(int i = 0; i<_num_vcs*_outputs; i++){
 	_VOQArbs[i]->UpdateState();
 	_VOQArbs[i]->Clear();
       }
@@ -547,8 +555,6 @@ bool IQRouter::_ReceiveFlits( )
   for(int input = 0; input < _inputs; ++input) { 
     if( _input_channels[input]->GetSource() == -1){
       Flit * f;
-      //for(int vc = 0; vc< (_special_vcs+_data_vcs); vc++){
-      //f = net[0]->GetSpecial( _input_channels[input],vc);
       f = _input_channels[input]->Receive();
 
 	if(gReservation){
@@ -622,7 +628,7 @@ void IQRouter::_InputQueuing( )
     //voq related, could break things
     //int const & vc = f->vc;
     int vc = f->vc;
-    assert((vc >= 0) && (vc < (_special_vcs+_data_vcs)));
+    assert((vc >= 0) && (vc < _num_vcs));
 
     Buffer * const cur_buf = _buf[input];
     OutputSet * o = NULL;
@@ -633,15 +639,15 @@ void IQRouter::_InputQueuing( )
       if(f->head){
 	int old_vc = f->vc;
 	_rf(this, f, input, o, false);
-	const OutputSet::sSetElement iset = o->GetSet();
-	int  out_port = iset.output_port;
+	const OutputSet::sSetElement* iset = o->GetSet();
+	int  out_port = iset->output_port;
 	f->vc = old_vc;
 	vc = vc2voq(f->vc, out_port);
 	_UpdateCommitment(input, vc, f, o);
-	_voq_pid[input*(_special_vcs+_data_vcs)+f->vc]=pair<int, int>(f->pid, vc);
+	_voq_pid[input*_num_vcs+f->vc]=pair<int, int>(f->pid, vc);
       } else {
-	assert(_voq_pid[input*(_special_vcs+_data_vcs)+f->vc].first==f->pid);
-	vc = _voq_pid[input*(_special_vcs+_data_vcs)+f->vc].second;
+	assert(_voq_pid[input*_num_vcs+f->vc].first==f->pid);
+	vc = _voq_pid[input*_num_vcs+f->vc].second;
       }
     }
     
@@ -859,9 +865,12 @@ void IQRouter::_VCAllocEvaluate( )
     assert(cur_buf->GetState(vc) == VC::vc_alloc);
 
     Flit const * const f = cur_buf->FrontFlit(vc);
-
+    
+    assert(f);
+    assert(f->head);
+    
     //check for expiration
-    if(VC_ALLOC_DROP && f && f->res_type == RES_TYPE_SPEC){
+    if(gReservation && VC_ALLOC_DROP && f->res_type == RES_TYPE_SPEC){
       if(( RESERVATION_QUEUING_DROP && f->exptime<GetSimTime()-cur_buf->TimeStamp(vc)) ||
 	 (!RESERVATION_QUEUING_DROP && f->exptime<GetSimTime())){
 	if(f->watch){
@@ -873,10 +882,7 @@ void IQRouter::_VCAllocEvaluate( )
 	cur_buf->SetDrop(vc);
 	continue;
       }
-    }
-    
-    assert(f);
-    assert(f->head);
+    }    
     
     if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | " 
@@ -886,26 +892,25 @@ void IQRouter::_VCAllocEvaluate( )
 		 << ")." << endl;
     }
     
-    const OutputSet *              route_set;
-
-    route_set = cur_buf->GetRouteSet(vc);
+    const OutputSet *route_set = cur_buf->GetRouteSet(vc);
     assert(route_set);
 
     int const out_priority = cur_buf->GetPriority(vc);
-    const OutputSet::sSetElement  iset = route_set->GetSet();
+    const OutputSet::sSetElement*  iset = route_set->GetSet();
 
-    int const & out_port = iset.output_port;
+    int const & out_port = iset->output_port;
     assert((out_port >= 0) && (out_port < _outputs));
 
     BufferState *dest_buf = _next_buf[out_port];
 
-    for(int out_vc = iset.vc_start; out_vc <= iset.vc_end; ++out_vc) {
+    for(int out_vc = iset->vc_start; out_vc <= iset->vc_end; ++out_vc) {
       assert((out_vc >= 0) && (out_vc < _vcs));
-      int const & in_priority = iset.pri;
+      int const & in_priority = iset->pri;
 
       //speculative buffer check
-      if( RESERVATION_BUFFER_SIZE_DROP && 
-	  VC_ALLOC_DROP && f && f->res_type == RES_TYPE_SPEC){
+      if(gReservation &&
+	 RESERVATION_BUFFER_SIZE_DROP && 
+	 VC_ALLOC_DROP && f->res_type == RES_TYPE_SPEC){
 	int next_size = dest_buf->Size(out_vc)-DEFAULT_CHANNEL_LATENCY*2;
 	next_size=MAX(next_size,0);
 
@@ -917,7 +922,6 @@ void IQRouter::_VCAllocEvaluate( )
 		       << " from input " << input <<" vc "<<vc
 		       << "." << endl;
 	  }
-	    
 	  cur_buf->SetDrop(vc);
 	  break;
 	}
@@ -929,10 +933,8 @@ void IQRouter::_VCAllocEvaluate( )
       // requesting the same output VC, the priority of VCs is based on the 
       // actual packet priorities, which is reflected in "out_priority".
 
-   
-
       if(_cut_through && 
-	 dest_buf->IsAvailableFor(out_vc,cur_buf->FrontFlit(vc)->packet_size) &&
+	 dest_buf->IsAvailableFor(out_vc,f->packet_size) &&
 	 !_output_buffer[out_port]->Full(out_vc)){
 	if(f->watch){
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -944,12 +946,12 @@ void IQRouter::_VCAllocEvaluate( )
 	  watched = true;
 	}
 	if(!_voq){
-	  _vc_allocator->AddRequest(input*_vcs + vc, out_port*(_special_vcs+_data_vcs) + out_vc, 0, in_priority, out_priority);
+	  _vc_allocator->AddRequest(input*_vcs + vc, out_port*_num_vcs + out_vc, 0, in_priority, out_priority);
 	} else {
 #ifdef USE_LARGE_ARB
-	  _VOQArbs[out_port*(_special_vcs+_data_vcs) + out_vc]->AddRequest(input*_vcs + vc,0,out_priority); 
+	  _VOQArbs[out_port*_num_vcs + out_vc]->AddRequest(input*_vcs + vc,0,out_priority); 
 #else
-	  _vc_allocator->AddRequest(input*_vcs + vc, out_port*(_special_vcs+_data_vcs) + out_vc, 0, in_priority, out_priority);
+	  _vc_allocator->AddRequest(input*_vcs + vc, out_port*_num_vcs + out_vc, 0, in_priority, out_priority);
 #endif
 	}
       } else {
@@ -995,32 +997,33 @@ void IQRouter::_VCAllocEvaluate( )
     assert((input >= 0) && (input < _inputs));
     int const & vc = tag->_vc;
     assert((vc >= 0) && (vc < _vcs));
-
     int & output_and_vc = tag->_output;
+
     if(!_voq){
       output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
     } else {
 #ifdef USE_LARGE_ARB      
       Buffer * const cur_buf = _buf[input];
-      const OutputSet *route_set;
-      route_set = cur_buf->GetRouteSet(vc);
+      const OutputSet *route_set = cur_buf->GetRouteSet(vc);
       assert(route_set);
-      const OutputSet::sSetElement  iset = route_set->GetSet();
-      int out_port = iset.output_port;
-      int vc_start = iset.vc_start;
-      int vc_end = iset.vc_end; 
+      const OutputSet::sSetElement*  iset = route_set->GetSet();
+      int out_port = iset->output_port;
+      int vc_start = iset->vc_start;
+      int vc_end = iset->vc_end; 
       int vc_count = vc_end-vc_start+1;
-      int rand_start = RandomInt(vc_count-1);
+      int rand_start=0;
+      if(vc_count>1){
+	rand_start= RandomInt(vc_count-1);
+      }
       //Especially for mutliple data vc, start at a vc at random, then scan until found
       for(int i = 0; i<vc_count; i++){
 	int vc_index = (rand_start+i)%vc_count;
 	int out_vc = vc_start+vc_index; //actual vc
-	if(_VOQArbs[(_special_vcs+_data_vcs)*out_port+out_vc]->Arbitrate()!=input*_vcs+vc){
+	if(_VOQArbs[_num_vcs*out_port+out_vc]->Arbitrate()!=input*_vcs+vc){
 	  output_and_vc = -1;
 	} else {
-	  output_and_vc =  (_special_vcs+_data_vcs)*out_port+out_vc;
-	  //ensures ptr update
-	  _VOQArbs[ (_special_vcs+_data_vcs)*out_port+ out_vc]->Claim();
+	  output_and_vc =  _num_vcs*out_port+out_vc;
+	  _VOQArbs[_num_vcs*out_port+ out_vc]->Claim();//ensures ptr update
 	  break;
 	}
       }
@@ -1028,40 +1031,11 @@ void IQRouter::_VCAllocEvaluate( )
       output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
 #endif
     }
- 
-    if(output_and_vc >= 0) {
-
-   
-      int const match_output = output_and_vc / (_special_vcs+_data_vcs);
-      assert((match_output >= 0) && (match_output < _outputs));
-      int const match_vc = output_and_vc % (_special_vcs+_data_vcs);
-      assert((match_vc >= 0) && (match_vc < (_special_vcs+_data_vcs)));
-
-      Buffer const * const cur_buf = _buf[input];
-      assert(!cur_buf->Empty(vc));
-      assert(cur_buf->GetState(vc) == VC::vc_alloc);
-
-      Flit const * const f = cur_buf->FrontFlit(vc);
-      assert(f);
-      assert(f->head);
-      
-
-
-      if(f->watch) {
-	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		   << "Assigning VC " << match_vc
-		   << " at output " << match_output 
-		   << " to VC " << vc
-		   << " at input " << input
-		   << "." << endl;
-      }
-    }
   }
 
   if(_vc_alloc_delay <= 1) {
     return;
   }
-
   for(deque<VCTag*>::iterator iter = _vc_alloc_vcs.begin();
       iter != _vc_alloc_vcs.end();
       ++iter) {
@@ -1072,18 +1046,15 @@ void IQRouter::_VCAllocEvaluate( )
     if(GetSimTime() < time) {
       break;
     }
-    
     int const & output_and_vc = tag->_output;
     
     if(output_and_vc >= 0) {
-      
-      int const match_output = output_and_vc / (_special_vcs+_data_vcs);
+      int const match_output = output_and_vc / _num_vcs;
       assert((match_output >= 0) && (match_output < _outputs));
-      int const match_vc = output_and_vc % (_special_vcs+_data_vcs);
-      assert((match_vc >= 0) && (match_vc < (_special_vcs+_data_vcs)));
+      int const match_vc = output_and_vc % _num_vcs;
+      assert((match_vc >= 0) && (match_vc < _num_vcs));
       
       BufferState const * const dest_buf = _next_buf[match_output];
-      
       if(!dest_buf->IsAvailableFor(match_vc)) {
 	assert(!_cut_through);
 	int const & input = tag->_input;
@@ -1098,8 +1069,6 @@ void IQRouter::_VCAllocEvaluate( )
 	Flit const * const f = cur_buf->FrontFlit(vc);
 	assert(f);
 	assert(f->head);
-
-
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  Discarding previously generated grant for VC " << vc
@@ -1119,8 +1088,6 @@ void IQRouter::_VCAllocUpdate( )
   while(!_vc_alloc_vcs.empty()) {
 
    VCTag* tag = _vc_alloc_vcs.front();
-
-
     int const & time =  tag->_time;
     if((time < 0) || (GetSimTime() < time)) {
       break;
@@ -1140,7 +1107,9 @@ void IQRouter::_VCAllocUpdate( )
     assert(f);
     assert(f->head);
    
-    if(cur_buf->GetDrop(vc)){
+    //SRP vc allocator drop processing
+    if(gReservation && 
+       cur_buf->GetDrop(vc)){
       if(f->watch){
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		   << "drop flit " << f->id
@@ -1149,12 +1118,12 @@ void IQRouter::_VCAllocUpdate( )
       }
 
       //send dropped credit since the packet is removed from the buffer
-    
       Flit* drop_f = NULL;
-      int out = (cur_buf->GetRouteSet(vc)->GetSet().output_port);
+      int out = (cur_buf->GetRouteSet(vc)->GetSet()->output_port);
       gDropInStats[_id][input]++;
       gDropOutStats[_id][out]++;
-      _next_bandwidth_commitment[out]-=f->packet_size;
+      if(_track_routing_commitment)
+	_next_bandwidth_commitment[out]-=f->packet_size;
       drop_f = trafficManager->DropPacket(input, f);
       drop_f->vc = f->vc;
 
@@ -1216,13 +1185,12 @@ void IQRouter::_VCAllocUpdate( )
     }
     
     int const & output_and_vc =  tag->_output;
-    
     if(output_and_vc >= 0) {
       
-      int const match_output = output_and_vc / (_special_vcs+_data_vcs);
+      int const match_output = output_and_vc / _num_vcs;
       assert((match_output >= 0) && (match_output < _outputs));
-      int const match_vc = output_and_vc % (_special_vcs+_data_vcs);
-      assert((match_vc >= 0) && (match_vc < (_special_vcs+_data_vcs)));
+      int const match_vc = output_and_vc % _num_vcs;
+      assert((match_vc >= 0) && (match_vc < _num_vcs));
 
       
       if(f->watch) {
@@ -1237,6 +1205,7 @@ void IQRouter::_VCAllocUpdate( )
 	     (!_cut_through && dest_buf->IsAvailableFor(match_vc)));
       
       dest_buf->TakeBuffer(match_vc);
+      //packet allocation of the output buffer
       if(!is_control_vc(match_vc)){
 	_output_buffer[match_output]->Take(match_vc);
       }
@@ -1310,7 +1279,7 @@ void IQRouter::_SWHoldEvaluate( )
     int const match_port = cur_buf->GetOutputPort(vc);
     assert((match_port >= 0) && (match_port < _outputs));
     int const match_vc = cur_buf->GetOutputVC(vc);
-    assert((match_vc >= 0) && (match_vc < (_special_vcs+_data_vcs)));
+    assert((match_vc >= 0) && (match_vc < _num_vcs));
     
     int const expanded_output = match_port*_output_speedup + input%_output_speedup;
     assert(_switch_hold_in[expanded_input] == expanded_output);
@@ -1436,8 +1405,8 @@ void IQRouter::_SWHoldUpdate( )
       f->hops++;
       f->vc = match_vc;
       
-      assert( _next_bandwidth_commitment[output]>0);
-      _next_bandwidth_commitment[output]--;
+      if(_track_routing_commitment)
+	 _next_bandwidth_commitment[output]--;
 
       dest_buf->SendingFlit(f);
   
@@ -1706,7 +1675,7 @@ void IQRouter::_SWAllocEvaluate( )
       int const dest_output = cur_buf->GetOutputPort(vc);
       assert((dest_output >= 0) && (dest_output < _outputs));
       int const dest_vc = cur_buf->GetOutputVC(vc);
-      assert((dest_vc >= 0) && (dest_vc < (_special_vcs+_data_vcs)));
+      assert((dest_vc >= 0) && (dest_vc < _num_vcs));
       
       BufferState const * const dest_buf = _next_buf[dest_output];
   
@@ -1749,10 +1718,10 @@ void IQRouter::_SWAllocEvaluate( )
     route_set = cur_buf->GetRouteSet(vc);
     assert(route_set);
     
-    const OutputSet::sSetElement  iset = route_set->GetSet();
+    const OutputSet::sSetElement*  iset = route_set->GetSet();
   
       
-    int const & dest_output = iset.output_port;
+    int const & dest_output = iset->output_port;
     assert((dest_output >= 0) && (dest_output < _outputs));
       
     // for lower levels of speculation, ignore credit availability and always 
@@ -1768,8 +1737,8 @@ void IQRouter::_SWAllocEvaluate( )
 	
       BufferState const * const dest_buf = _next_buf[dest_output];
 	
-      for(int dest_vc = iset.vc_start; dest_vc <= iset.vc_end; ++dest_vc) {
-	assert((dest_vc >= 0) && (dest_vc < (_special_vcs+_data_vcs)));
+      for(int dest_vc = iset->vc_start; dest_vc <= iset->vc_end; ++dest_vc) {
+	assert((dest_vc >= 0) && (dest_vc < _num_vcs));
 	if( (gReservation||gECN) &&
 	    is_control_vc(dest_vc) && 
 	    (dest_buf->IsAvailableFor(dest_vc) && 
@@ -1941,7 +1910,7 @@ void IQRouter::_SWAllocEvaluate( )
       assert((input >= 0) && (input < _inputs));
       assert((input % _output_speedup) == (expanded_output % _output_speedup));
       int const & vc = tag->_vc;
-      assert((vc >= 0) && (vc < (_special_vcs+_data_vcs)));
+      assert((vc >= 0) && (vc < _num_vcs));
       
       int const expanded_input = input * _input_speedup + vc % _input_speedup;
       assert(_switch_hold_vc[expanded_input] != vc);
@@ -1996,7 +1965,7 @@ void IQRouter::_SWAllocEvaluate( )
 			 << " due to misspeculation." << endl;
 	    }
 	tag->_output = -1;
-	  } else if((output_and_vc / (_special_vcs+_data_vcs)) != output) {
+	  } else if((output_and_vc / _num_vcs) != output) {
 	    if(f->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 			 << "Discarding grant from input " << input
@@ -2007,7 +1976,7 @@ void IQRouter::_SWAllocEvaluate( )
 	    }
 	tag->_output = -1;
 
-	  } else if(!dest_buf->HasCreditFor((output_and_vc % (_special_vcs+_data_vcs)))) {
+	  } else if(!dest_buf->HasCreditFor((output_and_vc % _num_vcs))) {
 	    assert(!_cut_through);
 	    if(f->watch) {
 	      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -2028,14 +1997,14 @@ void IQRouter::_SWAllocEvaluate( )
 	  route_set = cur_buf->GetRouteSet(vc);
 	  assert(route_set);
 
-	  const OutputSet::sSetElement iset = route_set ->GetSet();
+	  const OutputSet::sSetElement* iset = route_set ->GetSet();
 
 	  bool found_vc = false;
-	  if(iset.output_port == output) {
-	    for(int out_vc = iset.vc_start; 
-		out_vc <= iset.vc_end; 
+	  if(iset->output_port == output) {
+	    for(int out_vc = iset->vc_start; 
+		out_vc <= iset->vc_end; 
 		++out_vc) {
-	      assert((out_vc >= 0) && (out_vc < (_special_vcs+_data_vcs)));
+	      assert((out_vc >= 0) && (out_vc < _num_vcs));
 	      if(dest_buf->IsAvailableFor(out_vc) && 
 		 dest_buf->HasCreditFor(out_vc)) {
 		found_vc = true;
@@ -2067,7 +2036,7 @@ void IQRouter::_SWAllocEvaluate( )
 	assert(cur_buf->GetOutputPort(vc) == output);
 	
 	int const match_vc = cur_buf->GetOutputVC(vc);
-	assert((match_vc >= 0) && (match_vc < (_special_vcs+_data_vcs)));
+	assert((match_vc >= 0) && (match_vc < _num_vcs));
 
 	if(!dest_buf->HasCreditFor(match_vc)) {
 	  assert(!_cut_through);
@@ -2155,14 +2124,14 @@ void IQRouter::_SWAllocUpdate( )
 	const OutputSet *route_set;
 	route_set = cur_buf->GetRouteSet(vc);
 	assert(route_set);
-	const OutputSet::sSetElement iset = route_set->GetSet();
+	const OutputSet::sSetElement* iset = route_set->GetSet();
 
 
-	if(iset.output_port == output) {
-	  for(int out_vc = iset.vc_start; 
-	      out_vc <= iset.vc_end; 
+	if(iset->output_port == output) {
+	  for(int out_vc = iset->vc_start; 
+	      out_vc <= iset->vc_end; 
 	      ++out_vc) {
-	    assert((out_vc >= 0) && (out_vc < (_special_vcs+_data_vcs)));
+	    assert((out_vc >= 0) && (out_vc < _num_vcs));
 	      
 	    // FIXME: This check should probably be performed in Evaluate(), 
 	    // not Update(), as the latter can cause the outcome to depend on 
@@ -2170,11 +2139,11 @@ void IQRouter::_SWAllocUpdate( )
 	    if(dest_buf->IsAvailableFor(out_vc) && 
 	       dest_buf->HasCreditFor(out_vc) &&
 	       ((match_vc < 0) || 
-		RoundRobinArbiter::Supersedes(out_vc, iset.pri, 
+		RoundRobinArbiter::Supersedes(out_vc, iset->pri, 
 					      match_vc, match_prio, 
-					      vc_offset, (_special_vcs+_data_vcs)))) {
+					      vc_offset, _num_vcs))) {
 	      match_vc = out_vc;
-	      match_prio = iset.pri;
+	      match_prio = iset->pri;
 	    }
 	  }	
 	}
@@ -2191,7 +2160,7 @@ void IQRouter::_SWAllocUpdate( )
 	cur_buf->SetState(vc, VC::active);
 	cur_buf->SetOutput(vc, output, match_vc);
 	dest_buf->TakeBuffer(match_vc);
-	_vc_rr_offset[output*_classes+cl] = (match_vc + 1) % (_special_vcs+_data_vcs);
+	_vc_rr_offset[output*_classes+cl] = (match_vc + 1) % _num_vcs;
 
       } else {
 
@@ -2201,7 +2170,7 @@ void IQRouter::_SWAllocUpdate( )
 	assert(!dest_buf->IsFullFor(match_vc));
 
       }
-      assert((match_vc >= 0) && (match_vc < (_special_vcs+_data_vcs)));
+      assert((match_vc >= 0) && (match_vc < _num_vcs));
 
       if(f->watch) {
 	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
@@ -2223,8 +2192,9 @@ void IQRouter::_SWAllocUpdate( )
 
       f->hops++;
       f->vc = match_vc;
-      assert( _next_bandwidth_commitment[output]>0);
-      _next_bandwidth_commitment[output]--;
+
+      if(_track_routing_commitment)
+	_next_bandwidth_commitment[output]--;
 
       dest_buf->SendingFlit(f);
  
@@ -2442,7 +2412,7 @@ void IQRouter::_SendFlits( )
 
   for(int i = 0; i<_outputs; i++){
     if(gECN){
-      if(_voq && _use_voq_size){
+      if(_voq && _ecn_use_voq_size){
 	int voq_size =0;
 	for(int j = 0;  j<_inputs; j++){
 	  voq_size+=_buf[j]->GetSize(vc2voq(ECN_RESERVED_VCS,i));//this assumes 1 data vc
@@ -2455,12 +2425,12 @@ void IQRouter::_SendFlits( )
       } else {
 	assert(_voq);
       }
-      for(int j = 0; j<(_special_vcs+_data_vcs); j++){
+      for(int j = 0; j<_num_vcs; j++){
 	BufferState * const dest_buf = _next_buf[i];
-	if(_credit_hysteresis[i*(_special_vcs+_data_vcs)+j]){
-	  _credit_hysteresis[i*(_special_vcs+_data_vcs)+j] = ( (dest_buf->Size(j)-_output_buffer[i]->Size(j)) < ECN_BUFFER_THRESHOLD+ECN_CREDIT_HYSTERESIS);
+	if(_credit_hysteresis[i*_num_vcs+j]){
+	  _credit_hysteresis[i*_num_vcs+j] = ( (dest_buf->Size(j)-_output_buffer[i]->Size(j)) < ECN_BUFFER_THRESHOLD+ECN_CREDIT_HYSTERESIS);
 	} else {
-	  _credit_hysteresis[i*(_special_vcs+_data_vcs)+j] = ( (dest_buf->Size(j)-_output_buffer[i]->Size(j)) < ECN_BUFFER_THRESHOLD-ECN_CREDIT_HYSTERESIS);
+	  _credit_hysteresis[i*_num_vcs+j] = ( (dest_buf->Size(j)-_output_buffer[i]->Size(j)) < ECN_BUFFER_THRESHOLD-ECN_CREDIT_HYSTERESIS);
 	}
       }
     }
@@ -2473,8 +2443,8 @@ void IQRouter::_SendFlits( )
 
       if(gECN && f->head && f->res_type==RES_TYPE_NORM && !f->fecn ){	
 	if(_output_hysteresis[output] &&
-	   _credit_hysteresis[output*(_special_vcs+_data_vcs)+f->vc]){
-	  _ECN_activated[output*(_special_vcs+_data_vcs)+f->vc]++;
+	   _credit_hysteresis[output*_num_vcs+f->vc]){
+	  _ECN_activated[output*_num_vcs+f->vc]++;
 	  f->fecn= true; 
 	}
       }
@@ -2510,14 +2480,14 @@ void IQRouter::Display( ostream & os ) const
 int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
 {
   assert((out >= 0) && (out < _outputs));
-  assert(vc_begin < (_special_vcs+_data_vcs));
-  assert(vc_end <(_special_vcs+_data_vcs));
+  assert(vc_begin < _num_vcs);
+  assert(vc_end <_num_vcs);
   assert(vc_end >= vc_begin || vc_end==-1);
 
   BufferState const * const dest_buf = _next_buf[out];
   
   int const start = (vc_begin >= 0) ? vc_begin : 0;
-  int const end = (vc_end >= 0) ? vc_end : ((vc_begin >= 0)?start:((_special_vcs+_data_vcs) - 1));
+  int const end = (vc_end >= 0) ? vc_end : ((vc_begin >= 0)?start:(_num_vcs - 1));
 
   int size = 0;
   for (int v = start; v <= end; v++)  {
@@ -2530,11 +2500,38 @@ int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
     size-=_output_channels[out]->GetLatency()*2;
     size = size<0?0:size;
   }
+  //
   if(_track_routing_commitment && vc_begin== -1 && vc_end==-1){
     size+=_current_bandwidth_commitment[out];
   }
+  assert(!(size<0));
   return size;
 }
+int IQRouter::GetCreditArray(int out, int* vcs, int vc_count, bool rtt, bool commit) const
+{
+  assert((out >= 0) && (out < _outputs));
+
+  BufferState const * const dest_buf = _next_buf[out];
+  int size = 0;
+  for(int i = 0; i<vc_count; i++){
+    assert(vcs[i]>=0 && vcs[i]<_num_vcs);
+    size+= dest_buf->Size(vcs[i]);
+  }
+  
+  //these two special features can only be activated when you are requesting
+  //credits for the entire port not for specific virtual channel
+  if(rtt){
+    size-=_output_channels[out]->GetLatency()*2;
+    size = size<0?0:size;
+  }
+  //
+  if(commit){
+    size+=_current_bandwidth_commitment[out];
+  }
+  assert(!(size<0));
+  return size;
+}
+
 
 int IQRouter::GetBuffer(int i) const {
   assert(i < _inputs);
@@ -2543,7 +2540,7 @@ int IQRouter::GetBuffer(int i) const {
   int const i_start = (i >= 0) ? i : 0;
   int const i_end = (i >= 0) ? i : (_inputs - 1);
   for(int input = i_start; input <= i_end; ++input) {
-    for(int vc = 0; vc < (_special_vcs+_data_vcs); ++vc) {
+    for(int vc = 0; vc < _num_vcs; ++vc) {
       size += _buf[input]->GetSize(vc);
     }
   }
@@ -2553,11 +2550,11 @@ int IQRouter::GetBuffer(int i) const {
 vector<int> IQRouter::GetBuffers(int i) const {
   assert(i < _inputs);
 
-  vector<int> sizes((_special_vcs+_data_vcs));
+  vector<int> sizes(_num_vcs);
   int const i_start = (i >= 0) ? i : 0;
   int const i_end = (i >= 0) ? i : (_inputs - 1);
   for(int input = i_start; input <= i_end; ++input) {
-    for(int vc = 0; vc < (_special_vcs+_data_vcs); ++vc) {
+    for(int vc = 0; vc < _num_vcs; ++vc) {
       sizes[vc] += _buf[input]->GetSize(vc);
     }
   }
@@ -2566,8 +2563,10 @@ vector<int> IQRouter::GetBuffers(int i) const {
 
 
 void IQRouter::_UpdateCommitment(int input, int vc, const Flit* f, const OutputSet * route_set){
+  if(!_track_routing_commitment)
+    return;
   assert(f->head);
-  int output =  route_set->GetSet().output_port;
+  int output =  route_set->GetSet()->output_port;
   _next_bandwidth_commitment[output]+=f->packet_size;
 
 }
@@ -2576,7 +2575,6 @@ void IQRouter::_UpdateCommitment(int input, int vc, const Flit* f, const OutputS
 
 stack<VCTag *> VCTag::_all;
 stack<VCTag *> VCTag::_free;
-int VCTag::_cur_id = 0;
 VCTag::VCTag(){
   Reset();
   _use = false;
@@ -2616,7 +2614,6 @@ VCTag * VCTag::New(int t, int i, int v, int o) {
 
   assert(!tag->_use);
   tag->_use = true;
-  tag->_id = _cur_id++;
   tag->Set(t,i,v,o);
   return tag;
 }

@@ -31,6 +31,7 @@
 #include "network.hpp"
 #include "routefunc.hpp"
 
+
 class DragonFlyNew : public Network {
 
   int _m;
@@ -54,7 +55,7 @@ class DragonFlyNew : public Network {
   void _ComputeSize( const Configuration &config );
   void _BuildNet( const Configuration &config );
 
-
+ 
  
 public:
   DragonFlyNew( const Configuration &config, const string & name );

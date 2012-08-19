@@ -12,7 +12,7 @@ enum FlowStatus{
 
 enum SRPFlitType{
   RES_TYPE_SPEC=0,
-  RES_TYPE_NORM,
+  RES_TYPE_NORM,//dragonfly depends on spec and normal < control packets
   RES_TYPE_NACK,
   RES_TYPE_ACK,
   RES_TYPE_RES,

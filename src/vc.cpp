@@ -86,9 +86,7 @@ VC::VC( const Configuration& config, int outputs,
     _pri(0), _watched(false), _expected_pid(-1), _last_id(-1), _last_pid(-1),_drop(false),_special_vc(special)
 {
   if(_special_vc){
-    _max_size = config.GetInt("reservation_spec_vc_size");
-    if(_max_size==0)
-      _max_size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
+    _max_size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
   } else {
     _max_size = config.GetInt( "vc_buf_size" ) + config.GetInt( "shared_buf_size" );
   }
