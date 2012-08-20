@@ -193,11 +193,7 @@ void BufferState::TakeBuffer( int vc )
 bool BufferState::IsFullFor( int vc ) const
 {
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
-  if(gReservation){
-    if(vc==RES_RESERVED_VCS){
-      return (_cur_occupied[vc] >= _spec_vc_buf_size);
-    } 
-  }
+
   return ( ( _cur_occupied[vc] >= _vc_buf_size ) &&
 	   ( _shared_occupied >= _shared_buf_size ) );
 }
@@ -217,12 +213,7 @@ bool BufferState::IsAvailableFor( int vc,int size) const
   if(_in_use[vc]){
     return false;
   } else {
-    //duplicate isfullfir with minor  chanles
-    if(gReservation){
-      if(vc==RES_RESERVED_VCS){
-	return (_cur_occupied[vc]+size <= _spec_vc_buf_size);
-      } 
-    }
+
     return( _cur_occupied[vc]+size <= _vc_buf_size ) ;
   }
 
@@ -252,11 +243,7 @@ bool BufferState::IsAvailableFor( int vc ) const
 bool BufferState::HasCreditFor( int vc ) const
 {
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
-  if(gReservation){
-    if(vc==RES_RESERVED_VCS){
-      return (_cur_occupied[vc] < _spec_vc_buf_size);
-    } 
-  }
+
   return ( ( _cur_occupied[vc] < _vc_buf_size ) ||
 	   ( ( _shared_occupied < _shared_buf_size ) && 
 	     ( ( _cur_occupied[vc] - _vc_buf_size ) < 

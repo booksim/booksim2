@@ -18,8 +18,10 @@ OutputBuffer::OutputBuffer(const Configuration& config,
   if(_buffer_capacity.size()==0){
     _buffer_capacity.resize(_vcs, config.GetInt("output_buffer_size"));
   }
-  if( _control_capacity==-1)
+  if( _control_capacity==-1){
+    cout<<"Caution, output buffer groups all control vcs together"<<endl;
     _control_capacity =  config.GetInt("output_buffer_control_size");
+  }
   if( _spec_vc.size()==0)
     _spec_vc.resize(_vcs,false);
     
@@ -191,9 +193,9 @@ bool OutputBuffer::ControlFull(){
 //static function called by iq_router to set the speculative vc
 void OutputBuffer::SetSpecVC(int vc, int size){
   assert(size_t(vc) < _buffer_capacity.size());
-  _spec_vc[vc] = true;
-  if(_buffer_capacity[vc]!=size){
-    cout<<"Output buffer:Spec vc "<<vc<<" size set to "<<size<<endl;
+  if(!_spec_vc[vc]){
+    //cout<<"Output buffer:Spec vc "<<vc<<endl;
     _buffer_capacity[vc] = size;
+    _spec_vc[vc] = true;
   }
 }

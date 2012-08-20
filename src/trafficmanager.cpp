@@ -49,6 +49,10 @@
 Stats* retired_s; 
 Stats* retired_n;
 
+int debug_adaptive_same=0;
+int debug_adaptive_same_min=0;
+
+
 //expected flow trasnmission time vs actual
 Stats* gStatResEarly_POS;
 Stats* gStatResEarly_NEG;
@@ -116,7 +120,7 @@ bool RESERVATION_SPEC_OFF = false;
 //has passed
 bool RESERVATION_POST_WAIT = false;
 //use the next hop buffer occupancy to preemptively drop a speculative packet
-bool RESERVATION_BUFFER_SIZE_DROP=true;
+bool RESERVATION_BUFFER_SIZE_DROP=false;
 //send the reservation to the next segment with the last packet
 bool RESERVATION_TAIL_RESERVE=false;
 //instead or in addition to the reservaiton overhead factor, control packet also update the 
@@ -149,6 +153,11 @@ bool ECN_AIMD = false;
 
 //only some topology uses this
 int DEFAULT_CHANNEL_LATENCY=5;
+
+//adaptive routing
+bool ADAPTIVE_INTM_ALL=true;
+
+
 
 #define WATCH_FLID -1
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
@@ -239,6 +248,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   cout<<"size of ";
   cout<<sizeof(Flit)<<endl;
 
+
+  ADAPTIVE_INTM_ALL= (config.GetInt("adaptive_intm")==1);
 
   _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
@@ -732,6 +743,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _min_plat_stats=new Stats( this, "", 1.0, 5000 );
   _nonmin_plat_stats=new Stats( this, "", 1.0, 5000 );
+  _prog_plat_stats=new Stats( this, "", 1.0, 5000 );
   for ( int c = 0; c < _classes; ++c ) {
     ostringstream tmp_name;
     tmp_name << "plat_stat_" << c;
@@ -993,6 +1005,7 @@ TrafficManager::~TrafficManager( )
   
   delete _min_plat_stats;
   delete _nonmin_plat_stats;
+  delete _prog_plat_stats;
   for ( int c = 0; c < _classes; ++c ) {
     delete _plat_stats[c];
     delete _overall_min_plat[c];
@@ -1642,14 +1655,14 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
       }
   
-
-
       _plat_stats[f->cl]->AddSample( f->atime - f->time);
       if(head->minimal == 1){
 	_min_plat_stats->AddSample( f->atime - f->time);
       } else {
 	_nonmin_plat_stats->AddSample( f->atime - f->time);
-
+	if(head->minimal!=0){
+	  _prog_plat_stats->AddSample( f->atime - f->time);
+	}
       }
 #ifdef ENABLE_STATS
       if(head->res_type==RES_TYPE_SPEC){
@@ -2465,9 +2478,12 @@ void TrafficManager::_Step( )
     gStatMonitorTransient[5]->push_back(float(gStatSpecLatency->NumSamples())/_plat_stats[0]->NumSamples()*100);
 #endif
 
-    cout<<"Retired "<<retired_s->NumSamples()+retired_n->NumSamples()<<endl
-	<<" Adaptive "<<float(_nonmin_plat_stats->NumSamples())/(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples())
-	<<" norm_lat "<<retired_n->Average();
+    cout<<"Retired "<<retired_s->NumSamples()+retired_n->NumSamples()<<endl;
+    if(_nonmin_plat_stats->NumSamples()>0){
+      cout<<" same min "<<debug_adaptive_same_min<<" same "<<debug_adaptive_same<<endl;
+      cout<<" Adaptive "<<float(_nonmin_plat_stats->NumSamples())/(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples());
+    }
+    cout<<" norm_lat "<<retired_n->Average();
     if(gReservation){
       cout<<" spec_lat "<<retired_s->Average()
 	  <<" ("<<float(retired_s->NumSamples())/(retired_s->NumSamples()+retired_n->NumSamples())<<")"<<endl
@@ -2535,7 +2551,8 @@ void TrafficManager::_ClearStats( )
   _slowest_flit.assign(_classes, -1);
 
   gStatFlowSizes.clear();
-
+  
+  _prog_plat_stats->Clear();
   _nonmin_plat_stats->Clear( );
   _min_plat_stats->Clear( );
 
@@ -2784,12 +2801,13 @@ bool TrafficManager::_SingleSim( )
 	  cout << "Minimum latency = " << _plat_stats[c]->Min( ) << endl;
 	  cout << "Average latency = " << cur_latency << endl;
 	  cout << "\tMin latency = " << _min_plat_stats->Average( ) << endl;	  
-	  cout << "\tNonmin latency = " << _nonmin_plat_stats->Average( ) << endl;
+	  if(_nonmin_plat_stats->NumSamples())
+	    cout << "\tNonmin latency = " << _nonmin_plat_stats->Average( ) << endl;
+	  if(_prog_plat_stats->NumSamples())
+	    cout<< "\tProgged latency = "<< _prog_plat_stats->Average()<<endl;
 	  cout << "Maximum latency = " << _plat_stats[c]->Max( ) << endl;
 	  cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
-	  cout << "\tAverage spec fragmentation = " << _spec_frag_stats[c]->Average( ) << endl;
-	  cout << "\tAverage spec inhop frag = " << gStatSpecInHopFrag->Average( ) << endl;	  
-	  cout << "\tAverage spec outhop frag = " << gStatSpecOutHopFrag->Average( ) << endl;	  
+	  cout << "\tAverage spec fragmentation = " << _spec_frag_stats[c]->Average( ) << endl;	  
 	  
 	  cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 
@@ -2878,12 +2896,13 @@ bool TrafficManager::_SingleSim( )
       cout << "Average latency = " << cur_latency << endl;
       
       cout << "\tMin latency = " << _min_plat_stats->Average( ) << endl;	  
-      cout << "\tNonmin latency = " << _nonmin_plat_stats->Average( ) << endl;
+      if(_nonmin_plat_stats->NumSamples())
+	cout<< "\tNonmin latency = " << _nonmin_plat_stats->Average( ) << endl;
+      if(_prog_plat_stats->NumSamples())
+	cout<< "\tProgged latency = "<< _prog_plat_stats->Average()<<endl;
       cout << "Maximum latency = " << _plat_stats[0]->Max( ) << endl;
       cout << "Average fragmentation = " << _frag_stats[0]->Average( ) << endl;
       cout << "\tAverage spec fragmentation = " << _spec_frag_stats[0]->Average( ) << endl;
-      cout << "\tAverage spec inhop frag = " << gStatSpecInHopFrag->Average( )<<endl;
-      cout << "\tAverage spec outhop frag = " << gStatSpecOutHopFrag->Average( )<<endl;
       cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
       if(_stats_out) {
 	*_stats_out << "batch_time(" << total_phases + 1 << ") = " << _time << ";" << endl
@@ -2981,14 +3000,14 @@ bool TrafficManager::_SingleSim( )
 	cout<<"Flits allocated "<<Flit::Allocated()<<endl;
 	cout << "Minimum latency = " << _plat_stats[c]->Min( ) << endl;
 	cout << "Average latency = " << cur_latency << endl;
-
 	cout << "\tMin latency = " << _min_plat_stats->Average( ) << endl;	  
-	cout << "\tNonmin latency = " << _nonmin_plat_stats->Average( ) << endl;
+	if(_nonmin_plat_stats->NumSamples())
+	  cout<< "\tNonmin latency = " << _nonmin_plat_stats->Average( ) << endl;
+	if(_prog_plat_stats->NumSamples())
+	  cout<< "\tProgged latency = "<< _prog_plat_stats->Average()<<endl;
 	cout << "Maximum latency = " << _plat_stats[c]->Max( ) << endl;
 	cout << "Average fragmentation = " << _frag_stats[c]->Average( ) << endl;
-	cout << "\tAverage spec fragmentation = " << _spec_frag_stats[c]->Average( ) << endl;
-	cout << "\tAverage spec inhop frag = " << gStatSpecInHopFrag->Average( )<<endl;
-	cout << "\tAverage spec outhop frag = " << gStatSpecOutHopFrag->Average( )<<endl;
+	cout << "\tAverage spec fragmentation = "<< _spec_frag_stats[c]->Average( ) << endl;
 	cout << "Accepted packets = " << min << " at node " << dmin << " (avg = " << avg << ")" << endl;
 	cout << "Total in-flight flits = " << _total_in_flight_flits[c].size() << " (" << _measured_in_flight_flits[c].size() << " measured)" << endl;
 	//c+1 due to matlab array starting at 1
@@ -3400,7 +3419,10 @@ void TrafficManager::DisplayStats( ostream & os ) {
     os<<"ECN ratio "<<ecn_sum/ecn_num<<endl;
     os<<"Flows created "<<_cur_flid<<endl;
     //os<<"Flows lost flits "<<flow::_lost_flits<<" (better be zero)"<<endl;
-    os<<"Adaptive Ratio "<<float(_nonmin_plat_stats->NumSamples())/(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples())<<endl;
+    if(_nonmin_plat_stats->NumSamples())
+      os<<"Adaptive Ratio "<<float(_nonmin_plat_stats->NumSamples())/(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples())<<endl;
+    if(_prog_plat_stats->NumSamples())
+      os<<"Prog Ratio "<<float(_prog_plat_stats->NumSamples())/(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples())<<endl;
     _DisplayTedsShit();    
 #endif
   }

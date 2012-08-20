@@ -155,12 +155,12 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   if(_voq){
     if(gReservation){
       _ctrl_vcs = RES_RESERVED_VCS+RES_RESERVED_VCS*gAuxVCs;
+      _spec_vcs = gResVCs + gAuxVCs + gAdaptVCs;
       if(_spec_voq){
 	_special_vcs =  _ctrl_vcs; //spec gets included in data vc
       } else {
-	_special_vcs = _ctrl_vcs + 1 + gAuxVCs + gAdaptVCs;
+	_special_vcs = _ctrl_vcs + gResVCs + gAuxVCs + gAdaptVCs;
       }
- 
     } else if(gECN){
       _ctrl_vcs=ECN_RESERVED_VCS+gAuxVCs;;
       _special_vcs=_ctrl_vcs;
@@ -321,7 +321,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     _output_buffer[o] = new OutputBuffer(config, this, "output_buffer");
   }
   if(gReservation){
-    for(int i = RES_RESERVED_VCS; i< (RES_RESERVED_VCS+gResVCs); i++){
+    for(int i = _ctrl_vcs; i< (_ctrl_vcs+_spec_vcs); i++){
       OutputBuffer::SetSpecVC(i, config.GetInt("spec_output_buffer_size"));
     }
   }
@@ -2209,10 +2209,7 @@ void IQRouter::_SWAllocUpdate( )
       if(_voq){
 	int rvc = vc;
 	int vvc = voq2vc(rvc,_outputs);
-	//is the head flit of a spec is replaced by nack
-	/*	if(f->res_type==RES_TYPE_NACK && !is_control_vc(vc)){
-		vvc=RES_RESERVED_VCS;
-		}*/
+
 	_out_queue_credits.find(input)->second->id=777;
 	_out_queue_credits.find(input)->second->vc.push_back(vvc);
       } else {

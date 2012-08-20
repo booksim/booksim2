@@ -76,6 +76,7 @@ class IQRouter : public Router {
 
   int _ctrl_vcs; //control
   int _special_vcs; // vcs that do not voq
+  int _spec_vcs;// this is only used to set output buffer to spec
   int _data_vcs; //vcs that voq
   int _num_vcs; //same as config file?
   int _vcs; //vc including voq

@@ -14,3 +14,6 @@ track_routing_commitment=1;
 aux_vc=1;
 adapt_vc=3;
 num_vcs=14;
+	
+adaptive_threshold=12.0;
+adaptive_intm=0;
