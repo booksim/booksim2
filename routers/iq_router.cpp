@@ -176,14 +176,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
   _max_outputs = outputs;
   _max_inputs = inputs;
-  
-  gDropInStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
-  gDropInStats[id].resize(inputs,0);
-  gDropOutStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
-  gDropOutStats[id].resize(inputs,0);
-  gChanDropStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
-  gChanDropStats[id].resize(inputs,0);  
-
 
 
   _remove_credit_rtt = (config.GetInt("remove_credit_rtt")==1);
@@ -571,7 +563,7 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
 	  drop = true;
 	  dropped_pid[input][f->vc] = f->pid;
 	  gStatDropLateness->AddSample(-f->exptime);
-	  gChanDropStats[_id][input]++;
+	  gChanDropStats[_id + _network_cluster * gRouters][input]++;
 	}
       } else { 
 	if(f->exptime<GetSimTime()){
@@ -1195,8 +1187,8 @@ void IQRouter::_VCAllocUpdate( )
     
       Flit* drop_f = NULL;
       int out = (cur_buf->GetRouteSet(vc)->GetSet().output_port);
-      gDropInStats[_id][input]++;
-      gDropOutStats[_id][out]++;
+      gDropInStats[_id + _network_cluster * gRouters][input]++;
+      gDropOutStats[_id + _network_cluster * gRouters][out]++;
       _next_bandwidth_commitment[out]-=f->packet_size;
       drop_f = trafficManager->DropPacket(input, f, _network_cluster);
       drop_f->vc = f->vc;

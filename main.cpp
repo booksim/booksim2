@@ -88,6 +88,7 @@ int gC;//concentration
 
 int gNodes;
 int gNodes_total = -1;
+int gRouters = -1;
 
 //generate nocviewer trace
 bool gTrace;

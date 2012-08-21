@@ -157,10 +157,7 @@ public:
     return _active_packets;
   }
 
-  inline void AssignIndex(int network_cluster)
-  {
-    _network_cluster = network_cluster;
-  }
+  void AssignIndex(int network_cluster);
 
   inline int GetIndex() const
   {

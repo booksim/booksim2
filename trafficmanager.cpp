@@ -1070,6 +1070,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<SuperN
   } else {
     _stats_out = new ofstream(stats_out_file.c_str());
     config.WriteMatlabFile(_stats_out);
+    *_stats_out << "clear;" << endl;
   }
   
   string flow_out_file = config.GetStr( "flow_out" );
@@ -3037,7 +3038,7 @@ bool TrafficManager::_SingleSim( )
       if ( _time % 10000 == 0 ) {
 	cout << _sim_state << endl;
 	if(_stats_out)
-	  *_stats_out << "%=================================" << endl;
+	  *_stats_out << "%=================================" << endl << "clear;" << endl;
 	
 	for(int c = 0; c < _classes; ++c) {
 
@@ -3616,21 +3617,21 @@ void TrafficManager::DisplayStats( ostream & os ) {
     
     if (_stats_out != NULL)
     {
-      *_stats_out << endl << "Total retries per node." << endl << "[";
       int sum = 0;
+      *_stats_out << "retries = [";
       for (int i = 0; i < _nodes; i++)
       {
         sum += _retries[i];
         *_stats_out << _retries[i] << ", ";
       }
-      *_stats_out << "];" << endl << "Total retries: " << sum << endl;
+      *_stats_out << "];" << endl << "\% Total retries: " << sum << endl << "revivals = [";
       sum = 0;
       for (int i = 0; i < _nodes; i++)
       {
         sum += _revivals[i];
         *_stats_out << _revivals[i] << ", ";
       }
-      *_stats_out << "];" << endl << "Total revivals: " << sum << endl;
+      *_stats_out << "];" << endl << "\% Total revivals: " << sum << endl;
     }
     
     
@@ -3753,12 +3754,15 @@ void TrafficManager::_DisplayTedsShit(){
     *_stats_out<<"reservation_mismatch_pos =["
 	       <<*gStatReservationMismatch_POS <<"];\n";
 
-    for(int i = 0; i<6; i++){
-      *_stats_out<<"monitor_transient("<<i+1<<",:)=[";
-	for(size_t j = 0; j<gStatMonitorTransient[i]->size(); j++){
-	  *_stats_out<<(*gStatMonitorTransient[i])[j]<<"\t";
-	}
-      *_stats_out<<"];\n";
+    if (gStatMonitorTransient[0]->empty() == false || gStatMonitorTransient[1]->empty() == false || gStatMonitorTransient[2]->empty() == false || gStatMonitorTransient[3]->empty() == false || gStatMonitorTransient[4]->empty() == false ||gStatMonitorTransient[5]->empty() == false)
+    {
+      for(int i = 0; i<6; i++){
+        *_stats_out<<"monitor_transient("<<i+1<<",:)=[";
+	  for(size_t j = 0; j<gStatMonitorTransient[i]->size(); j++){
+	    *_stats_out<<(*gStatMonitorTransient[i])[j]<<"\t";
+  	  }
+        *_stats_out<<"];\n";
+      }
     }
 
     for(int i = 0; i<_nodes; i++){
@@ -3989,7 +3993,8 @@ void TrafficManager::_DisplayTedsShit(){
     for(size_t i = 0; i<rrr.size(); i++){
       *_stats_out<<"ecn_on(:,"<<i+1<<")=[";
       *_stats_out<<rrr[i]->_ECN_activated;
-      for(int ii=0; ii<(max_outputs-rrr[i]->NumOutputs())*_num_vcs; ii++)	 *_stats_out<<"0 ";
+      int outputs_temp = rrr[i]->IsTransitionRouter() == true ? rrr[i]->NumOutputs() : rrr[i]->NumOutputs() + 1;
+      for(int ii=0; ii<(max_outputs-outputs_temp)*_num_vcs; ii++)	 *_stats_out<<"0 ";
       *_stats_out<<"];\n";
     }
     /*    for(size_t i = 0; i<rrr.size(); i++){
@@ -3999,15 +4004,17 @@ void TrafficManager::_DisplayTedsShit(){
       *_stats_out<<"];\n";
       }*/
     for(size_t i = 0; i<rrr.size(); i++){
+      int outputs_temp = rrr[i]->IsTransitionRouter() == true ? rrr[i]->NumOutputs() : rrr[i]->NumOutputs() + 1;
       *_stats_out<<"input_request(:,"<<i+1<<")=[";
       *_stats_out<<rrr[i]->_input_request;
-      for(int ii=0; ii<max_outputs-rrr[i]->NumOutputs(); ii++)	 *_stats_out<<"0 ";
+      for(int ii=0; ii<max_outputs-outputs_temp; ii++)	 *_stats_out<<"0 ";
       *_stats_out<<"];\n";
     }
     for(size_t i = 0; i<rrr.size(); i++){
       *_stats_out<<"input_grant(:,"<<i+1<<")=[";
       *_stats_out<<rrr[i]->_input_grant;
-      for(int ii=0; ii<max_outputs-rrr[i]->NumOutputs(); ii++)	 *_stats_out<<"0 ";
+      int outputs_temp = rrr[i]->IsTransitionRouter() == true ? rrr[i]->NumOutputs() : rrr[i]->NumOutputs() + 1;
+      for(int ii=0; ii<max_outputs-outputs_temp; ii++)	 *_stats_out<<"0 ";
       *_stats_out<<"];\n";
     }
     *_stats_out<<"wait_time =[";

@@ -45,6 +45,7 @@ extern int gC;
 
 extern int gNodes;
 extern int gNodes_total;
+extern int gRouters;
 
 extern bool gTrace;
 

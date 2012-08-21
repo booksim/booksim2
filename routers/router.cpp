@@ -42,6 +42,11 @@
 #include <iostream>
 #include <cassert>
 #include "router.hpp"
+#include "trafficmanager.hpp"
+
+extern map<int, vector<int> > gDropInStats;
+extern map<int, vector<int> > gDropOutStats;
+extern map<int, vector<int> > gChanDropStats;
 
 //////////////////Sub router types//////////////////////
 #include "iq_router.hpp"
@@ -175,10 +180,22 @@ void Router::SetTransitionRouter()
   _is_transition_router = true;
   _inputs++;
   _outputs++;
+  int temp_index = _id + _network_cluster * gRouters;
+  int temp_size = gDropInStats[temp_index].size();
+  assert(_max_inputs - 1 == temp_size);
+  gDropInStats[temp_index].resize(_inputs,0);
+  gDropOutStats[temp_index].resize(_outputs,0);
+  gChanDropStats[temp_index].resize(_inputs,0);  
   assert(_max_inputs >= _inputs && _max_outputs >= _outputs);
 }
 
-
-
-
-
+  void Router::AssignIndex(int network_cluster)
+  {
+    _network_cluster = network_cluster;
+    gDropInStats.insert(pair<int,  vector<int> >(_id + _network_cluster * gRouters, vector<int>() ));
+    gDropInStats[_id + _network_cluster * gRouters].resize(_inputs,0);
+    gDropOutStats.insert(pair<int,  vector<int> >(_id + _network_cluster * gRouters, vector<int>() ));
+    gDropOutStats[_id + _network_cluster * gRouters].resize(_outputs,0);
+    gChanDropStats.insert(pair<int,  vector<int> >(_id + _network_cluster * gRouters, vector<int>() ));
+    gChanDropStats[_id + _network_cluster * gRouters].resize(_inputs,0);  
+  }
