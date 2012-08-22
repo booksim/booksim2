@@ -51,6 +51,19 @@ Stats* retired_n;
 
 int debug_adaptive_same=0;
 int debug_adaptive_same_min=0;
+int debug_adaptive_prog_GvL=0;
+int debug_adaptive_prog_GvL_min=0;
+int debug_adaptive_prog_GvG=0;
+int debug_adaptive_prog_GvG_min=0;
+
+int debug_adaptive_LvL=0;
+int debug_adaptive_LvL_min=0;
+int debug_adaptive_LvG=0;
+int debug_adaptive_LvG_min=0;
+int debug_adaptive_GvL=0;
+int debug_adaptive_GvL_min=0;
+int debug_adaptive_GvG=0;
+int debug_adaptive_GvG_min=0;
 
 
 //expected flow trasnmission time vs actual
@@ -1386,7 +1399,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     
     if(gReservation && RESERVATION_WALKIN_OVERHEAD && f->walkin && f->head){      
       _reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
-      _reservation_schedule[dest] +=  f->packet_size+2;
+      _reservation_schedule[dest] +=  f->packet_size+1;
     }
     if(gReservation && !f->walkin){
       //find or create a reorder buffer
@@ -2480,7 +2493,15 @@ void TrafficManager::_Step( )
 
     cout<<"Retired "<<retired_s->NumSamples()+retired_n->NumSamples()<<endl;
     if(_nonmin_plat_stats->NumSamples()>0){
-      cout<<" same min "<<debug_adaptive_same_min<<" same "<<debug_adaptive_same<<endl;
+      cout<<" same min "<<debug_adaptive_same_min<<" same "<<debug_adaptive_same<<"("<<float(debug_adaptive_same_min)/debug_adaptive_same<<")"<<endl;
+      cout<<" LvL min "<<debug_adaptive_LvL_min<<" same "<<debug_adaptive_LvL<<"("<<float(debug_adaptive_LvL_min)/debug_adaptive_LvL<<")"<<endl;
+      cout<<" LvG min "<<debug_adaptive_LvG_min<<" same "<<debug_adaptive_LvG<<"("<<float(debug_adaptive_LvG_min)/debug_adaptive_LvG<<")"<<endl;
+      cout<<" GvL min "<<debug_adaptive_GvL_min<<" same "<<debug_adaptive_GvL<<"("<<float(debug_adaptive_GvL_min)/debug_adaptive_GvL<<")"<<endl;
+      cout<<" GvG min "<<debug_adaptive_GvG_min<<" same "<<debug_adaptive_GvG<<"("<<float(debug_adaptive_GvG_min)/debug_adaptive_GvG<<")"<<endl;
+
+      cout<<"  Prog GvL min "<<debug_adaptive_prog_GvL_min<<" same "<<debug_adaptive_prog_GvL<<"("<<float(debug_adaptive_prog_GvL_min)/debug_adaptive_prog_GvL<<")"<<endl;
+      cout<<"  Prog GvG min "<<debug_adaptive_prog_GvG_min<<" same "<<debug_adaptive_prog_GvG<<"("<<float(debug_adaptive_prog_GvG_min)/debug_adaptive_prog_GvG<<")"<<endl;
+
       cout<<" Adaptive "<<float(_nonmin_plat_stats->NumSamples())/(_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples());
     }
     cout<<" norm_lat "<<retired_n->Average();
@@ -3688,10 +3709,36 @@ void TrafficManager::_DisplayTedsShit(){
       cout<<transient_stat[1][2][0]<<"\n";
       tfile.close();
     }
+    vector<FlitChannel *> icc = _net[0]->GetInject();
+    *_stats_out<<"injection_channel_util=[";
+    for(size_t i = 0; i<icc.size(); i++){
+      *_stats_out<<icc[i]->GetUtilization()<<" ";
+    }
+    *_stats_out<<"];\n";
+
+    vector<FlitChannel *> ecc = _net[0]->GetEject();
+    *_stats_out<<"ejection_channel_util=[";
+    for(size_t i = 0; i<ecc.size(); i++){
+      *_stats_out<<ecc[i]->GetUtilization()<<" ";
+    }
+    *_stats_out<<"];\n";
+
     vector<FlitChannel *> ccc = _net[0]->GetChannels();
     *_stats_out<<"channel_util=[";
     for(size_t i = 0; i<ccc.size(); i++){
       *_stats_out<<ccc[i]->GetUtilization()<<" ";
+    }
+    *_stats_out<<"];\n";
+    *_stats_out<<"local_channel_util=[";
+    for(size_t i = 0; i<ccc.size(); i++){
+      if(!ccc[i]->GetGlobal())
+	*_stats_out<<ccc[i]->GetUtilization()<<" ";
+    }
+    *_stats_out<<"];\n";
+    *_stats_out<<"global_channel_util=[";
+    for(size_t i = 0; i<ccc.size(); i++){
+      if(ccc[i]->GetGlobal())
+	*_stats_out<<ccc[i]->GetUtilization()<<" ";
     }
     *_stats_out<<"];\n";
 

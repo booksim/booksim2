@@ -47,7 +47,7 @@
 // ----------------------------------------------------------------------
 FlitChannel::FlitChannel(Module * parent, string const & name, int classes)
   : Channel<Flit>(parent, name), _routerSource(-1), _routerSourcePort(-1), 
-    _routerSink(-1), _routerSinkPort(-1),_cycles(0) , _active_sum(0), _classes(classes), _last_update(0){
+    _routerSink(-1), _routerSinkPort(-1),_cycles(0) , _active_sum(0), _classes(classes), _last_update(0), _global(false){
   _active.resize(classes, 0);
 }
 

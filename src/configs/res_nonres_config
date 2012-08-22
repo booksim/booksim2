@@ -27,7 +27,7 @@ voq=1;
 
 seed = 54321;
 
-reservation_buffer_size_drop=0;
+reservation_buffer_size_drop=1;
 reservation_spec_voq=1;
 reservation_tail_reserve=0;
 

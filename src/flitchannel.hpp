@@ -79,6 +79,12 @@ public:
     else 
       return float(_active_sum)/_cycles;
   }
+  inline void SetGlobal(){
+    _global=true;
+  }
+  inline bool GetGlobal(){
+    return _global;
+  }
   // Send flit 
   virtual void Send(Flit * flit);
 
@@ -104,6 +110,7 @@ private:
   int _active_sum;
   int _classes;
   int _last_update;
+  bool _global; //dragonfly only
 };
 
 #endif

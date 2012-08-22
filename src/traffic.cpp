@@ -384,6 +384,35 @@ int badperm_dflynew( int source, int total_nodes )
 
   return dest;
 }
+///each group of 4 groups send to another 4 groups such that
+//all traffic froma group access the same router
+int badprog_dflynew( int source, int total_nodes )
+{
+  int grp_size_routers = 2*(gK);
+  int grp_size_nodes = grp_size_routers * (gK);
+
+  int grp_id = source / grp_size_nodes;//current group
+  int grp_grp= grp_id/gK;//current group's group
+  int dest;
+
+  
+  if(grp_id==gG-1){ //fuck this extra gropu on the dragonfly
+    //cout<<grp_id<<"\t"<<(gG-gK-1)<<endl;
+   return (RandomInt(grp_size_nodes - 1) + (gG-gK-1)*grp_size_nodes ) %  total_nodes;
+  }
+
+  int dest_grp_base = 0;
+  if(grp_grp==0){
+    dest_grp_base=((gG/gK)+grp_grp-1)*gK+1;
+  } else{
+    dest_grp_base=((gG/gK+grp_grp)-1)%(gG/gK)*gK;
+  }
+  
+  //cout<<grp_id<<"\t"<<dest_grp_base<<endl;
+  dest =  (RandomInt(grp_size_nodes - 1) + (dest_grp_base+RandomInt(gK-1))*grp_size_nodes ) %  total_nodes;
+
+  return dest;
+}
 
 
 int badhot_dflynew( int source, int total_nodes )
@@ -514,7 +543,7 @@ void InitializeTrafficMap( const Configuration & config )
 
   gTrafficFunctionMap["bad_dragon"]   = &badperm_dflynew;
   gTrafficFunctionMap["badhot_dragon"]   = &badhot_dflynew;
-
+  gTrafficFunctionMap["badprog_dragon"]   = &badprog_dflynew;
   gTrafficFunctionMap["badperm_yarc"] = &badperm_yarc;
 
   gTrafficFunctionMap["hotspot"]  = &hotspot;

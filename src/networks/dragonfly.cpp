@@ -219,25 +219,35 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
   //ECN not supported y et
   assert(!gECN);
 
-  vc_min_same = new int[2];
+  vc_min_same = new int[3];
   vc_min_same[0] = SRP_VC_CONVERTER(0,RES_TYPE_NORM); //min-min
-  vc_min_same[1] = SRP_VC_CONVERTER(4,RES_TYPE_NORM); //unsure-min
-  vc_nonmin_same =new int[1];
+  vc_min_same[1] = SRP_VC_CONVERTER(1,RES_TYPE_NORM); //min-min
+  vc_min_same[2] = SRP_VC_CONVERTER(4,RES_TYPE_NORM); //unsure-min
+  vc_nonmin_same =new int[2];
   vc_nonmin_same[0] = SRP_VC_CONVERTER(2,RES_TYPE_NORM); //nonmin
+  vc_nonmin_same[1] = SRP_VC_CONVERTER(3,RES_TYPE_NORM); //nonmin
 
-  vc_min_res_same = new int[8];
+  vc_min_res_same = new int[14];
   vc_min_res_same[0] = SRP_VC_CONVERTER(0,RES_TYPE_NORM);
-  vc_min_res_same[1] = SRP_VC_CONVERTER(4,RES_TYPE_NORM);
-  vc_min_res_same[2] = SRP_VC_CONVERTER(0,RES_TYPE_SPEC);
-  vc_min_res_same[3] = SRP_VC_CONVERTER(4,RES_TYPE_SPEC);
-  vc_min_res_same[4] = SRP_VC_CONVERTER(0,RES_TYPE_RES);
-  vc_min_res_same[5] = SRP_VC_CONVERTER(0,RES_TYPE_NACK);
-  vc_min_res_same[6] = SRP_VC_CONVERTER(0,RES_TYPE_ACK);
-  vc_min_res_same[7] = SRP_VC_CONVERTER(0,RES_TYPE_GRANT);
+  vc_min_res_same[1] = SRP_VC_CONVERTER(1,RES_TYPE_NORM);
+  vc_min_res_same[2] = SRP_VC_CONVERTER(4,RES_TYPE_NORM);
+  vc_min_res_same[3] = SRP_VC_CONVERTER(0,RES_TYPE_SPEC);
+  vc_min_res_same[4] = SRP_VC_CONVERTER(1,RES_TYPE_SPEC);
+  vc_min_res_same[5] = SRP_VC_CONVERTER(4,RES_TYPE_SPEC);
+  vc_min_res_same[6] = SRP_VC_CONVERTER(0,RES_TYPE_RES);
+  vc_min_res_same[7] = SRP_VC_CONVERTER(1,RES_TYPE_RES);
+  vc_min_res_same[8] = SRP_VC_CONVERTER(0,RES_TYPE_NACK);
+  vc_min_res_same[9] = SRP_VC_CONVERTER(1,RES_TYPE_NACK);
+  vc_min_res_same[10] = SRP_VC_CONVERTER(0,RES_TYPE_ACK);
+  vc_min_res_same[11] = SRP_VC_CONVERTER(1,RES_TYPE_ACK);
+  vc_min_res_same[12] = SRP_VC_CONVERTER(0,RES_TYPE_GRANT);
+  vc_min_res_same[13] = SRP_VC_CONVERTER(1,RES_TYPE_GRANT);
 
-  vc_nonmin_res_same = new int[2];
+  vc_nonmin_res_same = new int[4];
   vc_min_res_same[0] = SRP_VC_CONVERTER(2,RES_TYPE_NORM);
-  vc_min_res_same[1] = SRP_VC_CONVERTER(2,RES_TYPE_SPEC);
+  vc_min_res_same[1] = SRP_VC_CONVERTER(3,RES_TYPE_NORM);
+  vc_min_res_same[2] = SRP_VC_CONVERTER(2,RES_TYPE_SPEC);
+  vc_min_res_same[3] = SRP_VC_CONVERTER(3,RES_TYPE_SPEC);
 
 
 
@@ -387,7 +397,7 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
 
       //      _chan[_output].global = true;
       _routers[node]->AddOutputChannel( _chan[_output], _chan_cred[_output] );
-
+      _chan[_output]->SetGlobal();
       _chan[_output]->SetLatency(_global_channel_latency);
       _chan_cred[_output]->SetLatency(_global_channel_latency);
 
@@ -558,7 +568,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
 
 void val_dragonflynew( const Router *r, const Flit *f, int in_channel, 
-			OutputSet *outputs, bool inject )
+		       OutputSet *outputs, bool inject )
 {
 
   //ph 0 min 
@@ -640,7 +650,7 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
     f->ph = 1;
   }  
 
- //optical dateline nonmin
+  //optical dateline nonmin
   if (f->ph == 2 && out_port >=gP + (gA-1)) {
     f->ph = 3;
   }  
@@ -667,8 +677,22 @@ int intm_select(int src_grp, int dst_grp, int grps, int grp_size, int net_size){
 extern int debug_adaptive_same;
 extern int debug_adaptive_same_min;
 
+extern int debug_adaptive_prog_GvL;
+extern int debug_adaptive_prog_GvL_min;
+extern int debug_adaptive_prog_GvG;
+extern int debug_adaptive_prog_GvG_min;
+
+extern int debug_adaptive_LvL;
+extern int debug_adaptive_LvL_min;
+extern int debug_adaptive_LvG;
+extern int debug_adaptive_LvG_min;
+extern int debug_adaptive_GvL;
+extern int debug_adaptive_GvL_min;
+extern int debug_adaptive_GvG;
+extern int debug_adaptive_GvG_min;
+
 void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel, 
-			OutputSet *outputs, bool inject )
+			    OutputSet *outputs, bool inject )
 {
   //ph 0 min 
   //ph 1 dest
@@ -732,46 +756,74 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
 	//min and non-min output port could be identical, need to distinquish them
 	if(nonmin_router_output == min_router_output){
-	  debug_adaptive_same++;
+
 	  if(gReservation){
 	    min_queue_size = 
 	      r->GetCreditArray(min_router_output,
-				vc_min_res_same,8 ,false, false);
+				vc_min_res_same,14 ,false, true);
 	    nonmin_queue_size =
 	      r->GetCreditArray(nonmin_router_output,
-				vc_nonmin_res_same,2 ,false, false);
+				vc_nonmin_res_same,4 ,false, true);
 	  } else {
 
 	    min_queue_size = 
 	      r->GetCreditArray(min_router_output,
-				vc_min_same,2,false, false);
+				vc_min_same,3,false, true);
 	    nonmin_queue_size = 
 	      r->GetCreditArray(nonmin_router_output,
-			   vc_nonmin_same,1,false, false);
+				vc_nonmin_same,2,false, true);
 	  }
 
 	} else {	  
 	  min_queue_size = r->GetCredit(min_router_output); 
 	  nonmin_queue_size = r->GetCredit(nonmin_router_output);
 	}
+	
+	if(nonmin_router_output == min_router_output){
+	  debug_adaptive_same++;
+	} else if( (min_router_output >=gP + gA-1) && 
+		   (nonmin_router_output >=gP + gA-1) ){
+	  debug_adaptive_GvG++;
+	} else if( (min_router_output >=gP + gA-1) && 
+		   (nonmin_router_output <gP + gA-1) ){
+	  debug_adaptive_GvL++;
+	} else if( (min_router_output <gP + gA-1) && 
+		   (nonmin_router_output >=gP + gA-1) ){
+	  debug_adaptive_LvG++;
+	} else if( (min_router_output <gP + gA-1) && 
+		   (nonmin_router_output <gP + gA-1) ){
+	  debug_adaptive_LvL++;
+	}
 
-
-	  if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {	  
-	    if (debug)  cout << " MINIMAL routing " << endl;
-	    f->ph = 4;
-	    f->minimal = 1;
-	    if(nonmin_router_output == min_router_output){
-	      debug_adaptive_same_min++;	      
-	    }
-	  } else {
-
-	    f->ph = 2;
-	    f->minimal = 0;
+	if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {	  
+	  if (debug)  cout << " MINIMAL routing " << endl;
+	  f->ph = 4;
+	  f->minimal = 1;
+	  if(nonmin_router_output == min_router_output){
+	    debug_adaptive_same_min++;	  
+	  } else if( (min_router_output >=gP + gA-1) && 
+		     (nonmin_router_output >=gP + gA-1) ){
+	    debug_adaptive_GvG_min++;
+	  } else if( (min_router_output >=gP + gA-1) && 
+		     (nonmin_router_output <gP + gA-1) ){
+	    debug_adaptive_GvL_min++;
+	  } else if( (min_router_output <gP + gA-1) && 
+		     (nonmin_router_output >=gP + gA-1) ){
+	    debug_adaptive_LvG_min++;
+	  } else if( (min_router_output <gP + gA-1) && 
+		     (nonmin_router_output <gP + gA-1) ){
+	    debug_adaptive_LvL_min++;
 	  }
+	} else {
+
+	  f->ph = 2;
+	  f->minimal = 0;
+	}
       }
     }
   } else if(f->ph == 4 && f->minimal==1){ //progressive
     assert(in_channel<gP + gA-1);
+
     //select a random node
     f->intm =intm_select(grp_ID, dest_grp_ID, 
 			 gG, g_grp_num_nodes, g_network_size);
@@ -779,6 +831,7 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
     if (debug){
       cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
     }
+
     //intermediate are in the same group
     if(grp_ID == intm_grp_ID ||intm_grp_ID==dest_grp_ID ){
       //shoudl track this stat
@@ -791,7 +844,23 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
       nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
       nonmin_queue_size = r->GetCredit(nonmin_router_output);
       
+      if( (min_router_output >=gP + gA-1) && 
+	  (nonmin_router_output >=gP + gA-1) ){
+	debug_adaptive_prog_GvG++;
+      } else if( (min_router_output >=gP + gA-1) && 
+		 (nonmin_router_output <gP + gA-1) ){
+	debug_adaptive_prog_GvL++;
+      } 
+      
+      
       if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {
+	if( (min_router_output >=gP + gA-1) && 
+	    (nonmin_router_output >=gP + gA-1) ){
+	  debug_adaptive_prog_GvG_min++;
+	} else if( (min_router_output >=gP + gA-1) && 
+		   (nonmin_router_output <gP + gA-1) ){
+	  debug_adaptive_prog_GvL_min++;
+	} 
       } else {
 	f->ph = 2;
 	f->minimal = 2;

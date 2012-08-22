@@ -58,8 +58,8 @@ class IQRouter : public Router {
   //adaptive routing related
   bool _remove_credit_rtt;
   bool _track_routing_commitment;
-  vector<int> _current_bandwidth_commitment;
-  vector<int> _next_bandwidth_commitment;
+  int* _current_bandwidth_commitment;
+  int* _next_bandwidth_commitment;
   
   bool _cut_through; //true
 
@@ -71,8 +71,6 @@ class IQRouter : public Router {
 
   //remembering a vc is marked for drop
   vector<bool> _res_voq_drop;
-
-
 
   int _ctrl_vcs; //control
   int _special_vcs; // vcs that do not voq

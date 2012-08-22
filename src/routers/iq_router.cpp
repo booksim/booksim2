@@ -70,7 +70,6 @@ extern int ECN_BUFFER_HYSTERESIS;
 extern int ECN_CREDIT_HYSTERESIS;
 
 extern bool RESERVATION_BUFFER_SIZE_DROP;
-extern int DEFAULT_CHANNEL_LATENCY;
 
 //improves large simulation performance
 #define USE_LARGE_ARB
@@ -136,10 +135,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
   _remove_credit_rtt = (config.GetInt("remove_credit_rtt")==1);
   _track_routing_commitment = (config.GetInt("track_routing_commitment")==1);
-  if( _track_routing_commitment){
-    _current_bandwidth_commitment.resize(outputs,0);
-    _next_bandwidth_commitment.resize(outputs,0);
-  }
 
   _cut_through = (config.GetInt("cut_through")==1);
 
@@ -176,9 +171,21 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     _res_voq_drop.resize(inputs*_vcs, false);
 
   } else {
+    assert(false);
+    //this is not complete, too lazy to copy from above
     _vcs         = config.GetInt( "num_vcs" );
   }
   
+
+  if( _track_routing_commitment){
+    _current_bandwidth_commitment = new int[outputs*_num_vcs];
+    _next_bandwidth_commitment= new int[outputs*_num_vcs];
+    for(int i = 0; i<outputs*_num_vcs; i++){
+      _current_bandwidth_commitment[i] = 0;
+      _next_bandwidth_commitment[i] = 0;
+    }
+  }
+
   _vc_activity.resize(inputs*_vcs,0);
   _holds = 0;
   _hold_cancels = 0;
@@ -396,10 +403,9 @@ IQRouter::~IQRouter( )
 void IQRouter::ReadInputs( )
 {
   if(  _track_routing_commitment){
-    for(int i =0; i<_outputs; ++i){
-      _current_bandwidth_commitment[i] = 
-	_next_bandwidth_commitment[i];
-    }
+    memcpy(_current_bandwidth_commitment, 
+	   _next_bandwidth_commitment, 
+	   sizeof(int)*_outputs*_num_vcs);
   }
  
   bool have_flits = _ReceiveFlits( );
@@ -911,7 +917,7 @@ void IQRouter::_VCAllocEvaluate( )
       if(gReservation &&
 	 RESERVATION_BUFFER_SIZE_DROP && 
 	 VC_ALLOC_DROP && f->res_type == RES_TYPE_SPEC){
-	int next_size = dest_buf->Size(out_vc)-DEFAULT_CHANNEL_LATENCY*2;
+	int next_size = dest_buf->Size(out_vc)-_output_channels[out_port]->GetLatency()*2;
 	next_size=MAX(next_size,0);
 
 	if(( RESERVATION_QUEUING_DROP && f->exptime-next_size<GetSimTime()-cur_buf->TimeStamp(vc)) ||
@@ -1123,7 +1129,8 @@ void IQRouter::_VCAllocUpdate( )
       gDropInStats[_id][input]++;
       gDropOutStats[_id][out]++;
       if(_track_routing_commitment)
-	_next_bandwidth_commitment[out]-=f->packet_size;
+	_next_bandwidth_commitment[out*_num_vcs+
+				   cur_buf->GetRouteSet(vc)->GetSet()->vc_start]-=f->packet_size;
       drop_f = trafficManager->DropPacket(input, f);
       drop_f->vc = f->vc;
 
@@ -1405,11 +1412,12 @@ void IQRouter::_SWHoldUpdate( )
       f->hops++;
       f->vc = match_vc;
       
-      if(_track_routing_commitment)
-	 _next_bandwidth_commitment[output]--;
+
 
       dest_buf->SendingFlit(f);
-  
+      if(_track_routing_commitment)
+	_next_bandwidth_commitment[output*_num_vcs+f->vc]--;
+
       _input_grant[expanded_input]++;
 
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
@@ -2193,11 +2201,10 @@ void IQRouter::_SWAllocUpdate( )
       f->hops++;
       f->vc = match_vc;
 
-      if(_track_routing_commitment)
-	_next_bandwidth_commitment[output]--;
-
       dest_buf->SendingFlit(f);
- 
+      if(_track_routing_commitment)
+	_next_bandwidth_commitment[output*_num_vcs+f->vc]--;
+
       _input_grant[expanded_input]++;
 
 
@@ -2436,6 +2443,10 @@ void IQRouter::_SendFlits( )
   for ( int output = 0; output < _outputs; ++output ) {
     Flit * f = _output_buffer[output]->SendFlit();
     if(f){
+      /*
+      if(_track_routing_commitment)
+	_next_bandwidth_commitment[output*_num_vcs+f->vc]--;
+      */
      ++_sent_flits[output];
 
       if(gECN && f->head && f->res_type==RES_TYPE_NORM && !f->fecn ){	
@@ -2491,17 +2502,23 @@ int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
     size+= dest_buf->Size(v);
   }
   
-  //these two special features can only be activated when you are requesting
-  //credits for the entire port not for specific virtual channel
   if(_remove_credit_rtt && vc_begin== -1 && vc_end==-1){
     size-=_output_channels[out]->GetLatency()*2;
     size = size<0?0:size;
   }
   //
-  if(_track_routing_commitment && vc_begin== -1 && vc_end==-1){
-    size+=_current_bandwidth_commitment[out];
+  if(_track_routing_commitment){
+    if(vc_begin== -1 && vc_end==-1){
+      for(int v = 0;v<_num_vcs;v++){
+	size+=_current_bandwidth_commitment[out*_num_vcs+v];
+      }
+    } else {
+      for(int v = start; v<end; v++){
+	size+=_current_bandwidth_commitment[out*_num_vcs+v];
+      }
+    }
   }
-  assert(!(size<0));
+  assert(size>=0);
   return size;
 }
 int IQRouter::GetCreditArray(int out, int* vcs, int vc_count, bool rtt, bool commit) const
@@ -2514,16 +2531,17 @@ int IQRouter::GetCreditArray(int out, int* vcs, int vc_count, bool rtt, bool com
     assert(vcs[i]>=0 && vcs[i]<_num_vcs);
     size+= dest_buf->Size(vcs[i]);
   }
-  
-  //these two special features can only be activated when you are requesting
-  //credits for the entire port not for specific virtual channel
+
+  //this really dont' make senes for indidual vcs, but whatever
   if(rtt){
     size-=_output_channels[out]->GetLatency()*2;
     size = size<0?0:size;
   }
-  //
+  //new vc specific commitment
   if(commit){
-    size+=_current_bandwidth_commitment[out];
+    for(int i = 0; i<vc_count; i++){
+      size+= _current_bandwidth_commitment[out*_num_vcs+vcs[i]];
+    }
   }
   assert(!(size<0));
   return size;
@@ -2564,8 +2582,12 @@ void IQRouter::_UpdateCommitment(int input, int vc, const Flit* f, const OutputS
     return;
   assert(f->head);
   int output =  route_set->GetSet()->output_port;
-  _next_bandwidth_commitment[output]+=f->packet_size;
-
+  //if a packet has an range of out put vcs, the commitment is put on the first vc
+  //truthfully, this doesn't work with multiple vc per route set, because commit increase
+  //is put on the first vc, but deduction need also be from the first vc, which is not
+  //implemented right now, 
+  _next_bandwidth_commitment[output*_num_vcs+
+			     route_set->GetSet()->vc_start]+=f->packet_size;
 }
 
 
