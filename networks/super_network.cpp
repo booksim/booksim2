@@ -283,7 +283,7 @@ void SuperNetwork::ReserveBitVector(Flit *f, int net, int chan)
         {
           int reduction_amount = MIN(payload, _bit_vectors[net][chan][i].first);
           int rest_of_reduction = payload - reduction_amount;
-          assert(rest_of_reduction > 0 && rest_of_reduction < _cycles_per_element && reduction_amount < _cycles_per_element && _bit_vectors[net][chan][i+1].first >= rest_of_reduction);
+          assert(rest_of_reduction > 0 && rest_of_reduction < _cycles_per_element && reduction_amount <= _cycles_per_element && _bit_vectors[net][chan][i+1].first >= rest_of_reduction);
           _bit_vectors[net][chan][i].first -= reduction_amount;
           _bit_vectors[net][chan][i].second.push_back(make_pair<int,int>(f->flid,reduction_amount));
           _bit_vectors[net][chan][i+1].first -= rest_of_reduction;
