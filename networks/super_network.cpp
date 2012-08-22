@@ -291,7 +291,7 @@ void SuperNetwork::ReserveBitVector(Flit *f, int net, int chan)
           i++; // Don't reserve in that (i+1) slot again.
           assert(i < _bit_vector_length);
           f->reservation_vector[i] = false;
-          assert(_bit_vectors[net][chan][i].first >= 0 && _bit_vectors[net][chan][i+1].first >= 0);
+          assert(_bit_vectors[net][chan][i-1].first >= 0 && _bit_vectors[net][chan][i].first >= 0);
           slots_to_reserve--;
         }
         else
