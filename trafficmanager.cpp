@@ -2870,6 +2870,10 @@ void TrafficManager::_ClearStats( )
 
   gStatGrantReceived.clear();
   gStatGrantReceived.resize(_nodes,0);
+  _retries.clear();
+  _revivals.clear();
+  _retries.resize(_nodes,0);
+  _revivals.resize(_nodes,0);
 
   gStatReservationReceived.clear();
   gStatReservationReceived.resize(_nodes,0);
