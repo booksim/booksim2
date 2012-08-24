@@ -194,6 +194,13 @@ protected:
   Stats * _min_plat_stats;     
   Stats * _nonmin_plat_stats;     
   Stats * _prog_plat_stats;     
+  Stats * _min_net_plat_stats;     
+  Stats * _min_spec_net_plat_stats;     
+  Stats * _nonmin_net_plat_stats;     
+  Stats * _nonmin_spec_net_plat_stats;     
+  Stats * _prog_net_plat_stats; 
+  Stats * _prog_spec_net_plat_stats; 
+
   vector<Stats *> _plat_stats;     
   vector<Stats *> _overall_min_plat;  
   vector<Stats *> _overall_avg_plat;  

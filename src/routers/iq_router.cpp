@@ -58,9 +58,6 @@ extern map<int, vector<int> > gDropInStats;
 extern map<int, vector<int> > gDropOutStats;
 extern map<int, vector<int> > gChanDropStats;
 extern Stats* gStatDropLateness;
-extern Stats* gStatSpecInHopFrag;
-extern Stats* gStatSpecOutHopFrag;
-
 
 extern bool RESERVATION_QUEUING_DROP;
 extern bool VC_ALLOC_DROP;
@@ -73,6 +70,8 @@ extern bool RESERVATION_BUFFER_SIZE_DROP;
 
 //improves large simulation performance
 #define USE_LARGE_ARB
+//#define ENABLE_ROUTER_STATS
+
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 
@@ -123,14 +122,14 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   : Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
 
-
+#ifdef  ENABLE_ROUTER_STATS
   gDropInStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
   gDropInStats[id].resize(inputs,0);
   gDropOutStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
   gDropOutStats[id].resize(inputs,0);
   gChanDropStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
   gChanDropStats[id].resize(inputs,0);  
-
+#endif
 
 
   _remove_credit_rtt = (config.GetInt("remove_credit_rtt")==1);
@@ -186,26 +185,25 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     }
   }
 
+#ifdef ENABLE_ROUTER_STATS
   _vc_activity.resize(inputs*_vcs,0);
+  _port_congestness.resize(_vcs*outputs,0.0);
+  _input_request.resize(inputs,0);
+  _input_grant.resize(outputs, 0);
+#endif
+
   _holds = 0;
   _hold_cancels = 0;
   
   _classes     = config.GetInt( "classes" );
   _speculative = (config.GetInt("speculative") > 0);
 
-  _port_congestness.resize(_vcs*outputs,0.0);
-  _vc_request_buffer_sum.resize(_vcs*outputs,0);
-  _vc_request_buffer_num.resize(_vcs*outputs,0);
   _vc_ecn.resize(_vcs*outputs,false);
 
 
   _output_hysteresis.resize(outputs,false);
   _credit_hysteresis.resize(_vcs*outputs,false);
-  _vc_congested.resize(_vcs*outputs,0);
   _ECN_activated.resize((_num_vcs)*outputs,0);
-  _input_request.resize(inputs,0);
-  _input_grant.resize(outputs, 0);
-  _vc_congested_sum.resize(_vcs*outputs,0);
 
   //converting flits to nacks does nto support speculation yet
   //need to modifity the sw_alloc_vcs queue
@@ -515,7 +513,9 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
 	  drop = true;
 	  dropped_pid[input][f->vc] = f->pid;
 	  gStatDropLateness->AddSample(-f->exptime);
+#ifdef ENABLE_ROUTER_STATS
 	  gChanDropStats[_id][input]++;
+#endif
 	}
       } else { 
 	if(f->exptime<GetSimTime()){
@@ -531,7 +531,9 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
 	  drop = true;
 	  dropped_pid[input][f->vc] = f->pid;
 	  gStatDropLateness->AddSample(GetSimTime()-f->exptime);
+#ifdef ENABLE_ROUTER_STATS
 	  gChanDropStats[_id][input]++;
+#endif
 	}
       }
     } else {
@@ -567,15 +569,7 @@ bool IQRouter::_ReceiveFlits( )
 	  f = _ExpirationCheck(f, input);
 	}
 	if(f){
-	 
-	  if(f->res_type==RES_TYPE_SPEC && f->tail){
-	    //debug
-	    gStatSpecInHopFrag->AddSample(GetSimTime()-_input_head_time[input]);
-	  }
-	  if(f->res_type==RES_TYPE_SPEC && f->head){
-	    //debug
-	    _input_head_time[input]= GetSimTime();
-	  }
+
 	  _in_queue_flits.insert(make_pair(input, f));
 	  activity = true;
 	}
@@ -656,8 +650,9 @@ void IQRouter::_InputQueuing( )
 	vc = _voq_pid[input*_num_vcs+f->vc].second;
       }
     }
-    
+#ifdef ENABLE_ROUTER_STATS
     _vc_activity[input*_vcs+vc]++;
+#endif
     if(f->watch) {
       *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		 << "Adding flit " << f->id
@@ -1126,8 +1121,10 @@ void IQRouter::_VCAllocUpdate( )
       //send dropped credit since the packet is removed from the buffer
       Flit* drop_f = NULL;
       int out = (cur_buf->GetRouteSet(vc)->GetSet()->output_port);
+#ifdef ENABLE_ROUTER_STATS
       gDropInStats[_id][input]++;
       gDropOutStats[_id][out]++;
+#endif
       if(_track_routing_commitment)
 	_next_bandwidth_commitment[out*_num_vcs+
 				   cur_buf->GetRouteSet(vc)->GetSet()->vc_start]-=f->packet_size;
@@ -1294,8 +1291,9 @@ void IQRouter::_SWHoldEvaluate( )
 
     BufferState const * const dest_buf = _next_buf[match_port];
     
-
+#ifdef ENABLE_ROUTER_STATS
     _input_request[expanded_input]++;
+#endif
 
     if(!dest_buf->HasCreditFor(match_vc)) {
 
@@ -1417,9 +1415,9 @@ void IQRouter::_SWHoldUpdate( )
       dest_buf->SendingFlit(f);
       if(_track_routing_commitment)
 	_next_bandwidth_commitment[output*_num_vcs+f->vc]--;
-
+#ifdef ENABLE_ROUTER_STATS
       _input_grant[expanded_input]++;
-
+#endif
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
       
       if(_out_queue_credits.count(input) == 0) {
@@ -1678,8 +1676,10 @@ void IQRouter::_SWAllocEvaluate( )
     }
     
     if(cur_buf->GetState(vc) == VC::active) {
+#ifdef ENABLE_ROUTER_STATS
       _input_request[input]++;
-      
+#endif
+
       int const dest_output = cur_buf->GetOutputPort(vc);
       assert((dest_output >= 0) && (dest_output < _outputs));
       int const dest_vc = cur_buf->GetOutputVC(vc);
@@ -2204,9 +2204,9 @@ void IQRouter::_SWAllocUpdate( )
       dest_buf->SendingFlit(f);
       if(_track_routing_commitment)
 	_next_bandwidth_commitment[output*_num_vcs+f->vc]--;
-
+#ifdef ENABLE_ROUTER_STATS
       _input_grant[expanded_input]++;
-
+#endif
 
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
 
@@ -2503,8 +2503,11 @@ int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
   }
   
   if(_remove_credit_rtt && vc_begin== -1 && vc_end==-1){
-    size-=_output_channels[out]->GetLatency()*2;
+    
+    size-=_output_buffer[out]->Total(); //new  deduct output buffer
+    size-=_output_channels[out]->GetLatency()*2;//RTT deduct RTT
     size = size<0?0:size;
+    size+=_output_buffer[out]->Total(); //new readd output buffer
   }
   //
   if(_track_routing_commitment){
@@ -2546,6 +2549,18 @@ int IQRouter::GetCreditArray(int out, int* vcs, int vc_count, bool rtt, bool com
   assert(!(size<0));
   return size;
 }
+int IQRouter::GetCommit(int out, int vc) const{
+  if(vc==-1){
+    int size = 0;
+    for(int v = 0;v<_num_vcs;v++){
+      size+=_current_bandwidth_commitment[out*_num_vcs+v];
+    }
+    return size;
+  } else {
+    return _current_bandwidth_commitment[out*_num_vcs+vc];
+  } 
+}
+
 
 
 int IQRouter::GetBuffer(int i) const {

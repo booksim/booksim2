@@ -28,7 +28,8 @@ protected:
   vector<bool> _buffer_tail;
   int _watch;
 
-
+  //total umber of pending packets this buffer;
+  int  _total;
 public:
   OutputBuffer( const Configuration& config,
 		Module *parent, const string& name);
@@ -40,7 +41,10 @@ public:
 
   int ControlSize();
   int Size(int vc);
-  int AllSize(){
+  inline int Total(){
+    return _total;
+  }
+  int Data(){
     int sum = 0;
     for(size_t i = 0; i<_buffers.size(); i++){
       sum+=_buffers[i].size();

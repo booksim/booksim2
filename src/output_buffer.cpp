@@ -39,6 +39,8 @@ OutputBuffer::OutputBuffer(const Configuration& config,
   _watch = 0;
 
   _nonspec_slots=0;
+
+  _total =0;
 }
 
 OutputBuffer::~OutputBuffer(){
@@ -56,6 +58,7 @@ Flit* OutputBuffer::SendFlit(){
     f= _control_buffer.front();
     _control_tail = f->tail;
     _control_buffer.pop();
+    _total--;
   }
   
   //Check normal buffers
@@ -93,6 +96,7 @@ Flit* OutputBuffer::SendFlit(){
       _last_buffer = buf_idx;
       f = _buffers[_last_buffer].front();
       _buffers[_last_buffer].pop();
+      _total--;
       _buffer_tail[_last_buffer] = f->tail;
       if(f->tail){
 	//output buffer slot freed (packets)
@@ -116,6 +120,7 @@ Flit* OutputBuffer::SendFlit(){
 
 //send a data packet
 void OutputBuffer::QueueFlit(int vc, Flit* f){
+  assert(f);
   assert(f->vc == vc);
   if(f->watch)
     _watch++;
@@ -125,6 +130,7 @@ void OutputBuffer::QueueFlit(int vc, Flit* f){
     assert(f->pid == _buffers[vc].back()->pid);
   }
   _buffers[vc].push(f);
+  _total++;
   //age based output arbitration
   if(f->head){
     _buffer_time[vc].push(GetSimTime());
@@ -138,9 +144,11 @@ void OutputBuffer::QueueFlit(int vc, Flit* f){
 
 //send a contorl packet to the output
 void OutputBuffer::QueueControlFlit(Flit* f){
+  assert(f);
   if(f->watch)
     _watch++;
   _control_buffer.push(f);
+  _total++;
 }
 
 

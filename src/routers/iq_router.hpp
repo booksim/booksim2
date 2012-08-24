@@ -195,6 +195,7 @@ public:
   void Display( ostream & os = cout ) const;
 
   virtual int GetCredit(int out, int vc_begin=-1, int vc_end=-1 ) const;
+  virtual int GetCommit(int out, int vc=-1) const;
   virtual int GetCreditArray(int out, int* vcs, int vc_count, bool rtt, bool commit) const;
   virtual int GetBuffer(int i = -1) const;
   virtual vector<int> GetBuffers(int i = -1) const;

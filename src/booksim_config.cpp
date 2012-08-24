@@ -51,6 +51,7 @@ BookSimConfig::BookSimConfig( )
   //1 all gropus eligibile for intm, 0, exclude src dst
   _int_map["adaptive_intm"] = 1;
   _float_map["adaptive_threshold"] = 6.0;
+  _float_map["spec_adaptive_threshold"] = -1.0;
   _int_map["dragonfly_global_latency"] = 30;
   _int_map["dragonfly_local_latency"] = 5;
   _int_map["remove_credit_rtt"] = 0;

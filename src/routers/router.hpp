@@ -76,8 +76,6 @@ public:
 
   map<int, bool> _port_congest_check;
   vector<double> _port_congestness;
-  vector<int> _vc_request_buffer_num; 
-  vector<int> _vc_request_buffer_sum; 
   vector<bool>_vc_ecn;
 
   //stats
@@ -122,6 +120,7 @@ public:
 
 
   virtual int GetCredit(int out, int vc_begin=-1, int vc_end=-1 ) const = 0;
+  virtual int GetCommit(int out, int vc=-1) const = 0;
   virtual int GetCreditArray(int out, int* vcs, int vc_count, bool rtt, bool commit) const=0;
   virtual int GetBuffer(int i = -1) const = 0;
 

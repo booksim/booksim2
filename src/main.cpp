@@ -97,6 +97,7 @@ bool gReservation = false;
 bool gECN = false;
 
 float gAdaptiveThreshold = 1.0;
+float gSpecAdaptiveThreshold = -1.0;
 #ifdef USE_GUI
 bool gGUIMode = false;
 #endif

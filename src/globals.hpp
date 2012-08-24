@@ -54,5 +54,6 @@ extern bool gReservation;
 extern bool gECN;
 
 extern float gAdaptiveThreshold;
+extern float gSpecAdaptiveThreshold;
 
 #endif

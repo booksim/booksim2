@@ -12,6 +12,8 @@ FlowROB::FlowROB(int flow_size){
 }
 
 FlowROB::~FlowROB(){
+  _pid.clear();
+  _rob.clear();
 }
 
 bool FlowROB::sn_check(int sn){
