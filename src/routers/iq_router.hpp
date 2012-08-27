@@ -110,6 +110,7 @@ class IQRouter : public Router {
 
   map<int, Credit *> _out_queue_credits;
 
+
   vector<Buffer *> _buf;
   vector<BufferState *> _next_buf;
 
@@ -126,6 +127,7 @@ class IQRouter : public Router {
   vector<OutputBuffer*> _output_buffer;
 
   vector<queue<Credit *> > _credit_buffer;
+  vector<  multimap<int, Credit *> > _credit_delay_queue;
 
   bool _hold_switch_for_packet;
   vector<bool> _switch_hold_in_skip;
@@ -135,6 +137,9 @@ class IQRouter : public Router {
   vector<int> _switch_hold_vc;
 
   vector<int> _input_head_time ;
+
+
+
 
   Flit* _ExpirationCheck(Flit* f, int input);
   bool _ReceiveFlits( );
@@ -182,6 +187,10 @@ class IQRouter : public Router {
   BufferMonitor * _bufferMonitor ;
   
 public:
+  long* debug_delay_map;
+  int* _crt_delay;
+  int* _crt;
+  bool* _global_table;
 
   IQRouter( Configuration const & config,
 	    Module *parent, string const & name, int id,
@@ -194,6 +203,9 @@ public:
   
   void Display( ostream & os = cout ) const;
 
+  virtual bool GetCongest(int c) const{
+    return _global_table[c];
+  }
   virtual int GetCredit(int out, int vc_begin=-1, int vc_end=-1 ) const;
   virtual int GetCommit(int out, int vc=-1) const;
   virtual int GetCreditArray(int out, int* vcs, int vc_count, bool rtt, bool commit) const;

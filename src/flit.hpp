@@ -33,6 +33,27 @@
 #include "reservation.hpp"
 #include "booksim.hpp"
 
+class PiggyPack{
+public: 
+  bool* _data;
+  static int _size;//set when dragonfly is initiated
+
+  void Reset();
+  static PiggyPack * New();
+  void Free();
+  static void FreeAll();
+
+private:
+
+  PiggyPack();
+  ~PiggyPack() {
+    if(_data)
+      delete [] _data;
+  }
+  static stack<PiggyPack *> _all;
+  static stack<PiggyPack *> _free;
+};
+
 class Flit {
 
 public:
@@ -62,8 +83,6 @@ public:
 
   int head_sn;
 
-  int flbid;
-
   bool walkin;
 
   bool fecn;
@@ -79,6 +98,7 @@ public:
   int  time;
   int  atime;
 
+  int flbid;
   int  id;
   int  pid;
 
@@ -100,6 +120,8 @@ public:
   //mutable int dr;
   mutable short minimal; // == 1 minimal routing, == 0, nonminimal routing
 
+
+  mutable PiggyPack* pb;
 
   void Reset();
 

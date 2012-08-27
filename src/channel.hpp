@@ -66,17 +66,25 @@ public:
   virtual void Evaluate() {}
   virtual void WriteOutputs();
 
+  inline void SetGlobal(){
+    _global=true;
+  }
+  inline bool GetGlobal(){
+    return _global;
+  }
+
 protected:
   int _delay;
   T * _input;
   T * _output;
+  bool _global; //dragonfly only
   queue<pair<int, T *> > _wait_queue;
 
 };
 
 template<typename T>
 Channel<T>::Channel(Module * parent, string const & name)
-  : TimedModule(parent, name), _delay(1), _input(0), _output(0) {
+  : TimedModule(parent, name), _delay(1), _input(0), _output(0),_global(false) {
 }
 
 template<typename T>

@@ -47,6 +47,8 @@ void Credit::Reset()
   head = false;
   tail = false;
   id   = -1;
+  cr_time = -1;
+  delay = 0;
 }
 
 Credit * Credit::New() {

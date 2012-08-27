@@ -39,6 +39,8 @@ Stats * GetStats(const std::string & name);
 
 extern bool gPrintActivity;
 
+extern int gA;
+extern int gP;
 extern int gK;
 extern int gN;
 extern int gC;
@@ -56,4 +58,9 @@ extern bool gECN;
 extern float gAdaptiveThreshold;
 extern float gSpecAdaptiveThreshold;
 
+
+extern bool gCRT;
+extern bool gPB;
+
+extern std::ostream * gStatsOut;
 #endif

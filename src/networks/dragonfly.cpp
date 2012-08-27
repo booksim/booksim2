@@ -213,6 +213,9 @@ DragonFlyNew::DragonFlyNew( const Configuration &config, const string & name ) :
 void DragonFlyNew::_ComputeSize( const Configuration &config )
 {
 
+  gCRT = config.GetStr("routing_function")=="ugalcrt";
+  gPB = config.GetStr("routing_function")=="ugalpb";
+
   gAdaptiveThreshold = config.GetFloat("adaptive_threshold");
   gSpecAdaptiveThreshold = config.GetFloat("spec_adaptive_threshold");
   if(gSpecAdaptiveThreshold<0)
@@ -293,7 +296,7 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
   _size = _num_of_switch;
 
 
-  
+  PiggyPack::_size=gK;
   gG = _g;
   gP = _p;
   gA = _a;
@@ -390,6 +393,7 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
       //      _chan[_output].global = true;
       _routers[node]->AddOutputChannel( _chan[_output], _chan_cred[_output] );
       _chan[_output]->SetGlobal();
+      _chan_cred[_output]->SetGlobal();
       _chan[_output]->SetLatency(_global_channel_latency);
       _chan_cred[_output]->SetLatency(_global_channel_latency);
 
@@ -507,6 +511,8 @@ void DragonFlyNew::RegisterRoutingFunctions(){
   gRoutingFunctionMap["min_dragonflynew"] = &min_dragonflynew;
   gRoutingFunctionMap["val_dragonflynew"] = &val_dragonflynew;
   gRoutingFunctionMap["ugal_dragonflynew"] = &ugal_dragonflynew;
+  gRoutingFunctionMap["ugalcrt_dragonflynew"] = &ugal_dragonflynew;
+  gRoutingFunctionMap["ugalpb_dragonflynew"] = &ugal_dragonflynew;
   gRoutingFunctionMap["ugalprog_dragonflynew"] = &ugalprog_dragonflynew;
 }
 
@@ -524,7 +530,6 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
     return;
   }
 
-
   int dest  = f->dest;
   int rID =  r->GetID(); 
   int grp_ID = int(rID / g_grp_num_routers); 
@@ -539,7 +544,6 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
       f->ph = 1;
     }
   } 
-
 
   out_port = dragonfly_port(rID, f->src, dest);
 
@@ -651,6 +655,8 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
   outputs->AddRange( out_port, out_vc, out_vc );
 
 }
+
+
 
 int intm_select(int src_grp, int dst_grp, int grps, int grp_size, int net_size){
   if(ADAPTIVE_INTM_ALL){
@@ -769,6 +775,7 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	      r->GetCreditArray(nonmin_router_output,
 				vc_nonmin_same,1,false, true);
 	  }
+	  //handling spec packets speically
 	  if(f->res_type!=RES_TYPE_SPEC){
 	    min_queue_size=0;
 	    nonmin_queue_size=9999;
@@ -795,8 +802,16 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	} else {
 	  assert(false);
 	}
+	//handling spec packets specially
+	//spec packet has a hard deadline and must be respected
+	if(f->res_type==RES_TYPE_SPEC){
+	  if(min_queue_size>f->exptime && nonmin_queue_size<f->exptime){
+	    min_queue_size=999999;
+	    nonmin_queue_size=0;
+	  } 
+	}
 
-	if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {	  
+	if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold) {	  
 	  if (debug)  cout << " MINIMAL routing " << endl;
 	  f->ph = 4;
 	  f->minimal = 1;
@@ -807,8 +822,6 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	    debug_adaptive_GvG_min++;
 	  } else if( (min_router_output >=gP + gA-1) && 
 		     (nonmin_router_output <gP + gA-1) ){
-	    //cout<<min_queue_size<<"("<< r->GetCommit(min_router_output)<<")"<<"\t"
-	    //<<nonmin_queue_size<<"("<< r->GetCommit(nonmin_router_output)<<")"<<endl;
 	    debug_adaptive_GvL_min++;
 	  } else if( (min_router_output <gP + gA-1) && 
 		     (nonmin_router_output >=gP + gA-1) ){
@@ -876,6 +889,13 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	assert(false);
       }
       
+      //special spec handling
+      if(f->res_type==RES_TYPE_SPEC){
+	if(min_queue_size>f->exptime && nonmin_queue_size<f->exptime){
+	  min_queue_size=999999;
+	  nonmin_queue_size=0;
+	} 
+      }
       
       if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {
 	if( (min_router_output >=gP + gA-1) && 
@@ -928,35 +948,13 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+int global_index(int src, int dest){
+  if(src<dest){
+    return dest-1;
+  } else {
+    return dest;
+  }
+}
 
 //Why would you use this on a dragonfly
 //Basic adaptive routign algorithm for the dragonfly
@@ -976,6 +974,8 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
     return;
   }
   
+  assert(!gReservation);
+
   //this constant biases the adaptive decision toward minimum routing
   //negative value woudl biases it towards nonminimum routing
   int adaptive_threshold = int(float(f->packet_size)*gAdaptiveThreshold);
@@ -988,8 +988,10 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
   int debug = f->watch;
   int out_port = -1;
   int out_vc = 0;
-  int min_queue_size, min_hopcnt;
-  int nonmin_queue_size, nonmin_hopcnt;
+
+  int min_queue_size;;
+  int nonmin_queue_size;
+
   int intm_grp_ID;
   int intm_rID;
 
@@ -997,58 +999,118 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
     cout<<"At router "<<rID<<endl;
   }
   int min_router_output, nonmin_router_output;
-  
-  //at the source router, make the adaptive routing decision
   if ( in_channel < gP )   {
-    //dest are in the same group, only use minimum routing
-    if (dest_grp_ID == grp_ID) {
+    //dest are in the same group
+    if (dest_grp_ID == grp_ID  ) {
       f->ph = 1;
       f->minimal = 1;
     } else {
       //select a random node
       f->intm =intm_select(grp_ID, dest_grp_ID, 
-			   gG,  g_grp_num_nodes, g_network_size);
-      intm_grp_ID = (int)(f->intm/g_grp_num_nodes);
+			   gG, g_grp_num_nodes, g_network_size);
+      intm_grp_ID = int(f->intm/g_grp_num_nodes);
       if (debug){
 	cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
       }
-      
-      //random intermediate are in the same group, use minimum routing
-      if(grp_ID == intm_grp_ID){
+
+      //intermediate was useless are in the same group
+      if(grp_ID == intm_grp_ID ||intm_grp_ID==dest_grp_ID){
 	f->ph = 0;
 	f->minimal = 1;
       } else {
-
-	min_hopcnt = dragonflynew_hopcnt(f->src, f->dest);
 	min_router_output = dragonfly_port(rID, f->src, f->dest); 
-	nonmin_hopcnt = dragonflynew_hopcnt(f->src, f->intm) +
-	  dragonflynew_hopcnt(f->intm,f->dest);
 	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
 
 	//min and non-min output port could be identical, need to distinquish them
 	if(nonmin_router_output == min_router_output){
-	  min_queue_size = MAX(r->GetCredit(min_router_output,1,1),0) ; 
-	  nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output,0,0),0);
+	  min_queue_size = 
+	    r->GetCreditArray(min_router_output,
+			      vc_min_same,1,false, true);
+	  nonmin_queue_size = 
+	    r->GetCreditArray(nonmin_router_output,
+			      vc_nonmin_same,1,false, true);
 	} else {	  
-	  min_queue_size = MAX(r->GetCredit(min_router_output),0) ; 
-	  nonmin_queue_size = MAX(r->GetCredit(nonmin_router_output),0);
+	  min_queue_size = r->GetCredit(min_router_output); 
+	  nonmin_queue_size = r->GetCredit(nonmin_router_output);
+	}
+	
+	if(nonmin_router_output == min_router_output){
+	  debug_adaptive_same++;
+	} else if( (min_router_output >=gP + gA-1) && 
+		   (nonmin_router_output >=gP + gA-1) ){
+	  debug_adaptive_GvG++;
+	} else if( (min_router_output >=gP + gA-1) && 
+		   (nonmin_router_output <gP + gA-1) ){
+	  debug_adaptive_GvL++;
+	} else if( (min_router_output <gP + gA-1) && 
+		   (nonmin_router_output >=gP + gA-1) ){
+	  debug_adaptive_LvG++;
+	} else if( (min_router_output <gP + gA-1) && 
+		   (nonmin_router_output <gP + gA-1) ){
+	  debug_adaptive_LvL++;
+	} else {
+	  assert(false);
+	}
+	
+	bool minimal = true;
+	if(gPB){
+	  bool min_global_congest = r->GetCongest(global_index(grp_ID, dest_grp_ID));
+	  bool nonmin_global_congest= r->GetCongest(global_index(grp_ID, intm_grp_ID));
+	  
+	  minimal = (1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold &&
+	    !(min_global_congest && !nonmin_global_congest);
+	} else {
+	  minimal = (1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold;
 	}
 
-	if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {	  
+	if (minimal) {	  
 	  if (debug)  cout << " MINIMAL routing " << endl;
 	  f->ph = 0;
 	  f->minimal = 1;
+	  if(nonmin_router_output == min_router_output){
+	    debug_adaptive_same_min++;	  
+	  } else if( (min_router_output >=gP + gA-1) && 
+		     (nonmin_router_output >=gP + gA-1) ){
+	    debug_adaptive_GvG_min++;
+	  } else if( (min_router_output >=gP + gA-1) && 
+		     (nonmin_router_output <gP + gA-1) ){
+	    debug_adaptive_GvL_min++;
+	  } else if( (min_router_output <gP + gA-1) && 
+		     (nonmin_router_output >=gP + gA-1) ){
+	    debug_adaptive_LvG_min++;
+	  } else if( (min_router_output <gP + gA-1) && 
+		     (nonmin_router_output <gP + gA-1) ){
+	    debug_adaptive_LvL_min++;
+	  }else {
+	    assert(false);
+	  }
 	} else {
+
+	  if(nonmin_router_output == min_router_output){
+	  } else if( (min_router_output >=gP + gA-1) && 
+		     (nonmin_router_output >=gP + gA-1) ){
+	  } else if( (min_router_output >=gP + gA-1) && 
+		     (nonmin_router_output <gP + gA-1) ){
+
+
+	  } else if( (min_router_output <gP + gA-1) && 
+		     (nonmin_router_output >=gP + gA-1) ){
+
+	  } else if( (min_router_output <gP + gA-1) && 
+		     (nonmin_router_output <gP + gA-1) ){
+	  }else {
+	    assert(false);
+	  }
 	  f->ph = 2;
 	  f->minimal = 0;
 	}
-
       }
     }
   }
   
+
   //transition from nonminimal phase to minimal
-  if(f->ph==2  || f->ph==3){
+  if(f->ph==2 || f->ph == 3){
     intm_rID= (int)(f->intm/gP);
     if( rID == intm_rID){
       f->ph = 0;

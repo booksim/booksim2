@@ -41,7 +41,6 @@
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
-
 //speed optimizations
 #define ENABLE_STATS
 //#define ENABLE_DEBUG_STATS
@@ -168,6 +167,8 @@ int ECN_CREDIT_HYSTERESIS=0;
 //ECN AIMD
 bool ECN_AIMD = false;
 
+//Piggyback adaptive routing
+int PB_THRESHOLD=0;
 
 //adaptive routing
 bool ADAPTIVE_INTM_ALL=true;
@@ -261,7 +262,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   cout<<"size of ";
   cout<<sizeof(Flit)<<endl;
 
-
+  //overload this for now
+  PB_THRESHOLD =   config.GetInt("ecn_congestion_threshold");
   ADAPTIVE_INTM_ALL= (config.GetInt("adaptive_intm")==1);
 
   _nodes = _net[0]->NumNodes( );
@@ -982,6 +984,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _stats_out = new ofstream(stats_out_file.c_str());
     config.WriteMatlabFile(_stats_out);
   }
+  gStatsOut = _stats_out;
   
   string flow_out_file = config.GetStr( "flow_out" );
   if(flow_out_file == "") {
@@ -3899,7 +3902,6 @@ void TrafficManager::_DisplayTedsShit(){
       *_stats_out<<"];\n";
     }
 #endif
-
 
   }
 }

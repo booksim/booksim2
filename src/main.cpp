@@ -98,10 +98,15 @@ bool gECN = false;
 
 float gAdaptiveThreshold = 1.0;
 float gSpecAdaptiveThreshold = -1.0;
+
+bool gCRT=false;
+bool gPB = false;
+
 #ifdef USE_GUI
 bool gGUIMode = false;
 #endif
 
+ostream * gStatsOut;
 
 vector<Network *> net;
 /////////////////////////////////////////////////////////////////////////////

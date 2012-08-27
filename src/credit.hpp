@@ -41,6 +41,8 @@ public:
   // these are only used by the event router
   bool head, tail;
   int  id;
+  int cr_time;
+  int delay;
 
   void Reset();
   

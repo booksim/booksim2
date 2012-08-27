@@ -16,4 +16,5 @@ adapt_vc=3;
 num_vcs=14;
 	
 adaptive_threshold=14.0;
+spec_adaptive_threshold=0.0;
 adaptive_intm=0;

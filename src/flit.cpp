@@ -59,6 +59,7 @@ ostream& operator<<( ostream& os, const Flit& f )
 
 Flit::Flit() 
 {  
+  pb=NULL;
   Reset();
 }  
 
@@ -77,15 +78,12 @@ void Flit::Reset()
   tail      = false ;
   ntime = -1;
   time      = -1 ;
-  //  ttime     = -1 ;
   atime     = -1 ;
   exptime =-1;
   sn        = -1 ;
   head_sn = -1;
-  //  rob_time  = 0 ;
   id        = -1 ;
   pid       = -1 ;
-  //  tid       = -1 ;
   flid = -1;
   hops      = 0 ;
   watch     = false ;
@@ -96,12 +94,12 @@ void Flit::Reset()
   pri = 0;
   intm =-1;
   ph = -1;
-  //dr = -1;
   minimal = 1;
-  //ring_par = -1;
-  //data = 0;
   payload = -1;
   packet_size=0;
+  if(pb)
+    pb->Free();
+  pb=NULL;
 }  
 
 Flit * Flit::Replicate(Flit* f){
@@ -137,18 +135,22 @@ Flit * Flit::Replicate(Flit* f){
 Flit * Flit::New() {
   Flit * f;
   if(_free.empty()) {
-    f = new Flit;
-    _all.push(f);
+    //better tomake a few more?
+    for(int i = 0; i<100; i++){
+      f= new Flit;
+      _free.push(f);
+      _all.push(f);
+    }
     if(_all.size()>10000000){
       cerr<<"Simulation time "<<GetSimTime()<<" flit allocation exceeds "<<_all.size()<<endl;
       exit(-1);
     }
-  } else {
-    f = _free.top();
-    assert(!f->inuse);
-    f->Reset();
-    _free.pop();
   }
+
+  f = _free.top();
+  assert(!f->inuse);
+  f->Reset();
+  _free.pop();
   f->inuse = true;
   return f;
 }
@@ -168,4 +170,48 @@ void Flit::FreeAll() {
 
 int Flit::OutStanding(){
   return _all.size()-_free.size();
+}
+
+
+
+stack<PiggyPack *> PiggyPack::_all;
+stack<PiggyPack *> PiggyPack::_free;
+int PiggyPack::_size=0;
+PiggyPack::PiggyPack(){
+  _data=NULL;
+}
+PiggyPack * PiggyPack::New() {
+  PiggyPack * p;
+  if(_free.empty()) {
+    //better tomake a few more?
+    for(int i = 0; i<100; i++){
+      p= new PiggyPack;
+      p->_data=new bool[_size];
+      _free.push(p);
+      _all.push(p);
+    }
+  }
+
+  p = _free.top();
+  p->Reset();
+  _free.pop();
+  return p;
+}
+
+void PiggyPack::Free() {
+  _free.push(this);
+}
+
+void PiggyPack::FreeAll() {
+  while(!_all.empty()) {
+    delete _all.top();
+    _all.pop();
+  }
+}
+
+void PiggyPack::Reset(){
+  assert(_data!=NULL);
+  for(int i = 0; i<_size;i++){
+    _data[i] = false;
+  } 
 }

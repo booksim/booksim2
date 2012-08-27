@@ -66,6 +66,8 @@ extern int ECN_CONGEST_THRESHOLD;
 extern int ECN_BUFFER_HYSTERESIS;
 extern int ECN_CREDIT_HYSTERESIS;
 
+extern int PB_THRESHOLD;
+
 extern bool RESERVATION_BUFFER_SIZE_DROP;
 
 //improves large simulation performance
@@ -74,46 +76,12 @@ extern bool RESERVATION_BUFFER_SIZE_DROP;
 
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
-
-//voq label to real vc
-int IQRouter::voq2vc(int vvc, int outputs){
-  assert(_voq);
-  assert(outputs!=-1);
-  if(vvc<_special_vcs){
-    return vvc;
-  } else { //data
-    return (vvc-_special_vcs)/outputs+_special_vcs;
-  }
-}
-
-bool IQRouter::is_control_vc(int vc){
-  assert(_voq);
-  if(vc<_ctrl_vcs){
-    return true;
-  }
-  return false;
-}
-bool IQRouter::is_voq_vc(int vc){
-  assert(_voq);
-
-  if(vc<_special_vcs){
-    return false;
-  } else { //data
-    return true;
-  }
-}
-int IQRouter::vc2voq(int vc, int output){
-  assert(_voq);
-
-  if(vc<_special_vcs){
-    return vc;
-  } else { //data
-    if(output==-1) //?
-      return -1;
-    else  //deduct ctrl vc, scale by #voq, add output port + add ctrl vc back
-      return (vc-_special_vcs)*_outputs+output+_special_vcs;
-  }
-
+int router_global_index(int rid, int output){
+  int router_grp_position = rid % gA;
+  int channel_router_position = (output-(gK+gA-1));
+  assert(channel_router_position >=0);
+  return router_grp_position*gK+
+    channel_router_position;
 }
 
 
@@ -121,20 +89,8 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 		    string const & name, int id, int inputs, int outputs )
   : Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
-
-#ifdef  ENABLE_ROUTER_STATS
-  gDropInStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
-  gDropInStats[id].resize(inputs,0);
-  gDropOutStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
-  gDropOutStats[id].resize(inputs,0);
-  gChanDropStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
-  gChanDropStats[id].resize(inputs,0);  
-#endif
-
-
-  _remove_credit_rtt = (config.GetInt("remove_credit_rtt")==1);
-  _track_routing_commitment = (config.GetInt("track_routing_commitment")==1);
-
+  /////////////////////
+  //VC setup parameters
   _cut_through = (config.GetInt("cut_through")==1);
 
   assert(_cut_through); //all the output buffer changes requires this
@@ -175,6 +131,32 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     _vcs         = config.GetInt( "num_vcs" );
   }
   
+  ////////////////////////////
+  //Adaptive routing parameters
+  _remove_credit_rtt = (config.GetInt("remove_credit_rtt")==1);
+  _track_routing_commitment = (config.GetInt("track_routing_commitment")==1);
+
+  if(gPB){
+    _global_table = new bool[gG-1];
+    for(int i = 0; i<gG-1; i++){
+      _global_table[i] = false;
+    }
+  }
+
+  if(gCRT){
+    debug_delay_map=new long [inputs];
+    for(int i = 0; i<inputs; i++) debug_delay_map[i] = 0;
+    _crt_delay =  new int[outputs*_num_vcs];
+    _crt =  new int[outputs*_num_vcs];
+    for(int i = 0; i<outputs*_num_vcs; i++){
+      _crt_delay[i] = 0;
+      _crt[i] = 0;
+    }
+    _credit_delay_queue.resize(outputs);
+  } else {
+    _credit_buffer.resize(_inputs); 
+  }
+
 
   if( _track_routing_commitment){
     _current_bandwidth_commitment = new int[outputs*_num_vcs];
@@ -185,28 +167,24 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     }
   }
 
-#ifdef ENABLE_ROUTER_STATS
-  _vc_activity.resize(inputs*_vcs,0);
-  _port_congestness.resize(_vcs*outputs,0.0);
-  _input_request.resize(inputs,0);
-  _input_grant.resize(outputs, 0);
-#endif
+
 
   _holds = 0;
   _hold_cancels = 0;
   
   _classes     = config.GetInt( "classes" );
-  _speculative = (config.GetInt("speculative") > 0);
 
+  /////////////////////
+  //ECN parameters  
   _vc_ecn.resize(_vcs*outputs,false);
-
-
   _output_hysteresis.resize(outputs,false);
   _credit_hysteresis.resize(_vcs*outputs,false);
   _ECN_activated.resize((_num_vcs)*outputs,0);
 
   //converting flits to nacks does nto support speculation yet
   //need to modifity the sw_alloc_vcs queue
+
+  _speculative = (config.GetInt("speculative") > 0);
   assert((!gReservation && _speculative)||(!_speculative));
   _spec_check_elig = (config.GetInt("spec_check_elig") > 0);
   _spec_mask_by_reqs = (config.GetInt("spec_mask_by_reqs") > 0);
@@ -220,7 +198,9 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   if(!_sw_alloc_delay) {
     Error("Switch allocator cannot have zero delay.");
   }
-  
+
+
+  ////////////
   // Routing
   string const rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
   map<string, tRoutingFunction>::const_iterator rf_iter = gRoutingFunctionMap.find(rf);
@@ -331,8 +311,6 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     }
   }
 
-  _credit_buffer.resize(_inputs); 
-
   // Switch configuration (when held for multiple cycles)
   _hold_switch_for_packet = (config.GetInt("hold_switch_for_packet") > 0);
   _switch_hold_in_skip.resize(_inputs*_input_speedup, false);
@@ -356,10 +334,51 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     for(int j = 0; j<_vcs; j++)
       dropped_pid[i][j] = -1;
   }
+
+#ifdef  ENABLE_ROUTER_STATS
+  gDropInStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
+  gDropInStats[id].resize(inputs,0);
+  gDropOutStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
+  gDropOutStats[id].resize(inputs,0);
+  gChanDropStats.insert(pair<int,  vector<int> >(_id, vector<int>() ));
+  gChanDropStats[id].resize(inputs,0);  
+#endif
+
+#ifdef ENABLE_ROUTER_STATS
+  _vc_activity.resize(inputs*_vcs,0);
+  _port_congestness.resize(_vcs*outputs,0.0);
+  _input_request.resize(inputs,0);
+  _input_grant.resize(outputs, 0);
+#endif
 }
 
 IQRouter::~IQRouter( )
 {
+  if(false && gStatsOut && gCRT){
+    
+    *gStatsOut<<"debug_delay("<<GetID()+1<<",:)=[";
+    for(int ii=0; ii<_inputs; ii++){
+      *gStatsOut<<debug_delay_map[ii]<<" ";
+    }
+    *gStatsOut<<"];\n";
+
+    *gStatsOut<<"crt("<<GetID()+1<<",:)=[";
+    for(int ii=0; ii<_outputs*_num_vcs; ii++){
+      *gStatsOut<<_crt[ii]<<" ";
+    }
+    *gStatsOut<<"];\n";
+  
+    *gStatsOut<<"crt_delay("<<GetID()+1<<",:)=[";
+    for(int ii=0; ii<_outputs*_num_vcs; ii++){
+      *gStatsOut<<_crt_delay[ii]<<" ";
+    }
+    *gStatsOut<<"];\n";
+  }
+
+  if(gCRT){
+    delete[] _crt;
+    delete[] _crt_delay;
+  }
 
   if(gPrintActivity) {
     cout << Name() << ".bufferMonitor:" << endl ; 
@@ -559,36 +578,44 @@ Flit* IQRouter::_ExpirationCheck(Flit* f, int input){
 }
 bool IQRouter::_ReceiveFlits( )
 {
+
+
+
+
   bool activity = false;
   for(int input = 0; input < _inputs; ++input) { 
-    if( _input_channels[input]->GetSource() == -1){
-      Flit * f;
-      f = _input_channels[input]->Receive();
-
-	if(gReservation){
-	  f = _ExpirationCheck(f, input);
-	}
-	if(f){
-
-	  _in_queue_flits.insert(make_pair(input, f));
-	  activity = true;
-	}
-	//}
-    } else {
-      Flit *  f = _input_channels[input]->Receive();
-      if(gReservation)
-	f = _ExpirationCheck(f, input);
-      if(f) {
-	++_received_flits[input];
-	if(f->watch) {
-	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		     << "Received flit " << f->id
-		     << " from channel at input " << input
-		     << "." << endl;
-	}
-	_in_queue_flits.insert(make_pair(input, f));
-	activity = true;
+    Flit * f;
+    f = _input_channels[input]->Receive();
+    if(gPB && f && f->pb!=NULL){ 
+      assert(_input_channels[input]->GetSource()!=-1);
+      assert(!_input_channels[input]->GetGlobal());
+      for(int i = 0; i<gK; i++){
+	int index = router_global_index(_input_channels[input]->GetSource(),
+					gK+gA-1+i);
+	_global_table[index] = f->pb->_data[i];
       }
+      
+      f->pb->Free();
+      f->pb = NULL;
+      if(f->id==-666){ //this is fake
+	f->Free();
+	continue;
+      }
+    }
+
+    if(gReservation){
+      f = _ExpirationCheck(f, input);
+    }
+    if(f){
+      _in_queue_flits.insert(make_pair(input, f));
+      activity = true;
+      if(f->watch) {
+	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
+		   << "Received flit " << f->id
+		   << " from channel at input " << input
+		 << "." << endl;
+      }
+      ++_received_flits[input];
     }
   }
   return activity;
@@ -600,9 +627,44 @@ bool IQRouter::_ReceiveCredits( )
   for(int output = 0; output < _outputs; ++output) {  
     Credit * const c = _output_credits[output]->Receive();
     if(c) {
+      if(gCRT && c->cr_time !=-1){
+	assert(!c->vc.empty());
+	assert(c->vc.size()==1);
+	int vc = c->vc[0];
+	_crt[output*_num_vcs+vc] = GetSimTime()-c->cr_time;
+      }
       _proc_credits.push_back(make_pair(GetSimTime() + _credit_delay, 
 					make_pair(c, output)));
       activity = true;
+    }
+  }
+
+  if(gCRT && activity){
+    int l_crt_min = 999999;
+    int g_crt_min = 999999;
+    for(int o = gK; o<_outputs; o++){
+      int port_crt_max = 0;
+      bool global = _output_credits[o]->GetGlobal();
+      //port max
+      for(int v = 0; v<_num_vcs; v++){
+	if(_crt[o*_num_vcs+v]>port_crt_max)
+	  port_crt_max = _crt[o*_num_vcs+v];
+      }
+      if(global && port_crt_max<g_crt_min){
+	  g_crt_min = port_crt_max;
+      } else if(!global && port_crt_max<l_crt_min){
+	l_crt_min = port_crt_max;
+      }
+    }
+    g_crt_min =  (g_crt_min==0)?63: g_crt_min;
+    l_crt_min =  (l_crt_min==0)?12: l_crt_min;
+    assert(l_crt_min >=12 && g_crt_min >=62);
+
+    for(int o = gK; o<_outputs; o++){
+      int min = _output_credits[o]->GetGlobal()?g_crt_min:l_crt_min;
+      for(int v = 0; v<_num_vcs; v++){
+	_crt_delay[o*_num_vcs+v]=MAX(_crt[o*_num_vcs+v]-min,0);
+      }
     }
   }
   return activity;
@@ -624,6 +686,8 @@ void IQRouter::_InputQueuing( )
 
     Flit * const & f = iter->second;
     assert(f);
+
+
 
     //voq related, could break things
     //int const & vc = f->vc;
@@ -1406,12 +1470,11 @@ void IQRouter::_SWHoldUpdate( )
 
       if(f->tail) --_active_packets[input];
       _bufferMonitor->read(input, f) ;
-      
+     
       f->hops++;
       f->vc = match_vc;
       
-
-
+      
       dest_buf->SendingFlit(f);
       if(_track_routing_commitment)
 	_next_bandwidth_commitment[output*_num_vcs+f->vc]--;
@@ -1419,17 +1482,24 @@ void IQRouter::_SWHoldUpdate( )
       _input_grant[expanded_input]++;
 #endif
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
-      
+      Credit* c =NULL;
       if(_out_queue_credits.count(input) == 0) {
 	_out_queue_credits.insert(make_pair(input,Credit::New()));
+      }
+      c=_out_queue_credits.find(input)->second;
+      if(gCRT){  //crt
+	c->cr_time = f->atime;//overload 
+	c->delay = (expanded_output>=_outputs-gK)?
+	  _crt_delay[expanded_output*_num_vcs+match_vc]:0;
+	f->atime = GetSimTime();//overload
       }
       if(_voq){
 	int rvc = vc;
 	int vvc = voq2vc(rvc,_outputs);
-	_out_queue_credits.find(input)->second->id=777;
-	_out_queue_credits.find(input)->second->vc.push_back(vvc);
+	c->id=777;
+	c->vc.push_back(vvc);
       } else {
-	_out_queue_credits.find(input)->second->vc.push_back(vc);
+	c->vc.push_back(vc);
       }
       if(cur_buf->Empty(vc)) {
 	if(f->watch) {
@@ -2209,18 +2279,25 @@ void IQRouter::_SWAllocUpdate( )
 #endif
 
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
-
+      Credit* c= NULL;
       if(_out_queue_credits.count(input) == 0) {
 	_out_queue_credits.insert(make_pair(input, Credit::New()));
       }
+      c = _out_queue_credits.find(input)->second;
+      if(gCRT){  //crt
+	c->cr_time = f->atime;
+	c->delay = (expanded_output>=_outputs-gK)?
+	  _crt_delay[expanded_output*_num_vcs+match_vc]:0;
+	f->atime = GetSimTime();
+      }
+
       if(_voq){
 	int rvc = vc;
 	int vvc = voq2vc(rvc,_outputs);
-
-	_out_queue_credits.find(input)->second->id=777;
-	_out_queue_credits.find(input)->second->vc.push_back(vvc);
+	c->id=777;
+	c->vc.push_back(vvc);
       } else {
-	_out_queue_credits.find(input)->second->vc.push_back(vc);
+	c->vc.push_back(vc);
       }
       if(cur_buf->Empty(vc)) {
 	if(f->tail) {
@@ -2391,30 +2468,50 @@ void IQRouter::_SwitchUpdate( )
 
 void IQRouter::_OutputQueuing( )
 {
-  for(map<int, Credit *>::const_iterator iter = _out_queue_credits.begin();
-      iter != _out_queue_credits.end();
-      ++iter) {
+  if(gCRT){//delay must be carried per vc, so merging credit due to speed up cannot occur
+    for(map<int, Credit *>::const_iterator iter = _out_queue_credits.begin();
+	iter != _out_queue_credits.end();
+	++iter) {
 
-    int const & input = iter->first;
-    assert((input >= 0) && (input < _inputs));
+      int const & input = iter->first;
+      assert((input >= 0) && (input < _inputs));
 
-    Credit * const & c = iter->second;
-    assert(c);
-    assert(!c->vc.empty());
-
-    _credit_buffer[input].push(c);
+      Credit * const & c = iter->second;
+      assert(c);
+      assert(!c->vc.empty());
+      if(gCRT){
+	assert(GetSimTime()+c->delay>=GetSimTime());
+	int delay=0;
+	if(input>=gK && input <_inputs-gK){//only local channel credit feel the delay
+	  delay = c->delay;
+	}
+	debug_delay_map[input]+=delay;
+	_credit_delay_queue[input].insert(pair<int, Credit*>(GetSimTime()+delay*4,c));
+      } else {
+	_credit_buffer[input].push(c);
+      }
+    }
+    _out_queue_credits.clear();
   }
-  _out_queue_credits.clear();
 }
 
-//------------------------------------------------------------------------------
-// write outputs
-//------------------------------------------------------------------------------
+
 
 void IQRouter::_SendFlits( )
 {
 
   for(int i = 0; i<_outputs; i++){
+    if(gPB && _output_channels[i]->GetGlobal()){
+      int grp_global_index = router_global_index(GetID(),i);
+      assert(grp_global_index<gG-1);
+      int output_level =GetCredit(i);
+      if(output_level >=PB_THRESHOLD){
+	_global_table[grp_global_index]=true;
+      } else {
+	_global_table[grp_global_index]=false;
+      }
+    }
+
     if(gECN){
       if(_voq && _ecn_use_voq_size){
 	int voq_size =0;
@@ -2443,12 +2540,7 @@ void IQRouter::_SendFlits( )
   for ( int output = 0; output < _outputs; ++output ) {
     Flit * f = _output_buffer[output]->SendFlit();
     if(f){
-      /*
-      if(_track_routing_commitment)
-	_next_bandwidth_commitment[output*_num_vcs+f->vc]--;
-      */
      ++_sent_flits[output];
-
       if(gECN && f->head && f->res_type==RES_TYPE_NORM && !f->fecn ){	
 	if(_output_hysteresis[output] &&
 	   _credit_hysteresis[output*_num_vcs+f->vc]){
@@ -2456,19 +2548,72 @@ void IQRouter::_SendFlits( )
 	  f->fecn= true; 
 	}
       }
+      if(gPB && f->head){
+	if(output>=gK && output<_outputs-gK){
+	  assert(f->pb==NULL);
+	  f->pb=PiggyPack::New();
+	  for(int i = 0; i<gK; i++){
+	    int index = router_global_index(GetID(),
+					    gK+gA-1+i);
+	    f->pb->_data[i] = _global_table[index];
+	  }
+	}
+      }
       _output_channels[output]->Send( f );
+    } else{
+      if(gPB){
+	if(output>=gK && output<_outputs-gK){
+	  f = Flit::New();
+	  f->id=-666;
+	  f->pb=PiggyPack::New();
+	  for(int i = 0; i<gK; i++){
+	    int index = router_global_index(GetID(),
+					    gK+gA-1+i);
+	    f->pb->_data[i] = _global_table[index];
+	  }
+	  _output_channels[output]->Send( f );
+	}
+      }
     }
   }
 }
 
 void IQRouter::_SendCredits( )
 {
-  for ( int input = 0; input < _inputs; ++input ) {
-    if ( !_credit_buffer[input].empty( ) ) {
-      Credit * const c = _credit_buffer[input].front( );
+  if(!gCRT){
+    for(map<int, Credit *>::const_iterator iter = _out_queue_credits.begin();
+	iter != _out_queue_credits.end();
+	++iter) {
+
+      int const & input = iter->first;
+      assert((input >= 0) && (input < _inputs));
+
+      Credit * const & c = iter->second;
       assert(c);
-      _credit_buffer[input].pop( );
-      _input_credits[input]->Send( c );
+      assert(!c->vc.empty());
+      _credit_buffer[input].push(c);
+    }
+    _out_queue_credits.clear();
+  }
+
+  for ( int input = 0; input < _inputs; ++input ) {
+    if(gCRT){
+      if(!_credit_delay_queue[input].empty( )){
+	multimap<int, Credit *>::iterator iter = _credit_delay_queue[input].begin();	
+	if(iter->first<=GetSimTime()){
+	  Credit * const c = iter->second;
+	  assert(c);
+	  _input_credits[input]->Send( c );
+	  _credit_delay_queue[input].erase(iter);
+	}
+      }
+    } else {
+      if ( !_credit_buffer[input].empty( ) ) {
+	Credit * const c = _credit_buffer[input].front( );
+	assert(c);
+	_credit_buffer[input].pop( );
+	_input_credits[input]->Send( c );
+      }
     }
   }
 }
@@ -2505,9 +2650,9 @@ int IQRouter::GetCredit(int out, int vc_begin, int vc_end ) const
   if(_remove_credit_rtt && vc_begin== -1 && vc_end==-1){
     
     size-=_output_buffer[out]->Total(); //new  deduct output buffer
-    size-=_output_channels[out]->GetLatency()*2;//RTT deduct RTT
+    size-=_output_channels[out]->GetLatency()*2;//deduct RTT
     size = size<0?0:size;
-    size+=_output_buffer[out]->Total(); //new readd output buffer
+    size+=_output_buffer[out]->Total(); //readd output buffer
   }
   //
   if(_track_routing_commitment){
@@ -2603,6 +2748,55 @@ void IQRouter::_UpdateCommitment(int input, int vc, const Flit* f, const OutputS
   //implemented right now, 
   _next_bandwidth_commitment[output*_num_vcs+
 			     route_set->GetSet()->vc_start]+=f->packet_size;
+}
+
+
+
+
+
+
+
+
+//voq label to real vc
+int IQRouter::voq2vc(int vvc, int outputs){
+  assert(_voq);
+  assert(outputs!=-1);
+  if(vvc<_special_vcs){
+    return vvc;
+  } else { //data
+    return (vvc-_special_vcs)/outputs+_special_vcs;
+  }
+}
+
+bool IQRouter::is_control_vc(int vc){
+  assert(_voq);
+  if(vc<_ctrl_vcs){
+    return true;
+  }
+  return false;
+}
+bool IQRouter::is_voq_vc(int vc){
+  assert(_voq);
+
+  if(vc<_special_vcs){
+    return false;
+  } else { //data
+    return true;
+  }
+}
+
+int IQRouter::vc2voq(int vc, int output){
+  assert(_voq);
+
+  if(vc<_special_vcs){
+    return vc;
+  } else { //data
+    if(output==-1) //?
+      return -1;
+    else  //deduct ctrl vc, scale by #voq, add output port + add ctrl vc back
+      return (vc-_special_vcs)*_outputs+output+_special_vcs;
+  }
+
 }
 
 

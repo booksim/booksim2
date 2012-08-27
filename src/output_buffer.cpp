@@ -200,6 +200,7 @@ bool OutputBuffer::ControlFull(){
 
 //static function called by iq_router to set the speculative vc
 void OutputBuffer::SetSpecVC(int vc, int size){
+  assert(gReservation);
   assert(size_t(vc) < _buffer_capacity.size());
   if(!_spec_vc[vc]){
     //cout<<"Output buffer:Spec vc "<<vc<<endl;
