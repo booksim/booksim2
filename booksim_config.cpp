@@ -53,7 +53,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["transition_channel_latency"] = 2; // Make this an even number, or else it will be one cycle less in actuality.
 
   _int_map["voq"] = 0;
-  _int_map["use_voq_size"] = 0;
+  _int_map["use_voq_size"] = 1;
   _int_map["forced_warmup"] = 0;
   _int_map["no_drain"] = 0;
   _int_map["cut_through"]=0;

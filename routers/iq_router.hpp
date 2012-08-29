@@ -75,6 +75,7 @@ class IQRouter : public Router {
   int _special_vcs;
   int _data_vcs; //problem when voq is used
   int _vcs; //voq included
+  int _num_vcs;
   int _classes;
 
   bool _speculative;

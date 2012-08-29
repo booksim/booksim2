@@ -179,6 +179,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
 
   _remove_credit_rtt = (config.GetInt("remove_credit_rtt")==1);
+  _num_vcs = config.GetInt("num_vcs");
   _track_routing_commitment = (config.GetInt("track_routing_commitment")==1);
   _current_bandwidth_commitment.resize(outputs,0);
   _next_bandwidth_commitment.resize(outputs,0);
@@ -2445,7 +2446,10 @@ void IQRouter::_SendFlits( )
       if(_voq && _use_voq_size){
 	int voq_size =0;
 	for(int j = 0;  j<_inputs; j++){
-	  voq_size+=_buf[j]->GetSize(vc2voq(ECN_RESERVED_VCS,i));
+          for (int v = 0; v < _num_vcs; v++)
+          {
+            voq_size+=_buf[j]->GetSize(vc2voq(v,i));
+          }
 	}	
 	if(_output_hysteresis[i]){
 	  _output_hysteresis[i] = (voq_size >=((size_t)ECN_CONGEST_THRESHOLD-ECN_BUFFER_HYSTERESIS));
@@ -2461,10 +2465,11 @@ void IQRouter::_SendFlits( )
       }
       for(int j = 0; j<(_special_vcs+_data_vcs); j++){
 	BufferState * const dest_buf = _next_buf[i];
+        int temp = dest_buf->Size(j)-_output_buffer[i].size();
 	if(_credit_hysteresis[i*(_special_vcs+_data_vcs)+j]){
-	  _credit_hysteresis[i*(_special_vcs+_data_vcs)+j] = ( (dest_buf->Size(j)-_output_buffer[i].size()) < ECN_BUFFER_THRESHOLD+ECN_CREDIT_HYSTERESIS);
+	  _credit_hysteresis[i*(_special_vcs+_data_vcs)+j] = temp < ECN_BUFFER_THRESHOLD+ECN_CREDIT_HYSTERESIS;
 	} else {
-	  _credit_hysteresis[i*(_special_vcs+_data_vcs)+j] = ( (dest_buf->Size(j)-_output_buffer[i].size()) < ECN_BUFFER_THRESHOLD-ECN_CREDIT_HYSTERESIS);
+	  _credit_hysteresis[i*(_special_vcs+_data_vcs)+j] = temp < ECN_BUFFER_THRESHOLD-ECN_CREDIT_HYSTERESIS;
 	}
       }
     }
