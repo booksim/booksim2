@@ -1,7 +1,7 @@
 // $Id: traffic.cpp 2326 2010-07-26 17:32:49Z qtedq $
 
 /*
- Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
+ Copyright (c) 2007-2012, Trustees of The Leland Stanford Junior University
  All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
