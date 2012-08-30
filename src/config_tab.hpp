@@ -1,7 +1,7 @@
 // $Id: config_tab.hpp 938 2008-12-12 03:06:32Z dub $
 
 /*
- Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
+ Copyright (c) 2007-2012, Trustees of The Leland Stanford Junior University
  All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
