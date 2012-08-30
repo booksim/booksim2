@@ -1,7 +1,7 @@
 // $Id: injection.cpp 4219 2011-12-16 19:37:51Z qtedq $
 
 /*
-  Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
+  Copyright (c) 2007-2012, Trustees of The Leland Stanford Junior University
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification,

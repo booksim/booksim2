@@ -1,7 +1,7 @@
 // $Id: buffer_state.hpp 4188 2011-12-06 20:38:43Z qtedq $
 
 /*
- Copyright (c) 2007-2011, Trustees of The Leland Stanford Junior University
+ Copyright (c) 2007-2012, Trustees of The Leland Stanford Junior University
  All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
