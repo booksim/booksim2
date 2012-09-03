@@ -70,6 +70,7 @@ int debug_adaptive_GvL_min=0;
 int debug_adaptive_GvG=0;
 int debug_adaptive_GvG_min=0;
 
+bool gAdaptive=false;
 
 //expected flow trasnmission time vs actual
 Stats* gStatResEarly_POS;
@@ -85,6 +86,8 @@ deque<float>** gStatMonitorTransient;
 //Stats for transient simulation
 bool TRANSIENT_BURST = false;
 bool TRANSIENT_ENABLE = false;
+
+
 double*** transient_stat;
 double** transient_ecn;
 long** transient_ird;
@@ -314,6 +317,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   transient_data_file=config.GetStr("transient_data");
   transient_finalize = (config.GetInt("transient_finalize")==1);
   
+  //transient is a vector of vectors
+  //the number of vectors is depending on ecn, routing
+  //the order of how vectors are added really matters, make sure they are follow
   transient_ecn = new double*[2];
   transient_ecn[0] = new double[transient_record_duration];
   transient_ecn[1] = new double[transient_record_duration];
@@ -332,7 +338,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   transient_count= new int*[2];
   transient_count[0] = new int[transient_record_duration];
   transient_count[1] = new int[transient_record_duration];
-  
+ 
   for(int i = 0; i<transient_record_duration ; i++){
     transient_ecn[0][i] = 0.0;
     transient_ecn[1][i] = 0.0;
@@ -517,6 +523,13 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _replies_inherit_priority = config.GetInt("replies_inherit_priority");
 
   // ============ Routing ============ 
+  if(config.GetStr("routing_function")=="ugalprog" ||
+     config.GetStr("routing_function")=="ugal" ||
+     config.GetStr("routing_function")=="ugalcrt" ||
+     config.GetStr("routing_function")=="ugalpb"){
+    gAdaptive = true;
+  }
+
 
   string rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
   map<string, tRoutingFunction>::const_iterator rf_iter = gRoutingFunctionMap.find(rf);
@@ -1667,9 +1680,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
 
       if(TRANSIENT_ENABLE && f){
-	int transient_index = int(float(head->ntime-transient_start+transient_prestart)/float(transient_granularity));
+
+	float time_slot = float(head->ntime-transient_start+transient_prestart)/float(transient_granularity);
+
 	//maybe shoudl use flit creation time
-	if(transient_index>=0 && transient_index < transient_record_duration){
+	if( time_slot>=0.0 &&  time_slot < transient_record_duration){
+	  int transient_index = int(time_slot);
 	  transient_stat[f->cl][0][transient_index]+= (f->atime - head->ntime);
 	  transient_stat[f->cl][1][transient_index]+= (f->atime - f->time);
 	  transient_count[f->cl][transient_index]++;
@@ -2167,22 +2183,20 @@ void TrafficManager::_Step( )
 
   _Inject();  
 
-
- //main flow buffer loop
+  //main flow buffer loop
   for ( int source = 0; source < _nodes; ++source ) {
     BufferState * const dest_buf = _buf_states[source][0];
     FlowBuffer* ready_flow_buffer = NULL;
-    //each cycle a special packet and a data packet can be insertedf
-    bool inject_special = false;
+    bool inject_special = false; //grant/ack/nack
     if(gReservation || gECN){
 #ifdef ENABLE_STATS
       gStatResponseBuffer->AddSample((int)_response_packets[source].size());
 #endif
-      if( !_response_packets[source].empty() && 
-	  _sent_data_tail[source]){
+      if(!_response_packets[source].empty() && 
+	 _sent_data_tail[source]){
 	Flit* f = _response_packets[source].front();
 	assert(f);
-	assert(f->head);//only heads
+	assert(f->head);//only single flit control packets
 	if(((!_cut_through && dest_buf->IsAvailableFor(f->vc)) || 
 	    ( _cut_through && dest_buf->IsAvailableFor(f->vc,f->packet_size))) &&
 	   dest_buf->HasCreditFor(f->vc)){
@@ -2191,26 +2205,24 @@ void TrafficManager::_Step( )
       }
     }
    
-    //first check dangling  flowbuffer
-    //this check lways occurs until a tail flit is sent, this prevents
-    //starvation
+    //first check dangling flowbuffer
+    //this check lways occurs until a tail flit is sent
     if(_last_sent_norm_buffer[source]!=NULL){
       assert(_last_sent_spec_buffer[source]==NULL);
       FlowBuffer* flb = _last_sent_norm_buffer[source];
       if((dest_buf->HasCreditFor(flb->_vc))){
 	assert(flb->eligible());
-	//removed a credit check
 	ready_flow_buffer =  flb;
+      } else {
+	assert(false);
       }
     }
     if(_last_sent_spec_buffer[source]!=NULL){
       assert(_last_sent_norm_buffer[source]==NULL);
       if(_last_sent_spec_buffer[source]->send_spec_ready()){
-      
 	FlowBuffer* flb = _last_sent_spec_buffer[source];
 	if((dest_buf->HasCreditFor(flb->_vc))){
 	  assert(flb->eligible());
-	  //removed a credit check
 	  ready_flow_buffer =  flb;
 	}
       } else {
@@ -2219,6 +2231,7 @@ void TrafficManager::_Step( )
     }
 
     //scan through all active buffers
+    //Even if ready_buffer already, for stats and update
     int flow_bids = 0;
     if(ready_flow_buffer==NULL){
       assert(_sent_data_tail[source]);
@@ -2228,16 +2241,17 @@ void TrafficManager::_Step( )
     int eligible_flows = 0;
     int normal_flows = 0;
     bool node_ready = false;
+
     for(set<FlowBuffer*>::iterator i = _active_set[source].begin();
 	i!=_active_set[source].end();
 	i++){
       FlowBuffer* flb = *i;
+      //updates
       flb->active_update();
-
-
-
-
-
+      if(gECN){
+	flb->ecn_update();
+      }
+      //assign VC
       if(flb->_vc == -1 &&
 	 (flb->send_norm_ready())){
 	_FlowVC( flb);
@@ -2249,20 +2263,21 @@ void TrafficManager::_Step( )
 	  _reservation_set[source].insert(flb);
 	}
       }
-      if(gECN){
-	flb->ecn_update();
-      }
-      if(flb->send_norm_ready())
+
+      if(flb->send_norm_ready()){
 	normal_flows++;
+      }
       if(flb->eligible()){
 	eligible_flows ++;
+	node_ready = true;
       }	
-      node_ready = 	node_ready || flb->eligible();
+
       if(ready_flow_buffer==NULL){
 	if(flb->eligible() &&
 	   (((!_cut_through && dest_buf->IsAvailableFor(flb->_vc))||
-	     ( _cut_through && dest_buf->IsAvailableFor(flb->_vc, _packet_size[flb->fl->cl])))|| !flb->_tail_sent)&&
+	     ( _cut_through && dest_buf->IsAvailableFor(flb->_vc, _packet_size[flb->fl->cl]))))&&
 	   dest_buf->HasCreditFor(flb->_vc)){
+	  assert(flb->_tail_sent);
 	  _flow_buffer_arb[source]->AddRequest(flb->_dest, flb->_dest, flb->priority());
 	  flow_bids++;
 	}
@@ -2283,7 +2298,6 @@ void TrafficManager::_Step( )
     if(normal_flows)
       gStatNormActiveFlowBuffers->AddSample(normal_flows);  
 #endif
-
     
     if(gECN){
       for(set<FlowBuffer*>::iterator i = _deactive_set[source].begin();
@@ -2299,8 +2313,7 @@ void TrafficManager::_Step( )
 	flb->ecn_update();
       }
     }  
-    
-  
+
     //first we check if there are reservation, they go first
     //flow buffer that won arbitration has first priority in sending their reservation
     if(gReservation && 
@@ -2308,7 +2321,6 @@ void TrafficManager::_Step( )
        _sent_data_tail[source] &&
        !_reservation_set[source].empty()){
       FlowBuffer* fast_res = NULL;
-
       //check for reseration VC
       if(dest_buf->IsAvailableFor(0) &&
 	 dest_buf->HasCreditFor(0)){
@@ -2332,7 +2344,6 @@ void TrafficManager::_Step( )
 	      _reservation_arb[source]->AddRequest(flb->_dest, flb->_dest, 1);
 	    }
 	  }
-	  //round one
 	  if(_reservation_arb[source]->NumReqs()>0){
 	    int id = _reservation_arb[source]->Arbitrate();
 	    _reservation_arb[source]->Claim();
@@ -2340,8 +2351,7 @@ void TrafficManager::_Step( )
 	    fast_res = _flow_buffer[source][id];
 	  }
 	}
-
-	//
+	//found a fast reservation
 	if(fast_res){
 	  Flit* rf =  fast_res->send();
 	  assert(rf->res_type==RES_TYPE_RES);
@@ -2357,7 +2367,7 @@ void TrafficManager::_Step( )
 	  if(rf->sn==0){
 	    _rob[rf->dest].insert(pair<int, FlowROB*>(rf->flid, new FlowROB(fast_res->fl->flow_size)));
 	  }
-	  //skip the rest of the sending code, reservaiton set
+	  //skip the rest of the sending code, a flit is already sent
 	  ready_flow_buffer= NULL;
 	}
       }
@@ -2367,7 +2377,6 @@ void TrafficManager::_Step( )
       int vc = ready_flow_buffer->_vc;
       Flit* f = ready_flow_buffer->front();
       assert(f);
-     
       //if fast_transmit, this if should be rarely called
       if(f->res_type== RES_TYPE_RES){
 	if(dest_buf->IsAvailableFor(0) &&
@@ -2376,7 +2385,8 @@ void TrafficManager::_Step( )
 	  dest_buf->SendingFlit(f);
 	  inject_special = false; //only 1 flit can inject, res take priority
 	  assert(_reservation_set[source].erase(ready_flow_buffer));
-	  //create rob at the destiantion
+	  //create rob at the destiantion, 
+	  //unrealistic but this is just for simulator book keeping anyway
 	  if(f->sn==0){
 	    _rob[f->dest].insert(pair<int, FlowROB*>(f->flid, new FlowROB(ready_flow_buffer->fl->flow_size)));
 	  }
@@ -2397,7 +2407,7 @@ void TrafficManager::_Step( )
 
       //VC bookkeeping completed success
       if(f){
-	//actual the actual packet to send
+	//actual the actual packet to send and deduct the buffer
 	f =  ready_flow_buffer->send();
 	if(RESERVATION_QUEUING_DROP ){
 	  f->exptime = gExpirationTime;
@@ -2513,6 +2523,9 @@ void TrafficManager::_Step( )
     _net[subnet]->Evaluate( );
     _net[subnet]->WriteOutputs( );
   }
+
+
+
 
   ++_stat_time;
   ++_time;

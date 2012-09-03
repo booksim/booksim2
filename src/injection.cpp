@@ -155,6 +155,19 @@ bool injection_hotspot_test(int source, double rate){
   }
 }
 
+bool injection_badhotspot_test(int source, double rate){
+  int grp_size_routers = 2*(gK);
+  int grp_size_nodes = grp_size_routers * (gK);
+  if(hs_lookup.count(source%grp_size_nodes)!=0){
+    return false;
+  } else {
+    if( hs_send_all || hs_senders.count(source%grp_size_nodes)!=0){
+      return bernoulli(source,rate);
+    } else {
+      return false;
+    }
+  }
+}
 
 //=============================================================
 
@@ -171,6 +184,7 @@ void InitializeInjectionMap( const Configuration & config )
   gInjectionProcessMap["burst"] = &injection_burst;
   gInjectionProcessMap["congestion_test"]    = &injection_congestion_test;
   gInjectionProcessMap["hotspot_test"]    = &injection_hotspot_test;
+  gInjectionProcessMap["badhotspot_test"]    = &injection_badhotspot_test;//dragon
   gInjectionProcessMap["background"]    = &background;
 
   permanent_flow = (config.GetInt("create_permanent_flows")==1);

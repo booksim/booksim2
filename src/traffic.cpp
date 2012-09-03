@@ -1,28 +1,29 @@
 // $Id$
 
 /*
+
  Copyright (c) 2007-2012, Trustees of The Leland Stanford Junior University
  All rights reserved.
 
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions are met:
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
 
- Redistributions of source code must retain the above copyright notice, this 
- list of conditions and the following disclaimer.
- Redistributions in binary form must reproduce the above copyright notice, this
- list of conditions and the following disclaimer in the documentation and/or
- other materials provided with the distribution.
+  Redistributions of source code must retain the above copyright notice, this 
+  list of conditions and the following disclaimer.
+  Redistributions in binary form must reproduce the above copyright notice, this
+  list of conditions and the following disclaimer in the documentation and/or
+  other materials provided with the distribution.
 
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
- DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
- ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+  ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #include <set>
 #include <map>
@@ -47,6 +48,7 @@ static int _xr = 1;
 //=============================================================
 
 static int _hs_max_val;
+
 
 static vector<pair<int, int> > _hs_elems;
 set<int> hs_lookup;
@@ -398,7 +400,7 @@ int badprog_dflynew( int source, int total_nodes )
   
   if(grp_id==gG-1){ //fuck this extra gropu on the dragonfly
     //cout<<grp_id<<"\t"<<(gG-gK-1)<<endl;
-   return (RandomInt(grp_size_nodes - 1) + (gG-gK-1)*grp_size_nodes ) %  total_nodes;
+    return (RandomInt(grp_size_nodes - 1) + (gG-gK-1)*grp_size_nodes ) %  total_nodes;
   }
 
   int dest_grp_base = 0;
@@ -418,15 +420,11 @@ int badprog_dflynew( int source, int total_nodes )
 int badhot_dflynew( int source, int total_nodes )
 {
   //hotspot + bad dragonfly traffic
-
   int grp_size_routers = 2*(gK);
   int grp_size_nodes = grp_size_routers * (gK);
-
   int group;
   int dest;
-
   int hot_index = RandomInt(_hs_elems.size() - 1);
-
   group = (int) (source / grp_size_nodes);
   dest =  ((_hs_elems[hot_index].second)%grp_size_nodes + (group+1)*grp_size_nodes ) %  total_nodes;
 
@@ -443,6 +441,16 @@ int badperm_yarc(int source, int total_nodes){
 int background_uniform(int source, int total_nodes){
   int e = RandomInt(total_nodes-1);
   while(hs_lookup.count(e)!=0){
+    e = RandomInt(total_nodes-1);
+  }
+  return e;
+}
+
+int badhot_background_uniform(int source, int total_nodes){
+  int e = RandomInt(total_nodes-1);
+  int grp_size_routers = 2*(gK);
+  int grp_size_nodes = grp_size_routers * (gK);
+  while(hs_lookup.count(e%grp_size_nodes)){
     e = RandomInt(total_nodes-1);
   }
   return e;
@@ -469,7 +477,7 @@ int hotspot(int source, int total_nodes){
 
 int noself_hotspot(int source, int total_nodes){
   assert( hs_send_all || hs_senders.count(source)!=0);
-  if(hs_lookup.count(source)!=0){
+  if(hs_lookup.count(source)!=0){//this should not trigger if inject = hotspot_test
     return background_uniform( source,  total_nodes);
   } else {
     return hotspot( source,  total_nodes);
@@ -506,8 +514,10 @@ int combined(int source, int total_nodes){
   return _cp_elems.back().second(source, total_nodes);
 }
 
-//=============================================================
 
+
+
+//=============================================================
 void InitializeTrafficMap( const Configuration & config )
 {
 
@@ -552,7 +562,7 @@ void InitializeTrafficMap( const Configuration & config )
 
   gTrafficFunctionMap["combined"] = &combined;
   gTrafficFunctionMap["background_uniform"] = &background_uniform;
-
+  gTrafficFunctionMap["badhot_background_uniform"] = &badhot_background_uniform;
 
   gTrafficFunctionMap["congestion_test"] = &traffic_congestion_test;
 
@@ -560,7 +570,8 @@ void InitializeTrafficMap( const Configuration & config )
   bystander_sender = config.GetInt("bystander_sender");
   bystander_receiver = config.GetInt("bystander_receiver");
   
-  //hotspot
+
+
   vector<int> hotspot_nodes = config.GetIntArray("hotspot_nodes");
   vector<int> hotspot_rates = config.GetIntArray("hotspot_rates");
   vector<int> hotspot_senders = config.GetIntArray("hotspot_senders");
@@ -578,6 +589,7 @@ void InitializeTrafficMap( const Configuration & config )
     _hs_elems.push_back(make_pair(rate, hotspot_nodes[i]));
     _hs_max_val += rate;
     hs_lookup.insert(hotspot_nodes[i]);
+    cout<<(hotspot_nodes[i])<<endl;
   }
   //random hotspot is handled by trafficmanager
 
@@ -597,8 +609,6 @@ void InitializeTrafficMap( const Configuration & config )
     _cp_elems.push_back(make_pair(rate, match->second));
     _cp_max_val += rate;
   }
-
-
 
 
 }
