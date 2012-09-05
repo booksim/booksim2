@@ -1521,7 +1521,7 @@ void TrafficManager::_WriteClassStats(int c, ostream & os) const {
     }
   }
 
-  double time_delta = (double)(_time - _reset_time);
+  double time_delta = (double)(_drain_time - _reset_time);
 
   os << "];" << endl
      << "sent_packets(" << c+1 << ",:) = [ ";
