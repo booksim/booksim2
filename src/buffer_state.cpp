@@ -551,7 +551,7 @@ BufferState::BufferState( const Configuration& config, Module *parent, const str
 
   _vc_occupancy.resize(_vcs, 0);
 
-  _in_use.resize(_vcs, false);
+  _in_use_by.resize(_vcs, -1);
   _tail_sent.resize(_vcs, false);
 
   _last_id.resize(_vcs, -1);
@@ -581,7 +581,7 @@ void BufferState::ProcessCredit( Credit const * const c )
     assert( ( vc >= 0 ) && ( vc < _vcs ) );
 
     if ( ( _wait_for_tail_credit ) && 
-	 ( !_in_use[vc] ) ) {
+	 ( _in_use_by[vc] < 0 ) ) {
       ostringstream err;
       err << "Received credit for idle VC " << vc;
       Error( err.str() );
@@ -597,8 +597,8 @@ void BufferState::ProcessCredit( Credit const * const c )
       Error(err.str());
     }
     if(_wait_for_tail_credit && !_vc_occupancy[vc] && _tail_sent[vc]) {
-      assert(_in_use[vc]);
-      _in_use[vc] = false;
+      assert(_in_use_by[vc] >= 0);
+      _in_use_by[vc] = -1;
     }
 
 #ifdef TRACK_BUFFERS
@@ -641,24 +641,24 @@ void BufferState::SendingFlit( Flit const * const f )
     _tail_sent[vc] = true;
     
     if ( !_wait_for_tail_credit ) {
-      assert(_in_use[vc]);
-      _in_use[vc] = false;
+      assert(_in_use_by[vc] >= 0);
+      _in_use_by[vc] = -1;
     }
   }
   _last_id[vc] = f->id;
   _last_pid[vc] = f->pid;
 }
 
-void BufferState::TakeBuffer( int vc )
+void BufferState::TakeBuffer( int vc, int tag )
 {
   assert( ( vc >= 0 ) && ( vc < _vcs ) );
 
-  if ( _in_use[vc] ) {
+  if ( _in_use_by[vc] >= 0 ) {
     ostringstream err;
     err << "Buffer taken while in use for VC " << vc;
     Error( err.str() );
   }
-  _in_use[vc]    = true;
+  _in_use_by[vc] = tag;
   _tail_sent[vc] = false;
   _buffer_policy->TakeBuffer(vc);
 }
@@ -669,7 +669,7 @@ void BufferState::Display( ostream & os ) const
   os << " occupied = " << _occupancy << endl;
   for ( int v = 0; v < _vcs; ++v ) {
     os << "  VC " << v << ": ";
-    os << "in_use = " << _in_use[v] 
+    os << "in_use_by = " << _in_use_by[v] 
        << ", tail_sent = " << _tail_sent[v]
        << ", occupied = " << _vc_occupancy[v] << endl;
   }
