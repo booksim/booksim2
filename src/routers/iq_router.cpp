@@ -55,6 +55,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
   _vc_busy_when_full = (config.GetInt("vc_busy_when_full") > 0);
   _vc_prioritize_empty = (config.GetInt("vc_prioritize_empty") > 0);
+  _vc_shuffle_requests = (config.GetInt("vc_shuffle_requests") > 0);
 
   _speculative = (config.GetInt("speculative") > 0);
   _spec_check_elig = (config.GetInt("spec_check_elig") > 0);
@@ -677,7 +678,9 @@ void IQRouter::_VCAllocEvaluate( )
 			 << ")." << endl;
 	      watched = true;
 	    }
-	    _vc_allocator->AddRequest(input*_vcs + vc, out_port*_vcs + out_vc, 
+	    int const input_and_vc
+	      = _vc_shuffle_requests ? (vc*_inputs + input) : (input*_vcs + vc);
+	    _vc_allocator->AddRequest(input_and_vc, out_port*_vcs + out_vc, 
 				      0, in_priority, out_priority);
 	  }
 	}
@@ -732,7 +735,9 @@ void IQRouter::_VCAllocEvaluate( )
     assert(f->vc == vc);
     assert(f->head);
 
-    int const output_and_vc = _vc_allocator->OutputAssigned(input * _vcs + vc);
+    int const input_and_vc
+      = _vc_shuffle_requests ? (vc*_inputs + input) : (input*_vcs + vc);
+    int const output_and_vc = _vc_allocator->OutputAssigned(input_and_vc);
 
     if(output_and_vc >= 0) {
 
@@ -1695,7 +1700,9 @@ void IQRouter::_SWAllocEvaluate( )
 
 	if(_vc_allocator) { // separate VC and switch allocators
 
-	  int const output_and_vc = _vc_allocator->OutputAssigned(input*_vcs+vc);
+	  int const input_and_vc = 
+	    _vc_shuffle_requests ? (vc*_inputs + input) : (input*_vcs + vc);
+	  int const output_and_vc = _vc_allocator->OutputAssigned(input_and_vc);
 
 	  if(output_and_vc < 0) {
 	    if(f->watch) {

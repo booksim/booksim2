@@ -121,6 +121,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["vc_busy_when_full"] = 0; // mark VCs as in use when they have no credit available
   _int_map["vc_prioritize_empty"] = 0; // prioritize empty VCs over non-empty ones in VC allocation
   _int_map["vc_priority_donation"] = 0; // allow high-priority flits to donate their priority to low-priority that they are queued up behind
+  _int_map["vc_shuffle_requests"] = 0; // rearrange VC allocator requests to avoid unfairness
 
   _int_map["hold_switch_for_packet"] = 0; // hold a switch config for the entire packet
 
