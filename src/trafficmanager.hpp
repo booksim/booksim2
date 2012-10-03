@@ -73,6 +73,7 @@ protected:
   vector<double> _load;
   vector<int> _flow_size;
   vector<int> _flow_size_range;
+  vector<int> _flow_mode;
   int _flow_mix_mode;
 
   vector<int>    _packet_size;

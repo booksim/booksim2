@@ -58,7 +58,25 @@
 FatTree::FatTree( const Configuration& config,const string & name )
   : Network( config ,name)
 {
-  
+
+  gAdaptVCs = config.GetInt("adapt_vc");
+  gAuxVCs = config.GetInt("aux_vc");
+
+  if(config.GetInt("hotspot_reservation")==1){
+    gResVCStart=0;
+    gGANVCStart=1;
+    gSpecVCStart=RES_RESERVED_VCS ;
+    gNSpecVCStart= gSpecVCStart+config.GetInt( "res_vcs" );
+    assert(gNSpecVCStart<gNumVCs); //+ is for the special vc used when gReservation==true
+  } else if(config.GetInt("ECN")==1){
+    gGANVCStart=0;
+    gNSpecVCStart= ECN_RESERVED_VCS;
+    assert(gNumVCs>gNSpecVCStart);
+  }  else {
+    gNSpecVCStart=0;
+  }
+
+
 
   _ComputeSize( config );
   _Alloc( );

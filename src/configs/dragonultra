@@ -7,7 +7,7 @@ k  = 4;
 n  = 1;
 
 
-routing_function = ugalprog;
+routing_function = ugalultra;
 remove_credit_rtt=1;
 track_routing_commitment=1;
 
@@ -15,6 +15,8 @@ aux_vc=1;
 adapt_vc=3;
 num_vcs=14;
 	
-adaptive_threshold=14.0;
+adaptive_threshold=12.0;
 adaptive_threshold_spec=0.0;
 adaptive_intm=0;
+
+ecn_congestion_threshold=512;

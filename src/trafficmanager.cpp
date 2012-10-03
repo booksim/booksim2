@@ -61,6 +61,13 @@ int debug_adaptive_prog_GvL_min=0;
 int debug_adaptive_prog_GvG=0;
 int debug_adaptive_prog_GvG_min=0;
 
+int debug_adaptive_pb=0;
+int debug_adaptive_pb_tt=0;
+int debug_adaptive_pb_ft=0;
+int debug_adaptive_pb_tf=0;
+int debug_adaptive_pb_ff=0;
+
+
 int debug_adaptive_LvL=0;
 int debug_adaptive_LvL_min=0;
 int debug_adaptive_LvG=0;
@@ -70,7 +77,7 @@ int debug_adaptive_GvL_min=0;
 int debug_adaptive_GvG=0;
 int debug_adaptive_GvG_min=0;
 
-bool gAdaptive=false;
+
 
 //expected flow trasnmission time vs actual
 Stats* gStatResEarly_POS;
@@ -87,11 +94,25 @@ deque<float>** gStatMonitorTransient;
 bool TRANSIENT_BURST = false;
 bool TRANSIENT_ENABLE = false;
 
+map<int, vector<double> > transient_stat;
+enum TransField{
+  C0_NET_LAT=0,
+  C0_LAT,
+  C0_ACCEPT,
+  C0_PACKET,
+  C0_ECN,
+  C0_IRD,
+  C0_NONMIN,
+  C1_NET_LAT,
+  C1_LAT,
+  C1_ACCEPT,
+  C1_PACKET,
+  C1_ECN,
+  C1_IRD,
+  C1_NONMIN,
+  TRANSFIELDMAX};
 
-double*** transient_stat;
-double** transient_ecn;
-long** transient_ird;
-int** transient_count;
+
 
 //time period to capture before transient event
 int transient_prestart = 50000;
@@ -148,6 +169,10 @@ int RESERVATION_CONTROL_OVERHEAD = 5;
 //When small packets are mixed in, they do not rquire reservations, we need to account for 
 //their bandwidth
 bool RESERVATION_WALKIN_OVERHEAD= true;
+//small scheduling adjustment at the destination
+bool RESERVATION_DEST_LAT_ACCOUNTING=false;
+//use network latency statistics as expected latency for flow buffers, highly unrealistic but optimal
+bool RESERVATION_IDEAL_EXPECTED_LATENCY = false;
 
 
 //expiration timer for IRD
@@ -176,6 +201,7 @@ int PB_THRESHOLD=0;
 //adaptive routing
 bool ADAPTIVE_INTM_ALL=true;
 
+//long flow simulation
 
 
 #define WATCH_FLID -1
@@ -265,6 +291,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   cout<<"size of ";
   cout<<sizeof(Flit)<<endl;
 
+
   //overload this for now
   PB_THRESHOLD =   config.GetInt("ecn_congestion_threshold");
   ADAPTIVE_INTM_ALL= (config.GetInt("adaptive_intm")==1);
@@ -317,47 +344,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   transient_data_file=config.GetStr("transient_data");
   transient_finalize = (config.GetInt("transient_finalize")==1);
   
-  //transient is a vector of vectors
-  //the number of vectors is depending on ecn, routing
-  //the order of how vectors are added really matters, make sure they are follow
-  transient_ecn = new double*[2];
-  transient_ecn[0] = new double[transient_record_duration];
-  transient_ecn[1] = new double[transient_record_duration];
-  transient_ird = new long*[2];
-  transient_ird[0] = new long[transient_record_duration];
-  transient_ird[1] = new long[transient_record_duration];
-  transient_stat = new double**[2]; //class
-  transient_stat[0] = new double*[3]; //net_lat, lat, accepted
-  transient_stat[1] = new double*[3]; 
-  transient_stat[0][0] = new double[transient_record_duration];
-  transient_stat[0][1] = new double[transient_record_duration];
-  transient_stat[0][2] = new double[transient_record_duration];
-  transient_stat[1][0] = new double[transient_record_duration];
-  transient_stat[1][1] = new double[transient_record_duration];
-  transient_stat[1][2] = new double[transient_record_duration];
-  transient_count= new int*[2];
-  transient_count[0] = new int[transient_record_duration];
-  transient_count[1] = new int[transient_record_duration];
- 
-  for(int i = 0; i<transient_record_duration ; i++){
-    transient_ecn[0][i] = 0.0;
-    transient_ecn[1][i] = 0.0;
-    transient_ird[0][i] = 0;
-    transient_ird[1][i] = 0;
-    transient_stat[0][0][i] = 0.0;
-    transient_stat[0][1][i] = 0.0;
-    transient_stat[0][2][i] = 0.0;
-    transient_stat[1][0][i] = 0.0;
-    transient_stat[1][1][i] = 0.0;
-    transient_stat[1][2][i] = 0.0;
-    transient_count[0][i]= 0;
-    transient_count[1][i]= 0;
-  }
-  //multiple transient simulations are run independently using temp files
-  if(TRANSIENT_ENABLE){
-    _LoadTransient(transient_data_file);
-  }
-
   FAST_RESERVATION_TRANSMIT = (config.GetInt("fast_reservation_transmit"));
   RESERVATION_OVERHEAD_FACTOR = config.GetFloat("reservation_overhead_factor");
   RESERVATION_CONTROL_OVERHEAD = config.GetInt("reservation_control_overhead");
@@ -372,6 +358,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   RESERVATION_POST_WAIT = (config.GetInt("reservation_post_wait")==1);
   RESERVATION_BUFFER_SIZE_DROP=(config.GetInt("reservation_buffer_size_drop")==1);
   RESERVATION_TAIL_RESERVE=(config.GetInt("reservation_tail_reserve")==1);
+
+  RESERVATION_DEST_LAT_ACCOUNTING = (config.GetInt("reservation_dest_lat_accounting")==1);
+  RESERVATION_IDEAL_EXPECTED_LATENCY=(config.GetInt("reservation_ideal_expected_latency")==1);
+
 
   FLOW_DEST_MERGE= (config.GetInt("flow_merge")==1);
   FAST_RETRANSMIT_ENABLE = (config.GetInt("fast_retransmit")==1);
@@ -449,8 +439,8 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   
   gStatFlowSenderLatency =  new Stats( this, "flow_sender_latency" , 5.0, 1000 );
   gStatFlowLatency=  new Stats( this, "flow_latency" , 10.0, 5000 );
-  gStatActiveFlowBuffers=  new Stats( this, "active_flows" , 1.0, 10 );
-  gStatNormActiveFlowBuffers=  new Stats( this, "normal_active_flows" , 1.0, 10 );
+  gStatActiveFlowBuffers=  new Stats( this, "active_flows" , 1.0, 100 );
+  gStatNormActiveFlowBuffers=  new Stats( this, "normal_active_flows" , 1.0, 100 );
   gStatReadyFlowBuffers=  new Stats( this, "sender_ready_flows" , 1.0, 10 );
   gStatResponseBuffer=  new Stats( this, "response_range" , 1.0, 10 );
   
@@ -523,12 +513,6 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _replies_inherit_priority = config.GetInt("replies_inherit_priority");
 
   // ============ Routing ============ 
-  if(config.GetStr("routing_function")=="ugalprog" ||
-     config.GetStr("routing_function")=="ugal" ||
-     config.GetStr("routing_function")=="ugalcrt" ||
-     config.GetStr("routing_function")=="ugalpb"){
-    gAdaptive = true;
-  }
 
 
   string rf = config.GetStr("routing_function") + "_" + config.GetStr("topology");
@@ -610,6 +594,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _flow_size_range.push_back(config.GetInt("flow_size_range"));
   }
   _flow_size_range.resize(_classes, _flow_size_range.back());
+ 
+  _flow_mode = config.GetIntArray( "create_permanent_flows" );
+  if(_flow_mode.empty()) {
+    _flow_mode.push_back(config.GetInt("create_permanent_flows"));
+  }
+  _flow_mode.resize(_classes, _flow_mode.back());
 
   _flow_mix_mode=config.GetInt("flow_mix_mode");
 
@@ -617,7 +607,10 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     if(_flow_mix_mode == FLOW_MIX_SINGLE){
       for(int c = 0; c < _classes; ++c){
 	_load[c] /= (double)_packet_size[c];
-	_load[c] /= (double)_flow_size[c];
+	if(_flow_mode[c]){//permanent flows has inf flow size so this is bad
+	} else {
+	  _load[c] /= (double)_flow_size[c];
+	}
       }
     } else if(_flow_mix_mode == FLOW_MIX_RANGE){
       for(int c = 0; c < _classes; ++c){
@@ -651,6 +644,16 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
       cout<<"Random hotspot, generating "<<rand_hotspot_src 
 	  <<" destinations and "<< rand_hotspot_dst <<" sources"<<endl;
       GenerateRandomHotspot(_nodes, rand_hotspot_src, rand_hotspot_dst );
+    }
+    if(_traffic[c]=="rand_gather"){
+      int rand_hotspot_src = config.GetInt("rand_hotspot_src");
+      int rand_hotspot_dst = config.GetInt("rand_hotspot_dst");
+      int rand_hotspot_split = config.GetInt("rand_hotspot_split");
+      cout<<"Random gather, generating "<<rand_hotspot_src 
+	  <<" destinations and "<< rand_hotspot_dst <<" sources"
+	  <<" each with "<<rand_hotspot_split<< endl;
+      GenerateRandomGather(_nodes, rand_hotspot_src, 
+			   rand_hotspot_dst,rand_hotspot_split );
     }
     map<string, tTrafficFunction>::const_iterator iter = gTrafficFunctionMap.find(_traffic[c]);
     if(iter == gTrafficFunctionMap.end()) {
@@ -725,7 +728,19 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _maxOutstanding = config.GetInt ("max_outstanding_requests");  
 
   // ============ Statistics ============ 
+  if(TRANSIENT_ENABLE){
+    for(int i = 0; i<TRANSFIELDMAX; i++){
+      transient_stat.insert(pair<int, vector<double> >(i,vector<double>()));
+    }
+    for(map<int, vector<double> >::iterator i = transient_stat.begin(); 
+	i!=transient_stat.end(); 
+	i++){
+      i->second.resize(transient_record_duration,0.0);
+    }
 
+    //multiple transient simulations are run independently using temp files
+    _LoadTransient(transient_data_file);
+  }
 
   _plat_stats.resize(_classes);
   _overall_min_plat.resize(_classes);
@@ -1241,9 +1256,10 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	receive_flow_buffer->ack(f->becn);	
       }
       if(f->becn && TRANSIENT_ENABLE){
-	int accepted_index = int(float(_time-transient_start+transient_prestart)/float(transient_granularity));
-	if(accepted_index>=0 && accepted_index < transient_record_duration){
-	  transient_ecn[1][accepted_index]+= 1.0;
+	float time_slot = float(_time-transient_start+transient_prestart)/float(transient_granularity);
+	if(time_slot>=0.0 && time_slot < transient_record_duration){
+	  int accepted_index = int(time_slot);
+	  transient_stat[C1_ECN][accepted_index]+= 1.0;
 	}
       }
       f->Free();
@@ -1290,9 +1306,20 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	gStatGrantTimeNow->AddSample(_time-f->payload);
       }
 #endif
-      
-      receive_flow_buffer->grant(f->payload,
-				 int(ceil(RESERVATION_RTT*float(_time-f->ntime))));
+      if( RESERVATION_IDEAL_EXPECTED_LATENCY){
+	//can't just use network latency becaues closer nodes gets disadvantaged
+	//ultra hack, grant time/average grant time = distance adjustment factor
+	// this is becuz grant time is basicaly constant. no adaptive accounting though
+	float adjust = float(_time-f->ntime)/gStatGrantLatency->Average();
+	float expected_lat=MAX(float(_time-f->ntime),
+			       gStatPureNetworkLatency[receive_flow_buffer->fl->cl]->Average()*adjust-_packet_size[receive_flow_buffer->fl->cl]);
+
+	receive_flow_buffer->grant(f->payload,
+				   int(expected_lat));
+      } else {
+	receive_flow_buffer->grant(f->payload,
+				   int(ceil(RESERVATION_RTT*float(_time-f->ntime))));
+      }
     }
     f->Free();
     if(RESERVATION_CONTROL_OVERHEAD!=0){
@@ -1325,23 +1352,27 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	gStatReservationTimeNow->AddSample(_time-_reservation_schedule[dest]);
       }
 #endif
-      //the return time is offset by the reservation packet latency 
-      //to prevent schedule fragmentation
+
       _reservation_schedule[dest] = MAX(_time,   _reservation_schedule[dest]);
       ff->payload  =_reservation_schedule[dest];
-      //this functionality has been moved tot he source
-
-      _reservation_schedule[dest] += int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
-
+      
+      int schedule_increment = int(ceil(float(f->payload)*RESERVATION_OVERHEAD_FACTOR));
+      if(RESERVATION_DEST_LAT_ACCOUNTING){
+	_reservation_schedule[dest] =MAX(_reservation_schedule[dest]+schedule_increment, 
+					 _time+(_time-f->ntime)+schedule_increment);
+      } else {
+	_reservation_schedule[dest] += schedule_increment;
+      }
       ff->res_type = RES_TYPE_GRANT;
       ff->pri = FLIT_PRI_GRANT;
       ff->vc = 1+gAuxVCs;
       _response_packets[dest].push_back(ff);
     }
-
+    
     if(RESERVATION_CONTROL_OVERHEAD!=0){
       _reservation_schedule[dest]+=RESERVATION_CONTROL_OVERHEAD;
     }     
+
     break;
   case RES_TYPE_SPEC:
 #ifdef ENABLE_STATS
@@ -1491,9 +1522,10 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       if(f->head &&
 	 f->fecn){
 	if(TRANSIENT_ENABLE){
-	  int accepted_index = int(float(_time-transient_start+transient_prestart)/float(transient_granularity));
-	  if(accepted_index>=0 && accepted_index < transient_record_duration){
-	    transient_ecn[0][accepted_index]+= 1.0;
+	  float time_slot = float(_time-transient_start+transient_prestart)/float(transient_granularity);
+	  if(time_slot>=0.0 && time_slot < transient_record_duration){
+	    int accepted_index = int(time_slot);
+	    transient_stat[C0_ECN][accepted_index]+= 1.0;
 	  }
 	}
 #ifdef ENABLE_STATS
@@ -1560,9 +1592,11 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 #endif
  
   if(TRANSIENT_ENABLE && f){
-    int accepted_index = int(float(_time-transient_start+transient_prestart)/float(transient_granularity));
-    if(accepted_index>=0 && accepted_index < transient_record_duration){
-      transient_stat[f->cl][2][accepted_index]+= 1.0;
+    float time_slot = float(_time-transient_start+transient_prestart)/float(transient_granularity);
+    if(time_slot>=0.0 && time_slot < transient_record_duration){
+      int accepted_index = int(time_slot);
+      int cl = (f->cl==0)?C0_ACCEPT:C1_ACCEPT;
+      transient_stat[cl][accepted_index]+= 1.0;
     }
   }
   
@@ -1686,11 +1720,17 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 	//maybe shoudl use flit creation time
 	if( time_slot>=0.0 &&  time_slot < transient_record_duration){
 	  int transient_index = int(time_slot);
-	  transient_stat[f->cl][0][transient_index]+= (f->atime - head->ntime);
-	  transient_stat[f->cl][1][transient_index]+= (f->atime - f->time);
-	  transient_count[f->cl][transient_index]++;
+	  int cl = (f->cl==0)?C0_NET_LAT:C1_NET_LAT;
+	  transient_stat[cl][transient_index]+= (f->atime - head->ntime);
+	  cl = (f->cl==0)?C0_LAT:C1_LAT;
+	  transient_stat[cl][transient_index]+= (f->atime - f->time);
+	  cl = (f->cl==0)?C0_PACKET:C1_PACKET;
+	  transient_stat[cl][transient_index]++;
+	  cl = (f->cl==0)?C0_NONMIN:C1_NONMIN;
+	  if(head->minimal != 1){
+	    transient_stat[cl][transient_index]++;
+	  }
 	}
-
       }
   
       _plat_stats[f->cl]->AddSample( f->atime - f->time);
@@ -1990,35 +2030,44 @@ void TrafficManager::_GenerateFlow( int source, int stype, int cl, int time ){
   int packet_destination; 
 
   packet_destination = _traffic_function[cl](source, _limit);
+  
+  //moved here from injection process  for multidest long flows
+  if(_flow_mode[cl]==1 &&
+     _flow_buffer[source][packet_destination]!=NULL &&
+     _flow_buffer[source][packet_destination]->active() &&
+     _flow_buffer[source][packet_destination]->_dest == packet_destination){
+    
+    _pending_flow[source]=NULL;
+  } else{
+    if ((packet_destination <0) || (packet_destination >= _nodes)) {
+      ostringstream err;
+      err << "Incorrect packet destination " << packet_destination;
+      Error( err.str( ) );
+    }
+    
+    flow* fl = new flow;
+    fl->flid = _cur_flid++;
+    fl->vc = -1;
+    int flow_packet_size = 0;
+    if(_flow_mix_mode==FLOW_MIX_SINGLE){
+      flow_packet_size  = _flow_size[cl];
+    } else if (_flow_mix_mode == FLOW_MIX_RANGE){
+      flow_packet_size  =  (RandomInt(_flow_size_range[cl])+_flow_size[cl]);
+    } else if (_flow_mix_mode == FLOW_MIX_BIMOD){
+      flow_packet_size  = (RandomInt(1)*_flow_size_range[cl]+_flow_size[cl]);
+    }
+    fl->flow_size = flow_packet_size*_packet_size[cl];
+    gStatFlowSizes[flow_packet_size]++;
+    fl->create_time = time;
+    fl->data_to_generate = flow_packet_size;
+    fl->src = source;
+    fl->dest = packet_destination;
+    fl->cl = cl;
+    fl->sn = 0;
 
-  if ((packet_destination <0) || (packet_destination >= _nodes)) {
-    ostringstream err;
-    err << "Incorrect packet destination " << packet_destination;
-    Error( err.str( ) );
+    assert(_pending_flow[source]==NULL);
+    _pending_flow[source] = fl;
   }
-
-  flow* fl = new flow;
-  fl->flid = _cur_flid++;
-  fl->vc = -1;
-  int flow_packet_size = 0;
-  if(_flow_mix_mode==FLOW_MIX_SINGLE){
-    flow_packet_size  = _flow_size[cl];
-  } else if (_flow_mix_mode == FLOW_MIX_RANGE){
-    flow_packet_size  =  (RandomInt(_flow_size_range[cl])+_flow_size[cl]);
-  } else if (_flow_mix_mode == FLOW_MIX_BIMOD){
-    flow_packet_size  = (RandomInt(1)*_flow_size_range[cl]+_flow_size[cl]);
-  }
-  fl->flow_size = flow_packet_size*_packet_size[cl];
-  gStatFlowSizes[flow_packet_size]++;
-  fl->create_time = time;
-  fl->data_to_generate = flow_packet_size;
-  fl->src = source;
-  fl->dest = packet_destination;
-  fl->cl = cl;
-  fl->sn = 0;
-
-  assert(_pending_flow[source]==NULL);
-  _pending_flow[source] = fl;
 }
 
 void TrafficManager::_FlowVC(FlowBuffer* flb){
@@ -2061,7 +2110,8 @@ void TrafficManager::_Inject(){
 	    //this is not a request packet
 	    //don't advance time
 	    //shoudl always trigger
-	    if(!_use_read_write[c] || (stype <= 0)){
+	    //if(!_use_read_write[c] || (stype <= 0))
+	    {
 	      ++_qtime[input][c];
 	    }
 	  }	  
@@ -2293,10 +2343,10 @@ void TrafficManager::_Step( )
 
 #ifdef ENABLE_STATS
     gStatNodeReady[source]+=int(node_ready);
-    if(eligible_flows)
-      gStatActiveFlowBuffers->AddSample(eligible_flows);  
-    if(normal_flows)
-      gStatNormActiveFlowBuffers->AddSample(normal_flows);  
+    
+    gStatActiveFlowBuffers->AddSample(eligible_flows);  
+
+    gStatNormActiveFlowBuffers->AddSample(normal_flows);  
 #endif
     
     if(gECN){
@@ -2433,7 +2483,13 @@ void TrafficManager::_Step( )
 #ifdef ENABLE_STATS
 	    gStatNormSent[source]++;
 #endif
-	    _last_sent_norm_buffer[source] =NULL;
+	    //debug
+	    //if(ready_flow_buffer->send_norm_ready()){
+	    //_last_sent_norm_buffer[source] =ready_flow_buffer;
+	    //} else 
+	    {
+	      _last_sent_norm_buffer[source] =NULL;
+	    }
 	  } else {
 	    assert(f->res_type==RES_TYPE_RES);
 	    _last_sent_spec_buffer[source] =NULL;
@@ -2535,8 +2591,8 @@ void TrafficManager::_Step( )
     gStatMonitorTransient[0]->push_back(retired_s->NumSamples()+retired_n->NumSamples());
     gStatMonitorTransient[1]->push_back(retired_s->Average());
     gStatMonitorTransient[2]->push_back(retired_n->Average());
-    gStatMonitorTransient[3]->push_back(((gStatReservationMismatch_POS->Average()*gStatReservationMismatch_POS->NumSamples())-(gStatReservationMismatch_NEG->Average()*gStatReservationMismatch_NEG->NumSamples()))/(gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples()));
-    gStatMonitorTransient[4]->push_back(((gStatResEarly_POS->Average()*gStatResEarly_POS->NumSamples())-(gStatResEarly_NEG->Average()*gStatResEarly_NEG->NumSamples()))/(gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples()));
+    gStatMonitorTransient[3]->push_back((gStatReservationMismatch_POS->Sum()-gStatReservationMismatch_NEG->Sum())/(gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples()));
+    gStatMonitorTransient[4]->push_back((gStatResEarly_POS->Sum()-gStatResEarly_NEG->Sum())/(gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples()));
     gStatMonitorTransient[5]->push_back(float(gStatSpecLatency->NumSamples())/_plat_stats[0]->NumSamples()*100);
 #endif
 
@@ -2552,6 +2608,12 @@ void TrafficManager::_Step( )
       cout<<"  Prog GvL min "<<debug_adaptive_prog_GvL_min<<" same "<<debug_adaptive_prog_GvL<<"("<<float(debug_adaptive_prog_GvL_min)/debug_adaptive_prog_GvL<<")"<<endl;
       cout<<"  Prog GvG min "<<debug_adaptive_prog_GvG_min<<" same "<<debug_adaptive_prog_GvG<<"("<<float(debug_adaptive_prog_GvG_min)/debug_adaptive_prog_GvG<<")"<<endl;
     }
+    if(gPB){
+      cout<<"  PB TT ("<<float(debug_adaptive_pb_tt)/debug_adaptive_pb<<")"<<endl;
+      cout<<"  PB TF!!!! ("<<float(debug_adaptive_pb_tf)/debug_adaptive_pb<<")"<<endl;
+      cout<<"  PB FT ("<<float(debug_adaptive_pb_ft)/debug_adaptive_pb<<")"<<endl;
+      cout<<"  PB FF ("<<float(debug_adaptive_pb_ff)/debug_adaptive_pb<<")"<<endl;
+    }
     if(_nonmin_plat_stats->NumSamples()+_prog_plat_stats->NumSamples()>0)
       cout<<" Adaptive "<<float(_nonmin_plat_stats->NumSamples()+_prog_plat_stats->NumSamples())/(_prog_plat_stats->NumSamples()+_nonmin_plat_stats->NumSamples()+_min_plat_stats->NumSamples());
 
@@ -2559,8 +2621,8 @@ void TrafficManager::_Step( )
     if(gReservation){
       cout<<" spec_lat "<<retired_s->Average()
 	  <<" ("<<float(retired_s->NumSamples())/(retired_s->NumSamples()+retired_n->NumSamples())<<")"<<endl
-	  <<" nonspec-arrive-mismatch "<<((gStatReservationMismatch_POS->Average()*gStatReservationMismatch_POS->NumSamples())-(gStatReservationMismatch_NEG->Average()*gStatReservationMismatch_NEG->NumSamples()))/(gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples())<<"("<<gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples()<<")"
-	  <<" res-deact-mismatch "<<((gStatResEarly_POS->Average()*gStatResEarly_POS->NumSamples())-(gStatResEarly_NEG->Average()*gStatResEarly_NEG->NumSamples()))/(gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples())<<"("<<gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples()<<")"<<endl;
+	  <<" nonspec-arrive-mismatch "<<(gStatReservationMismatch_POS->Sum()-gStatReservationMismatch_NEG->Sum())/(gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples())<<"("<<gStatReservationMismatch_POS->NumSamples()+gStatReservationMismatch_NEG->NumSamples()<<")"
+	  <<" res-deact-mismatch "<<(gStatResEarly_POS->Sum()-gStatResEarly_NEG->Sum())/(gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples())<<"("<<gStatResEarly_POS->NumSamples()+gStatResEarly_NEG->NumSamples()<<")"<<endl;
     } else if(gECN){    
       cout<<"\t BECN count "<<gStatBECN<<endl; 
     } else {
@@ -2575,9 +2637,15 @@ void TrafficManager::_Step( )
     gStatResEarly_POS->Clear();
     gStatResEarly_NEG->Clear();
     gStatBECN=0;
-    //gStatReservationMismatch_POS->Clear();
-    //gStatReservationMismatch_NEG->Clear();
+    gStatReservationMismatch_POS->Clear();
+    gStatReservationMismatch_NEG->Clear();
     //*/
+
+    if(_stats_out){
+      for(int c = 0; c < _classes; ++c) {
+	*_stats_out << "partial_lat(" << c+1 << ")="<<_plat_stats[c]->Average()<<";\n";
+      }
+    }
   }
 
   assert(_time);
@@ -3731,29 +3799,37 @@ void TrafficManager::_DisplayTedsShit(){
     if(TRANSIENT_ENABLE && (transient_data_file==""||transient_finalize)){
       for(int i = 0; i<transient_record_duration; i++){
 	*_stats_out<<"transient_net_stat("<<i+1<<",:)= [";
-	*_stats_out<<transient_stat[0][0][i]<<" "<<transient_count[0][i]<<" "<<float(transient_stat[0][0][i])/transient_count[0][i]<<" ";
-	*_stats_out<<transient_stat[1][0][i]<<" "<<transient_count[1][i]<<" "<<float(transient_stat[1][0][i])/transient_count[1][i]<<" ";
+	*_stats_out<<transient_stat[C0_NET_LAT][i]<<" "<<transient_stat[C0_PACKET][i]<<" "<<float(transient_stat[C0_NET_LAT][i])/transient_stat[C0_PACKET][i]<<" ";
+	*_stats_out<<transient_stat[C1_NET_LAT][i]<<" "<<transient_stat[C1_PACKET][i]<<" "<<float(transient_stat[C1_NET_LAT][i])/transient_stat[C1_PACKET][i]<<" ";
 	*_stats_out<<" ];"<<endl;
       }
       for(int i = 0; i<transient_record_duration; i++){
 	*_stats_out<<"transient_stat("<<i+1<<",:)= [";
-	*_stats_out<<transient_stat[0][1][i]<<" "<<transient_count[0][i]<<" "<<float(transient_stat[0][1][i])/transient_count[0][i]<<" ";
-	*_stats_out<<transient_stat[0][2][i]<<" ";
-	*_stats_out<<transient_stat[1][1][i]<<" "<<transient_count[1][i]<<" "<<float(transient_stat[1][1][i])/transient_count[1][i]<<" ";
-	*_stats_out<<transient_stat[1][2][i]<<" ";
+	*_stats_out<<transient_stat[C0_LAT][i]<<" "<<transient_stat[C0_PACKET][i]<<" "<<float(transient_stat[C0_LAT][i])/transient_stat[C0_PACKET][i]<<" ";
+	*_stats_out<<transient_stat[C0_ACCEPT][i]<<" ";
+	*_stats_out<<transient_stat[C1_LAT][i]<<" "<<transient_stat[C1_PACKET][i]<<" "<<float(transient_stat[C0_LAT][i])/transient_stat[C1_PACKET][i]<<" ";
+	*_stats_out<<transient_stat[C1_ACCEPT][i]<<" ";
 	*_stats_out<<" ];"<<endl;
       }
       if(gECN){
 	for(int i = 0; i<transient_record_duration; i++){
 	  *_stats_out<<"transient_ecn("<<i+1<<",:)= [";
-	  *_stats_out<<transient_ecn[0][i]<<" ";
-	  *_stats_out<<transient_ecn[1][i]<<" ";
+	  *_stats_out<<transient_stat[C0_ECN][i]<<" ";
+	  *_stats_out<<transient_stat[C1_ECN][i]<<" ";
 	  *_stats_out<<" ];"<<endl;
 	}
 	for(int i = 0; i<transient_record_duration; i++){
 	  *_stats_out<<"transient_ird("<<i+1<<",:)= [";
-	  *_stats_out<<transient_ird[0][i]<<" ";
-	  *_stats_out<<transient_ird[1][i]<<" ";
+	  *_stats_out<<transient_stat[C0_IRD][i]<<" ";
+	  *_stats_out<<transient_stat[C1_IRD][i]<<" ";
+	  *_stats_out<<" ];"<<endl;
+	}
+      }
+      if(gAdaptive){
+	for(int i = 0; i<transient_record_duration; i++){
+	  *_stats_out<<"transient_adapt("<<i+1<<",:)= [";
+	  *_stats_out<<transient_stat[C0_NONMIN][i]<<" ";
+	  *_stats_out<<transient_stat[C1_NONMIN][i]<<" ";
 	  *_stats_out<<" ];"<<endl;
 	}
       }
@@ -3762,50 +3838,48 @@ void TrafficManager::_DisplayTedsShit(){
       tfile.open(transient_data_file.c_str());
       //class 0 network latency
       for(int i = 0; i<transient_record_duration; i++)
-	tfile<<transient_stat[0][0][i]<<" ";
+	tfile<<transient_stat[C0_NET_LAT][i]<<" ";
       //class 0 latency
       for(int i = 0; i<transient_record_duration; i++)
-	tfile<<transient_stat[0][1][i]<<" ";
+	tfile<<transient_stat[C0_LAT][i]<<" ";
       //class 0 accepted
       for(int i = 0; i<transient_record_duration; i++)
-	tfile<<transient_stat[0][2][i]<<" ";
+	tfile<<transient_stat[C0_ACCEPT][i]<<" ";
       //class 0 packet count
       for(int i = 0; i<transient_record_duration; i++)
-	tfile<<transient_count[0][i]<<" ";
+	tfile<<transient_stat[C0_PACKET][i]<<" ";
 
       //class 1 network latency
       for(int i = 0; i<transient_record_duration; i++)
-	tfile<<transient_stat[1][0][i]<<" ";
+	tfile<<transient_stat[C1_NET_LAT][i]<<" ";
       //class 1 latency
       for(int i = 0; i<transient_record_duration; i++)
-	tfile<<transient_stat[1][1][i]<<" ";
+	tfile<<transient_stat[C1_LAT][i]<<" ";
       //class 1 accepted
       for(int i = 0; i<transient_record_duration; i++)
-	tfile<<transient_stat[1][2][i]<<" ";
+	tfile<<transient_stat[C1_ACCEPT][i]<<" ";
       //class 1 packet count
       for(int i = 0; i<transient_record_duration; i++)
-	tfile<<transient_count[1][i]<<" ";
+	tfile<<transient_stat[C1_PACKET][i]<<" ";
 
 
       
       if(gECN){
 	for(int i = 0; i<transient_record_duration; i++)
-	  tfile<<transient_ecn[0][i]<<" ";
+	  tfile<<transient_stat[C0_ECN][i]<<" ";
 	for(int i = 0; i<transient_record_duration; i++)
-	  tfile<<transient_ecn[1][i]<<" ";
+	  tfile<<transient_stat[C1_ECN][i]<<" ";
 	for(int i = 0; i<transient_record_duration; i++)
-	  tfile<<transient_ird[0][i]<<" ";
+	  tfile<<transient_stat[C0_IRD][i]<<" ";
 	for(int i = 0; i<transient_record_duration; i++)
-	  tfile<<transient_ird[1][i]<<" ";
+	  tfile<<transient_stat[C1_IRD][i]<<" ";
       }
-      
-      cout<<"test ";
-      cout<<transient_stat[0][0][0]<<" "<<transient_count[0][0]<<" ";
-      cout<<transient_stat[1][0][0]<<" "<<transient_count[1][0]<<" ";
-      cout<<transient_stat[0][1][0]<<" "<<transient_count[0][0]<<" ";
-      cout<<transient_stat[0][2][0]<<" ";
-      cout<<transient_stat[1][1][0]<<" "<<transient_count[1][0]<<" ";
-      cout<<transient_stat[1][2][0]<<"\n";
+      if(gAdaptive){
+	for(int i = 0; i<transient_record_duration; i++)
+	  tfile<<transient_stat[C0_NONMIN][i]<<" ";
+	for(int i = 0; i<transient_record_duration; i++)
+	  tfile<<transient_stat[C1_NONMIN][i]<<" ";
+      }
       tfile.close();
     }
 
@@ -3954,53 +4028,52 @@ void TrafficManager::_LoadTransient(const string & filename){
     while(!tfile.eof()) {
       //class 0 network latency
       for(int i = 0; i<transient_record_duration; i++)
-	tfile>>transient_stat[0][0][i];
+	tfile>>transient_stat[C0_NET_LAT][i];
       //class 0 latency
       for(int i = 0; i<transient_record_duration; i++)
-	tfile>>transient_stat[0][1][i];
+	tfile>>transient_stat[C0_LAT][i];
       //class 0 accepted
       for(int i = 0; i<transient_record_duration; i++)
-	tfile>>transient_stat[0][2][i];
+	tfile>>transient_stat[C0_ACCEPT][i];
       //class 0 packet count
       for(int i = 0; i<transient_record_duration; i++)
-	tfile>>transient_count[0][i];
+	tfile>>transient_stat[C0_PACKET][i];
 
 
       //class 1 network latency
       for(int i = 0; i<transient_record_duration; i++)
-	tfile>>transient_stat[1][0][i];
+	tfile>>transient_stat[C1_NET_LAT][i];
       //class 1 latency
       for(int i = 0; i<transient_record_duration; i++)
-	tfile>>transient_stat[1][1][i];
+	tfile>>transient_stat[C1_LAT][i];
       //class 1 accepted
       for(int i = 0; i<transient_record_duration; i++)
-	tfile>>transient_stat[1][2][i];
+	tfile>>transient_stat[C1_ACCEPT][i];
       //class 1 packet count
       for(int i = 0; i<transient_record_duration; i++)
-	tfile>>transient_count[1][i];
+	tfile>>transient_stat[C1_PACKET][i];
 
 
       
       if(gECN){
 	for(int i = 0; i<transient_record_duration; i++)
-	  tfile>>transient_ecn[0][i];
+	  tfile>>transient_stat[C0_ECN][i];
 	for(int i = 0; i<transient_record_duration; i++)
-	  tfile>>transient_ecn[1][i];
+	  tfile>>transient_stat[C1_ECN][i];
 	
 	for(int i = 0; i<transient_record_duration; i++)
-	  tfile>>transient_ird[0][i];
+	  tfile>>transient_stat[C0_IRD][i];
 	for(int i = 0; i<transient_record_duration; i++)
-	  tfile>>transient_ird[1][i];
-	
+	  tfile>>transient_stat[C1_IRD][i];	
+      }
+      if(gAdaptive){
+	for(int i = 0; i<transient_record_duration; i++)
+	  tfile>>transient_stat[C0_NONMIN][i];
+	for(int i = 0; i<transient_record_duration; i++)
+	  tfile>>transient_stat[C1_NONMIN][i];
       }
     }
-    cout<<"test ";
-    cout<<transient_stat[0][0][0]<<" "<<transient_count[0][0]<<" ";
-    cout<<transient_stat[1][0][0]<<" "<<transient_count[1][0]<<" ";
-    cout<<transient_stat[0][1][0]<<" "<<transient_count[0][0]<<" ";
-    cout<<transient_stat[0][2][0]<<" ";
-    cout<<transient_stat[1][1][0]<<" "<<transient_count[1][0]<<" ";
-    cout<<transient_stat[1][2][0]<<"\n";
+
     tfile.close();
   } else {
     cout<<"Unable to open transient data file, continuing with simulation\n";

@@ -47,6 +47,7 @@
 #include "fattree.hpp"
 #include "anynet.hpp"
 #include "dragonfly.hpp"
+#include "dragonfull.hpp"
 
 
 Network::Network( const Configuration &config, const string & name ) :
@@ -112,6 +113,9 @@ Network * Network::NewNetwork(const Configuration & config, const string & name)
   } else if ( topo == "dragonflynew"){
     DragonFlyNew::RegisterRoutingFunctions() ;
     n = new DragonFlyNew(config, name);
+  } else if ( topo == "dragonfull"){
+    DragonFull::RegisterRoutingFunctions() ;
+    n = new DragonFull(config, name);
   } else {
     cerr << "Unknown topology: " << topo << endl;
   }

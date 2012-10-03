@@ -39,6 +39,7 @@ Stats * GetStats(const std::string & name);
 
 extern bool gPrintActivity;
 
+extern int gH;
 extern int gA;
 extern int gP;
 extern int gK;
@@ -56,11 +57,23 @@ extern bool gReservation;
 extern bool gECN;
 
 extern float gAdaptiveThreshold;
-extern float gSpecAdaptiveThreshold;
+extern float gAdaptiveThresholdSpec;
 
 
 extern bool gCRT;
 extern bool gPB;
+extern bool gAdaptive;
+
 
 extern std::ostream * gStatsOut;
+
+
+extern int gAuxVCs;
+extern int gAdaptVCs;
+extern int gResVCStart;//reservation
+extern int gGANVCStart;//grant, ack, nack
+extern int gSpecVCStart;
+extern int gNSpecVCStart;
+
+extern int gNumVCs;
 #endif

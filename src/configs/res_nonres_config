@@ -17,8 +17,8 @@ expiration_time = 600;
 reservation_packet_threshold=128;
 reservation_chunk_limit=256;
 
-reservation_overhead_factor=1.00;
-reservation_control_overhead=5;
+reservation_overhead_factor=1.03;
+reservation_control_overhead=3;
 reservation_walkin_overhead=1;	
 hotspot_reservation=1;
 

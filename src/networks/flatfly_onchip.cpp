@@ -1,28 +1,28 @@
 // $Id$
 
 /*
- Copyright (c) 2007-2012, Trustees of The Leland Stanford Junior University
- All rights reserved.
+  Copyright (c) 2007-2012, Trustees of The Leland Stanford Junior University
+  All rights reserved.
 
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions are met:
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
 
- Redistributions of source code must retain the above copyright notice, this 
- list of conditions and the following disclaimer.
- Redistributions in binary form must reproduce the above copyright notice, this
- list of conditions and the following disclaimer in the documentation and/or
- other materials provided with the distribution.
+  Redistributions of source code must retain the above copyright notice, this 
+  list of conditions and the following disclaimer.
+  Redistributions in binary form must reproduce the above copyright notice, this
+  list of conditions and the following disclaimer in the documentation and/or
+  other materials provided with the distribution.
 
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
- DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
- ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+  ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 //Flattened butterfly simulator
@@ -328,7 +328,7 @@ void FlatFlyOnChip::RegisterRoutingFunctions(){
 
 
 void xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
-		  OutputSet *outputs, bool inject )
+		   OutputSet *outputs, bool inject )
 { 
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = 0, vcEnd = gNumVCs-1;
@@ -347,29 +347,32 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
       vcEnd = gWriteReplyEndVC;
     }
   } else {
-    if(f->res_type == RES_TYPE_RES){//special packets
-      //even though res type res always go on vc 0, it is the first flit
-      //popped from the flow buffer and handles the vc assignment for the whole buffer
-      //
-      if(inject){ 
-	vcBegin = RES_RESERVED_VCS;
-	vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
-      } else {
-	vcBegin = 0;
-	vcEnd = 0;
+    if(gReservation){
+      if(f->res_type == RES_TYPE_RES){//special packets
+	//even though res type res always go on vc 0, it is the first flit
+	//popped from the flow buffer and handles the vc assignment for the whole buffer
+	//
+	if(inject){ 
+	  vcBegin = gSpecVCStart;
+	  vcEnd = gNSpecVCStart-1;
+	} else {
+	  vcBegin =gResVCStart;
+	  vcEnd = gGANVCStart-1;
+	}
+      } else if(f->res_type == RES_TYPE_GRANT){
+	vcBegin = gGANVCStart;
+	vcEnd = gSpecVCStart-1;
+      } else if(f->res_type == RES_TYPE_NORM){ //normal packets
+	vcBegin = gNSpecVCStart;
+	vcEnd = (gNumVCs-1);
+      } else if(f->res_type == RES_TYPE_SPEC){
+	vcBegin = gSpecVCStart;
+	vcEnd = gNSpecVCStart-1;
+      } else { //ack, nack, grant
+	vcBegin = gGANVCStart;
+	vcEnd = gSpecVCStart-1;
       }
-    } else if(f->res_type == RES_TYPE_GRANT){
-      vcBegin = 1;
-      vcEnd = 1;
-    } else if(f->res_type == RES_TYPE_NORM){ //normal packets
-      vcBegin = (RES_RESERVED_VCS+gResVCs);
-      vcEnd = (gNumVCs-1);
-    } else if(f->res_type == RES_TYPE_SPEC){
-      vcBegin = RES_RESERVED_VCS;
-      vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
-    } else { //ack, nack, grant
-      vcBegin = RES_RESERVED_VCS-1;
-      vcEnd = RES_RESERVED_VCS-1;
+
     }
 
   }
@@ -451,7 +454,7 @@ int flatfly_outport_yx(int dest, int rID) {
 }
 
 void valiant_flatfly( const Router *r, const Flit *f, int in_channel, 
-		  OutputSet *outputs, bool inject )
+		      OutputSet *outputs, bool inject )
 {
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = 0, vcEnd = gNumVCs-1;
@@ -526,11 +529,11 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
   
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if(gECN){
-    if(f->type == RES_TYPE_ACK){
-      vcBegin = 0;
-      vcEnd = ECN_RESERVED_VCS-1;
+    if(f->res_type == RES_TYPE_ACK){
+      vcBegin = gGANVCStart;
+      vcEnd = gGANVCStart;
     } else {
-      vcBegin = (ECN_RESERVED_VCS);
+      vcBegin = gNSpecVCStart;
       vcEnd = (gNumVCs-1);
     }
   }else if(gReservation){
@@ -539,24 +542,24 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
       //popped from the flow buffer and handles the vc assignment for the whole buffer
       //
       if(inject){ 
-	vcBegin = RES_RESERVED_VCS;
-	vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
+	vcBegin = gSpecVCStart;
+	vcEnd = gNSpecVCStart-1;
       } else {
-	vcBegin = 0;
-	vcEnd = 0;
+	vcBegin =gResVCStart;
+	vcEnd = gGANVCStart-1;
       }
     } else if(f->res_type == RES_TYPE_GRANT){
-      vcBegin = 1;
-      vcEnd = 1;
+      vcBegin = gGANVCStart;
+      vcEnd = gSpecVCStart-1;
     } else if(f->res_type == RES_TYPE_NORM){ //normal packets
-      vcBegin = (RES_RESERVED_VCS+gResVCs);
+      vcBegin = gNSpecVCStart;
       vcEnd = (gNumVCs-1);
     } else if(f->res_type == RES_TYPE_SPEC){
-      vcBegin = RES_RESERVED_VCS;
-      vcEnd = (RES_RESERVED_VCS+gResVCs)-1;
+      vcBegin = gSpecVCStart;
+      vcEnd = gNSpecVCStart-1;
     } else { //ack, nack, grant
-      vcBegin = RES_RESERVED_VCS-1;
-      vcEnd = RES_RESERVED_VCS-1;
+      vcBegin = gGANVCStart;
+      vcEnd = gSpecVCStart-1;
     }
 
   }else{
@@ -613,7 +616,7 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
 
 //same as ugal except uses xyyx routing
 void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
-			  OutputSet *outputs, bool inject )
+			       OutputSet *outputs, bool inject )
 {
   // ( Traffic Class , Routing Order ) -> Virtual Channel Range
   int vcBegin = 0, vcEnd = gNumVCs-1;

@@ -97,10 +97,21 @@ bool gReservation = false;
 bool gECN = false;
 
 float gAdaptiveThreshold = 1.0;
-float gSpecAdaptiveThreshold = -1.0;
+float gAdaptiveThresholdSpec = -1.0;
 
 bool gCRT=false;
 bool gPB = false;
+bool gAdaptive=false;
+
+//SRP globals consider moving it to another files
+int gResVCStart=0;//reservation
+int gGANVCStart=0;//grant, ack, nack
+int gSpecVCStart=0;
+int gNSpecVCStart=0;
+//Additional SRP routing
+int gAuxVCs=0;
+int gAdaptVCs=0;
+
 
 #ifdef USE_GUI
 bool gGUIMode = false;

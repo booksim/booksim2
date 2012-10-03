@@ -51,6 +51,7 @@ static int _hs_max_val;
 
 
 static vector<pair<int, int> > _hs_elems;
+map<int, vector<int> > gather_dest;
 set<int> hs_lookup;
 bool hs_send_all = false;
 set<int> hs_senders;
@@ -258,6 +259,136 @@ void GenerateRandomHotspot( int total_nodes, int num_src, int num_dst){
   RandomSeed( prev_rand );
 }
 
+
+void GenerateRandomGather( int total_nodes, int num_src, int num_dst, int num_split){
+
+  //exact factors only
+  assert(float(num_src)/float(num_dst)-int(num_src/num_dst)==0.0);
+
+
+
+  //seed business
+  unsigned long prev_rand = RandomIntLong( );
+  RandomSeed(gPermSeed);
+  //erase previous hotspots gather_set
+  gather_dest.clear();
+  hs_lookup.clear();
+  hs_senders.clear();
+  _hs_elems.clear();
+  hs_send_all = false;
+
+  //Generate soruces
+  cout<<"Src:";
+  while(hs_senders.size()<(size_t)num_src){
+    hs_senders.insert(RandomInt(total_nodes-1));
+  }
+  for(set<int>::iterator i = hs_senders.begin(); i != hs_senders.end(); i++){
+    gather_dest.insert(pair<int, vector<int> >(*i, vector<int>()));
+    cout<<*i<<"\t";
+  }
+  cout<<endl;
+  
+  //Generate Dests
+  set<int> temp_dest;
+  while(temp_dest.size()<(size_t)num_dst){
+    int temp = RandomInt(total_nodes-1);
+    if(hs_senders.count(temp)==0){
+      temp_dest.insert(temp);
+    }
+  }
+  vector<int> dests_a;
+  vector<int> dests_b;
+  cout<<"Dst:";
+  for(set<int>::iterator i = temp_dest.begin(); i != temp_dest.end(); i++){
+    dests_a.push_back(*i);
+    cout<<*i<<"\t";
+  }
+  cout<<endl;
+  
+  int max_factor = num_src*num_split/num_dst;
+  cout<<"assign "<<max_factor<<" per dest\n";
+  int dest_remain = dests_a.size();
+  vector<int> assigned_a;assigned_a.resize(dests_a.size(),0);
+  vector<int> assigned_b;
+  vector<int>* dests = &dests_a;
+  vector<int>* dests_backup = &dests_b;
+  vector<int>* assigned = &assigned_a;
+  vector<int>* assigned_backup = &assigned_b;
+  map<int, vector<int> >::iterator source_iter = gather_dest.begin(); 
+  int retries = 0; //too many retries we reset the array
+  //assign sources to dest until it all runs out
+  while(dest_remain && source_iter!=gather_dest.end()){
+    while(source_iter->second.size()<num_split){
+      int index = RandomInt(dest_remain-1);
+      if((*assigned)[index]>=max_factor){//Full
+	retries++;
+	continue;
+      }
+      //if(source_iter->second.count((*dests)[index])==0){
+	//insert occurs when dest is not full, and source does not have dest yet
+	source_iter->second.push_back((*dests)[index]);
+	(*assigned)[index]++;
+	//}
+    }
+    //curret source is filled next
+    source_iter++;
+    
+    //array reorg
+    if(retries>10){
+      for(size_t i = 0; i<dests->size(); i++){
+	if((*assigned)[i]<max_factor){
+	  dests_backup->push_back((*dests)[i]);
+	  assigned_backup->push_back((*assigned)[i]);
+	}
+      }
+      cout<<dests->size()-dests_backup->size()<<" filled\n";
+      dests->clear();
+      assigned->clear();
+      //swap
+      vector<int>* temp = dests;
+      dests=  dests_backup;
+      dests_backup = temp;
+      temp = assigned;
+      assigned = assigned_backup;
+      assigned_backup = temp;
+      //loop conditio
+      dest_remain = dests->size();
+      retries = 0;
+    }
+  }
+  
+  
+  //sanity check
+  cout<<"source -> dest check\n";
+  map<int, int> check_map;
+  for(map<int, vector<int> >::iterator i = gather_dest.begin(); 
+      i!=gather_dest.end();
+      i++){
+    set<int> check_set;
+    //cout<<i->first<<"\t"<<i->second.size()<<endl;
+    for(vector<int>::iterator j=i->second.begin(); j!=i->second.end(); j++){
+      check_set.insert(*j);
+      if(check_map.count(*j)==0){
+	check_map[*j]=1;
+      } else {
+	check_map[*j]+=1;
+      }
+    }
+    cout<<i->first<<"\t"<<check_set.size()<<endl;
+  }
+  cout<<"dest -> source check\n";
+  for(map<int, int>::iterator i = check_map.begin();
+      i!=check_map.end(); 
+      i++){
+    cout<<i->first<<"\t"<<i->second<<endl;
+  }
+
+
+  cout<<"done gather generation"<<endl;
+
+  RandomSeed( prev_rand );
+}
+
 static vector<int> gPerm;
 
 
@@ -359,23 +490,9 @@ int taper64( int source, int total_nodes )
 
 //=============================================================
 
-int badperm_dfly( int source, int total_nodes )
-{
-  int grp_size_routers = powi((_xr*gK), gN - 1);
-  int grp_size_nodes = grp_size_routers * (_xr*gK);
-
-  int temp;
-  int dest;
-
-  temp = (int) (source / grp_size_nodes);
-  dest =  (RandomInt(grp_size_nodes - 1) + (temp+1)*grp_size_nodes ) %  total_nodes;
-
-  return dest;
-}
-
 int badperm_dflynew( int source, int total_nodes )
 {
-  int grp_size_routers = 2*(gK);
+  int grp_size_routers = gA;
   int grp_size_nodes = grp_size_routers * (gK);
 
   int temp;
@@ -473,7 +590,11 @@ int hotspot(int source, int total_nodes){
     return _hs_elems.back().second;
   }
 }
-
+int rand_gather(int source, int total_nodes){
+  assert(gather_dest.count(source)!=0);
+  int index = RandomInt(gather_dest[source].size()-1);
+  return gather_dest[source][index];
+}
 
 int noself_hotspot(int source, int total_nodes){
   assert( hs_send_all || hs_senders.count(source)!=0);
@@ -559,6 +680,7 @@ void InitializeTrafficMap( const Configuration & config )
   gTrafficFunctionMap["hotspot"]  = &hotspot;
   gTrafficFunctionMap["noself_hotspot"]  = &noself_hotspot;
   gTrafficFunctionMap["rand_noself_hotspot"]  = &noself_hotspot;
+  gTrafficFunctionMap["rand_gather"]  = &rand_gather;
 
   gTrafficFunctionMap["combined"] = &combined;
   gTrafficFunctionMap["background_uniform"] = &background_uniform;

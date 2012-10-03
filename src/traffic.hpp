@@ -37,6 +37,7 @@ void InitializeTrafficMap( const Configuration & config );
 void ResetTraffic( );
 void StepTrafficFunctions( );
 void GenerateRandomHotspot(int total, int src, int dst);
+void GenerateRandomGather(int total, int src, int dst, int split);
 
 extern map<string, tTrafficFunction> gTrafficFunctionMap;
 

@@ -47,7 +47,6 @@
 #include "misc_utils.hpp"
 
 map<string, tInjectionProcess> gInjectionProcessMap;
-bool permanent_flow;
 extern set<int> hs_lookup;
 map<int, double> congestion_rate_lookup;
 extern int bystander_sender;
@@ -68,14 +67,6 @@ bool background( int source, double rate )
 
 bool bernoulli( int source, double rate )
 {
-
-  if(permanent_flow){
-    if(GetSimTime()==0)
-      rate = 1.0;
-    else 
-      rate = 0.0;
-  }
-
   assert( ( source >= 0 ) && ( source < gNodes ) );
   assert( rate <= 1.0 );
 
@@ -156,7 +147,7 @@ bool injection_hotspot_test(int source, double rate){
 }
 
 bool injection_badhotspot_test(int source, double rate){
-  int grp_size_routers = 2*(gK);
+  int grp_size_routers = gA;
   int grp_size_nodes = grp_size_routers * (gK);
   if(hs_lookup.count(source%grp_size_nodes)!=0){
     return false;
@@ -187,7 +178,6 @@ void InitializeInjectionMap( const Configuration & config )
   gInjectionProcessMap["badhotspot_test"]    = &injection_badhotspot_test;//dragon
   gInjectionProcessMap["background"]    = &background;
 
-  permanent_flow = (config.GetInt("create_permanent_flows")==1);
   vector<int> hotspot_senders = config.GetIntArray("hotspot_senders");
   vector<double> hotspot_rates = config.GetFloatArray("hotspot_rates");
 

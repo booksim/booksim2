@@ -14,7 +14,7 @@
   may be used to endorse or promote products derived from this software without 
   specific prior written permission.
 
-  THIS SOFTWARE IS PROVIDED BY THE CO3YRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
   ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
   DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR 
@@ -30,112 +30,39 @@
 #include <vector>
 #include <sstream>
 
-#include "dragonfly.hpp"
+#include "dragonfull.hpp"
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
 #include "globals.hpp"
 #include "reservation.hpp"
 
-int gP, gA, gG;
+int gH=0;
 
-int g_grp_num_routers=0;
-int g_grp_num_nodes=0;
-int g_network_size = 0;
-
+extern int g_grp_num_routers;
+extern int g_grp_num_nodes;
+extern int g_network_size;
 
 //UGAL getcredit vc listings
 //!gReservation !ECN
-int * vc_min_same;
-int * vc_nonmin_same;
+extern int * vc_min_same;
+extern int * vc_nonmin_same;
 //gREservation
-int * vc_min_res_same;
-int * vc_nonmin_res_same;
+extern int * vc_min_res_same;
+extern int * vc_nonmin_res_same;
 
 extern bool ADAPTIVE_INTM_ALL;
-
-bool RESERVATION_ADAPT_CONTROL=false;
+extern bool RESERVATION_ADAPT_CONTROL;
 
 #define MAX(X,Y) ((X>Y)?(X):(Y))
 
-
-//global port indexing, given src_grp and dest_grp
-int dragonfly_global_index(int src, int dest){
-  if(src<dest){
-    return dest-1;
-  } else {
-    return dest;
-  }
-}
-
-//calculate the hop count between src and estination
-int dragonflynew_hopcnt(int src, int dest) 
-{
-  int hopcnt;
-  int dest_grp_ID, src_grp_ID; 
-  int src_hopcnt, dest_hopcnt;
-  int src_intm, dest_intm;
-  int grp_output, dest_grp_output;
-  int grp_output_RID;
-
-  
-  dest_grp_ID = int(dest/g_grp_num_nodes);
-  src_grp_ID = int(src / g_grp_num_nodes);
-  
-  //source and dest are in the same group, either 0-1 hop
-  if (dest_grp_ID == src_grp_ID) {
-    if ((int)(dest / gP) == (int)(src /gP))
-      hopcnt = 0;
-    else
-      hopcnt = 1;
-    
-  } else {
-    //source and dest are in the same group
-    //find the number of hops in the source group
-    //find the number of hops in the dest group
-    if (src_grp_ID > dest_grp_ID)  {
-      grp_output = dest_grp_ID;
-      dest_grp_output = src_grp_ID - 1;
-    }
-    else {
-      grp_output = dest_grp_ID - 1;
-      dest_grp_output = src_grp_ID;
-    }
-    grp_output_RID = ((int) (grp_output / (gP))) + src_grp_ID * g_grp_num_routers;
-    src_intm = grp_output_RID * gP;
-
-    grp_output_RID = ((int) (dest_grp_output / (gP))) + dest_grp_ID * g_grp_num_routers;
-    dest_intm = grp_output_RID * gP;
-
-    //hop count in source group
-    if ((int)( src_intm / gP) == (int)( src / gP ) )
-      src_hopcnt = 0;
-    else
-      src_hopcnt = 1; 
-
-    //hop count in destination group
-    if ((int)( dest_intm / gP) == (int)( dest / gP ) ){
-      dest_hopcnt = 0;
-    }else{
-      dest_hopcnt = 1;
-    }
-
-    //tally
-    hopcnt = src_hopcnt + 1 + dest_hopcnt;
-  }
-
-  return hopcnt;  
-}
-
-
 //packet output port based on the source, destination and current location
-int dragonfly_port(int rID, int source, int dest){
+int dragonfull_port(int rID, int source, int dest){
 
   int out_port = -1;
   int grp_ID = int(rID / g_grp_num_routers); 
   int dest_grp_ID = int(dest/g_grp_num_nodes);
   int grp_output=-1;
   int grp_RID=-1;
-  int group_dest=-1;
   
   //which router within this group the packet needs to go to
   if (dest_grp_ID == grp_ID) {
@@ -147,7 +74,6 @@ int dragonfly_port(int rID, int source, int dest){
       grp_output = dest_grp_ID - 1;
     }
     grp_RID = int(grp_output /gP) + grp_ID * g_grp_num_routers;
-    group_dest = grp_RID * gP;
   }
 
   //At the last hop
@@ -155,15 +81,16 @@ int dragonfly_port(int rID, int source, int dest){
     out_port = dest%gP;
   } else if (grp_RID == rID) {
     //At the optical link
-    out_port = gP + (gA-1) + grp_output %(gP);
+    int pick_one = RandomInt(1);
+    out_port = gP + 2*(2*gP-1) + 2*(grp_output %(gP))+pick_one ;
   } else {
     //need to route within a group
     assert(grp_RID!=-1);
-
+    int pick_one = RandomInt(1);
     if (rID < grp_RID){
-      out_port = (grp_RID % g_grp_num_routers) - 1 + gP;
+      out_port = pick_one + 2*((grp_RID % g_grp_num_routers) - 1) + gP;
     }else{
-      out_port = (grp_RID % g_grp_num_routers) + gP;
+      out_port = pick_one + 2*(grp_RID % g_grp_num_routers) + gP;
     }
   }  
  
@@ -171,99 +98,12 @@ int dragonfly_port(int rID, int source, int dest){
   return out_port;
 }
 
-//Dragonfly VCs are assigned by phase (ph)
-//With SRP control vcs, different offsets are added infront of the phase
-//Currently control vc DONOT route adaptively
-//          Spec vc DO route adaptively
-int SRP_VC_CONVERTER(int ph, int res_type){
-  int vc= -1;
-  switch(res_type){
-  case RES_TYPE_NACK:
-  case RES_TYPE_GRANT:
-  case RES_TYPE_ACK:
-    if(gECN){
-      return ph;
-    } else {
-      return (ph+
-	      gResVCStart); //offset: ecn_vc + aux
-    }
-    break;
-  case RES_TYPE_RES:
-    return (ph+
-	    gResVCStart); //reservation first set of vcs
-    break;
-  case RES_TYPE_SPEC:
-    return (ph+
-	    gSpecVCStart);//offset: ctrl_vc + ctrl_aux
-    break;
-  case RES_TYPE_NORM:
-    if(gECN){
-      return (ph+
-	      gNSpecVCStart); //offset: ack_vc + ack_aux
-    } else if(gReservation){
-      return (ph+
-	      gNSpecVCStart);
-    } else {
-      return ph;
-    }
-    break;
-  default:
-    assert(false);
-  }
-  return vc;
-}
+//same VC assignment as dragonfly
+extern int SRP_VC_CONVERTER(int ph, int res_type);
+extern void Dragonfly_Common_Setup( const Configuration &config);
 
-void  Dragonfly_Common_Setup( const Configuration &config){
-  gCRT = config.GetStr("routing_function")=="ugalcrt";
-  gPB = (config.GetStr("routing_function")=="ugalpb") ||
-    (config.GetStr("routing_function")=="ugalultra");
-  
-  if(config.GetStr("routing_function")=="ugalprog" ||
-     config.GetStr("routing_function")=="ugal" ||
-     config.GetStr("routing_function")=="ugalcrt" ||
-     config.GetStr("routing_function")=="ugalpb"){
-    gAdaptive = true;
-  }
-  
-  RESERVATION_ADAPT_CONTROL= (config.GetInt("reservation_adapt_control")==1);
-
-  gAdaptVCs = config.GetInt("adapt_vc");
-  gAuxVCs = config.GetInt("aux_vc");
-
-  //dragonfly can't do more than 1 spec vc
-  assert(config.GetInt("hotspot_reservation")!=1 || 
-	 config.GetInt( "res_vcs" )==1);
-
-  if(config.GetInt("hotspot_reservation")==1){
-    gResVCStart=0;
-    if(RESERVATION_ADAPT_CONTROL){
-      gGANVCStart =gResVCStart+1+gAdaptVCs+gAuxVCs;
-      gSpecVCStart=gGANVCStart+1+gAdaptVCs+gAuxVCs;
-    } else {
-      gGANVCStart =gResVCStart+1+gAuxVCs;
-      gSpecVCStart=gGANVCStart+1+gAuxVCs;
-    }
-    gNSpecVCStart= gSpecVCStart+1+gAdaptVCs+gAuxVCs;
-  } else {
-    gNSpecVCStart=0;
-  }
-
-  gAdaptiveThreshold = config.GetFloat("adaptive_threshold");
-  gAdaptiveThresholdSpec = config.GetFloat("adaptive_threshold_spec");
-  if(gAdaptiveThresholdSpec<0)
-    gAdaptiveThresholdSpec=gAdaptiveThreshold;
-
-  cout<<"Dragonfly Pre-setup\n";
-  cout<<"Res start "<<gResVCStart<<endl;
-  cout<<"GAN start "<<gGANVCStart<<endl;
-  cout<<"Spe start "<<gSpecVCStart<<endl;
-  cout<<"Nsp start "<<gNSpecVCStart<<endl;
-  cout<<"Threshold  "<<gAdaptiveThreshold<<endl;
-  cout<<"Spec Threshold "<<gAdaptiveThresholdSpec<<endl;
-}
-
-
-DragonFlyNew::DragonFlyNew( const Configuration &config, const string & name ) :
+//bandwidth ratio of 1:4:2
+DragonFull::DragonFull( const Configuration &config, const string & name ) :
   Network( config, name )
 {
 
@@ -272,9 +112,14 @@ DragonFlyNew::DragonFlyNew( const Configuration &config, const string & name ) :
   _BuildNet( config );
 }
 
-void DragonFlyNew::_ComputeSize( const Configuration &config )
+void DragonFull::_ComputeSize( const Configuration &config )
 {
-  Dragonfly_Common_Setup(config );
+
+  Dragonfly_Common_Setup(config);
+  
+  assert(!gCRT);//iq_router depends on gK
+  assert(!gPB);//iq_router depends on gA
+
 
   //These arrays are for ugal routing, hardcoded which VC to check for queu length
   //ECN not supported y et
@@ -305,9 +150,9 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
   //  -- only one dimension between the group
   // _n == # of dimensions within a group
   // _p == # of processors within a router
-  // inter-group ports : _p
+  // inter-group ports : 2_p
   // terminal ports : _p
-  // intra-group ports : 2*_p - 1
+  // intra-group ports : 4*_p - 1
   _p = config.GetInt( "k" );	// # of ports in each switch
   _n = config.GetInt( "n" );
   
@@ -318,40 +163,42 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
  
 
   assert(_n==1);
-  // dimension
 
+  //radix
   if (_n == 1)
-    _k = _p + _p + 2*_p  - 1;
+    _k = _p + 2*_p + 2*(2*_p  - 1);
   else
-    _k = _p + _p + 2*_p;
+    _k = _p + 2*_p + 4*_p;
 
   
-  // FIX...
-  gK = _p; gN = _n;
 
-  // with 1 dimension, total of 2p routers per group
-  // N = 2p * p * (2p^2 + 1)
-  // a = # of routers per group
-  //   = 2p (if n = 1)
-  //   = p^(n) (if n > 2)
-  //  g = # of groups
-  //    = a * p + 1
-  // N = a * p * g;
-  
+  gK = _p; 
+  gN = _n;
+
+  //routers per group
   if (_n == 1)
-    _a = 2 * _p;
+    _a = 2 * _p; //double channels in local group
   else
     _a = powi(_p, _n);
+  //only evens but this shouldn't be a problem
+  assert(((_a*_p)&0x01)==0);
 
-  _g = _a * _p + 1;
-  _nodes   = _a * _p * _g;
-
+  //globals per router
+  _h = 2*_p;
+  //groups
+  _g = ((_a * _h)>>1) + 1;
+  //network size
+  _nodes   = (_a * _p)* _g;
+  
+  //router count
   _num_of_switch = _nodes / _p;
-  _channels = _num_of_switch * (_k - _p); 
   _size = _num_of_switch;
+  //enwtork channel count
+  _channels = _num_of_switch * (_k - _p); 
 
 
-  PiggyPack::_size=gK;
+  PiggyPack::_size=gH;
+  gH = _h;
   gG = _g;
   gP = _p;
   gA = _a;
@@ -364,7 +211,7 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
   g_network_size = _nodes;
 }
 
-void DragonFlyNew::_BuildNet( const Configuration &config )
+void DragonFull::_BuildNet( const Configuration &config )
 {
 
   int _output;
@@ -372,13 +219,12 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
   int c;
   int _dim_ID;
   int _num_ports_per_switch;
-  int _dim_size;
 
   ostringstream router_name;
 
 
 
-  cout << " Dragonfly " << endl;
+  cout << " Dragonfly fullx2" << endl;
   cout << " p = " << _p << " n = " << _n << endl;
   cout << " each switch - total radix =  "<< _k << endl;
   cout << " # of switches = "<<  _num_of_switch << endl;
@@ -388,18 +234,17 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
   cout << " # of routers per group (_a) = " << _a << endl;
 
   for ( int node = 0; node < _num_of_switch; ++node ) {
+    //cout<<"router "<<node<<endl;
     // ID of the group
     int grp_ID;
     grp_ID = (int) (node/_a);
     router_name << "router";
-    
     router_name << "_" <<  node ;
-
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
 					node, _k, _k );
     _timed_modules.push_back(_routers[node]);
-
     router_name.str("");
+
 
     for ( int cnt = 0; cnt < _p; ++cnt ) {
       c = _p * node +  cnt;
@@ -414,39 +259,34 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
     }
 
     // add OUPUT channels
-    // _k == # of processor per router
-    //  need 2*_k routers  --thus, 
-    //  2_k-1 outputs channels within group
-    //  _k-1 outputs for intra-group
-
+    // _p == # of processor per router
+    //  need 2*_p routers  --thus, 
+    //  2(2_p-1) outputs channels within group, double channel
     //
 
     if (_n > 1 )  { cout << " ERROR: n>1 dimension NOT supported yet... " << endl; exit(-1); }
 
     //********************************************
-    //   connect OUTPUT channels
+    //   connect OUTPUT channels   EASY
     //********************************************
+    _num_ports_per_switch = (_k - _p);
     // add intra-group output channel
-    for ( int dim = 0; dim < _n; ++dim ) {
-      for ( int cnt = 0; cnt < (2*_p -1); ++cnt ) {
-	_output = (2*_p-1 + _p) * _n  * node + (2*_p-1) * dim  + cnt;
-
+    for ( int cnt = 0; cnt < 2*(2*_p -1); ++cnt ) {
+      _output = _num_ports_per_switch*node + cnt;
+      
 	_routers[node]->AddOutputChannel( _chan[_output], _chan_cred[_output] );
-
-
+	
 	_chan[_output]->SetLatency(_local_channel_latency);
 	_chan_cred[_output]->SetLatency(_local_channel_latency);
 	//cout<<_output<<" output local "<<endl;
-      }
     }
-
+    
     // add inter-group output channel
-
-    for ( int cnt = 0; cnt < _p; ++cnt ) {
-      _output = (2*_p-1 + _p) * node + (2*_p - 1) + cnt;
-
-      //      _chan[_output].global = true;
+    for ( int cnt = 0; cnt < _h; ++cnt ) {
+      _output = _num_ports_per_switch * node + 2*(2*_p - 1) + cnt;
+      
       _routers[node]->AddOutputChannel( _chan[_output], _chan_cred[_output] );
+
       _chan[_output]->SetGlobal();
       _chan_cred[_output]->SetGlobal();
       _chan[_output]->SetLatency(_global_channel_latency);
@@ -456,126 +296,112 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
 
 
     //********************************************
-    //   connect INPUT channels
+    //   connect INPUT channels HARD
     //********************************************
     // # of non-local nodes 
-    _num_ports_per_switch = (_k - _p);
-
-
+    int _num_port_bundle =  (_k - _p)>>1;
+    
     // intra-group GROUP channels
-    for ( int dim = 0; dim < _n; ++dim ) {
-
-      _dim_size = powi(_k,dim);
-
-      _dim_ID = ((int) (node / ( powi(_p, dim))));
-
-
-
+    {
       // NODE ID withing group
       _dim_ID = node % _a;
 
-
-
-
+      //cnt is not 2(2p-1) for easier calculation, we will just add input and input+1
       for ( int cnt = 0; cnt < (2*_p-1); ++cnt ) {
 
 	if ( cnt < _dim_ID)  {
 
-	  _input = 	grp_ID  * _num_ports_per_switch * _a - 
-	    (_dim_ID - cnt) *  _num_ports_per_switch + 
-	    _dim_ID * _num_ports_per_switch + 
-	    (_dim_ID - 1);
-	}
-	else {
-
+	  _input = 	grp_ID  * _num_ports_per_switch * _a +
+	    2*(cnt *  _num_port_bundle+ 
+	       (_dim_ID - 1));
+	}else {
 	  _input =  grp_ID * _num_ports_per_switch * _a + 
-	    _dim_ID * _num_ports_per_switch + 
-	    (cnt - _dim_ID + 1) * _num_ports_per_switch + 
-	    _dim_ID;
+	    2*((cnt + 1) *_num_port_bundle + 
+	       _dim_ID);
 			
 	}
 
-	if (_input < 0) {
-	  cout << " ERROR: _input less than zero " << endl;
+	if (_input < 0 ) {
+	  cout << " ERROR: _input less than zero or greater than _k " <<_input<< endl;
 	  exit(-1);
 	}
-	//cout<<_input<<" input local "<<endl;
+	//cout<<_input<<" input local "<<endl<<_input+1<<" input local "<<endl;
 	_routers[node]->AddInputChannel( _chan[_input], _chan_cred[_input] );
+	_routers[node]->AddInputChannel( _chan[_input+1], _chan_cred[_input+1] );
       }
     }
-
-
+    
+    
     // add INPUT channels -- "optical" channels connecting the groups
-    int _grp_num_routers;
-    int grp_output;
-    int grp_ID2;
+    int grp_output_bundle;
 
     for ( int cnt = 0; cnt < _p; ++cnt ) {
-      //	   _dim_ID
-      grp_output = _dim_ID* _p + cnt;
+      grp_output_bundle = _dim_ID* _p + cnt; //output bundle
 
-      _grp_num_routers = powi(_k, _n-1);
-      grp_ID2 = (int) ((grp_ID - 1) / (_k - 1));
 
-      if ( grp_ID > grp_output)   {
+      if ( grp_ID > grp_output_bundle)   {
 
-	_input = (grp_output) * _num_ports_per_switch * _a    +   		// starting point of group
-	  (_num_ports_per_switch - _p) * (int) ((grp_ID - 1) / _p) +      // find the correct router within grp
-	  (_num_ports_per_switch - _p) + 					// add offset within router
-	  grp_ID - 1;	
+	_input = (grp_output_bundle) * _num_ports_per_switch * _a    +   		// starting point of group
+	  2*((_num_port_bundle  - _p) * (int) ((grp_ID - 1) / _p) +      // find the correct router within grp
+	     (_num_port_bundle  - _p) + 					// add offset within router
+	     grp_ID - 1);	
       } else {
 
-	_input = (grp_output + 1) * _num_ports_per_switch * _a    + 
-	  (_num_ports_per_switch - _p) * (int) ((grp_ID) / _p) +      // find the correct router within grp
-	  (_num_ports_per_switch - _p) +
-	  grp_ID;	
+	_input = (grp_output_bundle + 1) * _num_ports_per_switch * _a    + 
+	  2*((_num_port_bundle  - _p) * (int) ((grp_ID) / _p) +      // find the correct router within grp
+	     (_num_port_bundle  - _p) +
+	     grp_ID);	
       }
-      
-      //cout<<_input<<" input global "<<endl;
+      //cout<<_input<<" input global "<<endl<<_input+1<<" input global "<<endl;
       _routers[node]->AddInputChannel( _chan[_input], _chan_cred[_input] );
+      _routers[node]->AddInputChannel( _chan[_input+1], _chan_cred[_input+1] );
     }
 
+  }
+
+  for(size_t i = 0; i<_chan.size(); i++){
+    assert(_chan[i]->GetSink()!=-1);
+    assert(_chan[i]->GetSource()!=-1);
   }
 
   cout<<"Done links"<<endl;
 }
 
 
-int DragonFlyNew::GetN( ) const
+int DragonFull::GetN( ) const
 {
   return _n;
 }
 
-int DragonFlyNew::GetK( ) const
+int DragonFull::GetK( ) const
 {
   return _k;
 }
 
-void DragonFlyNew::InsertRandomFaults( const Configuration &config )
+void DragonFull::InsertRandomFaults( const Configuration &config )
 {
  
 }
 
-double DragonFlyNew::Capacity( ) const
+double DragonFull::Capacity( ) const
 {
   return (double)_k / 8.0;
 }
 
-void DragonFlyNew::RegisterRoutingFunctions(){
+void DragonFull::RegisterRoutingFunctions(){
 
-  gRoutingFunctionMap["min_dragonflynew"] = &min_dragonflynew;
-  gRoutingFunctionMap["val_dragonflynew"] = &val_dragonflynew;
-  gRoutingFunctionMap["ugal_dragonflynew"] = &ugal_dragonflynew;
-  gRoutingFunctionMap["ugalcrt_dragonflynew"] = &ugal_dragonflynew;
-  gRoutingFunctionMap["ugalpb_dragonflynew"] = &ugal_dragonflynew;
-  gRoutingFunctionMap["ugalultra_dragonflynew"] = &ugalprog_dragonflynew;
-  gRoutingFunctionMap["ugalprog_dragonflynew"] = &ugalprog_dragonflynew;
+  gRoutingFunctionMap["min_dragonfull"] = &min_dragonfull;
+  gRoutingFunctionMap["val_dragonfull"] = &val_dragonfull;
+  gRoutingFunctionMap["ugal_dragonfull"] = &ugal_dragonfull;
+  gRoutingFunctionMap["ugalcrt_dragonfull"] = &ugal_dragonfull;
+  gRoutingFunctionMap["ugalpb_dragonfull"] = &ugal_dragonfull;
+  gRoutingFunctionMap["ugalprog_dragonfull"] = &ugalprog_dragonfull;
 }
 
 
 
 
-void min_dragonflynew( const Router *r, const Flit *f, int in_channel, 
+void min_dragonfull( const Router *r, const Flit *f, int in_channel, 
 		       OutputSet *outputs, bool inject )
 {
   outputs->Clear( );
@@ -601,10 +427,10 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
     }
   } 
 
-  out_port = dragonfly_port(rID, f->src, dest);
+  out_port = dragonfull_port(rID, f->src, dest);
 
   //optical dateline
-  if (out_port >=gP + (gA-1)) {
+  if (out_port >=gP + 2*(2*gP-1)) {
     f->ph = 1;
   }  
   
@@ -619,7 +445,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
 
 
-void val_dragonflynew( const Router *r, const Flit *f, int in_channel, 
+void val_dragonfull( const Router *r, const Flit *f, int in_channel, 
 		       OutputSet *outputs, bool inject )
 {
 
@@ -688,22 +514,22 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
   //port assignement based on the phase
   if(f->ph == 2 || f->ph==3){
     assert(f->minimal!=1);
-    out_port = dragonfly_port(rID, f->src, f->intm);
+    out_port = dragonfull_port(rID, f->src, f->intm);
   } else if(f->ph == 0){
-    out_port = dragonfly_port(rID, f->src, f->dest);
+    out_port = dragonfull_port(rID, f->src, f->dest);
   } else if(f->ph == 1 ){
-    out_port = dragonfly_port(rID, f->src, f->dest);
+    out_port = dragonfull_port(rID, f->src, f->dest);
   } else {
     assert(false);
   }
 
   //optical dateline
-  if (f->ph == 0 && out_port >=gP + (gA-1)) {
+  if (f->ph == 0 && out_port >=gP + 2*(2*gP-1)) {
     f->ph = 1;
   }  
 
   //optical dateline nonmin
-  if (f->ph == 2 && out_port >=gP + (gA-1)) {
+  if (f->ph == 2 && out_port >=gP + 2*(2*gP-1)) {
     f->ph = 3;
   }  
  
@@ -714,7 +540,7 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
 
 
-int dragonfly_intm_select(int src_grp, int dst_grp, int grps, int grp_size, int net_size){
+int dragonfull_intm_select(int src_grp, int dst_grp, int grps, int grp_size, int net_size){
   if(ADAPTIVE_INTM_ALL){
     return RandomInt(net_size - 1);
   } else {
@@ -736,12 +562,6 @@ extern int debug_adaptive_prog_GvL_min;
 extern int debug_adaptive_prog_GvG;
 extern int debug_adaptive_prog_GvG_min;
 
-extern int debug_adaptive_pb;
-extern int debug_adaptive_pb_tt;
-extern int debug_adaptive_pb_tf;
-extern int debug_adaptive_pb_ft;
-extern int debug_adaptive_pb_ff;
-
 extern int debug_adaptive_LvL;
 extern int debug_adaptive_LvL_min;
 extern int debug_adaptive_LvG;
@@ -751,7 +571,7 @@ extern int debug_adaptive_GvL_min;
 extern int debug_adaptive_GvG;
 extern int debug_adaptive_GvG_min;
 
-void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel, 
+void ugalprog_dragonfull( const Router *r, const Flit *f, int in_channel, 
 			    OutputSet *outputs, bool inject )
 {
   //ph 0 min 
@@ -800,7 +620,7 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
       f->minimal = 1;
     } else {
       //select a random node
-      f->intm =dragonfly_intm_select(grp_ID, dest_grp_ID, 
+      f->intm =dragonfull_intm_select(grp_ID, dest_grp_ID, 
 			   gG, g_grp_num_nodes, g_network_size);
       intm_grp_ID = int(f->intm/g_grp_num_nodes);
       if (debug){
@@ -815,11 +635,12 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	f->ph = 0;
 	f->minimal = 1;
       } else {
-	min_router_output = dragonfly_port(rID, f->src, f->dest); 
-	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
+	min_router_output = dragonfull_port(rID, f->src, f->dest); 
+	nonmin_router_output = dragonfull_port(rID, f->src, f->intm);
 
 	//min and non-min output port could be identical, need to distinquish them
 	if(nonmin_router_output == min_router_output){
+
 	  if(gReservation){
 	    min_queue_size = 
 	      r->GetCreditArray(min_router_output,
@@ -836,6 +657,11 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	      r->GetCreditArray(nonmin_router_output,
 				vc_nonmin_same,1,false, true);
 	  }
+	  //handling spec packets speically
+	  if(f->res_type!=RES_TYPE_SPEC){
+	    min_queue_size=0;
+	    nonmin_queue_size=9999;
+	  }
 	} else {	  
 	  min_queue_size = r->GetCredit(min_router_output); 
 	  nonmin_queue_size = r->GetCredit(nonmin_router_output);
@@ -843,73 +669,47 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	
 	if(nonmin_router_output == min_router_output){
 	  debug_adaptive_same++;
-	} else if( (min_router_output >=gP + gA-1) && 
-		   (nonmin_router_output >=gP + gA-1) ){
+	} else if( (min_router_output >=gP + 2*(2*gP-1)) && 
+		   (nonmin_router_output >=gP + 2*(2*gP-1)) ){
 	  debug_adaptive_GvG++;
-	} else if( (min_router_output >=gP + gA-1) && 
-		   (nonmin_router_output <gP + gA-1) ){
+	} else if( (min_router_output >=gP +  2*(2*gP-1)) && 
+		   (nonmin_router_output <gP +  2*(2*gP-1)) ){
 	  debug_adaptive_GvL++;
-	} else if( (min_router_output <gP + gA-1) && 
-		   (nonmin_router_output >=gP + gA-1) ){
+	} else if( (min_router_output <gP +  2*(2*gP-1)) && 
+		   (nonmin_router_output >=gP +  2*(2*gP-1)) ){
 	  debug_adaptive_LvG++;
-	} else if( (min_router_output <gP + gA-1) && 
-		   (nonmin_router_output <gP + gA-1) ){
+	} else if( (min_router_output <gP +  2*(2*gP-1)) && 
+		   (nonmin_router_output <gP +  2*(2*gP-1)) ){
 	  debug_adaptive_LvL++;
 	} else {
 	  assert(false);
 	}
-
-	//this is the adaptive decision
-	bool minimal = true;
-
-	if(gPB){
-	  //prog with pb
-	  bool min_global_congest = r->GetCongest(dragonfly_global_index(grp_ID, dest_grp_ID));
-	  bool nonmin_global_congest= r->GetCongest(dragonfly_global_index(grp_ID, intm_grp_ID));
-	  minimal = (1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold &&
-	    !(min_global_congest && !nonmin_global_congest);
-
-	  debug_adaptive_pb++;
-	  if((min_global_congest && nonmin_global_congest)){
-	    debug_adaptive_pb_tt++;
-	  } else if((min_global_congest && !nonmin_global_congest)){
-	    debug_adaptive_pb_tf++;
-	  } if((!min_global_congest && nonmin_global_congest)){
-	    debug_adaptive_pb_ft++;
-	  } if((!min_global_congest && !nonmin_global_congest)){
-	    debug_adaptive_pb_ff++;
-	  }
-
-	} else {
-	  //normal prog
-	  minimal = (1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold;  
-	}
-
 	//handling spec packets specially
 	//spec packet has a hard deadline and must be respected
 	if(f->res_type==RES_TYPE_SPEC){
 	  if(min_queue_size>f->exptime && nonmin_queue_size<f->exptime){
-	    minimal=false;
+	    min_queue_size=999999;
+	    nonmin_queue_size=0;
 	  } 
 	}
 
-	if (minimal) {	  
+	if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold) {	  
 	  if (debug)  cout << " MINIMAL routing " << endl;
 	  f->ph = 4;
 	  f->minimal = 1;
 	  if(nonmin_router_output == min_router_output){
 	    debug_adaptive_same_min++;	  
-	  } else if( (min_router_output >=gP + gA-1) && 
-		     (nonmin_router_output >=gP + gA-1) ){
+	  } else if( (min_router_output >=gP +  2*(2*gP-1)) && 
+		     (nonmin_router_output >=gP +  2*(2*gP-1)) ){
 	    debug_adaptive_GvG_min++;
-	  } else if( (min_router_output >=gP + gA-1) && 
-		     (nonmin_router_output <gP + gA-1) ){
+	  } else if( (min_router_output >=gP +  2*(2*gP-1)) && 
+		     (nonmin_router_output <gP +  2*(2*gP-1)) ){
 	    debug_adaptive_GvL_min++;
-	  } else if( (min_router_output <gP + gA-1) && 
-		     (nonmin_router_output >=gP + gA-1) ){
+	  } else if( (min_router_output <gP +  2*(2*gP-1)) && 
+		     (nonmin_router_output >=gP +  2*(2*gP-1)) ){
 	    debug_adaptive_LvG_min++;
-	  } else if( (min_router_output <gP + gA-1) && 
-		     (nonmin_router_output <gP + gA-1) ){
+	  } else if( (min_router_output <gP +  2*(2*gP-1)) && 
+		     (nonmin_router_output <gP +  2*(2*gP-1)) ){
 	    debug_adaptive_LvL_min++;
 	  }else {
 	    assert(false);
@@ -917,17 +717,17 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	} else {
 
 	  if(nonmin_router_output == min_router_output){
-	  } else if( (min_router_output >=gP + gA-1) && 
-		     (nonmin_router_output >=gP + gA-1) ){
-	  } else if( (min_router_output >=gP + gA-1) && 
-		     (nonmin_router_output <gP + gA-1) ){
+	  } else if( (min_router_output >=gP +  2*(2*gP-1)) && 
+		     (nonmin_router_output >=gP +  2*(2*gP-1)) ){
+	  } else if( (min_router_output >=gP +  2*(2*gP-1)) && 
+		     (nonmin_router_output <gP +  2*(2*gP-1)) ){
 
 
-	  } else if( (min_router_output <gP + gA-1) && 
-		     (nonmin_router_output >=gP + gA-1) ){
+	  } else if( (min_router_output <gP +  2*(2*gP-1)) && 
+		     (nonmin_router_output >=gP +  2*(2*gP-1)) ){
 
-	  } else if( (min_router_output <gP + gA-1) && 
-		     (nonmin_router_output <gP + gA-1) ){
+	  } else if( (min_router_output <gP +  2*(2*gP-1)) && 
+		     (nonmin_router_output <gP +  2*(2*gP-1)) ){
 	  }else {
 	    assert(false);
 	  }
@@ -937,11 +737,11 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	}
       }
     }
-  } else if( f->ph == 4 && f->minimal==1){ //progressive
-    assert(in_channel<gP + gA-1);
+  } else if(f->ph == 4 && f->minimal==1){ //progressive
+    assert(in_channel<gP +  2*(2*gP-1));
 
     //select a random node, maybe we should keep the old one
-    //f->intm =dragonfly_intm_select(grp_ID, dest_grp_ID, 
+    //f->intm =dragonfull_intm_select(grp_ID, dest_grp_ID, 
     //gG, g_grp_num_nodes, g_network_size);
 
     intm_grp_ID = (int)(f->intm/g_grp_num_nodes);
@@ -954,55 +754,42 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
       //shoudl track this stat
     } else {
       //congestion metric using queue length
-      min_router_output = dragonfly_port(rID, f->src, f->dest); 
+      min_router_output = dragonfull_port(rID, f->src, f->dest); 
       min_queue_size = r->GetCredit(min_router_output); 
       
       
-      nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
+      nonmin_router_output = dragonfull_port(rID, f->src, f->intm);
       nonmin_queue_size = r->GetCredit(nonmin_router_output);
       
-      if( (min_router_output >=gP + gA-1) && 
-	  (nonmin_router_output >=gP + gA-1) ){
+      if( (min_router_output >=gP + 2*(2*gP-1)) && 
+	  (nonmin_router_output >=gP + 2*(2*gP-1)) ){
 	debug_adaptive_prog_GvG++;
-      } else if( (min_router_output >=gP + gA-1) && 
-		 (nonmin_router_output <gP + gA-1) ){
+      } else if( (min_router_output >=gP + 2*(2*gP-1)) && 
+		 (nonmin_router_output <gP + 2*(2*gP-1)) ){
 	debug_adaptive_prog_GvL++;
       } else {
 	assert(false);
       }
-      bool minimal = true;
       
-      if(gPB){
-	  //prog with pb
-	  bool min_global_congest = r->GetCongest(dragonfly_global_index(grp_ID, dest_grp_ID));
-	  bool nonmin_global_congest= r->GetCongest(dragonfly_global_index(grp_ID, intm_grp_ID));
-	  minimal = (1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold&&
-	    !(min_global_congest && !nonmin_global_congest);
-      } else {
-	//normal prog
-	minimal = (1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ;
-      }
-
       //special spec handling
       if(f->res_type==RES_TYPE_SPEC){
 	if(min_queue_size>f->exptime && nonmin_queue_size<f->exptime){
-	  minimal=false;
+	  min_queue_size=999999;
+	  nonmin_queue_size=0;
 	} 
       }
       
-      if (minimal) {
-	//minimal minimal
-	if( (min_router_output >=gP + gA-1) && 
-	    (nonmin_router_output >=gP + gA-1) ){
+      if ((1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold ) {
+	if( (min_router_output >=gP + 2*(2*gP-1)) && 
+	    (nonmin_router_output >=gP + 2*(2*gP-1)) ){
 	  debug_adaptive_prog_GvG_min++;
-	} else if( (min_router_output >=gP + gA-1) && 
-		   (nonmin_router_output <gP + gA-1) ){
+	} else if( (min_router_output >=gP + 2*(2*gP-1)) && 
+		   (nonmin_router_output <gP + 2*(2*gP-1)) ){
 	  debug_adaptive_prog_GvL_min++;
 	} else {
 	  assert(false);
 	}
       } else {
-	//non minimal
 	f->ph = 2;
 	f->minimal = 2;
       }
@@ -1021,20 +808,20 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
   //port assignement based on the phase
   if(f->ph == 2 || f->ph == 3){
     assert(f->minimal!=1);
-    out_port = dragonfly_port(rID, f->src, f->intm);
+    out_port = dragonfull_port(rID, f->src, f->intm);
   } else if(f->ph == 0 || f->ph == 4 ){
-    out_port = dragonfly_port(rID, f->src, f->dest);
+    out_port = dragonfull_port(rID, f->src, f->dest);
   } else if(f->ph == 1){
-    out_port = dragonfly_port(rID, f->src, f->dest);
+    out_port = dragonfull_port(rID, f->src, f->dest);
   } else {
     assert(false);
   }
 
   //optical dateline
-  if ((f->ph == 0||f->ph == 4) && out_port >=gP + gA-1) {
+  if ((f->ph == 0||f->ph == 4) && out_port >=gP + 2*(2*gP-1)) {
     f->ph = 1;
   }  
-  if (f->ph == 2 && out_port >=gP + gA-1) {
+  if (f->ph == 2 && out_port >=gP + 2*(2*gP-1)) {
     f->ph = 3;
   }  
  
@@ -1043,10 +830,17 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 }
 
 
+int dragonfull_global_index(int src, int dest){
+  if(src<dest){
+    return dest-1;
+  } else {
+    return dest;
+  }
+}
 
 //Why would you use this on a dragonfly
 //Basic adaptive routign algorithm for the dragonfly
-void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel, 
+void ugal_dragonfull( const Router *r, const Flit *f, int in_channel, 
 			OutputSet *outputs, bool inject )
 {
   //need 4 VCs for deadlock freedom
@@ -1094,7 +888,7 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
       f->minimal = 1;
     } else {
       //select a random node
-      f->intm =dragonfly_intm_select(grp_ID, dest_grp_ID, 
+      f->intm =dragonfull_intm_select(grp_ID, dest_grp_ID, 
 			   gG, g_grp_num_nodes, g_network_size);
       intm_grp_ID = int(f->intm/g_grp_num_nodes);
       if (debug){
@@ -1106,8 +900,8 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	f->ph = 0;
 	f->minimal = 1;
       } else {
-	min_router_output = dragonfly_port(rID, f->src, f->dest); 
-	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
+	min_router_output = dragonfull_port(rID, f->src, f->dest); 
+	nonmin_router_output = dragonfull_port(rID, f->src, f->intm);
 
 	//min and non-min output port could be identical, need to distinquish them
 	if(nonmin_router_output == min_router_output){
@@ -1142,23 +936,11 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	
 	bool minimal = true;
 	if(gPB){
-	  bool min_global_congest = r->GetCongest(dragonfly_global_index(grp_ID, dest_grp_ID));
-	  bool nonmin_global_congest= r->GetCongest(dragonfly_global_index(grp_ID, intm_grp_ID));
+	  bool min_global_congest = r->GetCongest(dragonfull_global_index(grp_ID, dest_grp_ID));
+	  bool nonmin_global_congest= r->GetCongest(dragonfull_global_index(grp_ID, intm_grp_ID));
 	  
 	  minimal = (1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold &&
 	    !(min_global_congest && !nonmin_global_congest);
-	  debug_adaptive_pb++;
-
-	  if((min_global_congest && nonmin_global_congest)){
-	    debug_adaptive_pb_tt++;
-	  } else if((min_global_congest && !nonmin_global_congest)){
-	    debug_adaptive_pb_tf++;
-	  } if((!min_global_congest && nonmin_global_congest)){
-	    debug_adaptive_pb_ft++;
-	  } if((!min_global_congest && !nonmin_global_congest)){
-	    debug_adaptive_pb_ff++;
-	  }
-
 	} else {
 	  minimal = (1 * min_queue_size ) <= (2 * nonmin_queue_size)+adaptive_threshold;
 	}
@@ -1220,11 +1002,11 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
   //port assignement based on the phase
   if(f->ph == 2|| f->ph==3){
     assert(f->minimal!=1);
-    out_port = dragonfly_port(rID, f->src, f->intm);
+    out_port = dragonfull_port(rID, f->src, f->intm);
   } else if(f->ph == 0){
-    out_port = dragonfly_port(rID, f->src, f->dest);
+    out_port = dragonfull_port(rID, f->src, f->dest);
   } else if(f->ph == 1){
-    out_port = dragonfly_port(rID, f->src, f->dest);
+    out_port = dragonfull_port(rID, f->src, f->dest);
   } else {
     assert(false);
   }

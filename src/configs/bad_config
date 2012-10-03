@@ -1,0 +1,3 @@
+traffic       = bad_dragon;
+drain_measured_only=1;
+const_flits_per_packet = 32;

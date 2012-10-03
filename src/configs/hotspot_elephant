@@ -1,12 +1,12 @@
 //a number of hotspot sending to a single destiantion, no other traffic
 
-create_permanent_flows=0;
-flow_size = 8;
+create_permanent_flows=1;
+flow_size = 999999;
 const_flits_per_packet = 32;
 
 injection_rate = 1.0;
 injection_process=hotspot_test;
-traffic       = noself_hotspot;
+traffic       = rand_noself_hotspot;
 hotspot_nodes = {32};
 hotspot_rates = {1};
 

@@ -191,6 +191,8 @@ public:
   int* _crt_delay;
   int* _crt;
   bool* _global_table;
+  int * _global_array;
+  int _global_average;
 
   IQRouter( Configuration const & config,
 	    Module *parent, string const & name, int id,

@@ -67,8 +67,9 @@ extern int ECN_BUFFER_HYSTERESIS;
 extern int ECN_CREDIT_HYSTERESIS;
 
 extern int PB_THRESHOLD;
-
 extern bool RESERVATION_BUFFER_SIZE_DROP;
+
+bool ADAPTIVE_PERFECT_PB= true;
 
 //improves large simulation performance
 #define USE_LARGE_ARB
@@ -77,6 +78,7 @@ extern bool RESERVATION_BUFFER_SIZE_DROP;
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 int router_global_index(int rid, int output){
+  //this does not work for dragonfull
   int router_grp_position = rid % gA;
   int channel_router_position = (output-(gK+gA-1));
   assert(channel_router_position >=0);
@@ -89,6 +91,10 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 		    string const & name, int id, int inputs, int outputs )
   : Router( config, parent, name, id, inputs, outputs ), _active(false)
 {
+
+  ADAPTIVE_PERFECT_PB=(config.GetInt("adaptive_perfect_pb")==1);
+
+
   /////////////////////
   //VC setup parameters
   _cut_through = (config.GetInt("cut_through")==1);
@@ -104,15 +110,15 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
   if(_voq){
     if(gReservation){
-      _ctrl_vcs = RES_RESERVED_VCS+RES_RESERVED_VCS*gAuxVCs;
-      _spec_vcs = gResVCs + gAuxVCs + gAdaptVCs;
+      _ctrl_vcs = gSpecVCStart;
+      _spec_vcs = config.GetInt( "res_vcs" ) + gAuxVCs + gAdaptVCs;
       if(_spec_voq){
 	_special_vcs =  _ctrl_vcs; //spec gets included in data vc
       } else {
-	_special_vcs = _ctrl_vcs + gResVCs + gAuxVCs + gAdaptVCs;
+	_special_vcs = gNSpecVCStart;;
       }
     } else if(gECN){
-      _ctrl_vcs=ECN_RESERVED_VCS+gAuxVCs;;
+      _ctrl_vcs=gNSpecVCStart;;
       _special_vcs=_ctrl_vcs;
     } else {
       _ctrl_vcs= 0;
@@ -140,6 +146,12 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
     _global_table = new bool[gG-1];
     for(int i = 0; i<gG-1; i++){
       _global_table[i] = false;
+    }
+    if(ADAPTIVE_PERFECT_PB){
+      _global_array= new int[gA];
+      for(int i = 0; i<gA; i++){
+	_global_array[i] = 0;
+      }
     }
   }
 
@@ -424,6 +436,15 @@ void IQRouter::ReadInputs( )
 	   _next_bandwidth_commitment, 
 	   sizeof(int)*_outputs*_num_vcs);
   }
+  if(gPB && ADAPTIVE_PERFECT_PB){
+    int sum = 0; 
+    for(int i = 0; i<gK; i++){
+      int index = gK+gA-1+i;
+      assert(_output_channels[index]->GetGlobal());
+      sum += GetCredit(index);
+    }
+    _global_average = sum/gK;
+  }
  
   bool have_flits = _ReceiveFlits( );
   bool have_credits = _ReceiveCredits( );
@@ -598,6 +619,9 @@ bool IQRouter::_ReceiveFlits( )
       f->pb->Free();
       f->pb = NULL;
       if(f->id==-666){ //this is fake
+	if(ADAPTIVE_PERFECT_PB){
+	  _global_array[_input_channels[input]->GetSource()%gA] =f->payload;
+	}
 	f->Free();
 	continue;
       }
@@ -2499,16 +2523,35 @@ void IQRouter::_OutputQueuing( )
 
 void IQRouter::_SendFlits( )
 {
+  int group_threshold = 0;
+  if(ADAPTIVE_PERFECT_PB){
+    for(int i = 0; i<gA; i++){
+      //cout<< _global_array[i]<<"\t";//deug
+      group_threshold += 	_global_array[i];
+    }
+    //cout<<endl<<group_threshold<<"\t";//debug
+    group_threshold= group_threshold/(gA-1);//value for this router *should always be zero
+    //cout<<group_threshold<<endl;//debug
+  }
 
   for(int i = 0; i<_outputs; i++){
     if(gPB && _output_channels[i]->GetGlobal()){
       int grp_global_index = router_global_index(GetID(),i);
       assert(grp_global_index<gG-1);
       int output_level =GetCredit(i);
-      if(output_level >=PB_THRESHOLD){
-	_global_table[grp_global_index]=true;
+      if(!ADAPTIVE_PERFECT_PB){
+	if(output_level >=PB_THRESHOLD){
+	  _global_table[grp_global_index]=true;
+	} else {
+	  _global_table[grp_global_index]=false;
+	}
       } else {
-	_global_table[grp_global_index]=false;
+	if(output_level >=2*group_threshold && output_level >=PB_THRESHOLD){
+	  //cout<<grp_global_index<<"\t"<<output_level<<" "<<group_threshold<<endl;//debug
+	  _global_table[grp_global_index]=true;
+	} else {
+	  _global_table[grp_global_index]=false;
+	}
       }
     }
 
@@ -2516,7 +2559,9 @@ void IQRouter::_SendFlits( )
       if(_voq && _ecn_use_voq_size){
 	int voq_size =0;
 	for(int j = 0;  j<_inputs; j++){
-	  voq_size+=_buf[j]->GetSize(vc2voq(ECN_RESERVED_VCS,i));//this assumes 1 data vc
+	  for(int v=_special_vcs; v<_num_vcs; v++){
+	    voq_size+=_buf[j]->GetSize(vc2voq(v,i));
+	  }
 	}	
 	if(_output_hysteresis[i]){
 	  _output_hysteresis[i] = (voq_size >=((size_t)ECN_CONGEST_THRESHOLD-ECN_BUFFER_HYSTERESIS));
@@ -2526,6 +2571,7 @@ void IQRouter::_SendFlits( )
       } else {
 	assert(_voq);
       }
+  
       for(int j = 0; j<_num_vcs; j++){
 	BufferState * const dest_buf = _next_buf[i];
 	if(_credit_hysteresis[i*_num_vcs+j]){
@@ -2570,6 +2616,9 @@ void IQRouter::_SendFlits( )
 	    int index = router_global_index(GetID(),
 					    gK+gA-1+i);
 	    f->pb->_data[i] = _global_table[index];
+	  }
+	  if(ADAPTIVE_PERFECT_PB){
+	    f->payload=_global_average;
 	  }
 	  _output_channels[output]->Send( f );
 	}

@@ -42,6 +42,7 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["rand_hotspot_src"] = 2;
   _int_map["rand_hotspot_dst"] = 1;
+  _int_map["rand_hotspot_split"] = 1;
 
   //0 for most networks, 1 for dragonfly
   _int_map["aux_vc"] = 0;
@@ -51,7 +52,8 @@ BookSimConfig::BookSimConfig( )
   //1 all gropus eligibile for intm, 0, exclude src dst
   _int_map["adaptive_intm"] = 1;
   _float_map["adaptive_threshold"] = 6.0;
-  _float_map["spec_adaptive_threshold"] = -1.0;
+  _float_map["adaptive_threshold_spec"] = -1.0;
+  _int_map["adaptive_perfect_pb"] = 0;
   _int_map["dragonfly_global_latency"] = 30;
   _int_map["dragonfly_local_latency"] = 5;
   _int_map["remove_credit_rtt"] = 0;
@@ -62,11 +64,11 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["default_channel_latency"]=1;
 
-  _int_map["voq"] = 0;
-  _int_map["use_voq_size"] = 0;
+  _int_map["voq"] = 1;
+  _int_map["use_voq_size"] = 1;
   _int_map["forced_warmup"] = 0;
   _int_map["no_drain"] = 0;
-  _int_map["cut_through"]=0;
+  _int_map["cut_through"]=1;
 
   _int_map["transient_granularity"] = 1;
   _int_map["transient_prestart"] = 50000;
@@ -78,25 +80,28 @@ BookSimConfig::BookSimConfig( )
   _int_map["transient_finalize"]=0;;
   AddStrField("transient_data","");
 
-  _int_map["reservation_buffer_size_drop"] = 0;
+  _int_map["reservation_adapt_control"] = 0;
+  _int_map["reservation_buffer_size_drop"] = 1;
   _int_map["reservation_spec_off"] = 0;
   _int_map["reservation_always_succeed"] = 0;
   _float_map["reservation_rtt"] = 1.0;
-  _float_map["reservation_overhead_factor"] = 1.05;
-  _int_map["reservation_control_overhead"] = 0;
-  _int_map["reservation_walkin_overhead"] = 0;
-  _int_map["fast_reservation_transmit"] = 0;
+  _float_map["reservation_overhead_factor"] = 1.03;
+  _int_map["reservation_control_overhead"] = 5;
+  _int_map["reservation_walkin_overhead"] = 1;
+  _int_map["fast_reservation_transmit"] = 1;
   _int_map["reservation_packet_threshold"] = 128;
   _int_map["reservation_chunk_limit"] = 256;
   _int_map["fast_retransmit"] = 0;
   _int_map["reservation_queuing_drop"]= 1;
   _int_map["reservation_post_wait"]= 0;
-  _int_map["reservation_spec_voq"] = 0;
+  _int_map["reservation_spec_voq"] = 1;
   _int_map["reservation_tail_reserve"]=0;
+  _int_map["reservation_dest_lat_accounting"]=0;
+  _int_map["reservation_ideal_expected_latency"] = 0;
 
   _int_map["bystander_sender"] = 0;
   _int_map["bystander_receiver"] = 0;
-  _int_map["create_permanent_flows"] = 0;
+
 
   _int_map["flow_merge"] = 1;
   _int_map["flow_buffer_capacity"] = 128; //not used
@@ -107,24 +112,25 @@ BookSimConfig::BookSimConfig( )
   _int_map["flow_size_range"] = 0;
   AddStrField("flow_size_range","");
   _int_map["flow_mix_mode"] = 0;
-
+  AddStrField("create_permanent_flows","");
+  _int_map["create_permanent_flows"] = 0;
 
 
   _int_map["res_vcs"] = 1;
   _int_map["hotspot_reservation"] = 0;
-  _int_map["expiration_time"] = 200;
+  _int_map["expiration_time"] = 600;
 
   _int_map["ECN"] = 0;
-  _int_map["ird_reset_timer"] = 100;
+  _int_map["ird_reset_timer"] = 40;
   _int_map["ecn_timer_only"] = 1;
-  _int_map["ecn_buffer_threshold"] = 30;
-  _int_map["ecn_congestion_threshold"] = 40;
+  _int_map["ecn_buffer_threshold"] = 64;
+  _int_map["ecn_congestion_threshold"] = 512;
   _int_map["ird_scaling_factor"] = 1;
-  _int_map["ecn_ird_increase"] = 4;
+  _int_map["ecn_ird_increase"] = 256;
   _int_map["ecn_buffer_hysteresis"] = 0;
   _int_map["ecn_credit_hysteresis"] = 0;
   _int_map["ecn_aimd"] = 0;;
-  _int_map["ecn_ird_limit"]=1000;
+  _int_map["ecn_ird_limit"]=4000;
   //========================================================
   // Network options
   //========================================================
