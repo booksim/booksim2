@@ -15,6 +15,6 @@ aux_vc=1;
 adapt_vc=3;
 num_vcs=14;
 	
-adaptive_threshold=14.0;
+adaptive_threshold=4.0;
 adaptive_threshold_spec=0.0;
 adaptive_intm=0;

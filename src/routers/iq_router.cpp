@@ -68,6 +68,7 @@ extern int ECN_CREDIT_HYSTERESIS;
 
 extern int PB_THRESHOLD;
 extern bool RESERVATION_BUFFER_SIZE_DROP;
+extern bool RESERVATION_ADAPT_SPEC_KILL;
 
 bool ADAPTIVE_PERFECT_PB= true;
 
@@ -721,6 +722,9 @@ void IQRouter::_InputQueuing( )
     Buffer * const cur_buf = _buf[input];
     OutputSet * o = NULL;
     if(f->head){
+#ifdef FLIT_HOP_LATENCY 
+      f->arrival_stamp=GetSimTime();
+#endif 
       o = OutputSet::New();
     }
     if(_voq && vc2voq(vc)==-1){
@@ -958,6 +962,14 @@ void IQRouter::_VCAllocEvaluate( )
     assert(f);
     assert(f->head);
     
+    //check for routing drop
+    if(gReservation && 
+       RESERVATION_ADAPT_SPEC_KILL && 
+       f->res_type == RES_TYPE_SPEC&&
+       f->payload == -666){
+      cur_buf->SetDrop(vc);
+      continue;
+    }
     //check for expiration
     if(gReservation && VC_ALLOC_DROP && f->res_type == RES_TYPE_SPEC){
       if(( RESERVATION_QUEUING_DROP && f->exptime<GetSimTime()-cur_buf->TimeStamp(vc)) ||
@@ -2524,7 +2536,7 @@ void IQRouter::_OutputQueuing( )
 void IQRouter::_SendFlits( )
 {
   int group_threshold = 0;
-  if(ADAPTIVE_PERFECT_PB){
+  if(gPB && ADAPTIVE_PERFECT_PB){
     for(int i = 0; i<gA; i++){
       //cout<< _global_array[i]<<"\t";//deug
       group_threshold += 	_global_array[i];
@@ -2586,6 +2598,11 @@ void IQRouter::_SendFlits( )
   for ( int output = 0; output < _outputs; ++output ) {
     Flit * f = _output_buffer[output]->SendFlit();
     if(f){
+#ifdef FLIT_HOP_LATENCY 
+      if(f->head){
+	f->hop_lat.push(GetSimTime()-f-> arrival_stamp);
+      }
+#endif
      ++_sent_flits[output];
       if(gECN && f->head && f->res_type==RES_TYPE_NORM && !f->fecn ){	
 	if(_output_hysteresis[output] &&

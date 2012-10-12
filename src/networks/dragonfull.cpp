@@ -98,6 +98,12 @@ int dragonfull_port(int rID, int source, int dest){
   return out_port;
 }
 
+//test if two channels arrive at the same desitnation
+int dragonfull_equal_channel( int output1, int output2){ 
+  return  ((output1-gP)>>1) == ((output2-gP)>>1);
+}
+
+
 //same VC assignment as dragonfly
 extern int SRP_VC_CONVERTER(int ph, int res_type);
 extern void Dragonfly_Common_Setup( const Configuration &config);
@@ -639,7 +645,9 @@ void ugalprog_dragonfull( const Router *r, const Flit *f, int in_channel,
 	nonmin_router_output = dragonfull_port(rID, f->src, f->intm);
 
 	//min and non-min output port could be identical, need to distinquish them
-	if(nonmin_router_output == min_router_output){
+	if(nonmin_router_output == min_router_output ||
+	   r->GetOutputChannel(min_router_output)->GetSink()==
+	   r->GetOutputChannel(nonmin_router_output)->GetSink()){
 
 	  if(gReservation){
 	    min_queue_size = 
@@ -667,7 +675,9 @@ void ugalprog_dragonfull( const Router *r, const Flit *f, int in_channel,
 	  nonmin_queue_size = r->GetCredit(nonmin_router_output);
 	}
 	
-	if(nonmin_router_output == min_router_output){
+	if(nonmin_router_output == min_router_output||
+	   r->GetOutputChannel(min_router_output)->GetSink()==
+	   r->GetOutputChannel(nonmin_router_output)->GetSink()){
 	  debug_adaptive_same++;
 	} else if( (min_router_output >=gP + 2*(2*gP-1)) && 
 		   (nonmin_router_output >=gP + 2*(2*gP-1)) ){
@@ -697,7 +707,9 @@ void ugalprog_dragonfull( const Router *r, const Flit *f, int in_channel,
 	  if (debug)  cout << " MINIMAL routing " << endl;
 	  f->ph = 4;
 	  f->minimal = 1;
-	  if(nonmin_router_output == min_router_output){
+	  if(nonmin_router_output == min_router_output||
+	   r->GetOutputChannel(min_router_output)->GetSink()==
+	   r->GetOutputChannel(nonmin_router_output)->GetSink()){
 	    debug_adaptive_same_min++;	  
 	  } else if( (min_router_output >=gP +  2*(2*gP-1)) && 
 		     (nonmin_router_output >=gP +  2*(2*gP-1)) ){

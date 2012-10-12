@@ -500,7 +500,6 @@ int badperm_dflynew( int source, int total_nodes )
 
   temp = (int) (source / grp_size_nodes);
   dest =  (RandomInt(grp_size_nodes - 1) + (temp+1)*grp_size_nodes ) %  total_nodes;
-
   return dest;
 }
 ///each group of 4 groups send to another 4 groups such that

@@ -251,7 +251,7 @@ vector<int> gStatFlowMerged;
 Stats* gStatROBRange;
 
 Stats* gStatFlowSenderLatency;
-Stats* gStatFlowLatency;
+vector<Stats*> gStatFlowLatency;
 Stats* gStatActiveFlowBuffers;
 Stats* gStatNormActiveFlowBuffers;
 Stats* gStatReadyFlowBuffers;
@@ -270,6 +270,12 @@ Stats* gStatSourceLatency;
 Stats* gStatNackByPacket;
 
 Stats* gStatFastRetransmit;
+
+#ifdef FLIT_HOP_LATENCY 
+vector<Stats*> gStatHopLatMin;
+vector<Stats*> gStatHopLatNonMin;
+vector<Stats*> gStatHopLatProg;
+#endif
 
 int gStatBECN;
 
@@ -438,13 +444,12 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   gStatROBRange =  new Stats( this, "rob_range" , 1.0, 300 );
   
   gStatFlowSenderLatency =  new Stats( this, "flow_sender_latency" , 5.0, 1000 );
-  gStatFlowLatency=  new Stats( this, "flow_latency" , 10.0, 5000 );
+
   gStatActiveFlowBuffers=  new Stats( this, "active_flows" , 1.0, 100 );
   gStatNormActiveFlowBuffers=  new Stats( this, "normal_active_flows" , 1.0, 100 );
   gStatReadyFlowBuffers=  new Stats( this, "sender_ready_flows" , 1.0, 10 );
   gStatResponseBuffer=  new Stats( this, "response_range" , 1.0, 10 );
   
- 
   gStatAckLatency=  new Stats( this, "ack_hist" , 1.0, 1000 );
   gStatNackLatency=  new Stats( this, "nack_hist" , 1.0, 1000 );
   gStatResLatency=  new Stats( this, "res_hist" , 1.0, 1000 );
@@ -465,6 +470,19 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   gStatNackArrival = new Stats(this, "nack_arrival",1.0, 1000);
 
   gStatBECN = 0;
+
+#ifdef FLIT_HOP_LATENCY 
+  //assume max dragon hop count is 8
+  gStatHopLatMin.resize(8);
+  gStatHopLatNonMin.resize(8);
+  gStatHopLatProg.resize(8);
+  for(int i = 0; i<8; i++){
+    gStatHopLatMin[i] = new Stats(this, "hop",1.0, 2);
+    gStatHopLatNonMin[i] = new Stats(this, "hop",1.0, 2);
+    gStatHopLatProg[i] = new Stats(this, "hop",1.0, 2);
+  }
+#endif
+
 #endif
 
   //nodes higher than limit do not produce or receive packets
@@ -527,7 +545,9 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _classes = config.GetInt("classes");
   gStatPureNetworkLatency = new Stats*[_classes];
   gStatSpecNetworkLatency = new Stats*[_classes];
+  gStatFlowLatency.resize(_classes,NULL);
   for(int c = 0; c < _classes; ++c) {
+    gStatFlowLatency[c]=  new Stats( this, "flow_latency" , 10.0, 5000 );
     gStatSpecNetworkLatency[c] =  new Stats( this, "spec_net_hist" , 1.0, 1000 );
     gStatPureNetworkLatency[c] =  new Stats( this, "net_hist" , 1.0, 1000 );
   }
@@ -1085,7 +1105,7 @@ TrafficManager::~TrafficManager( )
     for ( int dest = 0; dest < _nodes; ++dest ) {
       delete _accepted_flits[c][dest];
     }
-    
+    delete gStatFlowLatency[c];
   }
   
   delete _batch_time;
@@ -1130,7 +1150,6 @@ TrafficManager::~TrafficManager( )
   delete gStatROBRange ;
  
   delete gStatFlowSenderLatency;
-  delete gStatFlowLatency;
   delete gStatActiveFlowBuffers;
   delete gStatNormActiveFlowBuffers;
   delete  gStatReadyFlowBuffers;
@@ -1555,7 +1574,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 #endif
 	if(receive_rob->done()){ //entire reservation chunk(s) has been received
 #ifdef ENABLE_STATS
-	  gStatFlowLatency->AddSample(GetSimTime()-receive_rob-> _flow_creation_time);
+	  gStatFlowLatency[f->cl]->AddSample(GetSimTime()-receive_rob-> _flow_creation_time);
 #endif
 	  delete _rob[dest][f->flid];
 	  _rob[dest].erase(f->flid); 
@@ -1788,6 +1807,31 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
   
   if(f->head && !f->tail) {
     _retired_packets[f->cl].insert(make_pair(f->pid, f));
+
+#ifdef FLIT_HOP_LATENCY 
+    int i = 0;
+    if(f->minimal==1){
+      while(!f->hop_lat.empty()){
+	gStatHopLatMin[i]->AddSample(f->hop_lat.front());
+	f->hop_lat.pop();
+	i++;
+      }
+    } else if(f->minimal==0){
+      while(!f->hop_lat.empty()){
+	gStatHopLatNonMin[i]->AddSample(f->hop_lat.front());
+	f->hop_lat.pop();
+	i++;
+      }
+    } else {
+      while(!f->hop_lat.empty()){
+	gStatHopLatProg[i]->AddSample(f->hop_lat.front());
+	f->hop_lat.pop();
+	i++;
+      }
+    }
+    assert(size_t(i)<=gStatHopLatMin.size()); //assume max dragon hop count is 8
+#endif
+
   } else {
     f->Free();  
   }
@@ -2517,7 +2561,7 @@ void TrafficManager::_Step( )
 	  gStatFlowSenderLatency->AddSample(_time-ready_flow_buffer->fl->create_time);
 	  gStatFastRetransmit->AddSample(ready_flow_buffer->_fast_retransmit);
 	  if(!gReservation){
-	    gStatFlowLatency->AddSample(GetSimTime()-_flow_buffer[source][f->flbid]->fl->create_time);
+	    gStatFlowLatency[_flow_buffer[source][f->flbid]->fl->cl]->AddSample(GetSimTime()-_flow_buffer[source][f->flbid]->fl->create_time);
 	  }
 #endif
 	  if(flow_done_status==FLOW_DONE_DONE){
@@ -2729,6 +2773,7 @@ void TrafficManager::_ClearStats( )
   
     _hop_stats[c]->Clear();
 
+    gStatFlowLatency[c]->Clear();
   }
   
   for(unsigned int i = 0; i<gDropInStats.size(); i++){
@@ -2810,7 +2855,6 @@ void TrafficManager::_ClearStats( )
   gStatROBRange->Clear();
   
   gStatFlowSenderLatency->Clear();
-  gStatFlowLatency->Clear();
   gStatActiveFlowBuffers->Clear();
   gStatNormActiveFlowBuffers->Clear();
   gStatReadyFlowBuffers->Clear();
@@ -3703,8 +3747,6 @@ void TrafficManager::_DisplayTedsShit(){
 
     *_stats_out<< "flow_sender_hist = ["
 	       <<*gStatFlowSenderLatency <<"];\n";
-    *_stats_out<< "flow_hist = ["
-	       <<*gStatFlowLatency <<"];\n";
     *_stats_out<< "active_flows = ["
 	       <<*gStatActiveFlowBuffers <<"];\n";
     *_stats_out<< "normal_active_flows = ["
@@ -3715,6 +3757,9 @@ void TrafficManager::_DisplayTedsShit(){
 	       <<*gStatResponseBuffer <<"];\n";
     
     for(int c = 0; c < _classes; ++c) {
+
+    *_stats_out<< "flow_hist(" << c+1 << ",:) = "
+	       <<*gStatFlowLatency[c] <<";\n";
       *_stats_out<< "net_hist(" << c+1 << ",:) = "
 		 <<*gStatPureNetworkLatency[c] <<";\n";
       *_stats_out<< "spec_net_hist(" << c+1 << ",:) = "
@@ -3745,6 +3790,20 @@ void TrafficManager::_DisplayTedsShit(){
 	       <<*gStatFastRetransmit<<";\n";
     *_stats_out<< "nack_arrival = "
 	       <<*gStatNackArrival<<";\n";
+
+#ifdef FLIT_HOP_LATENCY 
+    //assume max dragon hop count is 8
+    for(size_t i = 0; i<gStatHopLatMin.size(); i++){
+      *_stats_out<< "hop_lat_min("<<i+1<<")="<<gStatHopLatMin[i]->Average()<<";\n";
+    }
+    for(size_t i = 0; i<gStatHopLatNonMin.size(); i++){
+      *_stats_out<< "hop_lat_nonmin("<<i+1<<")="<<gStatHopLatNonMin[i]->Average()<<";\n";
+    }
+    for(size_t i = 0; i<gStatHopLatProg.size(); i++){
+      *_stats_out<< "hop_lat_prog("<<i+1<<")="<<gStatHopLatProg[i]->Average()<<";\n";
+    }
+#endif
+
 
     *_stats_out<< "flow_in_spec =" 
 	       <<gStatFlowStats[FLOW_STAT_SPEC]<<";\n";

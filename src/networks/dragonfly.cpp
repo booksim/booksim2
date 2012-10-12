@@ -53,7 +53,15 @@ int * vc_nonmin_res_same;
 
 extern bool ADAPTIVE_INTM_ALL;
 
+//speculative packet is set to drop if queue depth are too high
+bool RESERVATION_ADAPT_SPEC_KILL=false;
+//speculative packet decision also based on actual value of the queue depth
+bool RESERVATION_ADAPT_SPEC_TIME=true;
+//enables control packet adaptive routing
 bool RESERVATION_ADAPT_CONTROL=false;
+//% of control packets routing nonminimally
+float RESERVATION_ADAPT_CONTROL_ratio=0.0;
+
 
 #define MAX(X,Y) ((X>Y)?(X):(Y))
 
@@ -225,7 +233,10 @@ void  Dragonfly_Common_Setup( const Configuration &config){
     gAdaptive = true;
   }
   
+  RESERVATION_ADAPT_SPEC_KILL=(config.GetInt("reservation_adapt_spec_kill")==1);
+  RESERVATION_ADAPT_SPEC_TIME=(config.GetInt("reservation_adapt_spec_time")==1);
   RESERVATION_ADAPT_CONTROL= (config.GetInt("reservation_adapt_control")==1);
+  RESERVATION_ADAPT_CONTROL_ratio=config.GetFloat("reservation_adapt_control_ratio");
 
   gAdaptVCs = config.GetInt("adapt_vc");
   gAuxVCs = config.GetInt("aux_vc");
@@ -617,7 +628,29 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
   outputs->AddRange( out_port, out_vc, out_vc );
 }
 
+int dragonfly_intm_select(int src_grp, int dst_grp, int grps, int grp_size, int net_size){
+  if(ADAPTIVE_INTM_ALL){
+    return RandomInt(net_size - 1);
+  } else {
+    int g = RandomInt(grps-1);
+    while(g==src_grp || g==dst_grp){
+      g = RandomInt(grps-1);
+    }
+    return (g*grp_size+RandomInt(grp_size-1));
+  }
+}
 
+int dragonfly_val_intm_select(int src_grp, int dst_grp, int grps, int grp_size, int net_size){
+  if(ADAPTIVE_INTM_ALL){
+    return RandomInt(net_size - 1);
+  } else {
+    int g = RandomInt(grps-1);
+    while(g==src_grp ){
+      g = RandomInt(grps-1);
+    }
+    return (g*grp_size+RandomInt(grp_size-1));
+  }
+}
 
 void val_dragonflynew( const Router *r, const Flit *f, int in_channel, 
 		       OutputSet *outputs, bool inject )
@@ -657,15 +690,24 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
       f->minimal = 1;
     } else {
       //select a random node
-      f->intm =RandomInt(g_network_size - 1);
+      f->intm =dragonfly_val_intm_select(grp_ID, dest_grp_ID, 
+					 gG, g_grp_num_nodes, g_network_size);//RandomInt(g_network_size - 1);
       intm_grp_ID = (int)(f->intm/g_grp_num_nodes);
       if (debug){
 	cout<<"Intermediate node "<<f->intm<<" grp id "<<intm_grp_ID<<endl;
       }
       //intermediate are in the same group
-      if(f->res_type>RES_TYPE_NORM){
+      if(f->res_type>RES_TYPE_NORM && !RESERVATION_ADAPT_CONTROL){
 	f->ph = 0;
 	f->minimal = 1;
+      } else if( f->res_type>RES_TYPE_NORM && RESERVATION_ADAPT_CONTROL){
+	if(RandomFloat()<RESERVATION_ADAPT_CONTROL_ratio){
+	  f->ph = 2;
+	  f->minimal = 0;
+	} else {
+	  f->ph = 0;
+	  f->minimal = 1;
+	}
       } else if(grp_ID == intm_grp_ID || dest_grp_ID == intm_grp_ID){
 	f->ph = 0;
 	f->minimal = 1;
@@ -714,17 +756,6 @@ void val_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
 
 
-int dragonfly_intm_select(int src_grp, int dst_grp, int grps, int grp_size, int net_size){
-  if(ADAPTIVE_INTM_ALL){
-    return RandomInt(net_size - 1);
-  } else {
-    int g = RandomInt(grps-1);
-    while(g==src_grp || g==dst_grp){
-      g = RandomInt(grps-1);
-    }
-    return (g*grp_size+RandomInt(grp_size-1));
-  }
-}
 
 
 
@@ -808,9 +839,17 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
       }
 
       //intermediate was useless are in the same group
-      if( f->res_type>RES_TYPE_NORM){
+      if( f->res_type>RES_TYPE_NORM && !RESERVATION_ADAPT_CONTROL){
 	f->ph = 0;
 	f->minimal = 1;
+      } else if( f->res_type>RES_TYPE_NORM && RESERVATION_ADAPT_CONTROL){
+	if(RandomFloat()<RESERVATION_ADAPT_CONTROL_ratio){
+	  f->ph = 2;
+	  f->minimal = 0;
+	} else {
+	  f->ph = 0;
+	  f->minimal = 1;
+	}
       } else if(grp_ID == intm_grp_ID ||intm_grp_ID==dest_grp_ID){
 	f->ph = 0;
 	f->minimal = 1;
@@ -887,9 +926,15 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
 	//handling spec packets specially
 	//spec packet has a hard deadline and must be respected
-	if(f->res_type==RES_TYPE_SPEC){
+	if(f->res_type==RES_TYPE_SPEC && RESERVATION_ADAPT_SPEC_TIME){
 	  if(min_queue_size>f->exptime && nonmin_queue_size<f->exptime){
 	    minimal=false;
+	  } 
+	}
+	if(f->res_type==RES_TYPE_SPEC && RESERVATION_ADAPT_SPEC_KILL){
+	  if(min_queue_size*2>f->exptime && nonmin_queue_size*2>f->exptime){
+	    minimal=false;
+	    f->payload=-666;
 	  } 
 	}
 
@@ -984,12 +1029,18 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
       }
 
       //special spec handling
-      if(f->res_type==RES_TYPE_SPEC){
+      if(f->res_type==RES_TYPE_SPEC && RESERVATION_ADAPT_SPEC_TIME){
 	if(min_queue_size>f->exptime && nonmin_queue_size<f->exptime){
 	  minimal=false;
 	} 
       }
-      
+      if(f->res_type==RES_TYPE_SPEC && RESERVATION_ADAPT_SPEC_KILL){
+	if(min_queue_size>f->exptime && nonmin_queue_size>f->exptime){
+	  minimal=false;
+	  f->payload=-666;
+	} 
+      }
+
       if (minimal) {
 	//minimal minimal
 	if( (min_router_output >=gP + gA-1) && 

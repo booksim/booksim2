@@ -100,6 +100,14 @@ void Flit::Reset()
   if(pb)
     pb->Free();
   pb=NULL;
+
+#ifdef FLIT_HOP_LATENCY 
+  arrival_stamp=0;
+  while(!hop_lat.empty()){
+    hop_lat.pop();
+  }
+#endif
+
 }  
 
 Flit * Flit::Replicate(Flit* f){
@@ -162,6 +170,7 @@ void Flit::Free() {
 
 void Flit::FreeAll() {
   while(!_all.empty()) {
+    _all.top()->Reset();
     delete _all.top();
     _all.pop();
   }

@@ -30,8 +30,11 @@
 
 #include <iostream>
 #include <stack>
+#include <queue>
 #include "reservation.hpp"
 #include "booksim.hpp"
+
+//#define FLIT_HOP_LATENCY 
 
 class PiggyPack{
 public: 
@@ -71,11 +74,12 @@ public:
   short exptime;
   int sn;
   int flid;
-  int payload; 
+  mutable int payload; 
   //res = reservation size
   //grant = time
   //tail = tail reservation
-  //body = expected arrival time
+  //first body flit = expected arrival time
+  //mutable is a hack for spec routing drop -666
 
   short packet_size;
   //head: packet valid
@@ -122,6 +126,11 @@ public:
 
 
   mutable PiggyPack* pb;
+
+#ifdef FLIT_HOP_LATENCY 
+  int arrival_stamp;
+  queue<int> hop_lat;
+#endif
 
   void Reset();
 
