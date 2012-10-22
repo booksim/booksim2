@@ -35,9 +35,9 @@ PURIFY = /usr/bin/purify
 QUANT  = /usr/bin/quantify
 DEFINE =
 DEFINE_TEST = -DUSE_GUI
-INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
+INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower 
 CPPFLAGS = -Wall -O3	 -ggdb $(INCPATH) $(DEFINE)
-LFLAGS =
+LFLAGS = 
 
 
 OBJDIR := obj
