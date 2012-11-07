@@ -48,7 +48,7 @@ class AnyNet : public Network {
   void _BuildNet( const Configuration &config );
   void readFile();
   void buildRoutingTable();
-  int findPath(int router, int dest, int* hop_count,map<int, bool>* visited); 
+  void route(int r_start);
 
 public:
   AnyNet( const Configuration &config, const string & name );

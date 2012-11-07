@@ -42,10 +42,10 @@ map<int, int>* global_routing_table;
 AnyNet::AnyNet( const Configuration &config, const string & name )
   :  Network( config, name ){
 
+  router_list.resize(2);
   _ComputeSize( config );
   _Alloc( );
   _BuildNet( config );
-  router_list.resize(2);
 }
 
 AnyNet::~AnyNet(){
@@ -178,7 +178,12 @@ void AnyNet::RegisterRoutingFunctions() {
 
 void min_anynet( const Router *r, const Flit *f, int in_channel, 
 		 OutputSet *outputs, bool inject ){
-  int out_port = inject ? -1 : global_routing_table[r->GetID()].find(f->dest)->second;
+  int out_port=-1;
+  if(!inject){
+    assert(global_routing_table[r->GetID()].count(f->dest)!=0);
+    out_port=global_routing_table[r->GetID()].find(f->dest)->second;
+  }
+ 
 
   int vcBegin = 0, vcEnd = gNumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -205,80 +210,77 @@ void AnyNet::buildRoutingTable(){
   routing_table.resize(_size);
 
   for(int i = 0; i<_size; i++){
-    for(int j = 0; j<_nodes; j++){
-      int outport;
-      //find a path from router i to node j
-      /* Easy case
-       * first check if the dest is connected to the router
-       */
-	assert((router_list[0]).find(i)!=(router_list[0]).end());  
-      
-      if((*((router_list[0]).find(i)->second)).find(j)!=(*((router_list[0]).find(i)->second)).end()){
-	
-	outport =  (*((router_list[0]).find(i)->second)).find(j)->second;
-      } else {      
-	int hop_count = 0;
-	map<int, bool>* visited  = new map<int,bool>;
-	//cout<<"\t*Scouting router "<<i<<" to node "<<j<<endl;
-	outport =findPath(i,j, &hop_count, visited);
-	if(outport== -1){
-	  cout<<"*There is no path between router "<<i<<" and node "<<j<<endl;
-	  exit(-1);
-	} else {
-	  cout<<"*Found path from router "<<i<<" to node "<<j<<" hop "<<hop_count<<endl;
-	}
-	delete visited;
-      }
-      //the outport better be smaller than radix lol
-      assert(outport<_routers[i]->NumOutputs());
-      cout<<"Router "<<i<<" terminal "<<j<<" outport "<<outport<<endl; 
-      (routing_table[i])[j] = outport;
-    }
+    route(i);
   }
   global_routing_table = &routing_table[0];
 }
 
-int AnyNet::findPath(int router, int dest, int* hop_count,map<int, bool>* visited){
 
-  /* Hard case
-   * hop hop hop
-   */
-  //alright been here, aint no pather this way
-  // cout<<"\t\t*at router "<<router<<endl;
-  if(visited->find(router)!= visited->end()){
-    //   cout<<"\t\t\t*running in a circle"<<endl;
-    return -1;
+//11/7/2012
+//basically djistra's, tested on a large dragonfly anynet configuration
+void AnyNet::route(int r_start){
+  int* dist = new int[_size];
+  int* prev = new int[_size];
+  set<int> rlist;
+  for(int i = 0; i<_size; i++){
+    dist[i] =  numeric_limits<int>::max();
+    prev[i] = -1;
+    rlist.insert(i);
   }
-
-  if((*((router_list[0]).find(router)->second)).find(dest)!=(*((router_list[0]).find(router)->second)).end()){
-    
-    //cout<<"\t\t\t*found node returning"<<endl;
-    return (*((router_list[0]).find(router)->second)).find(dest)->second;
-  }
-  
-  (*visited)[router] = true;
-  
-  map<int,   map<int, int >*>::const_iterator riter = router_list[1].find(router);
-  map<int, int >::const_iterator rriter;
-
-  int shortest_distance = numeric_limits<int>::max();
-  int shortest_port = -1;
-  for(rriter = riter->second->begin();rriter!=riter->second->end(); rriter++){
-    int outport = -1;
-    int duplicate_hop_count = *hop_count;
-    outport = findPath(rriter->first,dest,&duplicate_hop_count, visited);
-    //omg we found a path??
-    if(outport !=-1){
-      if(duplicate_hop_count<shortest_distance){
-	shortest_distance = duplicate_hop_count;
-	shortest_port = rriter->second;
+  dist[r_start] = 0;
+  while(!rlist.empty()){
+    //find min 
+    int min_dist = numeric_limits<int>::max();
+    int min_cand = -1;
+    for(set<int>::iterator i = rlist.begin();
+	i!=rlist.end();
+	i++){
+      if(dist[*i]<min_dist){
+	min_dist = dist[*i];
+	min_cand = *i;
       }
+    }
+    rlist.erase(min_cand);
 
+    //neighbor
+    for(map<int,int>::iterator i = router_list[1][min_cand]->begin(); 
+	i!=router_list[1][min_cand]->end(); 
+	i++){
+      int new_dist = dist[min_cand] + 1;//distance is hops not cycles
+      if(new_dist < dist[i->first]){
+	dist[i->first] = new_dist;
+	prev[i->first] = min_cand;
+      }
     }
   }
-  visited->erase(visited->find(router));
-  (*hop_count) = shortest_distance+1;
-  return shortest_port;
+  
+  //post process from the prev list
+  for(int i = 0; i<_size; i++){
+    if(prev[i] ==-1){ //self
+      assert(i == r_start);
+      for(map<int, int>::iterator iter = router_list[0][i]->begin();
+	  iter!=router_list[0][i]->end();
+	  iter++){
+	routing_table[r_start][iter->first]=iter->second;
+	cout<<"node "<<iter->first<<" port "<< iter->second<<endl;
+      }
+    } else {
+      int distance=1;
+      int neighbor=i;
+      while(prev[neighbor]!=r_start){
+	neighbor= prev[neighbor];
+	distance++;
+      }
+      assert( router_list[1][r_start]->count(neighbor)!=0);
+      int port = router_list[1][r_start]->find(neighbor)->second;
+      for(map<int, int>::iterator iter = router_list[0][i]->begin();
+	  iter!=router_list[0][i]->end();
+	  iter++){
+	routing_table[r_start][iter->first]=port;
+	cout<<"node "<<iter->first<<" port "<< port<<" dist "<<distance<<endl;
+      }
+    }
+  }
 }
 
 
@@ -286,6 +288,14 @@ void AnyNet::readFile(){
 
   ifstream network_list;
   string line;
+  enum ParseState{HEAD_TYPE=0,
+		  HEAD_ID,
+		  BODY_TYPE, 
+		  BODY_ID,
+		  LINK_WEIGHT};
+  enum ParseType{NODE=0,
+		 ROUTER,
+		 UNKNOWN};
 
   network_list.open(file_name.c_str());
   if(!network_list.is_open()){
@@ -299,17 +309,133 @@ void AnyNet::readFile(){
     if(line==""){
       continue;
     }
+
+    ParseState state=HEAD_TYPE;
     //position to parse out white sspace
     int pos = 0;
     int next_pos=-1;
-    //the first node and its type, 0 node, 1 router
-    bool head = false;
-    int head_position = -1;
-    int head_type = -1;
-    //rest of the connections
-    bool name = false;
-    int body_type = -1;
+    string temp;
+    //the first node and its type
+    int head_id = -1;
+    ParseType head_type = UNKNOWN;
+    //stuff that head are linked to
+    ParseType body_type = UNKNOWN;
+    int body_id = -1;
+    int link_weight = 1;
 
+    do{
+
+      //skip empty spaces
+      next_pos = line.find(" ",pos);
+      temp = line.substr(pos,next_pos-pos);
+      pos = next_pos+1;
+      if(temp=="" || temp==" "){
+	continue;
+      }
+
+      switch(state){
+      case HEAD_TYPE:
+	if(temp=="router"){
+	  head_type = ROUTER;
+	} else if (temp == "node"){
+	  head_type = NODE;
+	} else {
+	  cout<<"Unknow head of line type "<<temp<<"\n";
+	  assert(false);
+	}
+	state=HEAD_ID;
+	break;
+      case HEAD_ID:
+	//need better error check
+	head_id = atoi(temp.c_str());
+
+	//intialize router structures
+	if(router_list[NODE].count(head_id) == 0){
+	  router_list[NODE][head_id] = new map<int, int>;
+	}
+	if(router_list[ROUTER].count(head_id) == 0){
+	  router_list[ROUTER][head_id] = new map<int, int>;
+	}  
+
+	state=BODY_TYPE;
+	break;
+      case LINK_WEIGHT:
+      case BODY_TYPE:
+	if(temp=="router"){
+	  body_type = ROUTER;
+	} else if (temp == "node"){
+	  body_type = NODE;
+	} else {
+	  cout<<"Unknow body type "<<temp<<"\n";
+	  assert(false);
+	}
+	state=BODY_ID;
+	break;
+      case BODY_ID:
+	body_id = atoi(temp.c_str());	
+	//intialize router structures if necessary
+	if(body_type==ROUTER){
+	  if(router_list[NODE].count(body_id) ==0){
+	    router_list[NODE][body_id] = new map<int, int>;
+	  }
+	  if(router_list[ROUTER].count(body_id) == 0){
+	    router_list[ROUTER][body_id] = new map<int, int>;
+	  }
+	}
+
+	if(head_type==NODE && body_type==NODE){ 
+
+	  cout<<"Cannot connect node to node "<<temp<<"\n";
+	  assert(false);
+
+	} else if(head_type==NODE && body_type==ROUTER){
+
+	  if(node_list.count(head_id)!=0 &&
+	     node_list[head_id]!=body_id){
+	    cout<<"Node "<<body_id<<" trying to connect to multiple router "
+		<<body_id<<" and "<<node_list[head_id]<<endl;
+	    assert(false);
+	  }
+	  node_list[head_id]=body_id;
+	  router_list[NODE][body_id]->insert(pair<int, int>(head_id,-1));
+
+	} else if(head_type==ROUTER && body_type==NODE){
+	  //insert and check node
+	  if(node_list.count(body_id) != 0 &&
+	     node_list[body_id]!=head_id){
+	    cout<<"Node "<<body_id<<" trying to connect to multiple router "
+		<<body_id<<" and "<<node_list[head_id]<<endl;
+	    assert(false);
+	  }
+	  node_list[body_id] = head_id;
+	  router_list[NODE][head_id]->insert(pair<int, int>(body_id,-1));
+
+	} else if(head_type==ROUTER && body_type==ROUTER){
+	  router_list[ROUTER][head_id]->insert(pair<int, int>(body_id,-1));
+	  router_list[ROUTER][body_id]->insert(pair<int, int>(head_id,-1));
+	}
+	state=LINK_WEIGHT;
+	break ;
+      default:
+	cout<<"Unknow parse state\n";
+	assert(false);
+	break;
+      }
+
+    } while(pos!=0);
+    if(state!=LINK_WEIGHT &&
+       state!=BODY_TYPE){
+      cout<<"Warn incomplete parse of the line: "<<line<<endl;
+      exit(-1);
+    }
+
+  }
+
+
+
+ 
+
+      /*
     //loop through each element in a line
     do{
       next_pos = line.find(" ",pos);
@@ -418,7 +544,7 @@ void AnyNet::readFile(){
 
   }
 
- 
+      */ 
 
   //map verification, make sure the information contained in bother maps
   //are the same
