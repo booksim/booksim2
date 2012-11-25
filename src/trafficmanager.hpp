@@ -219,6 +219,7 @@ protected:
   int   _include_queuing;
 
   vector<int> _measure_stats;
+  bool _pair_stats;
 
   vector<double> _latency_thres;
 

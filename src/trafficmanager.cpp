@@ -288,135 +288,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
 
   _hold_switch_for_packet = config.GetInt("hold_switch_for_packet");
 
-  // ============ Statistics ============ 
-
-  _plat_stats.resize(_classes);
-  _overall_min_plat.resize(_classes, 0.0);
-  _overall_avg_plat.resize(_classes, 0.0);
-  _overall_max_plat.resize(_classes, 0.0);
-
-  _nlat_stats.resize(_classes);
-  _overall_min_nlat.resize(_classes, 0.0);
-  _overall_avg_nlat.resize(_classes, 0.0);
-  _overall_max_nlat.resize(_classes, 0.0);
-
-  _flat_stats.resize(_classes);
-  _overall_min_flat.resize(_classes, 0.0);
-  _overall_avg_flat.resize(_classes, 0.0);
-  _overall_max_flat.resize(_classes, 0.0);
-
-  _frag_stats.resize(_classes);
-  _overall_min_frag.resize(_classes, 0.0);
-  _overall_avg_frag.resize(_classes, 0.0);
-  _overall_max_frag.resize(_classes, 0.0);
-
-  _pair_plat.resize(_classes);
-  _pair_nlat.resize(_classes);
-  _pair_flat.resize(_classes);
-  
-  _hop_stats.resize(_classes);
-  _overall_hop_stats.resize(_classes, 0.0);
-  
-  _sent_packets.resize(_classes);
-  _overall_min_sent_packets.resize(_classes, 0.0);
-  _overall_avg_sent_packets.resize(_classes, 0.0);
-  _overall_max_sent_packets.resize(_classes, 0.0);
-  _accepted_packets.resize(_classes);
-  _overall_min_accepted_packets.resize(_classes, 0.0);
-  _overall_avg_accepted_packets.resize(_classes, 0.0);
-  _overall_max_accepted_packets.resize(_classes, 0.0);
-
-  _sent_flits.resize(_classes);
-  _overall_min_sent.resize(_classes, 0.0);
-  _overall_avg_sent.resize(_classes, 0.0);
-  _overall_max_sent.resize(_classes, 0.0);
-  _accepted_flits.resize(_classes);
-  _overall_min_accepted.resize(_classes, 0.0);
-  _overall_avg_accepted.resize(_classes, 0.0);
-  _overall_max_accepted.resize(_classes, 0.0);
-
-#ifdef TRACK_STALLS
-  _buffer_busy_stalls.resize(_classes);
-  _buffer_conflict_stalls.resize(_classes);
-  _buffer_full_stalls.resize(_classes);
-  _buffer_reserved_stalls.resize(_classes);
-  _crossbar_conflict_stalls.resize(_classes);
-  _overall_buffer_busy_stalls.resize(_classes, 0);
-  _overall_buffer_conflict_stalls.resize(_classes, 0);
-  _overall_buffer_full_stalls.resize(_classes, 0);
-  _overall_buffer_reserved_stalls.resize(_classes, 0);
-  _overall_crossbar_conflict_stalls.resize(_classes, 0);
-#endif
-
-  for ( int c = 0; c < _classes; ++c ) {
-    ostringstream tmp_name;
-
-    tmp_name << "plat_stat_" << c;
-    _plat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _plat_stats[c];
-    tmp_name.str("");
-
-    tmp_name << "nlat_stat_" << c;
-    _nlat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _nlat_stats[c];
-    tmp_name.str("");
-
-    tmp_name << "flat_stat_" << c;
-    _flat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
-    _stats[tmp_name.str()] = _flat_stats[c];
-    tmp_name.str("");
-
-    tmp_name << "frag_stat_" << c;
-    _frag_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
-    _stats[tmp_name.str()] = _frag_stats[c];
-    tmp_name.str("");
-
-    tmp_name << "hop_stat_" << c;
-    _hop_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 20 );
-    _stats[tmp_name.str()] = _hop_stats[c];
-    tmp_name.str("");
-
-    _pair_plat[c].resize(_nodes*_nodes);
-    _pair_nlat[c].resize(_nodes*_nodes);
-    _pair_flat[c].resize(_nodes*_nodes);
-
-    _sent_packets[c].resize(_nodes, 0);
-    _accepted_packets[c].resize(_nodes, 0);
-    _sent_flits[c].resize(_nodes, 0);
-    _accepted_flits[c].resize(_nodes, 0);
-
-#ifdef TRACK_STALLS
-    _buffer_busy_stalls[c].resize(_subnets*_routers, 0);
-    _buffer_conflict_stalls[c].resize(_subnets*_routers, 0);
-    _buffer_full_stalls[c].resize(_subnets*_routers, 0);
-    _buffer_reserved_stalls[c].resize(_subnets*_routers, 0);
-    _crossbar_conflict_stalls[c].resize(_subnets*_routers, 0);
-#endif
-
-    for ( int i = 0; i < _nodes; ++i ) {
-      for ( int j = 0; j < _nodes; ++j ) {
-	tmp_name << "pair_plat_stat_" << c << "_" << i << "_" << j;
-	_pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-	_stats[tmp_name.str()] = _pair_plat[c][i*_nodes+j];
-	tmp_name.str("");
-	
-	tmp_name << "pair_nlat_stat_" << c << "_" << i << "_" << j;
-	_pair_nlat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-	_stats[tmp_name.str()] = _pair_nlat[c][i*_nodes+j];
-	tmp_name.str("");
-
-	tmp_name << "pair_flat_stat_" << c << "_" << i << "_" << j;
-	_pair_flat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-	_stats[tmp_name.str()] = _pair_flat[c][i*_nodes+j];
-	tmp_name.str("");
-      }
-    }
-  }
-
-  _slowest_flit.resize(_classes, -1);
-  _slowest_packet.resize(_classes, -1);
-
-  // ============ Simulation parameters ============ 
+ // ============ Simulation parameters ============ 
 
   _total_sims = config.GetInt( "sim_count" );
 
@@ -439,6 +311,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _measure_stats.push_back(config.GetInt("measure_stats"));
   }
   _measure_stats.resize(_classes, _measure_stats.back());
+  _pair_stats = (config.GetInt("pair_stats")==1);
 
   _latency_thres = config.GetFloatArray( "latency_thres" );
   if(_latency_thres.empty()) {
@@ -568,6 +441,141 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
 #endif
 
+  // ============ Statistics ============ 
+
+  _plat_stats.resize(_classes);
+  _overall_min_plat.resize(_classes, 0.0);
+  _overall_avg_plat.resize(_classes, 0.0);
+  _overall_max_plat.resize(_classes, 0.0);
+
+  _nlat_stats.resize(_classes);
+  _overall_min_nlat.resize(_classes, 0.0);
+  _overall_avg_nlat.resize(_classes, 0.0);
+  _overall_max_nlat.resize(_classes, 0.0);
+
+  _flat_stats.resize(_classes);
+  _overall_min_flat.resize(_classes, 0.0);
+  _overall_avg_flat.resize(_classes, 0.0);
+  _overall_max_flat.resize(_classes, 0.0);
+
+  _frag_stats.resize(_classes);
+  _overall_min_frag.resize(_classes, 0.0);
+  _overall_avg_frag.resize(_classes, 0.0);
+  _overall_max_frag.resize(_classes, 0.0);
+
+  if(_pair_stats){
+    _pair_plat.resize(_classes);
+    _pair_nlat.resize(_classes);
+    _pair_flat.resize(_classes);
+  }
+  
+  _hop_stats.resize(_classes);
+  _overall_hop_stats.resize(_classes, 0.0);
+  
+  _sent_packets.resize(_classes);
+  _overall_min_sent_packets.resize(_classes, 0.0);
+  _overall_avg_sent_packets.resize(_classes, 0.0);
+  _overall_max_sent_packets.resize(_classes, 0.0);
+  _accepted_packets.resize(_classes);
+  _overall_min_accepted_packets.resize(_classes, 0.0);
+  _overall_avg_accepted_packets.resize(_classes, 0.0);
+  _overall_max_accepted_packets.resize(_classes, 0.0);
+
+  _sent_flits.resize(_classes);
+  _overall_min_sent.resize(_classes, 0.0);
+  _overall_avg_sent.resize(_classes, 0.0);
+  _overall_max_sent.resize(_classes, 0.0);
+  _accepted_flits.resize(_classes);
+  _overall_min_accepted.resize(_classes, 0.0);
+  _overall_avg_accepted.resize(_classes, 0.0);
+  _overall_max_accepted.resize(_classes, 0.0);
+
+#ifdef TRACK_STALLS
+  _buffer_busy_stalls.resize(_classes);
+  _buffer_conflict_stalls.resize(_classes);
+  _buffer_full_stalls.resize(_classes);
+  _buffer_reserved_stalls.resize(_classes);
+  _crossbar_conflict_stalls.resize(_classes);
+  _overall_buffer_busy_stalls.resize(_classes, 0);
+  _overall_buffer_conflict_stalls.resize(_classes, 0);
+  _overall_buffer_full_stalls.resize(_classes, 0);
+  _overall_buffer_reserved_stalls.resize(_classes, 0);
+  _overall_crossbar_conflict_stalls.resize(_classes, 0);
+#endif
+
+  for ( int c = 0; c < _classes; ++c ) {
+    ostringstream tmp_name;
+
+    tmp_name << "plat_stat_" << c;
+    _plat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _plat_stats[c];
+    tmp_name.str("");
+
+    tmp_name << "nlat_stat_" << c;
+    _nlat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _nlat_stats[c];
+    tmp_name.str("");
+
+    tmp_name << "flat_stat_" << c;
+    _flat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+    _stats[tmp_name.str()] = _flat_stats[c];
+    tmp_name.str("");
+
+    tmp_name << "frag_stat_" << c;
+    _frag_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
+    _stats[tmp_name.str()] = _frag_stats[c];
+    tmp_name.str("");
+
+    tmp_name << "hop_stat_" << c;
+    _hop_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 20 );
+    _stats[tmp_name.str()] = _hop_stats[c];
+    tmp_name.str("");
+
+    if(_pair_stats){
+      _pair_plat[c].resize(_nodes*_nodes);
+      _pair_nlat[c].resize(_nodes*_nodes);
+      _pair_flat[c].resize(_nodes*_nodes);
+    }
+
+    _sent_packets[c].resize(_nodes, 0);
+    _accepted_packets[c].resize(_nodes, 0);
+    _sent_flits[c].resize(_nodes, 0);
+    _accepted_flits[c].resize(_nodes, 0);
+
+#ifdef TRACK_STALLS
+    _buffer_busy_stalls[c].resize(_subnets*_routers, 0);
+    _buffer_conflict_stalls[c].resize(_subnets*_routers, 0);
+    _buffer_full_stalls[c].resize(_subnets*_routers, 0);
+    _buffer_reserved_stalls[c].resize(_subnets*_routers, 0);
+    _crossbar_conflict_stalls[c].resize(_subnets*_routers, 0);
+#endif
+    if(_pair_stats){
+      for ( int i = 0; i < _nodes; ++i ) {
+	for ( int j = 0; j < _nodes; ++j ) {
+	  tmp_name << "pair_plat_stat_" << c << "_" << i << "_" << j;
+	  _pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+	  _stats[tmp_name.str()] = _pair_plat[c][i*_nodes+j];
+	  tmp_name.str("");
+	  
+	  tmp_name << "pair_nlat_stat_" << c << "_" << i << "_" << j;
+	  _pair_nlat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+	  _stats[tmp_name.str()] = _pair_nlat[c][i*_nodes+j];
+	  tmp_name.str("");
+	  
+	tmp_name << "pair_flat_stat_" << c << "_" << i << "_" << j;
+	_pair_flat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+	_stats[tmp_name.str()] = _pair_flat[c][i*_nodes+j];
+	tmp_name.str("");
+	}
+      }
+    }
+  }
+
+  _slowest_flit.resize(_classes, -1);
+  _slowest_packet.resize(_classes, -1);
+
+ 
+
 }
 
 TrafficManager::~TrafficManager( )
@@ -588,12 +596,13 @@ TrafficManager::~TrafficManager( )
 
     delete _traffic_pattern[c];
     delete _injection_process[c];
-
-    for ( int i = 0; i < _nodes; ++i ) {
-      for ( int j = 0; j < _nodes; ++j ) {
-	delete _pair_plat[c][i*_nodes+j];
-	delete _pair_nlat[c][i*_nodes+j];
-	delete _pair_flat[c][i*_nodes+j];
+    if(_pair_stats){
+      for ( int i = 0; i < _nodes; ++i ) {
+	for ( int j = 0; j < _nodes; ++j ) {
+	  delete _pair_plat[c][i*_nodes+j];
+	  delete _pair_nlat[c][i*_nodes+j];
+	  delete _pair_flat[c][i*_nodes+j];
+	}
       }
     }
   }
@@ -657,7 +666,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
      (_flat_stats[f->cl]->Max() < (f->atime - f->itime)))
     _slowest_flit[f->cl] = f->id;
   _flat_stats[f->cl]->AddSample( f->atime - f->itime);
-  _pair_flat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->itime );
+  if(_pair_stats){
+    _pair_flat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->itime );
+  }
       
   if ( f->tail ) {
     Flit * head;
@@ -713,9 +724,10 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
       _nlat_stats[f->cl]->AddSample( f->atime - head->itime);
       _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
    
-      _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->ctime );
-      _pair_nlat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->itime );
-      
+      if(_pair_stats){
+	_pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->ctime );
+	_pair_nlat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->itime );
+      }
     }
     
     if(f != head) {
@@ -1305,15 +1317,15 @@ void TrafficManager::_ClearStats( )
     _buffer_reserved_stalls[c].assign(_subnets*_routers, 0);
     _crossbar_conflict_stalls[c].assign(_subnets*_routers, 0);
 #endif
-
-    for ( int i = 0; i < _nodes; ++i ) {
-      for ( int j = 0; j < _nodes; ++j ) {
-	_pair_plat[c][i*_nodes+j]->Clear( );
-	_pair_nlat[c][i*_nodes+j]->Clear( );
-	_pair_flat[c][i*_nodes+j]->Clear( );
+    if(_pair_stats){
+      for ( int i = 0; i < _nodes; ++i ) {
+	for ( int j = 0; j < _nodes; ++j ) {
+	  _pair_plat[c][i*_nodes+j]->Clear( );
+	  _pair_nlat[c][i*_nodes+j]->Clear( );
+	  _pair_flat[c][i*_nodes+j]->Clear( );
+	}
       }
     }
-
     _hop_stats[c]->Clear();
 
   }
@@ -1496,6 +1508,9 @@ bool TrafficManager::_SingleSim( )
       converged = 0; 
       _sim_state = draining;
       _drain_time = _time;
+      if(_stats_out) {
+	WriteStats(*_stats_out);
+      }
       break;
       
     }
@@ -1567,6 +1582,9 @@ bool TrafficManager::_SingleSim( )
 	    cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
 	    converged = 0; 
 	    _sim_state = warming_up;
+	    if(_stats_out) {
+	      WriteStats(*_stats_out);
+	    }
 	    break;
 	  }
 	  
@@ -1773,32 +1791,34 @@ void TrafficManager::WriteStats(ostream & os) const {
        << "flat(" << c+1 << ") = " << _flat_stats[c]->Average() << ";" << endl
        << "flat_hist(" << c+1 << ",:) = " << *_flat_stats[c] << ";" << endl
        << "frag_hist(" << c+1 << ",:) = " << *_frag_stats[c] << ";" << endl
-       << "hops(" << c+1 << ",:) = " << *_hop_stats[c] << ";" << endl
-       << "pair_sent(" << c+1 << ",:) = [ ";
-    for(int i = 0; i < _nodes; ++i) {
-      for(int j = 0; j < _nodes; ++j) {
-	os << _pair_plat[c][i*_nodes+j]->NumSamples() << " ";
+       << "hops(" << c+1 << ",:) = " << *_hop_stats[c] << ";" << endl;
+    if(_pair_stats){
+      os<< "pair_sent(" << c+1 << ",:) = [ ";
+      for(int i = 0; i < _nodes; ++i) {
+	for(int j = 0; j < _nodes; ++j) {
+	  os << _pair_plat[c][i*_nodes+j]->NumSamples() << " ";
+	}
       }
-    }
-    os << "];" << endl
-       << "pair_plat(" << c+1 << ",:) = [ ";
-    for(int i = 0; i < _nodes; ++i) {
-      for(int j = 0; j < _nodes; ++j) {
-	os << _pair_plat[c][i*_nodes+j]->Average( ) << " ";
+      os << "];" << endl
+	 << "pair_plat(" << c+1 << ",:) = [ ";
+      for(int i = 0; i < _nodes; ++i) {
+	for(int j = 0; j < _nodes; ++j) {
+	  os << _pair_plat[c][i*_nodes+j]->Average( ) << " ";
+	}
       }
-    }
-    os << "];" << endl
-       << "pair_nlat(" << c+1 << ",:) = [ ";
-    for(int i = 0; i < _nodes; ++i) {
-      for(int j = 0; j < _nodes; ++j) {
-	os << _pair_nlat[c][i*_nodes+j]->Average( ) << " ";
+      os << "];" << endl
+	 << "pair_nlat(" << c+1 << ",:) = [ ";
+      for(int i = 0; i < _nodes; ++i) {
+	for(int j = 0; j < _nodes; ++j) {
+	  os << _pair_nlat[c][i*_nodes+j]->Average( ) << " ";
+	}
       }
-    }
-    os << "];" << endl
-       << "pair_flat(" << c+1 << ",:) = [ ";
-    for(int i = 0; i < _nodes; ++i) {
-      for(int j = 0; j < _nodes; ++j) {
-	os << _pair_flat[c][i*_nodes+j]->Average( ) << " ";
+      os << "];" << endl
+	 << "pair_flat(" << c+1 << ",:) = [ ";
+      for(int i = 0; i < _nodes; ++i) {
+	for(int j = 0; j < _nodes; ++j) {
+	  os << _pair_flat[c][i*_nodes+j]->Average( ) << " ";
+	}
       }
     }
 

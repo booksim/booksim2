@@ -231,6 +231,8 @@ BookSimConfig::BookSimConfig( )
   // whether or not to measure statistics for a given traffic class
   _int_map["measure_stats"] = 1;
   AddStrField("measure_stats", ""); // workaround to allow for vector specification
+  //whether to enable per pair statistics, caution N^2 memory usage
+  _int_map["pair_stats"] = 0;
 
   // if avg. latency exceeds the threshold, assume unstable
   _float_map["latency_thres"] = 500.0;
