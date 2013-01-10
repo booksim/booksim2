@@ -102,6 +102,8 @@ void Wavefront::Allocate( )
   _last_out = -1;
   _priorities.clear();
   
+  assert(first_diag >= 0);
+
   // Round-robin the priority diagonal
   _pri = ( ( _skip_diags ? first_diag : _pri ) + 1 ) % _square;
 }
