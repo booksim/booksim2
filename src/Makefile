@@ -1,4 +1,4 @@
-# $Id $
+l# $Id $
 
 # Copyright (c) 2007-2012, Trustees of The Leland Stanford Junior University
 # All rights reserved.
@@ -27,15 +27,13 @@
 #
 # Makefile
 #
-MOC = /usr/lib/qt4/bin/moc
 YACC   = bison -y
 DEFINE = 
-DEFINE_TEST = -DUSE_GUI
 INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
 CPPFLAGS += -Wall $(INCPATH) $(DEFINE)
-#CPPFLAGS += -O3
+CPPFLAGS += -O3
 CPPFLAGS += -g
-LFLAGS +=  
+LFLAGS +=
 
 
 OBJDIR := obj
@@ -67,14 +65,7 @@ CPP_SRCS = main.cpp \
    switch_monitor.cpp \
    buffer_monitor.cpp
 
-ifeq ($(DEFINE) , $(DEFINE_TEST))
-	CPP_SRCS += \
-	bgui.cpp\
-   moc_bgui.cpp
-	LFLAGS +=  -lQtGui -lQtCore -lpthread 
-	INCPATH += -I/usr/include/QtCore -I/usr/include/QtGui
-else 
-endif
+
 
 LEX_OBJS  = ${OBJDIR}/lex.yy.o
 YACC_OBJS = ${OBJDIR}/y.tab.o
@@ -104,10 +95,6 @@ $(PROG): $(OBJS)
 
 # rules to compile simulator
 
-moc_bgui.cpp: booksim_config.hpp \
-		config_utils.hpp \
-		bgui.hpp
-	$(MOC) $(INCPATH) bgui.hpp -o moc_bgui.cpp
 
 ${LEX_OBJS}: lex.yy.c y.tab.h
 	$(CC) $(CPPFLAGS) -c $< -o $@

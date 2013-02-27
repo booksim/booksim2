@@ -39,33 +39,42 @@ routing_function = dor;
 
 // Flow control
 
-num_vcs     = 2;
-vc_buf_size = 16;
+num_vcs     = 8;
+vc_buf_size = 8;
 
-wait_for_tail_credit = 1;
+wait_for_tail_credit = 0;
 
 // Router architecture
 
-vc_allocator = islip;
-sw_allocator = islip;
+vc_allocator = separable_input_first;
+sw_allocator = separable_input_first;
 alloc_iters  = 1;
 
 credit_delay   = 2;
-routing_delay  = 1;
+routing_delay  = 0;
 vc_alloc_delay = 1;
+sw_alloc_delay = 1;
+speculative=1;
 
-input_speedup     = 2;
+input_speedup     = 1;
 output_speedup    = 1;
 internal_speedup  = 1.0;
 
 // Traffic
 
 traffic                = uniform;
-packet_size = 20;
-
+packet_size ={{1,2,3,4},{10,20}};
+packet_size_rate={{1,1,1,1},{2,1}};
 // Simulation
 
 sim_type       = latency;
-injection_rate = 0.01;
+injection_rate = 0.1;
 
 
+classes=2;
+
+
+classes=2;
+injection_rate={0.1,0.1};
+packet_size={{1,5},{10,20}};
+packet_size_rate={{1,1},{2,1}};

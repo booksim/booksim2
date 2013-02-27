@@ -311,60 +311,6 @@ BookSimConfig::BookSimConfig( )
 }
 
 
-#ifdef USE_GUI
-
-//A list of important simulator for the booksim gui, anything else not listed here is still included
-//but just not very organized
-vector<pair<string, vector<string> > > BookSimConfig::GetImportantMap() {
-  //Vector of 5 categories, each category is a vector of potions. Maps don't work because it autosorts
-  vector< pair<string, vector< string> > > important;
-  important.push_back( make_pair( "Topology", vector<string>() ));
-  important[0].second.push_back("topology");
-  important[0].second.push_back("k");
-  important[0].second.push_back("n");
-  important[0].second.push_back("c");
-  important[0].second.push_back( "routing_function");
-  important[0].second.push_back("use_noc_latency");
-
-  important.push_back(make_pair("Router", vector<string>()));
-  important[1].second.push_back("router");
-  important[1].second.push_back("num_vcs");
-  important[1].second.push_back("vc_buf_size");
-  important[1].second.push_back("routing_delay");
-  important[1].second.push_back("vc_alloc_delay");
-  important[1].second.push_back("sw_alloc_delay");
-  important[1].second.push_back("st_prepare_delay");
-  important[1].second.push_back("st_final_delay");
-
-  important.push_back(make_pair("Allocator", vector<string>()));
-  important[2].second.push_back("vc_allocator");
-  important[2].second.push_back("sw_allocator");
-  important[2].second.push_back("arb_type");
-  important[2].second.push_back("priority");
-  important[2].second.push_back("speculative");
-
-  important.push_back(make_pair("Simulation", vector<string>()));
-  important[3].second.push_back("traffic");
-  important[3].second.push_back("injection_rate");
-  important[3].second.push_back("injection_rate_uses_flits");
-  important[3].second.push_back("sim_type");
-  important[3].second.push_back("latency_thres");
-  important[3].second.push_back("const_flits_per_packet");
-  important[3].second.push_back("injection_process");
-  important[3].second.push_back("sample_period");
-
-  important.push_back(make_pair("Statistics", vector<string>()));
-  important[4].second.push_back("print_activity");
-  important[4].second.push_back("print_csv_results");
-  important[4].second.push_back("print_vc_stats");
-  important[4].second.push_back("stats_out");
-  important[4].second.push_back("sim_power");
-  important[4].second.push_back("power_output_file");
-
-  return important;
-}
-
-#endif
 
 PowerConfig::PowerConfig( )
 { 
