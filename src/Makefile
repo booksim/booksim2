@@ -27,6 +27,7 @@
 #
 # Makefile
 #
+LEX = flex
 YACC   = bison -y
 DEFINE = 
 INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
