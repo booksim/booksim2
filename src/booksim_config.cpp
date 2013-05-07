@@ -48,15 +48,17 @@ BookSimConfig::BookSimConfig( )
   _int_map["subnets"] = 1;
 
   //==== Topology options =======================
-  //important
   AddStrField( "topology", "torus" );
   _int_map["k"] = 8; //network radix
   _int_map["n"] = 2; //network dimension
   _int_map["c"] = 1; //concentration
   AddStrField( "routing_function", "none" );
+
+  //simulator tries to correclty adjust latency for node/router placement 
   _int_map["use_noc_latency"] = 1;
 
-  //not critical
+
+  //used for noc latency calcualtion for network with concentration
   _int_map["x"] = 8; //number of routers in X
   _int_map["y"] = 8; //number of routers in Y
   _int_map["xr"] = 1; //number of nodes per router in X only if c>1
@@ -82,6 +84,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["output_delay"] = 0;
   _int_map["credit_delay"] = 0;
   _float_map["internal_speedup"] = 1.0;
+
   //with switch speedup flits requires otuput buffering
   //full output buffer will cancel switch allocation requests
   //default setting is unlimited
@@ -100,9 +103,9 @@ BookSimConfig::BookSimConfig( )
   AddStrField("spec_sw_allocator", "prio");
   
   _int_map["num_vcs"]         = 16;  
-  _int_map["vc_buf_size"]     = 8;  
-  _int_map["buf_size"]        = -1;
-  AddStrField("buffer_policy", "private");
+  _int_map["vc_buf_size"]     = 8;  //per vc buffer size
+  _int_map["buf_size"]        = -1; //shared buffer size
+  AddStrField("buffer_policy", "private"); //buffer sharing policy
 
   _int_map["private_bufs"] = -1;
   _int_map["private_buf_size"] = 1;
@@ -223,7 +226,7 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField( "sim_type", "latency" );
 
-  _int_map["warmup_periods"] = 0; // number of samples periods to "warm-up" the simulation
+  _int_map["warmup_periods"] = 3; // number of samples periods to "warm-up" the simulation
 
   _int_map["sample_period"] = 1000; // how long between measurements
   _int_map["max_samples"]   = 10;   // maximum number of sample periods in a simulation

@@ -1428,7 +1428,7 @@ bool TrafficManager::_SingleSim( )
         for ( int iter = 0; iter < _sample_period; ++iter )
             _Step( );
     
-        cout << _sim_state << endl;
+        //cout << _sim_state << endl;
 
         UpdateStats();
         DisplayStats();
