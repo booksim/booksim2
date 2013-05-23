@@ -1789,7 +1789,6 @@ void min_adapt_torus( const Router *r, const Flit *f, int in_channel, OutputSet 
   if ( f->ph == 0 ) {
     outputs->AddRange( out_port, vcBegin, vcBegin, 0 );
   } else  {
-    assert(f->ph == 1);
     outputs->AddRange( out_port, vcBegin+1, vcBegin+1, 0 );
   } 
 }
