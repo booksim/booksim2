@@ -94,7 +94,6 @@ private:
   // Statistics for Activity Factors
   vector<int> _active;
   int _idle;
-  int _classes;
 };
 
 #endif

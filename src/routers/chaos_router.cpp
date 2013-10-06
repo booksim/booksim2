@@ -589,13 +589,13 @@ void ChaosRouter::_OutputAdvance( )
 
   for ( int m = 0; m < _multi_queue_size; ++m ) {
     if ( _multi_match[m] != -1 ) {
-      if ( !_multi_queue[m].empty( ) ) {
-	f = _multi_queue[m].front( );
-	_multi_queue[m].pop( );
-      } else {
+      if ( _multi_queue[m].empty( ) ) {
 	cout << "State = " << _multi_state[m] << endl;
 	Error( "Multi queue empty, but matched!" );
       }
+      assert( !_multi_queue[m].empty( ) );
+      f = _multi_queue[m].front( );
+      _multi_queue[m].pop( );
 
       _crossbar_pipe->Write( f, _multi_match[m] );
 
