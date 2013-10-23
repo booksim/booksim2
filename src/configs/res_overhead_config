@@ -1,0 +1,38 @@
+//rservtaion overhead is 0, control packetes "self reserve"
+
+vc_allocator = separable_input_first;
+sw_allocator = separable_input_first;
+alloc_iters  = 1;
+
+
+output_buffer_size=2;
+internal_speedup  = 2.0;
+vc_buf_size = 512;
+	
+priority = other;
+
+num_vcs     = 4;
+res_vcs = 1;
+expiration_time = 200;
+reservation_packet_threshold=128;
+reservation_chunk_limit=512;
+
+reservation_overhead_factor=1.00;
+reservation_control_overhead=4;
+hotspot_reservation=1;
+
+fast_reservation_transmit=1;
+voq=1;
+
+seed = 54321;
+
+vc_busy_when_full=1; 
+reservation_buffer_size_drop=1;
+reservation_spec_voq=0;
+reservation_tail_reserve=0;
+hold_switch_for_packet=1;
+
+vc_busy_when_full=1;
+hold_switch_for_packet=1;
+cut_through=1;
+deadlock_warn_timeout=99999999;

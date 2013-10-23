@@ -1,0 +1,22 @@
+
+topology = dragonflynew;
+
+k  = 4;
+n  = 1;
+
+
+routing_function = ugalcrt;
+remove_credit_rtt=1;
+track_routing_commitment=1;
+
+adaptive_threshold=12.0;
+spec_adaptive_threshold=0.0;
+adaptive_intm=0;
+
+aux_vc=1;
+adapt_vc=2;
+num_vcs=12;
+
+//magical numbers
+//local lat 5 crt 12
+//global lat 30 crt 62	

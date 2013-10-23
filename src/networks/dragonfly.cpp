@@ -201,8 +201,12 @@ int SRP_VC_CONVERTER(int ph, int res_type){
 	    gResVCStart); //reservation first set of vcs
     break;
   case RES_TYPE_SPEC:
-    return (ph+
-	    gSpecVCStart);//offset: ctrl_vc + ctrl_aux
+    if(gSpecVCStart+1==gNSpecVCStart){//reservation_spec_deadlock=1
+      return gSpecVCStart;//impossible deadlock??
+    } else{
+      return (ph+
+	      gSpecVCStart);//offset: ctrl_vc + ctrl_aux
+    }
     break;
   case RES_TYPE_NORM:
     if(gECN){
@@ -254,7 +258,11 @@ void  Dragonfly_Common_Setup( const Configuration &config){
       gGANVCStart =gResVCStart+1+gAuxVCs;
       gSpecVCStart=gGANVCStart+1+gAuxVCs;
     }
-    gNSpecVCStart= gSpecVCStart+1+gAdaptVCs+gAuxVCs;
+    if(config.GetInt("reservation_spec_deadlock")==1){
+      gNSpecVCStart= gSpecVCStart+1;
+    } else {
+      gNSpecVCStart= gSpecVCStart+1+gAdaptVCs+gAuxVCs;
+    }
   } else {
     gNSpecVCStart=0;
   }
@@ -930,6 +938,8 @@ void ugalprog_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	  if(min_queue_size>f->exptime && nonmin_queue_size<f->exptime){
 	    minimal=false;
 	  } 
+	  //test for pure valiant spec 
+	  minimal = false;
 	}
 	if(f->res_type==RES_TYPE_SPEC && RESERVATION_ADAPT_SPEC_KILL){
 	  if(min_queue_size*2>f->exptime && nonmin_queue_size*2>f->exptime){

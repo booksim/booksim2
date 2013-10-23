@@ -1,0 +1,15 @@
+classes=2;
+flow_size = {8,8};
+injection_rate = {0.2,1.0};
+injection_process={bernoulli,badhotspot_test};
+traffic       = {badhot_background_uniform,badhot_dragon};
+
+drain_measured_only=1;
+const_flits_per_packet = 32;
+
+hotspot_nodes = {31,21,15};//every elem has to be smaller than dragonfly group size
+hotspot_senders = {1,4,7,12,19,20,25,29,16};//every elem has to be smaller than dragonfly group size and dont over loap with hotspot_nodes
+
+max_samples=1;
+drain_measured_only=1;
+sample_period=250000;

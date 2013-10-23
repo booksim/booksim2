@@ -1,0 +1,10 @@
+
+flow_size = {8,8};
+const_flits_per_packet = 32;
+
+classes=2;
+injection_rate = {0.2,1.0};
+injection_process={bernoulli,hotspot_test};
+traffic       = {background_uniform,badhot_dragon};
+hotspot_nodes = {31,21,5,2,15,10};
+hotspot_rates={1};

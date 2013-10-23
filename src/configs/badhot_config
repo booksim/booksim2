@@ -1,0 +1,6 @@
+
+flow_size=8;
+traffic       = badhot_dragon;
+drain_measured_only=1;
+const_flits_per_packet = 32;
+hotspot_nodes = {31,9};//every elem has to be smaller than dragonfly group size

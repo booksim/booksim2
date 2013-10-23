@@ -124,7 +124,7 @@ void OutputBuffer::QueueFlit(int vc, Flit* f){
   assert(f->vc == vc);
   if(f->watch)
     _watch++;
-  
+
   //check fragmentation
   if(!f->head && !_buffers[vc].empty()) {
     assert(f->pid == _buffers[vc].back()->pid);
@@ -203,7 +203,7 @@ void OutputBuffer::SetSpecVC(int vc, int size){
   assert(gReservation);
   assert(size_t(vc) < _buffer_capacity.size());
   if(!_spec_vc[vc]){
-    //cout<<"Output buffer:Spec vc "<<vc<<endl;
+    cout<<"Output buffer:Spec vc "<<vc<<endl;
     _buffer_capacity[vc] = size;
     _spec_vc[vc] = true;
   }

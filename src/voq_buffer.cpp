@@ -9,22 +9,18 @@ VOQ_Buffer::VOQ_Buffer(const Configuration& config, int outputs,
 		       Module *parent, const string& name ):Buffer( parent, name ){
   assert(config.GetInt("voq")==1);
   int data_vcs         = config.GetInt( "num_vcs" );
-  int ctrl_vcs;
   int special_vcs;
 
   if(gReservation){
-    ctrl_vcs = RES_RESERVED_VCS+RES_RESERVED_VCS*gAuxVCs;
     if(config.GetInt("reservation_spec_voq")==1){
-      special_vcs =  ctrl_vcs; //spec gets included in data vc
+      special_vcs =  gSpecVCStart; //spec gets included in data vc
     } else {
-      special_vcs = ctrl_vcs + 1 + gAuxVCs + gAdaptVCs;
+      special_vcs = gNSpecVCStart;
     }
    
   } else if(gECN){
-    ctrl_vcs=ECN_RESERVED_VCS+gAuxVCs;;
-    special_vcs=ctrl_vcs;
+    special_vcs=gNSpecVCStart;
   } else {
-    ctrl_vcs= 0;
     special_vcs = 0;
   }
 

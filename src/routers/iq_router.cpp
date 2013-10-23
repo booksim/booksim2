@@ -112,7 +112,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   if(_voq){
     if(gReservation){
       _ctrl_vcs = gSpecVCStart;
-      _spec_vcs = config.GetInt( "res_vcs" ) + gAuxVCs + gAdaptVCs;
+      _spec_vcs = gNSpecVCStart-gSpecVCStart;
       if(_spec_voq){
 	_special_vcs =  _ctrl_vcs; //spec gets included in data vc
       } else {

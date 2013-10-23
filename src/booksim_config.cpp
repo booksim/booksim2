@@ -80,6 +80,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["transient_finalize"]=0;;
   AddStrField("transient_data","");
 
+  _int_map["reservation_spec_deadlock"]=0;
   _int_map["reservation_adapt_spec_kill"]=0;
   _int_map["reservation_adapt_spec_time"] = 1;
   _int_map["reservation_adapt_control"] = 0;

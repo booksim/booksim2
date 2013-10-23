@@ -1,0 +1,26 @@
+vc_allocator = separable_input_first;
+sw_allocator = separable_input_first;
+alloc_iters  = 1;
+
+
+output_buffer_size=2;
+internal_speedup  = 2.0;
+classes=1;
+
+priority = other;
+
+num_vcs     = 2;
+vc_buf_size = 512;
+
+
+voq=1;
+
+
+
+seed = 54321;
+max_samples=1;
+
+
+vc_busy_when_full=1;
+hold_switch_for_packet=1;
+cut_through=1;
