@@ -48,15 +48,17 @@ BookSimConfig::BookSimConfig( )
   _int_map["subnets"] = 1;
 
   //==== Topology options =======================
-  //important
   AddStrField( "topology", "torus" );
   _int_map["k"] = 8; //network radix
   _int_map["n"] = 2; //network dimension
   _int_map["c"] = 1; //concentration
   AddStrField( "routing_function", "none" );
+
+  //simulator tries to correclty adjust latency for node/router placement 
   _int_map["use_noc_latency"] = 1;
 
-  //not critical
+
+  //used for noc latency calcualtion for network with concentration
   _int_map["x"] = 8; //number of routers in X
   _int_map["y"] = 8; //number of routers in Y
   _int_map["xr"] = 1; //number of nodes per router in X only if c>1
@@ -82,6 +84,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["output_delay"] = 0;
   _int_map["credit_delay"] = 0;
   _float_map["internal_speedup"] = 1.0;
+
   //with switch speedup flits requires otuput buffering
   //full output buffer will cancel switch allocation requests
   //default setting is unlimited
@@ -100,9 +103,9 @@ BookSimConfig::BookSimConfig( )
   AddStrField("spec_sw_allocator", "prio");
   
   _int_map["num_vcs"]         = 16;  
-  _int_map["vc_buf_size"]     = 8;  
-  _int_map["buf_size"]        = -1;
-  AddStrField("buffer_policy", "private");
+  _int_map["vc_buf_size"]     = 8;  //per vc buffer size
+  _int_map["buf_size"]        = -1; //shared buffer size
+  AddStrField("buffer_policy", "private"); //buffer sharing policy
 
   _int_map["private_bufs"] = -1;
   _int_map["private_buf_size"] = 1;
@@ -211,7 +214,7 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField( "workload", "synthetic({0.1,1,bernoulli,uniform})" );
 
-  _int_map["warmup_periods"] = 0; // number of samples periods to "warm-up" the simulation
+  _int_map["warmup_periods"] = 3; // number of samples periods to "warm-up" the simulation
 
   _int_map["sample_period"] = 1000; // how long between measurements
   _int_map["max_samples"]   = 10;   // maximum number of sample periods in a simulation
@@ -297,62 +300,6 @@ BookSimConfig::BookSimConfig( )
   //==================Network file===========================
   AddStrField("network_file","");
 }
-
-
-#ifdef USE_GUI
-
-//A list of important simulator for the booksim gui, anything else not listed here is still included
-//but just not very organized
-vector<pair<string, vector<string> > > BookSimConfig::GetImportantMap() {
-  //Vector of 5 categories, each category is a vector of potions. Maps don't work because it autosorts
-  vector< pair<string, vector< string> > > important;
-  important.push_back( make_pair( "Topology", vector<string>() ));
-  important[0].second.push_back("topology");
-  important[0].second.push_back("k");
-  important[0].second.push_back("n");
-  important[0].second.push_back("c");
-  important[0].second.push_back( "routing_function");
-  important[0].second.push_back("use_noc_latency");
-
-  important.push_back(make_pair("Router", vector<string>()));
-  important[1].second.push_back("router");
-  important[1].second.push_back("num_vcs");
-  important[1].second.push_back("vc_buf_size");
-  important[1].second.push_back("routing_delay");
-  important[1].second.push_back("vc_alloc_delay");
-  important[1].second.push_back("sw_alloc_delay");
-  important[1].second.push_back("st_prepare_delay");
-  important[1].second.push_back("st_final_delay");
-
-  important.push_back(make_pair("Allocator", vector<string>()));
-  important[2].second.push_back("vc_allocator");
-  important[2].second.push_back("sw_allocator");
-  important[2].second.push_back("arb_type");
-  important[2].second.push_back("priority");
-  important[2].second.push_back("speculative");
-
-  important.push_back(make_pair("Simulation", vector<string>()));
-  important[3].second.push_back("traffic");
-  important[3].second.push_back("injection_rate");
-  important[3].second.push_back("injection_rate_uses_flits");
-  important[3].second.push_back("sim_type");
-  important[3].second.push_back("latency_thres");
-  important[3].second.push_back("packet_size");
-  important[3].second.push_back("injection_process");
-  important[3].second.push_back("sample_period");
-
-  important.push_back(make_pair("Statistics", vector<string>()));
-  important[4].second.push_back("print_activity");
-  important[4].second.push_back("print_csv_results");
-  important[4].second.push_back("print_vc_stats");
-  important[4].second.push_back("stats_out");
-  important[4].second.push_back("sim_power");
-  important[4].second.push_back("power_output_file");
-
-  return important;
-}
-
-#endif
 
 PowerConfig::PowerConfig( )
 { 

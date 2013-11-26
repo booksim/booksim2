@@ -239,7 +239,7 @@ void KNCube::InsertRandomFaults( const Configuration &config )
 
   num_fails = config.GetInt( "link_failures" );
   
-  if ( num_fails ) {
+  if ( _size && num_fails ) {
     prev_seed = RandomIntLong( );
     RandomSeed( config.GetInt( "fail_seed" ) );
 

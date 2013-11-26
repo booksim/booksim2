@@ -41,10 +41,7 @@
 #include <iostream>
 #include <fstream>
 
-#ifdef USE_GUI
-#include <QApplication>
-#include "bgui.hpp"
-#endif
+
 
 #include <sstream>
 #include "booksim.hpp"
@@ -93,9 +90,7 @@ bool gTrace;
 
 ostream * gWatchOut;
 
-#ifdef USE_GUI
-bool gGUIMode = false;
-#endif
+
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -161,29 +156,10 @@ int main( int argc, char **argv )
 
   BookSimConfig config;
 
-#ifdef USE_GUI
-  for(int i = 1; i < argc; ++i) {
-    string arg(argv[i]);
-    if(arg=="-g"){
-      gGUIMode = true;
-      break;
-    }
-  }
-#endif
+
   if ( !ParseArgs( &config, argc, argv ) ) {
-#ifdef USE_GUI
-    if(gGUIMode){
-      cout<< "No config file found"<<endl;
-      cout<< "Usage: " << argv[0] << " configfile... [param=value...]" << endl;
-      cout<< "GUI is using default parameters instead"<<endl;
-    } else {
-#endif
     cerr << "Usage: " << argv[0] << " configfile... [param=value...]" << endl;
     return 0;
- 
-#ifdef USE_GUI
-    }
-#endif
  } 
 
   
@@ -206,20 +182,6 @@ int main( int argc, char **argv )
 
   /*configure and run the simulator
    */
-
-#ifdef USE_GUI
-  if(gGUIMode){
-    cout<<"GUI Mode\n";
-    QApplication app(argc, argv);
-    BooksimGUI * bs = new BooksimGUI();
-    //transfer all the contorl and data to the gui, go to bgui.cpp for the rest
-    bs->RegisterSimFunc(&Simulate,&config);
-    bs->setGeometry(100, 100, 1200, 355);
-    bs->show();
-    return app.exec();
-  }
-#endif
-
   bool result = Simulate( config );
   return result ? -1 : 0;
 }

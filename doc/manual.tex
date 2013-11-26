@@ -118,7 +118,7 @@ The default \texttt{Makefile} should work on the Stanford Leland machines.
 Type \texttt{make} to build the simulator. 
 
 A note for Windows users:
-The above instructions have been tested to work with the newest version of Cygwin.
+The above instructions have been tested to work with Cygwin 1.7.18.
 
 \subsection{Running a simulation}
 \label{sec:run_example}
@@ -178,8 +178,10 @@ also displayed.
 
 \begin{figure}
 \begin{verbatim}
-BEGIN Configuration File
-Name: examples/torus88
+BEGIN Configuration File: examples/torus88
+
+....
+
 // Topology
 topology = torus;
 k = 8;
@@ -187,34 +189,35 @@ n = 2;
 // Routing
 routing_function = dim_order;
 // Flow control
-num_vcs = 4;
+num_vcs = 2;
 // Traffic
 traffic = uniform;
 injection_rate = 0.15;
 
-END Configuration File
-0%=================================
-% Average latency = 10.3206
-% Accepted packets = 0.113 at node 38 (avg = 0.149031)
-lat(1) = 10.3206;
-bins = [ 0 ...999];
-freq = [ 0 0 145 4 550 52 988 137 1439 285 1656 428 1359 417 958 294 453 163 143
- 49 10 7 1 0 ....
+END Configuration File: examples/torus88
+Class 0:
+Packet latency average = 33.2807
+	minimum = 7
+	maximum = 73
 
 ....
 
-% Warmed up ...Time used is 3000 cycles
+Warmed up ...Time used is 2000 cycles
 
 ....
 
-% Draining all recorded packets ...
-% Draining remaining packets ...
-Time taken is 6030 cycles
+Draining all recorded packets ...
+Draining remaining packets ...
+Time taken is 5104 cycles
+====== Overall Traffic Statistics ======
 ====== Traffic class 0 ======
-Overall average latency = 10.2897 (1 samples)
-Overall average accepted rate = 0.14834 (1 samples)
-Overall min accepted rate = 0.129043 (1 samples)
-Average hops = 4.99839 (57153 samples)
+Packet latency average = 33.6964 (1 samples)
+	minimum = 7 (1 samples)
+	maximum = 84 (1 samples)
+
+....
+
+Total run time 1.01837
 \end{verbatim}
 \caption{Simulator output from running the \texttt{examples/torus88}
 configuration file.}
@@ -224,7 +227,9 @@ configuration file.}
 After the warm up periods have passed (default to 3$\times$sample\_period), the simulator prints the
 ``\texttt{Warmed up}'' message and resets all the simulation statistics.
 Then, the measurement phase begins and statistics continue to be
-reported after each sample period.  Once the measurement periods have
+reported after each sample period.  The measurement phase 
+typically last for last least 3 sample periods. 
+Once the measurement periods have
 passed, all the measurement packets are drained from the network
 before final latency and throughput numbers are reported.  Details of
 the configuration parameters used to control the length of the
@@ -256,39 +261,38 @@ k = 8;
 n = 2;
 
 // Routing
-
-routing_function = dim_order;
+routing_function = dor;
 
 // Flow control
-
 num_vcs     = 8;
 vc_buf_size = 8;
-
 wait_for_tail_credit = 1;
 
 // Router architecture
-
 vc_allocator = islip;
 sw_allocator = islip;
 alloc_iters  = 1;
 
 credit_delay   = 2;
-routing_delay  = 1;
+routing_delay  = 0;
 vc_alloc_delay = 1;
+sw_alloc_delay = 1;
 
 input_speedup     = 2;
 output_speedup    = 1;
 internal_speedup  = 1.0;
 
-// Traffic
 
-traffic                = transpose;
-const_flits_per_packet = 20;
+// Traffic
+traffic = transpose;
+packet_size = 20;
+
 
 // Simulation
+sim_type = latency;
 
-sim_type       = latency;
-injection_rate = 0.01;
+injection_rate = 0.005;
+
 \end{verbatim}
 \caption{A typical configuration file (\texttt{examples/mesh88\_lat})
 for creating a latency versus offered load curve for a 8-ary 2-mesh
@@ -300,83 +304,109 @@ network.}
 \label{sec:config_params}
 
 All information used to configure a simulation is passed through a
-configuration file as illustrated by the example in
-Section~\ref{sec:run_example}.  This section lists the existing
-configuration parameters --- a user can incorporate additional options
-by changing the \texttt{booksim\_config.cpp} file.
+configuration file as illustrated by the example in 
+Section~\ref{sec:run_example}.  This section lists the major
+configuration parameters for the simulator. Additional description can be found in the 
+configuration parameter class file \texttt{booksim\_config.cpp}.
+A user can incorporate additional options by changing the this file.
 
 \subsection{Topologies}
 \label{sec:topos}
 
-The \texttt{topology} parameter determines the underlying topology of the
-network. There is also a set of numerical parameters that describes the size of the networks. 
+The \texttt{topology} parameter determines the underlying topology of
+the network. There is also a set of numerical parameters that
+describes the size of the networks.  
 
 \begin{opt_list}{topoparams}
 
 \item[k] Network radix, the number of routers per dimension
 \item[n] Network dimension
-\item[c] Network concentration, the number of nodes sharing a single router. Typically set to 1, >1 only in networks that has concentration (i.e. cmesh)
-\item[x] (NoC simulations only) The number of routers in the X dimension. Used to calculate channel latency between routers. 
-\item[y] (NoC simulations only) The number of routers in the y dimension. Used to calculate channel latency between routers. 
-\item[xr] (NoC simulations only) For networks that have c>1, the number of nodes in the x direction per router. Used to calculate channel latency between routers. 
-\item[yr] (NoC simulations only) For networks that have c>1, the number of nodes in the y direction per router. Used to calculate channel latency between routers. 
-\item[limit] Emulate partially filled networks. Nodes greater or equal to limit does not generate or receive packets during simulation. Though depending on the routing algorithm the routers associated with those nodes may be use to route passing by traffic. 
+\item[c] Network concentration, the number of nodes sharing a single
+  router. Typically set to 1, >1 only in networks that has
+  concentration (i.e. cmesh).
+\item[x] (NoC simulations only) The number of routers in the X
+  dimension. Used to calculate channel latency between routers.  
+\item[y] (NoC simulations only) The number of routers in the y
+  dimension. Used to calculate channel latency between routers.  
+\item[xr] (NoC simulations only) For networks that have c>1, the
+  number of nodes in the x direction per router. Used to calculate
+  channel latency between routers.  
+\item[yr] (NoC simulations only) For networks that have c>1, the
+  number of nodes in the y direction per router. Used to calculate
+  channel latency between routers.  
 
 \end{opt_list}
 
 
-The channel latency of the network must be configured within the source code of the topology files. All topologies by default have channel latency of 1 cycles. Topologies available in \simname are:
+The channel latency of the network must be configured within the
+source code of the topology files. All topologies by default have
+channel latency of 1 cycles. Topologies available in \simname are: 
 
 \begin{opt_list}{topologies}
 \item[fly] A $k$-ary $n$-fly (butterfly) topology. The \texttt{k}
 parameter determines the network's radix and the \texttt{n} parameter
-determines the network's dimension.
+determines the network's dimension. Note: a $k$-ary 1-fly is
+essentially a single radix-k router, useful for testing.
 
 \item[mesh] A $k$-ary $n$-mesh (mesh) topology. The \texttt{k}
 parameter determines the network's radix and the \texttt{n} parameter determines
 the network's dimension.
 
-\item[single] A network with a single node, used for testing single
-router performance.  The number of input and output ports for the node
-is determined by the \texttt{in\_ports} and \texttt{out\_ports} parameters,
-respectively.
 
 \item[torus] A $k$-ary $n$-cube (torus) topology.  The \texttt{k}
 parameter determines the network's radix and the \texttt{n} parameter determines
 the network's dimension.
-\item[cmesh] Concentrated mesh topology is a A $k$-ary $n$-mesh topology with multiple nodes sharing a single router. The \texttt{c} determines the concentration. The cmesh topology has the option that turns on "express channels" as described in  by default these channels are turned off. 
+\item[cmesh] Concentrated mesh topology is a A $k$-ary $n$-mesh
+  topology with multiple nodes sharing a single router. The \texttt{c}
+  determines the concentration. The cmesh topology has the option that
+  turns on "express channels" as described in  by default these
+  channels are turned off.  
 
-\item[fat tree] Fat Tree topology with 3 levels. Nodes are routers are arranged in a tree structure but the number of links between levels stays constant. At the bottom \texttt{k} nodes shares a level 0 router.
+\item[fat tree] Fat Tree topology with 3 levels. Nodes are routers are
+  arranged in a tree structure but the number of links between levels
+  stays constant. At the bottom \texttt{k} nodes shares a level 0
+  router. 
 
-\item[flattened butterfly] A topology based on the paper "Flattened butterfly: a cost-efficient topology for high-radix networks" ISCA 2007
+\item[flattened butterfly] A topology based on the paper "Flattened
+  butterfly: a cost-efficient topology for high-radix networks" ISCA
+  2007 
+
+\item[dragonfly] A topology based on the paper ``Technology-driven,
+  highly-scalable dragonfly topology.'' ISCA 2008
 
 \item[quad tree] A quad tree topology.
 
 \item[tree 4]
 
-\item[cmo] Concentrated Multi-dimensional Octagon created by Sang Kyun Kim and Wook-Jin Chung from  EE382C several years ago.
+\item[anynet] A topology based on an user input file specifying
+  connectivity of nodes and routers. 
 
 \end{opt_list}
 
-Both the \texttt{mesh} and \texttt{torus} topologies support the
-addition of random link failures with the \texttt{link\_failures}
-parameter.  The value of \texttt{link\_failures} determines the number
-of channels that are randomly removed from the topology and are thus
-no longer available for forwarding packets.  Moreover, the
-randomization for failed channels is controlled by selecting an
-integer value for the \texttt{fail\_seed} parameter --- a fixed seed
-gives a fixed set of failed channels, independent of other
-randomization in the simulation.  Also, note that only certain routing
-functions support this feature (see Section~\ref{sec:routing_algs}).
+%Both the \texttt{mesh} and \texttt{torus} topologies support the
+%addition of random link failures with the \texttt{link\_failures}
+%parameter.  The value of \texttt{link\_failures} determines the number
+%of channels that are randomly removed from the topology and are thus
+%no longer available for forwarding packets.  Moreover, the
+%randomization for failed channels is controlled by selecting an
+%integer value for the \texttt{fail\_seed} parameter --- a fixed seed
+%gives a fixed set of failed channels, independent of other
+%randomization in the simulation.  Also, note that only certain routing
+%functions support this feature (see Section~\ref{sec:routing_algs}).
 
 \subsection{Physical sub-networks}
 \label{sec:physical_subnets}
 
-The \texttt{physical\_subnetworks} parameter defines the number of physical sub-networks present in the network (defaults to one).
-All sub-networks receive the same configuration parameters and thus are identical. Traffic sources
-maintain an injection queue for each sub-network. The packet generation process is unaffected. It enqueues generated packets into the
-proper sub-network queue according to a division function in the traffic manager. At every cycle, flits at the head of each queue attempt to be injected.
-Traffic destinations can eject one flit from each sub-network each cycle.
+The \texttt{physical\_subnetworks} parameter defines the number of
+physical sub-networks present in the network (defaults to one). All
+sub-networks receive the same configuration parameters and thus are
+identical. Traffic sources maintain an injection queue for each
+sub-network. The packet 
+generation process is unaffected. It enqueues generated packets into
+the proper sub-network queue according to a division function in the
+traffic manager. At every cycle, flits at the head of each queue
+attempt to be injected. Traffic destinations can eject one flit from
+each sub-network each cycle. 
 
 
 \subsection{Routing algorithms}
@@ -384,7 +414,12 @@ Traffic destinations can eject one flit from each sub-network each cycle.
 
 The \texttt{routing\_function} parameter selects a routing algorithm
 for the topology.  Many routing algorithms need multiple virtual
-channels for deadlock freedom (VCDF). In addition to \texttt{routefunc.cpp}, some topologies source files include additional routing functions. Also, the simulator code is structured so that additional routing algorithms can be added with minimal changes to the overall simulator (see the \texttt{routefunc.cpp} file in the simulator's source code).
+channels for deadlock freedom. In addition to \texttt{routefunc.cpp},
+some topologies source files include additional routing
+functions. Also, the simulator code is structured so that additional
+routing algorithms can be added with minimal changes to the overall
+simulator (see the \texttt{routefunc.cpp} file in the simulator's
+source code). 
 
 \subsection{Flow control}
 
@@ -431,8 +466,8 @@ channel.  Also, the configuration parser expects a floating point
 number for this field, so integer speedups should also include a
 decimal point (e.g. ``2.0'').
 
-\item[output\_delay] The processing delay incurred in the output queue
-of a router.
+%\item[output\_delay] The processing delay incurred in the output queue
+%of a router.
 \end{opt_list}
 
 \subsubsection{The input-queued router}
@@ -458,28 +493,31 @@ space.  Similar to \texttt{input\_speedup}
 
 \item[hold\_switch\_for\_packet]
 
-\item[speculative] Enable speculative switch allocation (i.e., allow switch allocation to occur in parallel with VC allocation for header flits).
+\item[speculative] Enable speculative switch allocation (i.e., allow
+  switch allocation to occur in parallel with VC allocation for header
+  flits). 
 
-\item[filter\_spec\_grants] Determines how speculative grants are masked (\texttt{any\_nonspec\_gnts}: any non-speculative grant inhibits all speculative grants; \texttt{confl\_nonspec\_reqs}: speculative grants are inhibited by conflicting non-speculative requests; \texttt{confl\_nonspec\_gnts}: speculative grants are inhibited by conflicting non-speculative grants).
+%\item[filter\_spec\_grants] Determines how speculative grants are masked (\texttt{any\_nonspec\_gnts}: any non-speculative grant inhibits all speculative grants; \texttt{confl\_nonspec\_reqs}: speculative grants are inhibited by conflicting non-speculative requests; \texttt{confl\_nonspec\_gnts}: speculative grants are inhibited by conflicting non-speculative grants).
 
-\item[alloc\_iters] For the \texttt{islip}, \texttt{pim} and \texttt{select} allocators, allocation can be improved by performing multiple iterations of the algorithm; this parameter controls the number of iterations to be performed for both switch and VC allocation.
+\item[alloc\_iters] For the \texttt{islip}, \texttt{pim} and
+  \texttt{select} allocators, allocation can be improved by performing
+  multiple iterations of the algorithm; this parameter controls the
+  number of iterations to be performed for both switch and VC
+  allocation. 
 
-\item[sw\_allocator] The type of allocator used for switch allocation.
-See Section~\ref{sec:alloc} for a list of the possible allocators.
+\item[arb\_type] If the VC or switch  allocator is a separable
+  input- or output-first allocator, this parameter selects the type of
+  arbiter to use. 
 
-\item[sw\_alloc\_arb\_type] If the switch allocator is a separable input- or output-first allocator, this parameter selects the type of arbiter to use.
-
-\item[sw\_alloc\_iters] If the switch allocator is of type \texttt{islip}, \texttt{pim} or \texttt{select}, this parameter controls how many allocation iterations should be performed. This overrides the global \texttt{alloc\_iters} parameter.
+\item[sw\_allocator] The type of allocator used for switch
+  allocation. See Section~\ref{sec:alloc} for a list of the possible
+  allocators. 
 
 \item[sw\_alloc\_delay] The delay (in cycles) of switch allocation.
 
 \item[vc\_allocator] The type of allocator used for virtual-channel
 allocation.  See Section~\ref{sec:alloc} for a list of the possible
 allocators.
-
-\item[vc\_alloc\_arb\_type] If the VC allocator is a separable input- or output-first allocator, this parameter selects the type of arbiter to use.
-
-\item[vc\_alloc\_iters] If the VC allocator is of type \texttt{islip}, \texttt{pim} or \texttt{select}, this parameter controls how many allocation iterations should be performed. This overrides the global \texttt{alloc\_iters} parameter.
 
 \item[vc\_alloc\_delay] The delay (in cycles) of virtual-channel
 allocation.
@@ -628,7 +666,7 @@ particular statistics.
 
 \item[print\_activity] At the end of a simulation using iq\_router, print out the activity for buffer, switch, and channel of the network. 
 
-\item[viewer\_trace] The simulator will generate very verbose print out of all activity inside the network. This print out should be fed into noc\_viewer for a graphic display of the activity inside the network. Currently not working. 
+%\item[viewer\_trace] The simulator will generate very verbose print out of all activity inside the network. This print out should be fed into noc\_viewer for a graphic display of the activity inside the network. Currently not working. 
 
 \item[watch\_file] Specific flits can have their "watch" status turn on. Require input a file which has flit id listed. 1 id per line. 
 
