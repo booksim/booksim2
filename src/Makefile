@@ -24,9 +24,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-#
-# Makefile
-#
 LEX = flex
 YACC   = bison -y
 DEFINE = 
@@ -36,111 +33,50 @@ CPPFLAGS += -O3
 CPPFLAGS += -g
 LFLAGS +=
 
-
-OBJDIR := obj
-PROG   := booksim
+PROG := booksim
 
 # simulator source files
-CPP_SRCS = main.cpp \
-   config_utils.cpp \
-   booksim_config.cpp \
-   module.cpp \
-   buffer.cpp \
-   vc.cpp \
-   routefunc.cpp \
-   traffic.cpp \
-   flitchannel.cpp \
-   trafficmanager.cpp \
-   batchtrafficmanager.cpp \
-   packet_reply_info.cpp \
-   buffer_state.cpp \
-   stats.cpp \
-   credit.cpp \
-   outputset.cpp \
-   flit.cpp \
-   injection.cpp\
-   misc_utils.cpp\
-   rng_wrapper.cpp\
-   rng_double_wrapper.cpp\
-   power_module.cpp \
-   switch_monitor.cpp \
-   buffer_monitor.cpp
+CPP_SRCS = $(wildcard *.cpp) $(wildcard */*.cpp)
+CPP_HDRS = $(wildcard *.hpp) $(wildcard */*.hpp)
+CPP_OBJS = $(CPP_SRCS:.cpp=.o)
 
+LEX_SRCS = lex.yy.c
+LEX_OBJS = lex.yy.o
 
+YACC_SRCS = y.tab.c
+YACC_HDRS = y.tab.h
+YACC_OBJS = y.tab.o
 
-LEX_OBJS  = ${OBJDIR}/lex.yy.o
-YACC_OBJS = ${OBJDIR}/y.tab.o
-
-# networks 
-NETWORKS:= $(wildcard networks/*.cpp) 
-ALLOCATORS:= $(wildcard allocators/*.cpp)
-ARBITERS:= $(wildcard arbiters/*.cpp)
-ROUTERS:= $(wildcard routers/*.cpp)
-POWER:= $(wildcard power/*.cpp)
-
-#--- Make rules ---
-OBJS :=  $(LEX_OBJS) $(YACC_OBJS)\
- $(CPP_SRCS:%.cpp=${OBJDIR}/%.o)\
- $(NETWORKS:networks/%.cpp=${OBJDIR}/%.o)\
- $(ALLOCATORS:allocators/%.cpp=${OBJDIR}/%.o)\
- $(ARBITERS:arbiters/%.cpp=${OBJDIR}/%.o)\
- $(ROUTERS:routers/%.cpp=${OBJDIR}/%.o)\
- $(POWER:power/%.cpp=${OBJDIR}/%.o)
+OBJS :=  $(CPP_OBJS) $(LEX_OBJS) $(YACC_OBJS)
 
 .PHONY: clean
 
-all:$(PROG)
+all: $(PROG)
 
 $(PROG): $(OBJS)
 	 $(CXX) $(LFLAGS) $^ -o $@
 
-# rules to compile simulator
+$(LEX_SRCS): config.l
+	$(LEX) $<
 
+$(YACC_SRCS) $(YACC_HDRS): config.y
+	$(YACC) -d $<
 
-${LEX_OBJS}: lex.yy.c y.tab.h
+${LEX_OBJS}: $(LEX_SRCS) $(YACC_HDRS)
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
-${YACC_OBJS}: y.tab.c y.tab.h
+${YACC_OBJS}: $(YACC_SRCS)
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
-${OBJDIR}/%.o: %.cpp 
-	$(CXX) $(CPPFLAGS) -c $< -o $@
-
-# rules to compile networks
-${OBJDIR}/%.o: networks/%.cpp 
-	$(CXX) $(CPPFLAGS) -c $< -o $@
-
-# rules to compile arbiters
-${OBJDIR}/%.o: arbiters/%.cpp 
-	$(CXX) $(CPPFLAGS) -c $< -o $@
-
-# rules to compile allocators
-${OBJDIR}/%.o: allocators/%.cpp 
-	$(CXX) $(CPPFLAGS) -c $< -o $@
-
-# rules to compile routers
-${OBJDIR}/%.o: routers/%.cpp 
-	$(CXX) $(CPPFLAGS) -c $< -o $@
-
-# rules to compile power classes
-${OBJDIR}/%.o: power/%.cpp
+%.o: %.cpp $(CPP_HDRS)
 	$(CXX) $(CPPFLAGS) -c $< -o $@
 
 clean:
+	rm -f y.tab.c y.tab.h
+	rm -f lex.yy.c
 	rm -f $(OBJS) 
 	rm -f $(PROG)
-	rm -f *~
-	rm -f allocators/*~
-	rm -f arbiters/*~
-	rm -f networks/*~
-	rm -f runfiles/*~
-	rm -f routers/*~
-	rm -f examples/*~
-	rm -f y.tab.c y.tab.h lex.yy.c
-	rm -f moc_bgui.cpp
 
-y.tab.c y.tab.h: config.y
-	$(YACC) -d $<
-
-lex.yy.c: config.l
-	$(LEX) $<
+distclean: clean
+	rm -f *~ */*~
+	rm -f *.o */*.o
