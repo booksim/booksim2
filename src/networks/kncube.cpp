@@ -231,7 +231,9 @@ void KNCube::InsertRandomFaults( const Configuration &config )
   int num_fails = config.GetInt( "link_failures" );
   
   if ( _size && num_fails ) {
-    unsigned long prev_seed = RandomIntLong( );
+    vector<long> save_x;
+    vector<double> save_u;
+    SaveRandomState( save_x, save_u );
     RandomSeed( config.GetInt( "fail_seed" ) );
 
     vector<bool> fail_nodes(_size);
@@ -302,7 +304,7 @@ void KNCube::InsertRandomFaults( const Configuration &config )
 	   << chan << endl;
     }
 
-    RandomSeed( prev_seed );
+    RestoreRandomState( save_x, save_u );
   }
 }
 

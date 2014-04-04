@@ -332,7 +332,9 @@ RandomPermutationTrafficPattern::RandomPermutationTrafficPattern(int nodes,
 
 void RandomPermutationTrafficPattern::randomize(int seed)
 {
-  unsigned long prev_seed = RandomIntLong( );
+  vector<long> save_x;
+  vector<double> save_u;
+  SaveRandomState(save_x, save_u);
   RandomSeed(seed);
 
   _dest.assign(_nodes, -1);
@@ -353,7 +355,7 @@ void RandomPermutationTrafficPattern::randomize(int seed)
     _dest[j] = i;
   }
 
-  RandomSeed(prev_seed); 
+  RestoreRandomState(save_x, save_u); 
 }
 
 int RandomPermutationTrafficPattern::dest(int source)
