@@ -234,7 +234,14 @@ void KNCube::InsertRandomFaults( const Configuration &config )
     vector<long> save_x;
     vector<double> save_u;
     SaveRandomState( save_x, save_u );
-    RandomSeed( config.GetInt( "fail_seed" ) );
+    int fail_seed;
+    if ( config.GetStr( "fail_seed" ) == "time" ) {
+      fail_seed = int( time( NULL ) );
+      cout << "SEED: fail_seed=" << fail_seed << endl;
+    } else {
+      fail_seed = config.GetInt( "fail_seed" );
+    }
+    RandomSeed( fail_seed );
 
     vector<bool> fail_nodes(_size);
 

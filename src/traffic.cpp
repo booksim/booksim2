@@ -76,7 +76,12 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes,
     int perm_seed = -1;
     if(params.empty()) {
       if(config) {
-	perm_seed = config->GetInt("perm_seed");
+	if(config->GetStr("perm_seed") == "time") {
+	  perm_seed = int(time(NULL));
+	  cout << "SEED: perm_seed=" << perm_seed << endl;
+	} else {
+	  perm_seed = config->GetInt("perm_seed");
+	}
       } else {
 	cout << "Error: Missing parameter for random permutation traffic pattern: " << pattern << endl;
 	exit(-1);
