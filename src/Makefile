@@ -38,6 +38,7 @@ PROG := booksim
 # simulator source files
 CPP_SRCS = $(wildcard *.cpp) $(wildcard */*.cpp)
 CPP_HDRS = $(wildcard *.hpp) $(wildcard */*.hpp)
+CPP_DEPS = $(CPP_SRCS:.cpp=.d)
 CPP_OBJS = $(CPP_SRCS:.cpp=.o)
 
 LEX_SRCS = lex.yy.c
@@ -69,14 +70,18 @@ $(YACC_OBJS): $(YACC_SRCS)
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
 %.o: %.cpp $(CPP_HDRS)
-	$(CXX) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) -MMD -c $< -o $@
 
 clean:
-	rm -f y.tab.c y.tab.h
-	rm -f lex.yy.c
-	rm -f $(OBJS) 
+	rm -f $(YACC_SRCS) $(YACC_HDRS)
+	rm -f $(LEX_SRCS)
+	rm -f $(CPP_DEPS)
+	rm -f $(OBJS)
 	rm -f $(PROG)
 
 distclean: clean
 	rm -f *~ */*~
 	rm -f *.o */*.o
+	rm -f *.d */*.d
+
+-include $(CPP_DEPS)
