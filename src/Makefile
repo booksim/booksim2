@@ -69,7 +69,7 @@ $(LEX_OBJS): $(LEX_SRCS) $(YACC_HDRS)
 $(YACC_OBJS): $(YACC_SRCS)
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
-%.o: %.cpp $(CPP_HDRS)
+%.o: %.cpp
 	$(CXX) $(CPPFLAGS) -MMD -c $< -o $@
 
 clean:
