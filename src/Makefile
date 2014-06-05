@@ -76,7 +76,7 @@ $(YACC_OBJS): $(YACC_SRCS)
 $(NETRACE_OBJS): $(NETRACE_SRCS) $(NETRACE_HDRS)
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
-%.o: %.cpp $(CPP_HDRS)
+%.o: %.cpp
 	$(CXX) $(CPPFLAGS) -MMD -c $< -o $@
 
 clean:
