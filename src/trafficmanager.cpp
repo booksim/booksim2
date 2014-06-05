@@ -185,7 +185,14 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   }
 
   //seed the network
-  RandomSeed(config.GetInt("seed"));
+  int seed;
+  if(config.GetStr("seed") == "time") {
+    seed = int(time(NULL));
+    cout << "SEED: seed=" << seed << endl;
+  } else {
+    seed = config.GetInt("seed");
+  }
+  RandomSeed(seed);
 
   _measure_stats = config.GetIntArray( "measure_stats" );
   if(_measure_stats.empty()) {

@@ -228,29 +228,29 @@ int KNCube::GetK( ) const
 /*legacy, not sure how this fits into the own scheme of things*/
 void KNCube::InsertRandomFaults( const Configuration &config )
 {
-  int num_fails;
-  unsigned long prev_seed;
-
-  int node, chan;
-  int i, j, t, n, c;
-  bool available;
-
-  bool edge;
-
-  num_fails = config.GetInt( "link_failures" );
+  int num_fails = config.GetInt( "link_failures" );
   
   if ( _size && num_fails ) {
-    prev_seed = RandomIntLong( );
-    RandomSeed( config.GetInt( "fail_seed" ) );
+    vector<long> save_x;
+    vector<double> save_u;
+    SaveRandomState( save_x, save_u );
+    int fail_seed;
+    if ( config.GetStr( "fail_seed" ) == "time" ) {
+      fail_seed = int( time( NULL ) );
+      cout << "SEED: fail_seed=" << fail_seed << endl;
+    } else {
+      fail_seed = config.GetInt( "fail_seed" );
+    }
+    RandomSeed( fail_seed );
 
     vector<bool> fail_nodes(_size);
 
-    for ( i = 0; i < _size; ++i ) {
-      node = i;
+    for ( int i = 0; i < _size; ++i ) {
+      int node = i;
 
       // edge test
-      edge = false;
-      for ( n = 0; n < _n; ++n ) {
+      bool edge = false;
+      for ( int n = 0; n < _n; ++n ) {
 	if ( ( ( node % _k ) == 0 ) ||
 	     ( ( node % _k ) == _k - 1 ) ) {
 	  edge = true;
@@ -265,18 +265,20 @@ void KNCube::InsertRandomFaults( const Configuration &config )
       }
     }
 
-    for ( i = 0; i < num_fails; ++i ) {
-      j = RandomInt( _size - 1 );
-      available = false;
+    for ( int i = 0; i < num_fails; ++i ) {
+      int j = RandomInt( _size - 1 );
+      bool available = false;
+      int node, chan;
+      int t;
 
       for ( t = 0; ( t < _size ) && (!available); ++t ) {
 	node = ( j + t ) % _size;
        
 	if ( !fail_nodes[node] ) {
 	  // check neighbors
-	  c = RandomInt( 2*_n - 1 );
+	  int c = RandomInt( 2*_n - 1 );
 
-	  for ( n = 0; ( n < 2*_n ) && (!available); ++n ) {
+	  for ( int n = 0; ( n < 2*_n ) && (!available); ++n ) {
 	    chan = ( n + c ) % 2*_n;
 
 	    if ( chan % 1 ) {
@@ -300,7 +302,7 @@ void KNCube::InsertRandomFaults( const Configuration &config )
       OutChannelFault( node, chan );
       fail_nodes[node] = true;
 
-      for ( n = 0; ( n < _n ) && available ; ++n ) {
+      for ( int n = 0; ( n < _n ) && available ; ++n ) {
 	fail_nodes[_LeftNode( node, n )]  = true;
 	fail_nodes[_RightNode( node, n )] = true;
       }
@@ -309,7 +311,7 @@ void KNCube::InsertRandomFaults( const Configuration &config )
 	   << chan << endl;
     }
 
-    RandomSeed( prev_seed );
+    RestoreRandomState( save_x, save_u );
   }
 }
 
