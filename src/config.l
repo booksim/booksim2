@@ -1,5 +1,7 @@
 %{
 
+#include <string.h>
+
 #include "y.tab.h"
 
 static unsigned int lineno = 1;
