@@ -30,6 +30,7 @@
 #include <fstream>
 #include <limits>
 #include <cstdlib>
+#include <ctime>
 
 #include "booksim.hpp"
 #include "booksim_config.hpp"
