@@ -1204,19 +1204,17 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 int find_distance (int src, int dest) {
   int dist = 0;
   int _dim   = gN;
-  int _dim_size;
   
   int src_tmp= (int) src / gC;
   int dest_tmp = (int) dest / gC;
-  int src_id, dest_id;
   
   //  cout << " HOP CNT between  src: " << src << " dest: " << dest;
   for (int d=0;d < _dim; d++) {
-    _dim_size = powi(gK, d )*gC;
+    //int _dim_size = powi(gK, d )*gC;
     //if ((int)(src / _dim_size) !=  (int)(dest / _dim_size))
     //   dist++;
-    src_id = src_tmp % gK;
-    dest_id = dest_tmp % gK;
+    int src_id = src_tmp % gK;
+    int dest_id = dest_tmp % gK;
     if (src_id !=  dest_id)
       dist++;
     src_tmp = (int) (src_tmp / gK);

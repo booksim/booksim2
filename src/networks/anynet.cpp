@@ -478,11 +478,11 @@ void AnyNet::readFile(){
 
   }
 
-  //map verification, make sure the information contained in bother maps
+  //map verification, make sure the information contained in both maps
   //are the same
   assert(router_list[0].size() == router_list[1].size());
 
-  //traffic generator assumes node list is sequenctial and starts at 0
+  //traffic generator assumes node list is sequential and starts at 0
   vector<int> node_check;
   for(map<int,int>::iterator i = node_list.begin();
       i!=node_list.end();
@@ -491,7 +491,7 @@ void AnyNet::readFile(){
   }
   sort(node_check.begin(), node_check.end());
   for(size_t i = 0; i<node_check.size(); i++){
-    if(node_check[i] != i){
+    if((size_t)node_check[i] != i){
       cout<<"Anynet:booksim trafficmanager assumes sequential node numbering starting at 0\n";
       assert(false);
     }

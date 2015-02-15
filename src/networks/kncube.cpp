@@ -35,6 +35,7 @@
 #include <vector>
 #include <sstream>
 #include <ctime>
+#include <cassert>
 #include "kncube.hpp"
 #include "random_utils.hpp"
 #include "misc_utils.hpp"
@@ -226,7 +227,7 @@ int KNCube::GetK( ) const
   return _k;
 }
 
-/*legacy, not sure how this fits into the own scheme of things*/
+/*legacy, not sure how this fits into the new scheme of things*/
 void KNCube::InsertRandomFaults( const Configuration &config )
 {
   int num_fails = config.GetInt( "link_failures" );
@@ -269,11 +270,12 @@ void KNCube::InsertRandomFaults( const Configuration &config )
     for ( int i = 0; i < num_fails; ++i ) {
       int j = RandomInt( _size - 1 );
       bool available = false;
-      int node, chan;
+      int node = -1;
+      int chan = -1;
       int t;
 
       for ( t = 0; ( t < _size ) && (!available); ++t ) {
-	node = ( j + t ) % _size;
+	int node = ( j + t ) % _size;
        
 	if ( !fail_nodes[node] ) {
 	  // check neighbors
@@ -299,7 +301,8 @@ void KNCube::InsertRandomFaults( const Configuration &config )
 	Error( "Could not find another possible fault channel" );
       }
 
-      
+      assert(node != -1);
+      assert(chan != -1);
       OutChannelFault( node, chan );
       fail_nodes[node] = true;
 

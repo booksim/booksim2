@@ -227,7 +227,7 @@ int Tree4::_WireLatency( int height1, int pos1, int height2, int pos2 )
 {
   int heightChild, heightParent, posChild, posParent;
 
-  int L;
+  int L = -1;
 
   if (height1 < height2) {
     heightChild  = height2;
@@ -285,5 +285,6 @@ int Tree4::_WireLatency( int height1, int pos1, int height2, int pos2 )
       case 3: L =_length_d1_d0_0; break;
       }
   }
+  assert(L != -1);
   return L;
 }
