@@ -28,6 +28,7 @@
 #include <sstream>
 #include <fstream>
 #include <limits>
+#include <ctime>
 
 #include "booksim.hpp"
 #include "booksim_config.hpp"

@@ -27,6 +27,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <ctime>
 #include "random_utils.hpp"
 #include "traffic.hpp"
 
