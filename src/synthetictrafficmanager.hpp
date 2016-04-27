@@ -1,7 +1,7 @@
 // $Id$
 
 /*
- Copyright (c) 2007-2015, Trustees of The Leland Stanford Junior University
+ Copyright (c) 2007-2012, Trustees of The Leland Stanford Junior University
  All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -25,50 +25,62 @@
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _BATCHTRAFFICMANAGER_HPP_
-#define _BATCHTRAFFICMANAGER_HPP_
+#ifndef _SYNTHETICTRAFFICMANAGER_HPP_
+#define _SYNTHETICTRAFFICMANAGER_HPP_
 
-#include <iostream>
 #include <vector>
 
-#include "synthetictrafficmanager.hpp"
+#include "trafficmanager.hpp"
+#include "traffic.hpp"
+#include "stats.hpp"
 
-class BatchTrafficManager : public SyntheticTrafficManager {
+class SyntheticTrafficManager : public TrafficManager {
+
+private:
+
+  vector<vector<int> > _packet_size;
+  vector<vector<int> > _packet_size_rate;
+  vector<int> _packet_size_max_val;
 
 protected:
 
-  vector<int> _max_outstanding;
-  vector<int> _batch_size;
-  int _batch_count;
-  int _last_id;
-  int _last_pid;
+  vector<string> _traffic;
+  vector<TrafficPattern *> _traffic_pattern;
 
-  Stats * _batch_time;
-  double _overall_min_batch_time;
-  double _overall_avg_batch_time;
-  double _overall_max_batch_time;
+  vector<int> _reply_class;
+  vector<int> _request_class;
 
-  ostream * _sent_packets_out;
+  vector<vector<int> > _qtime;
+  vector<vector<bool> > _qdrained;
 
-  virtual void _RetireFlit( Flit *f, int dest );
+  vector<Stats *> _tlat_stats;     
+  vector<double> _overall_min_tlat;  
+  vector<double> _overall_avg_tlat;  
+  vector<double> _overall_max_tlat;  
 
-  virtual int _IssuePacket( int source, int cl );
-  virtual void _ClearStats( );
-  virtual bool _SingleSim( );
+  vector<vector<Stats *> > _pair_tlat;
 
-  virtual void _UpdateOverallStats( );
+  virtual void _RetirePacket( Flit * head, Flit * tail );
+
+  virtual int _IssuePacket( int source, int cl ) = 0;
+
+  virtual void _Inject( );
+
+  virtual bool _PacketsOutstanding( ) const;
+
+  virtual void _ResetSim( );
 
   virtual string _OverallStatsHeaderCSV() const;
   virtual string _OverallClassStatsCSV(int c) const;
-  virtual void _DisplayOverallClassStats( int c, ostream & os ) const;
-  virtual void _DisplayClassStats( int c, ostream & os ) const;
-  virtual void _WriteClassStats( int c, ostream & os ) const;
 
+  int _GetNextPacketSize(int cl) const;
+  double _GetAveragePacketSize(int cl) const;
+
+  SyntheticTrafficManager( const Configuration &config, const vector<Network *> & net );
 
 public:
 
-  BatchTrafficManager( const Configuration &config, const vector<Network *> & net );
-  virtual ~BatchTrafficManager( );
+  virtual ~SyntheticTrafficManager( );
 
 };
 

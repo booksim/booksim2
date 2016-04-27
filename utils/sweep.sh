@@ -71,7 +71,7 @@ fi
 
 echo "SWEEP: Determining zero-load latency..."
 ${sim} $* print_csv_results=1 injection_rate=${zero_load_inj} | tee ${sim}.${HOSTNAME}.${$}.log
-zero_load_lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 6`
+zero_load_lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 5`
 rm ${sim}.${HOSTNAME}.${$}.log
 if [ "${zero_load_lat}" = "" ]
 then
@@ -99,7 +99,7 @@ do
     else
 	echo "SWEEP: Simulating for injection rate ${inj}..."
 	${sim} $* print_csv_results=1 injection_rate=${inj} | tee ${sim}.${HOSTNAME}.${$}.log
-	lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 6`
+	lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 5`
 	rm ${sim}.${HOSTNAME}.${$}.log
     fi
     if [ "${lat}" = "" ]
@@ -138,7 +138,7 @@ do
 		do
 		    echo "SWEEP: Simulating for injection rate ${ref_inj}..."
 		    ${sim} $* print_csv_results=1 injection_rate=${ref_inj} | tee ${sim}.${HOSTNAME}.${$}.log
-		    intm_lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 6`
+		    intm_lat=`grep "results:" ${sim}.${HOSTNAME}.${$}.log | cut -d , -f 5`
 		    rm ${sim}.${HOSTNAME}.${$}.log
 		    if [ "${intm_lat}" = "" ]
 		    then

@@ -44,7 +44,7 @@ ostream& operator<<( ostream& os, const Flit& f )
 {
   os << "  Flit ID: " << f.id << " (" << &f << ")" 
      << " Packet ID: " << f.pid
-     << " Type: " << f.type 
+     << " Class: " << f.cl 
      << " Head: " << f.head
      << " Tail: " << f.tail << endl;
   os << "  Source: " << f.src << "  Dest: " << f.dest << " Intm: "<<f.intm<<endl;
@@ -60,7 +60,6 @@ Flit::Flit()
 
 void Flit::Reset() 
 {  
-  type      = ANY_TYPE ;
   vc        = -1 ;
   cl        = -1 ;
   head      = false ;

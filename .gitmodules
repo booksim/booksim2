@@ -1,0 +1,3 @@
+[submodule "src/netrace"]
+	path = src/netrace
+	url = https://github.com/booksim/netrace.git

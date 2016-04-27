@@ -38,14 +38,6 @@ class Flit {
 
 public:
 
-  const static int NUM_FLIT_TYPES = 5;
-  enum FlitType { READ_REQUEST  = 0, 
-		  READ_REPLY    = 1,
-		  WRITE_REQUEST = 2,
-		  WRITE_REPLY   = 3,
-                  ANY_TYPE      = 4 };
-  FlitType type;
-
   int vc;
 
   int cl;
@@ -69,7 +61,6 @@ public:
 
   int  hops;
   bool watch;
-  int  subnetwork;
   
   // intermediate destination (if any)
   mutable int intm;

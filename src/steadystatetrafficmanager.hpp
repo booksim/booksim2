@@ -25,33 +25,51 @@
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _PACKET_REPLY_INFO_HPP_
-#define _PACKET_REPLY_INFO_HPP_
+#ifndef _STEADYSTATETRAFFICMANAGER_HPP_
+#define _STEADYSTATETRAFFICMANAGER_HPP_
 
-#include <stack>
+#include <vector>
 
-#include "flit.hpp"
+#include "synthetictrafficmanager.hpp"
+#include "injection.hpp"
 
-//register the requests to a node
-class PacketReplyInfo {
+class SteadyStateTrafficManager : public SyntheticTrafficManager {
+
+protected:
+
+  vector<double> _load;
+
+  vector<string> _injection;
+  vector<InjectionProcess *> _injection_process;
+
+  bool _measure_latency;
+
+  int   _sample_period;
+  int   _max_samples;
+  int   _warmup_periods;
+
+  vector<double> _latency_thres;
+
+  vector<double> _stopping_threshold;
+  vector<double> _acc_stopping_threshold;
+
+  vector<double> _warmup_threshold;
+  vector<double> _acc_warmup_threshold;
+
+  virtual int _IssuePacket( int source, int cl );
+
+  virtual void _ResetSim( );
+
+  virtual bool _SingleSim( );
+
+  virtual string _OverallStatsHeaderCSV() const;
+  virtual string _OverallClassStatsCSV(int c) const;
 
 public:
-  int source;
-  int time;
-  bool record;
-  Flit::FlitType type;
 
-  static PacketReplyInfo* New();
-  void Free();
-  static void FreeAll();
+  SteadyStateTrafficManager( const Configuration &config, const vector<Network *> & net );
+  virtual ~SteadyStateTrafficManager( );
 
-private:
-
-  static stack<PacketReplyInfo*> _all;
-  static stack<PacketReplyInfo*> _free;
-
-  PacketReplyInfo() {}
-  ~PacketReplyInfo() {}
 };
 
 #endif
