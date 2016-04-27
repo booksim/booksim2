@@ -25,33 +25,48 @@
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "packet_reply_info.hpp"
+#ifndef _WORKLOADTRAFFICMANAGER_HPP_
+#define _WORKLOADTRAFFICMANAGER_HPP_
 
-stack<PacketReplyInfo*> PacketReplyInfo::_all;
-stack<PacketReplyInfo*> PacketReplyInfo::_free;
+#include <iostream>
+#include <vector>
+#include <list>
 
-PacketReplyInfo * PacketReplyInfo::New()
-{
-  PacketReplyInfo * pr;
-  if(_free.empty()) {
-    pr = new PacketReplyInfo();
-    _all.push(pr);
-  } else {
-    pr = _free.top();
-    _free.pop();
-  }
-  return pr;
-}
+#include "trafficmanager.hpp"
+#include "workload.hpp"
 
-void PacketReplyInfo::Free()
-{
-  _free.push(this);
-}
+class WorkloadTrafficManager : public TrafficManager {
 
-void PacketReplyInfo::FreeAll()
-{
-  while(!_all.empty()) {
-    delete _all.top();
-    _all.pop();
-  }
-}
+protected:
+
+  int _sample_period;
+  int _max_samples;
+  int _warmup_periods;
+
+  vector<Workload *> _workload;
+
+  int _overall_runtime;
+
+  virtual void _Inject( );
+  virtual void _RetirePacket( Flit * head, Flit * tail );
+  virtual void _ResetSim( );
+  virtual bool _SingleSim( );
+
+  bool _Completed( );
+
+  virtual void _UpdateOverallStats( );
+
+  virtual string _OverallStatsHeaderCSV() const;
+  virtual string _OverallClassStatsCSV(int c) const;
+
+  virtual void _DisplayClassStats(int c, ostream & os) const;
+  virtual void _DisplayOverallClassStats(int c, ostream & os) const;
+
+public:
+
+  WorkloadTrafficManager( const Configuration &config, const vector<Network *> & net );
+  virtual ~WorkloadTrafficManager( );
+
+};
+
+#endif

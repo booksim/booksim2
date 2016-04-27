@@ -31,7 +31,6 @@
 #include <list>
 #include <map>
 #include <set>
-#include <cassert>
 
 #include "module.hpp"
 #include "config_utils.hpp"
@@ -39,23 +38,13 @@
 #include "flit.hpp"
 #include "buffer_state.hpp"
 #include "stats.hpp"
-#include "traffic.hpp"
 #include "routefunc.hpp"
 #include "outputset.hpp"
-#include "injection.hpp"
-
-//register the requests to a node
-class PacketReplyInfo;
 
 class TrafficManager : public Module {
 
-private:
-
-  vector<vector<int> > _packet_size;
-  vector<vector<int> > _packet_size_rate;
-  vector<int> _packet_size_max_val;
-
 protected:
+
   int _nodes;
   int _routers;
   int _vcs;
@@ -65,26 +54,14 @@ protected:
 
   // ============ Traffic ============ 
 
-  int    _classes;
+  int _classes;
 
-  vector<double> _load;
-
-  vector<int> _use_read_write;
-  vector<double> _write_fraction;
-
-  vector<int> _read_request_size;
-  vector<int> _read_reply_size;
-  vector<int> _write_request_size;
-  vector<int> _write_reply_size;
-
-  vector<string> _traffic;
+  int _subnets;
+  vector<int> _subnet;
 
   vector<int> _class_priority;
 
   vector<vector<int> > _last_class;
-
-  vector<TrafficPattern *> _traffic_pattern;
-  vector<InjectionProcess *> _injection_process;
 
   // ============ Message priorities ============ 
 
@@ -109,22 +86,15 @@ protected:
 
   // ============ Injection queues ============ 
 
-  vector<vector<int> > _qtime;
-  vector<vector<bool> > _qdrained;
   vector<vector<list<Flit *> > > _partial_packets;
 
   vector<map<int, Flit *> > _total_in_flight_flits;
   vector<map<int, Flit *> > _measured_in_flight_flits;
   vector<map<int, Flit *> > _retired_packets;
+
   bool _empty_network;
 
   bool _hold_switch_for_packet;
-
-  // ============ physical sub-networks ==========
-
-  int _subnets;
-
-  vector<int> _subnet;
 
   // ============ deadlock ==========
 
@@ -133,9 +103,8 @@ protected:
 
   // ============ request & replies ==========================
 
-  vector<int> _packet_seq_no;
-  vector<list<PacketReplyInfo*> > _repliesPending;
-  vector<int> _requestsOutstanding;
+  vector<vector<int> > _packet_seq_no;
+  vector<vector<int> > _requests_outstanding;
 
   // ============ Statistics ============
 
@@ -206,28 +175,15 @@ protected:
   enum eSimState { warming_up, running, draining, done };
   eSimState _sim_state;
 
-  bool _measure_latency;
-
   int   _reset_time;
   int   _drain_time;
 
   int   _total_sims;
-  int   _sample_period;
-  int   _max_samples;
-  int   _warmup_periods;
 
   int   _include_queuing;
 
   vector<int> _measure_stats;
   bool _pair_stats;
-
-  vector<double> _latency_thres;
-
-  vector<double> _stopping_threshold;
-  vector<double> _acc_stopping_threshold;
-
-  vector<double> _warmup_threshold;
-  vector<double> _acc_warmup_threshold;
 
   int _cur_id;
   int _cur_pid;
@@ -260,23 +216,25 @@ protected:
 #endif
 
   // ============ Internal methods ============ 
-protected:
 
   virtual void _RetireFlit( Flit *f, int dest );
+  virtual void _RetirePacket( Flit * head, Flit * tail );
 
-  void _Inject();
+  virtual void _Inject() = 0;
+  
   void _Step( );
 
-  bool _PacketsOutstanding( ) const;
+  virtual bool _PacketsOutstanding( ) const;
   
-  virtual int  _IssuePacket( int source, int cl );
-  void _GeneratePacket( int source, int size, int cl, int time );
+  int _GeneratePacket( int source, int dest, int size, int cl, int time );
+
+  virtual void _ResetSim( );
 
   virtual void _ClearStats( );
 
   void _ComputeStats( const vector<int> & stats, int *sum, int *min = NULL, int *max = NULL, int *min_pos = NULL, int *max_pos = NULL ) const;
 
-  virtual bool _SingleSim( );
+  virtual bool _SingleSim( ) = 0;
 
   void _DisplayRemaining( ostream & os = cout ) const;
   
@@ -284,26 +242,29 @@ protected:
 
   virtual void _UpdateOverallStats();
 
-  virtual string _OverallStatsCSV(int c = 0) const;
+  virtual string _OverallStatsHeaderCSV() const;
+  virtual string _OverallClassStatsCSV(int c) const;
 
-  int _GetNextPacketSize(int cl) const;
-  double _GetAveragePacketSize(int cl) const;
+  virtual void _DisplayClassStats( int c, ostream & os ) const ;
+  virtual void _WriteClassStats( int c, ostream & os ) const ;
+  virtual void _DisplayOverallClassStats( int c, ostream & os ) const ;
+
+  TrafficManager( const Configuration &config, const vector<Network *> & net );
 
 public:
+
+  virtual ~TrafficManager( );
 
   static TrafficManager * New(Configuration const & config, 
 			      vector<Network *> const & net);
 
-  TrafficManager( const Configuration &config, const vector<Network *> & net );
-  virtual ~TrafficManager( );
-
   bool Run( );
 
-  virtual void WriteStats( ostream & os = cout ) const ;
-  virtual void UpdateStats( ) ;
-  virtual void DisplayStats( ostream & os = cout ) const ;
-  virtual void DisplayOverallStats( ostream & os = cout ) const ;
-  virtual void DisplayOverallStatsCSV( ostream & os = cout ) const ;
+  void UpdateStats();
+  void DisplayStats(ostream & os = cout) const;
+  void WriteStats(ostream & os = cout) const;
+  void DisplayOverallStats(ostream & os = cout) const;
+  void DisplayOverallStatsCSV(ostream & os = cout) const;
 
   inline int getTime() { return _time;}
   Stats * getStats(const string & name) { return _stats[name]; }

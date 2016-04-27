@@ -155,6 +155,29 @@ BookSimConfig::BookSimConfig( )
 
   _int_map["classes"] = 1;
 
+  // number of flits per packet
+  _int_map["packet_size"] = 1;
+  AddStrField("packet_size", ""); // workaraound to allow for vector specification
+
+  // if multiple values are specified per class, set probabilities for each
+  _int_map["packet_size_rate"] = 1;
+  AddStrField("packet_size_rate", ""); // workaraound to allow for vector specification
+
+  // Control assignment of packets to VCs
+  _int_map["start_vc"] = -1;
+  AddStrField("start_vc", ""); // workaraound to allow for vector specification
+  _int_map["end_vc"] = -1;
+  AddStrField("end_vc", ""); // workaraound to allow for vector specification
+
+  // Control Injection of Packets into Replicated Networks
+  _int_map["subnet"] = 0;
+  AddStrField("subnet", ""); // workaraound to allow for vector specification
+
+  // for every class, determine which class receiving nodes will generate a reply packet for
+  // (set to -1 for no reply)
+  _int_map["reply_class"] = -1;
+  AddStrField("reply_class", ""); // workaraound to allow for vector specification
+
   AddStrField( "traffic", "uniform" );
 
   _int_map["class_priority"] = 0;
@@ -168,14 +191,6 @@ BookSimConfig::BookSimConfig( )
   
   _int_map["injection_rate_uses_flits"] = 0;
 
-  // number of flits per packet
-  _int_map["packet_size"] = 1;
-  AddStrField("packet_size", ""); // workaraound to allow for vector specification
-
-  // if multiple values are specified per class, set probabilities for each
-  _int_map["packet_size_rate"] = 1;
-  AddStrField("packet_size_rate", ""); // workaraound to allow for vector specification
-
   AddStrField( "injection_process", "bernoulli" );
 
   _float_map["burst_alpha"] = 0.5; // burst interval
@@ -185,40 +200,11 @@ BookSimConfig::BookSimConfig( )
   AddStrField( "priority", "none" );  // message priorities
 
   _int_map["batch_size"] = 1000;
+  AddStrField("batch_size", "");
   _int_map["batch_count"] = 1;
+
   _int_map["max_outstanding_requests"] = 0; // 0 = unlimited
-
-  // Use read/write request reply scheme
-  _int_map["use_read_write"] = 0;
-  AddStrField("use_read_write", ""); // workaraound to allow for vector specification
-  _float_map["write_fraction"] = 0.5;
-  AddStrField("write_fraction", "");
-
-  // Control assignment of packets to VCs
-  _int_map["read_request_begin_vc"] = 0;
-  _int_map["read_request_end_vc"] = 5;
-  _int_map["write_request_begin_vc"] = 2;
-  _int_map["write_request_end_vc"] = 7;
-  _int_map["read_reply_begin_vc"] = 8;
-  _int_map["read_reply_end_vc"] = 13;
-  _int_map["write_reply_begin_vc"] = 10;
-  _int_map["write_reply_end_vc"] = 15;
-
-  // Control Injection of Packets into Replicated Networks
-  _int_map["read_request_subnet"] = 0;
-  _int_map["read_reply_subnet"] = 0;
-  _int_map["write_request_subnet"] = 0;
-  _int_map["write_reply_subnet"] = 0;
-
-  // Set packet length in flits
-  _int_map["read_request_size"]  = 1;
-  AddStrField("read_request_size", ""); // workaraound to allow for vector specification
-  _int_map["write_request_size"] = 1;
-  AddStrField("write_request_size", ""); // workaraound to allow for vector specification
-  _int_map["read_reply_size"]    = 1;
-  AddStrField("read_reply_size", ""); // workaraound to allow for vector specification
-  _int_map["write_reply_size"]   = 1;
-  AddStrField("write_reply_size", ""); // workaraound to allow for vector specification
+  AddStrField("max_outstanding_requests", "");
 
   //==== Simulation parameters ==========================
 
@@ -227,6 +213,8 @@ BookSimConfig::BookSimConfig( )
   //   throughput - sustained throughput for a particular injection rate
 
   AddStrField( "sim_type", "latency" );
+
+  AddStrField( "workload", "synthetic({0.1,1,bernoulli,uniform})" );
 
   _int_map["warmup_periods"] = 3; // number of samples periods to "warm-up" the simulation
 
@@ -315,8 +303,6 @@ BookSimConfig::BookSimConfig( )
   //==================Network file===========================
   AddStrField("network_file","");
 }
-
-
 
 PowerConfig::PowerConfig( )
 { 

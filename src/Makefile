@@ -48,7 +48,11 @@ YACC_SRCS = y.tab.c
 YACC_HDRS = y.tab.h
 YACC_OBJS = y.tab.o
 
-OBJS :=  $(CPP_OBJS) $(LEX_OBJS) $(YACC_OBJS)
+NETRACE_SRCS = netrace/netrace.c
+NETRACE_HDRS = netrace/netrace.h
+NETRACE_OBJS = netrace/netrace.o
+
+OBJS :=  $(CPP_OBJS) $(LEX_OBJS) $(YACC_OBJS) $(NETRACE_OBJS)
 
 .PHONY: clean
 
@@ -67,6 +71,9 @@ $(LEX_OBJS): $(LEX_SRCS) $(YACC_HDRS)
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
 $(YACC_OBJS): $(YACC_SRCS)
+	$(CC) $(CPPFLAGS) -c $< -o $@
+
+$(NETRACE_OBJS): $(NETRACE_SRCS) $(NETRACE_HDRS)
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
 %.o: %.cpp

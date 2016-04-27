@@ -58,7 +58,7 @@ InjectionProcess * InjectionProcess::New(string const & inject, int nodes,
 					 Configuration const * const config)
 {
   string process_name;
-  string param_str;
+  string param_str = "";
   size_t left = inject.find_first_of('(');
   if(left == string::npos) {
     process_name = inject;

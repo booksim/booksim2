@@ -42,8 +42,6 @@ routing_function = dest_tag;
 
 traffic = uniform;
 
-use_read_write = 0;
-
 injection_rate = 1.0;
 
 

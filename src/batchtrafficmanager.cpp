@@ -29,20 +29,27 @@
 #include <sstream>
 #include <fstream>
 
-#include "packet_reply_info.hpp"
-#include "random_utils.hpp"
 #include "batchtrafficmanager.hpp"
 
 BatchTrafficManager::BatchTrafficManager( const Configuration &config, 
 					  const vector<Network *> & net )
-: TrafficManager(config, net), _last_id(-1), _last_pid(-1), 
+: SyntheticTrafficManager(config, net), _last_id(-1), _last_pid(-1), 
    _overall_min_batch_time(0), _overall_avg_batch_time(0), 
    _overall_max_batch_time(0)
 {
 
-  _max_outstanding = config.GetInt ("max_outstanding_requests");  
+  _max_outstanding = config.GetIntArray("max_outstanding_requests");
+  if(_max_outstanding.empty()) {
+    _max_outstanding.push_back(config.GetInt("max_outstanding_requests"));
+  }
+  _max_outstanding.resize(_classes, _max_outstanding.back());
 
-  _batch_size = config.GetInt( "batch_size" );
+  _batch_size = config.GetIntArray("batch_size");
+  if(_batch_size.empty()) {
+    _batch_size.push_back(config.GetInt("batch_size"));
+  }
+  _batch_size.resize(_classes, _batch_size.back());
+
   _batch_count = config.GetInt( "batch_count" );
 
   _batch_time = new Stats( this, "batch_time", 1.0, 1000 );
@@ -71,50 +78,30 @@ void BatchTrafficManager::_RetireFlit( Flit *f, int dest )
 
 int BatchTrafficManager::_IssuePacket( int source, int cl )
 {
-  int result = 0;
-  if(_use_read_write[cl]) { //read write packets
-    //check queue for waiting replies.
-    //check to make sure it is on time yet
-    if(!_repliesPending[source].empty()) {
-      if(_repliesPending[source].front()->time <= _time) {
-	result = -1;
-      }
-    } else {
-      if((_packet_seq_no[source] < _batch_size) && 
-	 ((_max_outstanding <= 0) || 
-	  (_requestsOutstanding[source] < _max_outstanding))) {
-	
-	//coin toss to determine request type.
-	result = (RandomFloat() < 0.5) ? 2 : 1;
-      
-	_requestsOutstanding[source]++;
-      }
-    }
-  } else { //normal
-    if((_packet_seq_no[source] < _batch_size) && 
-       ((_max_outstanding <= 0) || 
-	(_requestsOutstanding[source] < _max_outstanding))) {
-      result = _GetNextPacketSize(cl);
-      _requestsOutstanding[source]++;
-    }
+  if(((_max_outstanding[cl] <= 0) ||
+      (_requests_outstanding[cl][source] < _max_outstanding[cl])) &&
+     (_packet_seq_no[cl][source] < _batch_size[cl])) {
+    int dest = _traffic_pattern[cl]->dest(source);
+    int size = _GetNextPacketSize(cl);
+    int time = ((_include_queuing == 1) ? _qtime[cl][source] : _time);
+    return _GeneratePacket(source, dest, size, cl, time);
   }
-  if(result != 0) {
-    _packet_seq_no[source]++;
-  }
-  return result;
+  return -1;
 }
 
 void BatchTrafficManager::_ClearStats( )
 {
-  TrafficManager::_ClearStats();
-  _batch_time->Clear( );
+  SyntheticTrafficManager::_ClearStats();
+  _batch_time->Clear();
 }
 
 bool BatchTrafficManager::_SingleSim( )
 {
   int batch_index = 0;
   while(batch_index < _batch_count) {
-    _packet_seq_no.assign(_nodes, 0);
+    for (int c = 0; c < _classes; ++c) {
+      _packet_seq_no[c].assign(_nodes, 0);
+    }
     _last_id = -1;
     _last_pid = -1;
     _sim_state = running;
@@ -124,10 +111,12 @@ bool BatchTrafficManager::_SingleSim( )
     do {
       _Step();
       batch_complete = true;
-      for(int i = 0; i < _nodes; ++i) {
-	if(_packet_seq_no[i] < _batch_size) {
-	  batch_complete = false;
-	  break;
+      for(int source = 0; (source < _nodes) && batch_complete; ++source) {
+	for(int c = 0; c < _classes; ++c) {
+	  if(_packet_seq_no[c][source] < _batch_size[c]) {
+	    batch_complete = false;
+	    break;
+	  }
 	}
       }
       if(_sent_packets_out) {
@@ -141,12 +130,14 @@ bool BatchTrafficManager::_SingleSim( )
 
     int empty_steps = 0;
     
-    bool packets_left = false;
+    bool requests_outstanding = false;
     for(int c = 0; c < _classes; ++c) {
-      packets_left |= !_total_in_flight_flits[c].empty();
+      for(int n = 0; n < _nodes; ++n) {
+	requests_outstanding |= (_requests_outstanding[c][n] > 0);
+      }
     }
     
-    while( packets_left ) { 
+    while( requests_outstanding ) { 
       _Step( ); 
       
       ++empty_steps;
@@ -156,9 +147,11 @@ bool BatchTrafficManager::_SingleSim( )
 	cout << ".";
       }
       
-      packets_left = false;
+      requests_outstanding = false;
       for(int c = 0; c < _classes; ++c) {
-	packets_left |= !_total_in_flight_flits[c].empty();
+	for(int n = 0; n < _nodes; ++n) {
+	  requests_outstanding |= (_requests_outstanding[c][n] > 0);
+	}
       }
     }
     cout << endl;
@@ -179,38 +172,51 @@ bool BatchTrafficManager::_SingleSim( )
   return 1;
 }
 
-void BatchTrafficManager::_UpdateOverallStats() {
-  TrafficManager::_UpdateOverallStats();
+void BatchTrafficManager::_UpdateOverallStats()
+{
+  SyntheticTrafficManager::_UpdateOverallStats();
   _overall_min_batch_time += _batch_time->Min();
   _overall_avg_batch_time += _batch_time->Average();
   _overall_max_batch_time += _batch_time->Max();
 }
   
-string BatchTrafficManager::_OverallStatsCSV(int c) const
+string BatchTrafficManager::_OverallStatsHeaderCSV() const
 {
   ostringstream os;
-  os << TrafficManager::_OverallStatsCSV(c) << ','
+  os << SyntheticTrafficManager::_OverallStatsHeaderCSV() << ','
+     << "min_batch_time" << ','
+     << "avg_batch_time" << ','
+     << "max_batch_time";
+  return os.str();
+}
+
+string BatchTrafficManager::_OverallClassStatsCSV(int c) const
+{
+  ostringstream os;
+  os << SyntheticTrafficManager::_OverallClassStatsCSV(c) << ','
      << _overall_min_batch_time / (double)_total_sims << ','
      << _overall_avg_batch_time / (double)_total_sims << ','
      << _overall_max_batch_time / (double)_total_sims;
   return os.str();
 }
 
-void BatchTrafficManager::WriteStats(ostream & os) const
+void BatchTrafficManager::_DisplayClassStats(int c, ostream & os) const
 {
-  TrafficManager::WriteStats(os);
-  os << "batch_time = " << _batch_time->Average() << ";" << endl;
-}    
-
-void BatchTrafficManager::DisplayStats(ostream & os) const {
-  TrafficManager::DisplayStats();
-  os << "Minimum batch duration = " << _batch_time->Min() << endl;
-  os << "Average batch duration = " << _batch_time->Average() << endl;
-  os << "Maximum batch duration = " << _batch_time->Max() << endl;
+  TrafficManager::_DisplayClassStats(c, os);
+  os << "Minimum batch duration = " << _batch_time->Min() << endl
+     << "Average batch duration = " << _batch_time->Average() << endl
+     << "Maximum batch duration = " << _batch_time->Max() << endl;
 }
 
-void BatchTrafficManager::DisplayOverallStats(ostream & os) const {
-  TrafficManager::DisplayOverallStats(os);
+void BatchTrafficManager::_WriteClassStats(int c, ostream & os) const
+{
+  SyntheticTrafficManager::_WriteClassStats(c, os);
+  os << "batch_time(" << c+1 << ") = " << _batch_time->Average() << ";" << endl;
+}
+
+void BatchTrafficManager::_DisplayOverallClassStats(int c, ostream & os) const
+{
+  SyntheticTrafficManager::_DisplayOverallClassStats(c, os);
   os << "Overall min batch duration = " << _overall_min_batch_time / (double)_total_sims
      << " (" << _total_sims << " samples)" << endl
      << "Overall min batch duration = " << _overall_avg_batch_time / (double)_total_sims
