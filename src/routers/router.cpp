@@ -47,6 +47,7 @@
 #include "iq_router.hpp"
 #include "event_router.hpp"
 #include "chaos_router.hpp"
+#include "chipper.hpp"   //  Ameya
 ///////////////////////////////////////////////////////
 
 int const Router::STALL_BUFFER_BUSY = -2;
@@ -138,6 +139,8 @@ Router *Router::NewRouter( const Configuration& config,
     r = new EventRouter( config, parent, name, id, inputs, outputs );
   } else if ( type == "chaos" ) {
     r = new ChaosRouter( config, parent, name, id, inputs, outputs );
+  } else if ( type == "chipper" ) {   //  Ameya
+    r = new Chipper( config, parent, name, id, inputs, outputs );
   } else {
     cerr << "Unknown router type: " << type << endl;
   }
