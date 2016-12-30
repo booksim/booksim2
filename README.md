@@ -2,7 +2,6 @@ BookSim Interconnection Network Simulator
 =========================================
 
 Added features for CHIPPER (Bufferless routing strategy)
-
 =========================================
 
 BookSim is a cycle-accurate interconnection network simulator.
