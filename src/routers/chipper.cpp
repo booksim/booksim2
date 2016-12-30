@@ -72,6 +72,21 @@ Chipper::~Chipper()
 	}
 }
 
+void Chipper::AddInputChannel( FlitChannel *channel, CreditChannel * ignored)
+{
+	//	Ameya: credit channel ignored
+	_input_channels.push_back( channel );
+	channel->SetSink( this, _input_channels.size() - 1 ) ;
+}
+
+void Chipper::AddOutputChannel(FlitChannel * channel, CreditChannel * ignored)
+{
+	//	Ameya: credit channel ignored
+	_output_channels.push_back( channel );
+	_channel_faults.push_back( false );
+	channel->SetSource( this, _output_channels.size() - 1 ) ;
+}
+
 void Chipper::Display( ostream & os ) const
 {
 	os << "Nothing to display" << endl;		//	Ameya: Just for sake of avoiding pure virual func

@@ -30,6 +30,9 @@ public:
 	       int inputs, int outputs	);
 	virtual ~Chipper();
 
+	virtual void AddInputChannel( FlitChannel *channel, CreditChannel * ignored);
+	virtual void AddOutputChannel(FlitChannel * channel, CreditChannel * ignored);
+
 	virtual void ReadInputs();
 	// virtual void Evaluate( );
 	virtual void WriteOutputs();

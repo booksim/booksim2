@@ -35,6 +35,8 @@
 #include "booksim.hpp"
 #include "booksim_config.hpp"
 
+#include <iostream>
+
 BookSimConfig::BookSimConfig( )
 { 
   //========================================================
@@ -93,6 +95,9 @@ BookSimConfig::BookSimConfig( )
 
   // enable next-hop-output queueing
   _int_map["noq"] = 0;
+
+  //  Ameya: enable bufferless simulation
+  _int_map["bufferless"] = 0;
 
   //==== Input-queued ======================================
 
@@ -346,4 +351,37 @@ PowerConfig::PowerConfig( )
   _float_map["Cw_cpl"] = 0;
   _float_map["wire_length"] = 0;
 
+}
+
+void BookSimConfig::CheckConsistency()   //  Ameya
+{
+  int bufferless = this->GetInt("bufferless");
+  if(bufferless)
+  {
+    if(this->GetInt("num_vcs")!=1)
+    {
+      cerr << "Setting num_vcs to 1 from original value of " << this->GetInt("num_vcs") << endl;
+      this->Assign("num_vcs", 1);
+    }
+    if(this->GetInt("vc_buf_size")!=1)
+    {
+      cerr << "Setting vc_buf_size to 1 from original value of " << this->GetInt("vc_buf_size") << endl;
+      this->Assign("vc_buf_size", 1);
+    }
+    if(this->GetInt("buf_size")!=1)
+    {
+      cerr << "Setting buf_size to 1 from original value of " << this->GetInt("buf_size") << endl;
+      this->Assign("buf_size", 1);
+    }
+    if(this->GetStr("topology") != "mesh")
+    {
+      cerr << "Bufferless only supported for mesh" << endl;
+      assert(this->GetStr("topology") == "mesh");
+    }
+    if(this->GetStr("routing_function") != "dor")
+    {
+      cerr << "Bufferless only supported for dor" << endl;
+      assert(this->GetStr("routing_function") == "dor");
+    }
+  }
 }

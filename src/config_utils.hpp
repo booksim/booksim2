@@ -30,10 +30,10 @@
 
 #include "booksim.hpp"
 
-#include<cstdio>
-#include<string>
-#include<map>
-#include<vector>
+#include <cstdio>
+#include <string>
+#include <map>
+#include <vector>
 
 extern "C" int yyparse();
 
