@@ -212,6 +212,12 @@ void Network::WriteFlit( Flit *f, int source )
   _inject[source]->Send(f);
 }
 
+int Network::CheckInject( int source )
+{
+  assert( ( source >= 0 ) && ( source < _nodes ) );
+  return ( _inject[source]->GetInjectStatus() );
+}
+
 Flit *Network::ReadFlit( int dest )
 {
   assert( ( dest >= 0 ) && ( dest < _nodes ) );

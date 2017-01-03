@@ -41,9 +41,9 @@ public:
 	virtual int GetUsedCredit(int o) const {return 0;}
 	virtual int GetBufferOccupancy(int i) const {return 0;}
 
-  virtual vector<int> UsedCredits() const { return vector<int>(); }
-  virtual vector<int> FreeCredits() const { return vector<int>(); }
-  virtual vector<int> MaxCredits() const { return vector<int>(); }
+	virtual vector<int> UsedCredits() const { return vector<int>(); }
+	virtual vector<int> FreeCredits() const { return vector<int>(); }
+	virtual vector<int> MaxCredits() const { return vector<int>(); }
 	
 	//	Ameya: Just for sake of avoiding pure virual func
 	virtual void Display( ostream & os = cout ) const;	//	Recheck implementation

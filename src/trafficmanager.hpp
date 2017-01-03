@@ -265,12 +265,12 @@ protected:
   virtual void _RetireFlit( Flit *f, int dest );
 
   void _Inject();
-  void _Step( );
-
+  virtual void _Step( );
+  
   bool _PacketsOutstanding( ) const;
   
   virtual int  _IssuePacket( int source, int cl );
-  void _GeneratePacket( int source, int size, int cl, int time );
+  virtual void _GeneratePacket( int source, int size, int cl, int time );
 
   virtual void _ClearStats( );
 
