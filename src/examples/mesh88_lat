@@ -37,9 +37,9 @@ n = 2;
 routing_function = dor;
 
 // Flow control
-num_vcs     = 8;
-vc_buf_size = 8;
-wait_for_tail_credit = 1;
+num_vcs     = 1;
+vc_buf_size = 1;
+wait_for_tail_credit = 0;
 
 // Router architecture
 vc_allocator = islip;
@@ -58,7 +58,7 @@ internal_speedup  = 1.0;
 
 // Traffic
 traffic = transpose;
-packet_size = 20;
+packet_size = 4;
 
 
 // Simulation
@@ -66,3 +66,5 @@ sim_type = latency;
 
 injection_rate = 0.005;
 
+watch_file=tempwatch;
+watch_out=tempout;

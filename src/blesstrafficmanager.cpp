@@ -13,7 +13,8 @@
 
 BlessTrafficManager::BlessTrafficManager( const Configuration &config, 
 					  const vector<Network *> & net )
-: TrafficManager(config, net) {}
+: TrafficManager(config, net), _golden_turn(0), _golden_in_flight(0)
+{}
 
 BlessTrafficManager::~BlessTrafficManager( ) {}
 
@@ -253,11 +254,24 @@ void BlessTrafficManager::_GeneratePacket( int source, int stype,
         // default:
         //     f->pri = 0;
         // }
-        f->pri = size - i;
-        if ( i == ( size - 1 ) ) { // Tail flit
-            f->tail = true;
-        } else {
-            f->tail = false;
+        // f->pri = size - i;
+        // if ( i == ( size - 1 ) ) { // Tail flit
+        //     f->tail = true;
+        // } else {
+        //     f->tail = false;
+        // }
+
+        f->pri = numeric_limits<int>::max() - time;
+        assert(f->pri >= 0);
+
+        if(!_IsGoldenInFlight() && _IsGoldenTurn(source))
+        {
+            f->golden = 1;
+            _golden_flits.push_back(f->id);
+        }
+        else
+        {
+            f->golden = 0;
         }
 
         f->vc  = -1;
@@ -268,9 +282,152 @@ void BlessTrafficManager::_GeneratePacket( int source, int stype,
                        << "Enqueuing flit " << f->id
                        << " (packet " << f->pid
                        << ") at time " << time
+                       << " with golden status " << f->golden
                        << "." << endl;
         }
 
         _partial_packets[source][cl].push_back( f );
+    }
+
+    if(!_IsGoldenInFlight() && _IsGoldenTurn(source))
+    {
+        assert(!_golden_flits.empty());
+        _UpdateGoldenStatus(source);
+    }
+}
+
+void BlessTrafficManager::_UpdateGoldenStatus( int source )
+{
+    _golden_in_flight = 1;
+    _golden_turn = (source + 1)%_nodes;
+}
+
+void BlessTrafficManager::_RetireFlit( Flit *f, int dest )
+{
+    _deadlock_timer = 0;
+
+    assert(_total_in_flight_flits[f->cl].count(f->id) > 0);
+    _total_in_flight_flits[f->cl].erase(f->id);
+
+    if(f->record) {
+        assert(_measured_in_flight_flits[f->cl].count(f->id) > 0);
+        _measured_in_flight_flits[f->cl].erase(f->id);
+    }
+
+    if ( f->watch ) {
+        *gWatchOut << GetSimTime() << " | "
+                   << "node" << dest << " | "
+                   << "Retiring flit " << f->id
+                   << " (packet " << f->pid
+                   << ", src = " << f->src
+                   << ", dest = " << f->dest
+                   << ", golden = " << f->golden
+                   << ", hops = " << f->hops
+                   << ", flat = " << f->atime - f->itime
+                   << ")." << endl;
+    }
+
+    if ( f->dest != dest ) {
+        ostringstream err;
+        err << "Flit " << f->id << " arrived at incorrect output " << dest;
+        Error( err.str( ) );
+    }
+
+    if((_slowest_flit[f->cl] < 0) ||
+       (_flat_stats[f->cl]->Max() < (f->atime - f->itime)))
+        _slowest_flit[f->cl] = f->id;
+    _flat_stats[f->cl]->AddSample( f->atime - f->itime);
+    if(_pair_stats){
+        _pair_flat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->itime );
+    }
+
+    if ( f->tail ) {
+        Flit * head;
+        if(f->head) {
+            head = f;
+        } else {
+            map<int, Flit *>::iterator iter = _retired_packets[f->cl].find(f->pid);
+            assert(iter != _retired_packets[f->cl].end());
+            head = iter->second;
+            _retired_packets[f->cl].erase(iter);
+            assert(head->head);
+            assert(f->pid == head->pid);
+        }
+        if ( f->watch ) {
+            *gWatchOut << GetSimTime() << " | "
+                       << "node" << dest << " | "
+                       << "Retiring packet " << f->pid
+                       << " (plat = " << f->atime - head->ctime
+                       << ", nlat = " << f->atime - head->itime
+                       << ", frag = " << (f->atime - head->atime) - (f->id - head->id) // NB: In the spirit of solving problems using ugly hacks, we compute the packet length by taking advantage of the fact that the IDs of flits within a packet are contiguous.
+                       << ", src = " << head->src
+                       << ", dest = " << head->dest
+                       << ", golden = " << head->golden
+                       << ")." << endl;
+        }
+
+        //code the source of request, look carefully, its tricky ;)
+        if (f->type == Flit::READ_REQUEST || f->type == Flit::WRITE_REQUEST) {
+            PacketReplyInfo* rinfo = PacketReplyInfo::New();
+            rinfo->source = f->src;
+            rinfo->time = f->atime;
+            rinfo->record = f->record;
+            rinfo->type = f->type;
+            _repliesPending[dest].push_back(rinfo);
+        } else {
+            if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY  ){
+                _requestsOutstanding[dest]--;
+            } else if(f->type == Flit::ANY_TYPE) {
+                _requestsOutstanding[f->src]--;
+            }
+
+        }
+
+        // Only record statistics once per packet (at tail)
+        // and based on the simulation state
+        if ( ( _sim_state == warming_up ) || f->record ) {
+
+            _hop_stats[f->cl]->AddSample( f->hops );
+
+            if((_slowest_packet[f->cl] < 0) ||
+               (_plat_stats[f->cl]->Max() < (f->atime - head->itime)))
+                _slowest_packet[f->cl] = f->pid;
+            _plat_stats[f->cl]->AddSample( f->atime - head->ctime);
+            _nlat_stats[f->cl]->AddSample( f->atime - head->itime);
+            _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
+
+            if(_pair_stats){
+                _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->ctime );
+                _pair_nlat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->itime );
+            }
+        }
+
+        if(f != head) {
+            head->Free();
+        }
+
+    }
+
+    if(f->golden)
+    {
+        if ( _golden_flits.empty() )
+        {
+            ostringstream err;
+            err << "Flit " << f->id << " claiming to be golden at " << dest;
+            Error( err.str( ) );
+        }
+        vector<int>::iterator it = find( _golden_flits.begin(), _golden_flits.end(), f->id );
+        assert( it != _golden_flits.end());
+        _golden_flits.erase(it);
+        if( _golden_flits.empty() )
+        {
+            _golden_in_flight = 0;
+        }
+    }
+
+    if(f->head && !f->tail) {
+        _retired_packets[f->cl].insert(make_pair(f->pid, f));
+    } else {
+        f->Free();
     }
 }

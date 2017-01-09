@@ -38,3 +38,6 @@ num_vcs = 2;
 // Traffic
 traffic = uniform;
 injection_rate = 0.15;
+
+watch_file=tempwatch;
+watch_out=tempout;
