@@ -86,6 +86,8 @@ void BlessTrafficManager::_Step( )
                 if( _net[subnet]->CheckInject(n) )
                 {                  
                     f->itime = _time;
+                    f->pri = numeric_limits<int>::max() - f->itime;
+                    assert(f->pri >= 0);
 
                     _last_class[n][subnet] = f->cl;
                     
