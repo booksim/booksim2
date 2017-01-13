@@ -112,7 +112,6 @@ bool Simulate( BookSimConfig const & config )
   /*tcc and characterize are legacy
    *not sure how to use them
    */
-
   assert(trafficManager == NULL);
   trafficManager = TrafficManager::New( config, net ) ;
 

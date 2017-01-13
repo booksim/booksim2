@@ -20,9 +20,21 @@ class Chipper : public Router {
 	vector<map<int, Flit *> > _stage_2;
 	//	No need for extra flags showing occupancy as each buffer is timed
 
-	tRoutingFunction   _rf;		//	Temporary (check necessity later) Ameya
+	int _time;
+	int _inject_slot;
+	int last_channel;
 
-  virtual void _InternalStep();
+	cRoutingFunction   _rf;		//	Temporary (check necessity later) Ameya
+
+  	virtual void _InternalStep();
+  	void _IncomingFlits( );
+  	void _SendFlits( );
+  	void _EjectFlits();
+  	void _input_to_stage1();
+  	void _stage1_to_stage2();
+  	void Permute();
+  	void _stage2_to_output();
+  	void Partial_Permute(int dir1, int dir2, int perm_num);
 
 public:
 	Chipper(	const Configuration& config,
@@ -33,6 +45,7 @@ public:
 	virtual void AddInputChannel( FlitChannel *channel, CreditChannel * ignored);
 	virtual void AddOutputChannel(FlitChannel * channel, CreditChannel * ignored);
 
+	int GetInjectStatus();
 	virtual void ReadInputs();
 	// virtual void Evaluate( );
 	virtual void WriteOutputs();

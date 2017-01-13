@@ -49,9 +49,9 @@ TrafficManager * TrafficManager::New(Configuration const & config,
     int tbufferless =  config.GetInt("bufferless");
     if((sim_type == "latency") || (sim_type == "throughput")) {
         if(tbufferless)
-            result = new BlessTrafficManager(config, net);
+            result = new BlessTrafficManager(config, net);  //  Ameya
         else
-            result = new TrafficManager(config, net);   //  Ameya
+            result = new TrafficManager(config, net);
     } else if(sim_type == "batch") {
         result = new BatchTrafficManager(config, net);
     } else {

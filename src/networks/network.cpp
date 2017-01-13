@@ -215,7 +215,7 @@ void Network::WriteFlit( Flit *f, int source )
 int Network::CheckInject( int source )
 {
   assert( ( source >= 0 ) && ( source < _nodes ) );
-  return ( _inject[source]->GetInjectStatus() );
+  return ( _routers[source]->GetInjectStatus() );
 }
 
 Flit *Network::ReadFlit( int dest )

@@ -53,6 +53,7 @@
 
 
 map<string, tRoutingFunction> gRoutingFunctionMap;
+map<string, cRoutingFunction> cRoutingFunctionMap;
 
 /* Global information used by routing functions */
 
@@ -1996,4 +1997,7 @@ void InitializeRoutingMap( const Configuration & config )
 
   gRoutingFunctionMap["chaos_mesh"]  = &chaos_mesh;
   gRoutingFunctionMap["chaos_torus"] = &chaos_torus;
+
+  //  Ameya
+  cRoutingFunctionMap["dor_next_mesh"]       = &dor_next_mesh;
 }

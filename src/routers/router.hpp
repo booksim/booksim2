@@ -111,6 +111,11 @@ public:
     return _output_channels[output];
   }
 
+  virtual int GetInjectStatus()
+  {
+    return 0;
+  }
+
   virtual void ReadInputs( ) = 0;
   virtual void Evaluate( );
   virtual void WriteOutputs( ) = 0;

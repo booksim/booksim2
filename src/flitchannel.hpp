@@ -73,9 +73,9 @@ public:
   }
 
   // Ameya
-  inline int GetInjectStatus() const {
-    return ( _input == 0 );
-  }
+  // inline int GetInjectStatus() const {
+  //   return ( _input == 0 );
+  // }
 
   // Send flit 
   virtual void Send(Flit * flit);

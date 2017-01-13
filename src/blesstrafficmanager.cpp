@@ -134,7 +134,6 @@ void BlessTrafficManager::_Step( )
         _net[subnet]->Evaluate( );
         _net[subnet]->WriteOutputs( );
     }
-
     ++_time;
     assert(_time);
     if(gTrace)

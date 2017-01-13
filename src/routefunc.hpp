@@ -34,10 +34,12 @@
 #include "config_utils.hpp"
 
 typedef void (*tRoutingFunction)( const Router *, const Flit *, int in_channel, OutputSet *, bool );
+typedef int (*cRoutingFunction)( int router, int dest, bool descending );
 
 void InitializeRoutingMap( const Configuration & config );
 
 extern map<string, tRoutingFunction> gRoutingFunctionMap;
+extern map<string, cRoutingFunction> cRoutingFunctionMap;
 
 extern int gNumVCs;
 extern int gReadReqBeginVC, gReadReqEndVC;
