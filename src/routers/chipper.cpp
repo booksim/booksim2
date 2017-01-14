@@ -44,7 +44,7 @@ Chipper::Chipper( const Configuration& config,
 
 Chipper::~Chipper()
 {
-	for ( int i = 0; i < _inputs; ++i ) {
+	for ( int i = 0; i < _inputs-1; ++i ) {
 		while (!_input_buffer[i].empty())
 		{
 			(_input_buffer[i].begin()->second)->Free();
@@ -52,7 +52,7 @@ Chipper::~Chipper()
 		}
 	}
 
-	for ( int i = 0; i < _inputs; ++i ) {
+	for ( int i = 0; i < _inputs-1; ++i ) {
 		while (!_stage_1[i].empty())
 		{
 			(_stage_1[i].begin()->second)->Free();
@@ -60,7 +60,7 @@ Chipper::~Chipper()
 		}
 	}
 
-	for ( int i = 0; i < _inputs; ++i ) {
+	for ( int i = 0; i < _inputs-1; ++i ) {
 		while (!_stage_2[i].empty())
 		{
 			(_stage_2[i].begin()->second)->Free();
@@ -68,7 +68,7 @@ Chipper::~Chipper()
 		}
 	}
 
-	for ( int o = 0; o < _outputs; ++o ) {
+	for ( int o = 0; o < _outputs-1; ++o ) {
 	  while (!_output_buffer[o].empty())
 		{
 			(_output_buffer[o].begin()->second)->Free();
@@ -105,11 +105,11 @@ int Chipper::GetInjectStatus()
 		map<int,Flit*>::iterator f = _stage_1[input].find(GetSimTime());
 		if(f == _stage_1[input].end())
 		{
-			_inject_slot = input;
+			// _inject_slot = input;
 			return 1;
 		}
 	}
-	_inject_slot = -1;
+	// _inject_slot = -1;
 	return 0;
 }
 
@@ -186,6 +186,8 @@ void Chipper::_InternalStep( )
 	Permute();
 
 	_stage2_to_output();
+
+	CheckSanity();
 }
 
 // Added by HH
@@ -288,7 +290,11 @@ void Chipper::_stage1_to_stage2()
 		// }
 		it = _stage_1[input].find(_time);
 		if(it == _stage_1[input].end())
+		{
+			if(_inject_slot == -1)
+				_inject_slot = input;
 			continue;
+		}
 		_stage_2[input].insert(make_pair(it->first+1, it->second));
 		_stage_1[input].erase(it);
     }
@@ -299,7 +305,16 @@ void Chipper::_stage1_to_stage2()
     	Flit *f = _input_channels[last_channel]->Receive();
     	if(f)
     	{
-    		_stage_2[_inject_slot].insert(make_pair(_time+1, it->second));
+    		if(f->watch) {
+				*gWatchOut << GetSimTime() << " | "
+							<< "router" << GetID() << " | "
+							<< "Receiving flit " << f->id
+							<< " at time " << _time
+							<< " with priority " << f->pri
+							<< " and golden status " << f->golden
+							<< "." << endl;
+			}
+    		_stage_2[_inject_slot].insert(make_pair(_time+1, f));
     		_inject_slot = -1;
     	}
     }
@@ -449,4 +464,43 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 			}
 		}
 	}	
+}
+
+void Chipper::CheckSanity()
+{
+	for ( int i = 0; i < _inputs-1; ++i ) {
+		if(_input_buffer[i].size() > 2)
+		{
+			ostringstream err;
+            err << "Flit pile up at input buffer of router: " << GetID();
+            Error( err.str( ) );
+		}
+	}
+
+	for ( int i = 0; i < _inputs-1; ++i ) {
+		if(_stage_1[i].size() > 2)
+		{
+			ostringstream err;
+            err << "Flit pile up at _stage_1 of router: " << GetID();
+            Error( err.str( ) );
+		}
+	}
+
+	for ( int i = 0; i < _inputs-1; ++i ) {
+		if(_stage_2[i].size() > 2)
+		{
+			ostringstream err;
+            err << "Flit pile up at _stage_2 of router: " << GetID();
+            Error( err.str( ) );
+		}
+	}
+
+	for ( int o = 0; o < _outputs-1; ++o ) {
+		if(_output_buffer[o].size() > 2)
+		{
+			ostringstream err;
+            err << "Flit pile up at output buffer of router: " << GetID();
+            Error( err.str( ) );
+		}
+	}
 }

@@ -35,6 +35,7 @@ class Chipper : public Router {
   	void Permute();
   	void _stage2_to_output();
   	void Partial_Permute(int dir1, int dir2, int perm_num);
+  	void CheckSanity();
 
 public:
 	Chipper(	const Configuration& config,
