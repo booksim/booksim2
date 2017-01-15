@@ -124,7 +124,15 @@ void Chipper::ReadInputs()
 
 	    if ( f )
 	    {
-	      _input_buffer[input].insert( pair<int, Flit *>(time, f) );
+	    	if(f->watch) {
+				*gWatchOut << GetSimTime() << " | "
+					<< "node" << GetID() << " | "
+					<< "Flit " << f->id
+					<< " arrived at input " << input << " | "
+					<< "destination " << f->dest
+					<< "." << endl;
+			}
+	    	_input_buffer[input].insert( pair<int, Flit *>(time, f) );
 	    }
   	}	
 }
@@ -146,6 +154,14 @@ void Chipper::_SendFlits( )
   		f = buffer_timed.find( time );
   		if(f != buffer_timed.end() )
   		{
+  			if((f->second)->watch) {
+				*gWatchOut << GetSimTime() << " | "
+					<< "node" << GetID() << " | "
+					<< "Flit " << (f->second)->id
+					<< " sent from output " << output << " | "
+					<< "destination " << (f->second)->dest
+					<< "." << endl;
+			}
   			_output_channels[output]->Send( f->second );
   			buffer_timed.erase(f);
   		}
