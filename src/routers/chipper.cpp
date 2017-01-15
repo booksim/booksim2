@@ -129,20 +129,6 @@ void Chipper::ReadInputs()
   	}	
 }
 
-// HH Definition of _ReceiveFlits: inserts flit into buffer from channel corresponding to current sim time
-// void Chipper::_IncomingFlits( )
-// {
-//   Flit *f;
-//   map< int,Flit* > buffer_timed;
-//   int receive_time = GetSimTime();
-//   for ( int input = 0; input < _inputs; ++input ) { 
-//     	f = _input_channels[input]->Receive(); 
-// 		if ( f ) {
-//      		_input_buffer[input].insert( pair<int, Flit *>(receive_time,f) );
-//     }
-//   }
-// }
-
 // HH : Performs the function of sending flits from output buffer into channel
 void Chipper::WriteOutputs()
 {
@@ -168,13 +154,6 @@ void Chipper::_SendFlits( )
 
 void Chipper::_InternalStep( )
 {
-  // Receive incoming flits
-  	 // int pair_time = _IncomingFlits( );
-  	 //HH : Need to make the time the flits are received global in order to know when the input flits were 
-// were paired into the map
-  	 //Have to pass this onto subsequent functions to find the correct flit from each buffer
-  	 // I am thinking pair_time should be updated at each stage with GetSimTime and then passed onto next stage
-  // Eject flits which have reached their desitnation
 	_time = GetSimTime();
 
 	_EjectFlits();
@@ -264,12 +243,6 @@ void Chipper::_input_to_stage1()
 {
     map<int, Flit*>::iterator it;
     for ( int input = 0; input < _inputs-1; ++input ){
-        // intermediate = _input_buffer[input];
-        // for( map<int, Flit*>::iterator it = intermediate_1.begin() ; it = intermediate_1.end() ; ++it ){      //Nandan: Adding the delay associated with the pipe
-        //      if(pair_time == it->first){
-        //      it->first = it->first + 1;
-        //      }
-        // }
         it =_input_buffer[input].find(_time);
         if(it == _input_buffer[input].end())
         	continue;
@@ -282,12 +255,6 @@ void Chipper::_stage1_to_stage2()
 {
 	map<int, Flit*>::iterator it;
 	for ( int input = 0; input < _inputs-1; ++input ){      // Nandan: Adding the delay associated with the pipe
-		// intermediate = _stage_1[input];
-		// for( map<int, Flit*>::iterator it = intermediate_2.begin() ; it = intermediate_2.end() ; ++it ){
-		  // if(pair_time == it->first){
-		 // it->first = it->first + 1;
-		 // }
-		// }
 		it = _stage_1[input].find(_time);
 		if(it == _stage_1[input].end())
 		{
@@ -335,24 +302,10 @@ void Chipper::_stage2_to_output()
 //	Nandan:	Routing stage of CHIPPER
 void Chipper::Permute()
 {
-	// int router_number = GetID();
-	// int west = _LeftNode(router_number, 0);
-	// int east = _RightNode(router_number, 0);
-	// int north = _LeftNode(router_number, 1);
-	// int south = _RightNode(router_number, 1);
-	// vector<int> direction;
-	// vector<int> priority;
-	// vector<bool> golden;
-	// direction.resize(_inputs-1);
-	// priority.resize(_inputs-1);
-	// for(input = 0; input < _inputs; ++input)
-	// {
-
 	Partial_Permute(2,0,1);
 	Partial_Permute(3,1,1);
 	Partial_Permute(3,2,2);
 	Partial_Permute(1,0,0);
-	
 }
 
 void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
