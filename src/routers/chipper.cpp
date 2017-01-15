@@ -397,6 +397,42 @@ void Chipper::Permute()
 	Partial_Permute(3,1,1);
 	Partial_Permute(3,2,2);
 	Partial_Permute(1,0,0);
+	for(int i=0;i < _inputs-1;++i)
+	{
+		Flit *f;
+		map<int, Flit*>::iterator it;
+		it = _stage_2[i].find(_time);
+		if(it == _stage_2[i].end())
+		{
+			continue;
+		}
+		else
+		{
+			f = it->second;
+		}
+		if(!(f->watch))
+			continue;
+		if(_rf(GetID(), f->dest, true) == i)
+		{
+			*gWatchOut << GetSimTime() << " | "
+				<< "node" << GetID() << " | "
+				<< "Flit " << f->id
+				<< " headed for " << f->dest
+				<< " optimally routed"
+				<< " to node "<< (_output_channels[i]->GetSink())->GetID()
+				<< "." << endl;
+		}
+		else
+		{
+			*gWatchOut << GetSimTime() << " | "
+				<< "node" << GetID() << " | "
+				<< "Flit " << f->id
+				<< " headed for " << f->dest
+				<< " sub-optimally routed"
+				<< " to node "<< (_output_channels[i]->GetSink())->GetID()
+				<< "." << endl;
+		}
+	}
 }
 
 void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
@@ -424,34 +460,77 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 	}
 	if((f1 == NULL)&&(f2 == NULL))
 		return;
-	if((f1 == NULL))
+	if(f1 == NULL)
 	{
 		if(_rf(GetID(), f2->dest, true) > perm_num)
 		{
 			_stage_2[dir2].erase(it2);
 			_stage_2[dir1].insert(pair<int, Flit *>(_time, f2) );
 		}
+		// if(f2->watch) {
+		// 	*gWatchOut << GetSimTime() << " | "
+		// 		<< "node" << GetID() << " | "
+		// 		<< "Flit " << f2->id
+		// 		<< " headed for " << f2->dest
+		// 		<< " optimally routed (no contention) "
+		// 		<< "in step " <<(perm_num == 1 ? 1 : 2)<< " of permute"
+		// 		<< "." << endl;
+		// }
 		return;
 	}
-	if((f2 == NULL))
+	if(f2 == NULL)
 	{
-		if(_rf(GetID(), f1->dest, true) < perm_num)
+		if(_rf(GetID(), f1->dest, true) <= perm_num)
 		{
 			_stage_2[dir1].erase(it1);
 			_stage_2[dir2].insert(pair<int, Flit *>(_time, f1) );
 		}
+		// if(f1->watch) {
+		// 	*gWatchOut << GetSimTime() << " | "
+		// 		<< "node" << GetID() << " | "
+		// 		<< "Flit " << f1->id
+		// 		<< " headed for " << f1->dest
+		// 		<< " optimally routed (no contention) "
+		// 		<< "in step " <<(perm_num == 1 ? 1 : 2)<< " of permute"
+		// 		<< "." << endl;
+		// }		
 		return;
 	}
+	// if((f1->watch)||(f2->watch)) {
+	// 	*gWatchOut << GetSimTime() << " | "
+	// 		<< "node" << GetID() << " | "
+	// 		<< " f1 " << f1->id << " dest1 " << f1->dest 
+	// 		<< " f2 " << f2->id << " dest2 " << f2->dest
+	// 		<<endl;
+	// }	// edit1 
 	if((f1->golden == 1)&&(f2->golden == 1))
 	{
 		if(f1->pri >= f2->pri)
 		{
-			if(_rf(GetID(), f1->dest, true) < perm_num)
+			if(_rf(GetID(), f1->dest, true) <= perm_num)
 			{
 				_stage_2[dir1].erase(it1);
 				_stage_2[dir2].erase(it2);
 				_stage_2[dir2].insert( pair<int, Flit *>(_time, f1) );
 				_stage_2[dir1].insert( pair<int, Flit *>(_time, f2) );
+				// if(f1->watch) {
+				// 	*gWatchOut << GetSimTime() << " | "
+				// 		<< "node" << GetID() << " | "
+				// 		<< "Flit " << f1->id
+				// 		<< " headed for " << f1->dest
+				// 		<< " optimally routed (no contention) "
+				// 		<< "in step " <<(perm_num == 1 ? 1 : 2)<< " of permute"
+				// 		<< "." << endl;
+				// }
+				// if(f1->watch) {
+				// 	*gWatchOut << GetSimTime() << " | "
+				// 		<< "node" << GetID() << " | "
+				// 		<< "Flit " << f1->id
+				// 		<< " headed for " << f1->dest
+				// 		<< " optimally routed (no contention) "
+				// 		<< "in step " <<(perm_num == 1 ? 1 : 2)<< " of permute"
+				// 		<< "." << endl;
+				// }
 			}
 		}
 		else
@@ -467,7 +546,7 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 	}
 	else if((f1->golden == 1))
 	{
-		if(_rf(GetID(), f1->dest, true) < perm_num)
+		if(_rf(GetID(), f1->dest, true) <= perm_num)
 		{
 			_stage_2[dir1].erase(it1);
 			_stage_2[dir2].erase(it2);
@@ -489,7 +568,7 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 	{
 		if(f1->pri >= f2->pri)
 		{
-			if(_rf(GetID(), f1->dest, true) < perm_num)
+			if(_rf(GetID(), f1->dest, true) <= perm_num)
 			{
 				_stage_2[dir1].erase(it1);
 				_stage_2[dir2].erase(it2);
