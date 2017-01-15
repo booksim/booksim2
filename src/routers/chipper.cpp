@@ -187,6 +187,15 @@ void Chipper::_EjectFlits(){
   		f = it->second;
 	    if ( f->dest ==  GetID() )
 	    {
+	    	if(f->watch) {
+				*gWatchOut << GetSimTime() << " | "
+					<< "node" << GetID() << " | "
+					<< "Flit " << f->id
+					<< " waiting for eject at " << f->dest
+					<< " with priority " << f->pri
+					<< " and golden status " << f->golden
+					<< "." << endl;
+			}
 			received_flits[input] = f;
 			// Check for golden status and golden tie
 			if(f->golden == 1 && !golden_cnt)
@@ -196,10 +205,20 @@ void Chipper::_EjectFlits(){
 			}
 			else if(f->golden == 1)
 			{
-				if(received_flits[flit_to_eject]->pri > f->pri) // Resolve golden tie based on older flit
+				if(received_flits[flit_to_eject]->pri < f->pri) // Resolve golden tie based on older flit
 				{
 					flit_to_eject = input;
-					break;
+				}
+				else
+				{
+					if(f->watch) {
+						*gWatchOut << GetSimTime() << " | "
+							<< "node" << GetID() << " | "
+							<< "Flit " << f->id
+							<< " trying to eject at " << f->dest
+							<< " lost golden tie at time " << _time
+							<< "." << endl;
+					}
 				}
 		  	}
 	    }
@@ -211,7 +230,7 @@ void Chipper::_EjectFlits(){
 
     if(flit_to_eject == -1)
     {
-    	int oldest_flit_index;
+    	int oldest_flit_index = -1;
     	int high_pri = -1;
 	    for( int input = 0; input < _inputs-1; ++input )
 	    {
@@ -219,6 +238,19 @@ void Chipper::_EjectFlits(){
 	    	// to find the oldest flit and consequently retiring that flit	 
 	    	if(received_flits[input] != NULL && received_flits[input]->pri > high_pri)
 	    	{
+	    		if(oldest_flit_index != -1)
+	    		{
+	    			if(received_flits[input]->watch) {
+						*gWatchOut << GetSimTime() << " | "
+							<< "node" << GetID() << " | "
+							<< "Flit " << received_flits[input]->id
+							<< " waiting for eject at " << received_flits[input]->dest
+							<< " with priority " << received_flits[input]->pri 
+							<< " beat flit " << received_flits[oldest_flit_index]->id
+							<< " with priority " << high_pri
+							<< "." << endl;
+					}
+	    		}
 	    		high_pri = received_flits[input]->pri;
 	    		oldest_flit_index = input; 
 	    	}
@@ -226,6 +258,14 @@ void Chipper::_EjectFlits(){
     	if(high_pri > -1)
     	{
     		flit_to_eject = oldest_flit_index;
+    		if(received_flits[flit_to_eject]->watch) {
+				*gWatchOut << GetSimTime() << " | "
+					<< "node" << GetID() << " | "
+					<< "Flit " << received_flits[flit_to_eject]->id
+					<< " accepted for eject at " << received_flits[flit_to_eject]->dest
+					<< " | golden status " << received_flits[flit_to_eject]->golden
+					<< "." << endl;
+			}
     		_output_channels[last_channel]->Send(received_flits[flit_to_eject]);
     		_input_buffer[flit_to_eject].erase(_input_buffer[flit_to_eject].find(_time));
     		// HH : Receive flit with oldest_flit_index -> Need to apply the function that handles retire flit
@@ -234,6 +274,14 @@ void Chipper::_EjectFlits(){
 	else
 	{
 		//	Ameya: Eject golden flit
+		if(f->watch) {
+			*gWatchOut << GetSimTime() << " | "
+				<< "node" << GetID() << " | "
+				<< "Flit " << f->id
+				<< " accepted for eject at " << f->dest
+				<< " | golden status " << f->golden
+				<< "." << endl;
+		}
 		_output_channels[last_channel]->Send(received_flits[flit_to_eject]);
 		_input_buffer[flit_to_eject].erase(_input_buffer[flit_to_eject].find(_time));
 	}	
@@ -246,6 +294,15 @@ void Chipper::_input_to_stage1()
         it =_input_buffer[input].find(_time);
         if(it == _input_buffer[input].end())
         	continue;
+        if((it->second)->watch) {
+			*gWatchOut << GetSimTime() << " | "
+				<< "node" << GetID() << " | "
+				<< "Flit " << (it->second)->id
+				<< " headed for " << (it->second)->dest
+				<< " written from _input_buffer to _stage_1 in slot "
+				<< input
+				<< "." << endl;
+		}
         _stage_1[input].insert(make_pair(it->first+1, it->second));
         _input_buffer[input].erase(it);
     }
@@ -261,6 +318,15 @@ void Chipper::_stage1_to_stage2()
 			if(_inject_slot == -1)
 				_inject_slot = input;
 			continue;
+		}
+		if((it->second)->watch) {
+			*gWatchOut << GetSimTime() << " | "
+				<< "node" << GetID() << " | "
+				<< "Flit " << (it->second)->id
+				<< " headed for " << (it->second)->dest
+				<< " written from _stage_1 to _stage_2 in slot "
+				<< input
+				<< "." << endl;
 		}
 		_stage_2[input].insert(make_pair(it->first+1, it->second));
 		_stage_1[input].erase(it);
@@ -294,6 +360,15 @@ void Chipper::_stage2_to_output()
         it = _stage_2[input].find(_time);
         if(it == _stage_2[input].end())
         	continue;
+        if((it->second)->watch) {
+			*gWatchOut << GetSimTime() << " | "
+				<< "node" << GetID() << " | "
+				<< "Flit " << (it->second)->id
+				<< " headed for " << (it->second)->dest
+				<< " written from _stage_2 to _output_buffer in slot "
+				<< input
+				<< "." << endl;
+		}
         _output_buffer[input].insert(make_pair(it->first+1, it->second));
         _stage_2[input].erase(it);
     }
