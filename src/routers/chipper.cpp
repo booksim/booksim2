@@ -467,15 +467,6 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 			_stage_2[dir2].erase(it2);
 			_stage_2[dir1].insert(pair<int, Flit *>(_time, f2) );
 		}
-		// if(f2->watch) {
-		// 	*gWatchOut << GetSimTime() << " | "
-		// 		<< "node" << GetID() << " | "
-		// 		<< "Flit " << f2->id
-		// 		<< " headed for " << f2->dest
-		// 		<< " optimally routed (no contention) "
-		// 		<< "in step " <<(perm_num == 1 ? 1 : 2)<< " of permute"
-		// 		<< "." << endl;
-		// }
 		return;
 	}
 	if(f2 == NULL)
@@ -485,24 +476,8 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 			_stage_2[dir1].erase(it1);
 			_stage_2[dir2].insert(pair<int, Flit *>(_time, f1) );
 		}
-		// if(f1->watch) {
-		// 	*gWatchOut << GetSimTime() << " | "
-		// 		<< "node" << GetID() << " | "
-		// 		<< "Flit " << f1->id
-		// 		<< " headed for " << f1->dest
-		// 		<< " optimally routed (no contention) "
-		// 		<< "in step " <<(perm_num == 1 ? 1 : 2)<< " of permute"
-		// 		<< "." << endl;
-		// }		
 		return;
 	}
-	// if((f1->watch)||(f2->watch)) {
-	// 	*gWatchOut << GetSimTime() << " | "
-	// 		<< "node" << GetID() << " | "
-	// 		<< " f1 " << f1->id << " dest1 " << f1->dest 
-	// 		<< " f2 " << f2->id << " dest2 " << f2->dest
-	// 		<<endl;
-	// }	// edit1 
 	if((f1->golden == 1)&&(f2->golden == 1))
 	{
 		if(f1->pri >= f2->pri)
@@ -513,24 +488,6 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 				_stage_2[dir2].erase(it2);
 				_stage_2[dir2].insert( pair<int, Flit *>(_time, f1) );
 				_stage_2[dir1].insert( pair<int, Flit *>(_time, f2) );
-				// if(f1->watch) {
-				// 	*gWatchOut << GetSimTime() << " | "
-				// 		<< "node" << GetID() << " | "
-				// 		<< "Flit " << f1->id
-				// 		<< " headed for " << f1->dest
-				// 		<< " optimally routed (no contention) "
-				// 		<< "in step " <<(perm_num == 1 ? 1 : 2)<< " of permute"
-				// 		<< "." << endl;
-				// }
-				// if(f1->watch) {
-				// 	*gWatchOut << GetSimTime() << " | "
-				// 		<< "node" << GetID() << " | "
-				// 		<< "Flit " << f1->id
-				// 		<< " headed for " << f1->dest
-				// 		<< " optimally routed (no contention) "
-				// 		<< "in step " <<(perm_num == 1 ? 1 : 2)<< " of permute"
-				// 		<< "." << endl;
-				// }
 			}
 		}
 		else
