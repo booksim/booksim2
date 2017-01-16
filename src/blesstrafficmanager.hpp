@@ -7,6 +7,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <map>
 
 #include "config_utils.hpp"
 #include "stats.hpp"
@@ -17,6 +18,13 @@ private:
   int _golden_turn;
   int _golden_in_flight;
   vector<int> _golden_flits;
+  
+  struct Stat_Util{
+    Flit * f;
+    int pending;
+  };
+  
+  vector<map<int, Stat_Util*> > _retire_stats;
 
 protected:
 
