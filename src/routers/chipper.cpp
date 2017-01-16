@@ -48,31 +48,31 @@ Chipper::~Chipper()
 		while (!_input_buffer[i].empty())
 		{
 			(_input_buffer[i].begin()->second)->Free();
-		  _input_buffer[i].erase(_input_buffer[i].begin());
+			_input_buffer[i].erase(_input_buffer[i].begin());
 		}
 	}
-
+	
 	for ( int i = 0; i < _inputs-1; ++i ) {
 		while (!_stage_1[i].empty())
 		{
 			(_stage_1[i].begin()->second)->Free();
-		  _stage_1.erase(_stage_1.begin());
+			_stage_1[i].erase(_stage_1[i].begin());
 		}
 	}
-
+	
 	for ( int i = 0; i < _inputs-1; ++i ) {
 		while (!_stage_2[i].empty())
 		{
 			(_stage_2[i].begin()->second)->Free();
-		  _stage_2.erase(_stage_2.begin());
+			_stage_2[i].erase(_stage_2[i].begin());
 		}
 	}
-
+	
 	for ( int o = 0; o < _outputs-1; ++o ) {
 	  while (!_output_buffer[o].empty())
 		{
 			(_output_buffer[o].begin()->second)->Free();
-		  _output_buffer[o].erase(_output_buffer[o].begin());
+			_output_buffer[o].erase(_output_buffer[o].begin());
 		}
 	}
 }
