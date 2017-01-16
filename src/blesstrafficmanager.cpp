@@ -52,10 +52,7 @@ void BlessTrafficManager::_Step( )
                 if((_sim_state == warming_up) || (_sim_state == running))
                 {
                     ++_accepted_flits[f->cl][n];
-                    if(f->tail)
-                    {
-                    ++_accepted_packets[f->cl][n];
-                    }
+                    // Update of _accepted_packets[f->cl][n] moved to _RetireFlit
                 }
             }
         }
@@ -103,6 +100,14 @@ void BlessTrafficManager::_Step( )
                                    << " Destination " << f->dest
                                    << "." << endl;
                     }
+
+                    if((_sim_state == warming_up) || (_sim_state == running)) {
+                        ++_sent_flits[f->cl][n];
+                        if(f->head) {
+                            ++_sent_packets[f->cl][n];
+                        }
+                    }
+
 #ifdef TRACK_FLOWS
                     ++_injected_flits[f->cl][n];
 #endif
@@ -407,7 +412,8 @@ void BlessTrafficManager::_RetireFlit( Flit *f, int dest )
             }
             if(f != head) {
                 head->Free();
-            }            
+            }
+            ++_accepted_packets[f->cl][dest];   //  Ameya: Moved here from _Step()        
         }
     }
     else

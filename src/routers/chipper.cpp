@@ -18,10 +18,9 @@ Chipper::Chipper( const Configuration& config,
 	    id,
 	    inputs, outputs )
 {
-  ostringstream module_name;
+	ostringstream module_name;
   
 	// Routing
-
 	string rf = "dor_next_mesh";
 	map<string, cRoutingFunction>::iterator rf_iter = cRoutingFunctionMap.find(rf);
 	if(rf_iter == cRoutingFunctionMap.end()) {
