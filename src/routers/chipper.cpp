@@ -344,13 +344,25 @@ void Chipper::_input_to_stage1()
 
 void Chipper::_stage1_to_stage2()
 {
-	map<int, Flit*>::iterator it;
-	for ( int input = 0; input < _inputs-1; ++input ){      // Nandan: Adding the delay associated with the pipe
+	map<int, Flit*>::iterator it,it1;
+	for ( int input = 0; input < _inputs-1; ++input )      // Nandan: Adding the delay associated with the pipe
+	{
 		it = _stage_1[input].find(_time);
 		if(it == _stage_1[input].end())
 		{
 			if((_inject_slot == -1)&&(IsChannelValid(input)))
+			{	
 				_inject_slot = input;
+				//	Precaution (possibly redundant)
+				it1 = _stage_2[_inject_slot].find(_time+1);
+				if(!(it1 == _stage_2[_inject_slot].end()))
+				{
+					ostringstream err;
+			        err << GetSimTime() << " | Magic flit: " << GetID();
+			        Error( err.str( ) );
+				}
+				//	End precaution
+			}
 			continue;
 		}
 		if((it->second)->watch) {
@@ -369,6 +381,15 @@ void Chipper::_stage1_to_stage2()
     if(_inject_slot > -1)
     {
     	assert(_inject_slot < _inputs - 1);
+    	//	Precaution (possibly redundant)
+    	it1 = _stage_2[_inject_slot].find(_time+1);
+		if(!(it1 == _stage_2[_inject_slot].end()))
+		{
+			ostringstream err;
+            err << GetSimTime() << " | Flit pile up at inject stage of router: " << GetID();
+            Error( err.str( ) );
+		}
+		//	End precaution
     	Flit *f = _input_channels[last_channel]->Receive();
     	if(f)
     	{
@@ -376,6 +397,7 @@ void Chipper::_stage1_to_stage2()
 				*gWatchOut << GetSimTime() << " | "
 							<< "node" << GetID() << " | "
 							<< "Receiving flit " << f->id
+							<< " headed for " << f->dest
 							<< " at time " << _time
 							<< " at slot " << _inject_slot
 							<< " with priority " << f->pri
@@ -383,8 +405,8 @@ void Chipper::_stage1_to_stage2()
 							<< "." << endl;
 			}
     		_stage_2[_inject_slot].insert(make_pair(_time+1, f));
-    		_inject_slot = -1;
     	}
+    	_inject_slot = -1;
     }
 }
 
@@ -610,9 +632,9 @@ int Chipper::Find_Edge_Router(int router_number, int k)
 		return 2;
 	else if(router_number == ((k*k)-1) )
 		return 8;
-	else if(router_number == ((k*k)-1-k) )
+	else if(router_number == ((k*k)-k) )
 		return 6;
-	else if(router_number > ((k*k)-1-k) && (router_number < ((k*k)-1) ) )
+	else if(router_number > ((k*k)-k) && (router_number < ((k*k)-1) ) )
 		return 7;
 	else if( (router_number%k) == 0 )
 		return 5;
