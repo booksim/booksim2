@@ -180,6 +180,7 @@ void Chipper::_SendFlits( )
 					<< "destination " << (f->second)->dest
 					<< "." << endl;
 			}
+			(f->second)->hops++;
   			_output_channels[output]->Send( f->second );
   			buffer_timed.erase(f);
   		}
