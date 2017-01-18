@@ -39,6 +39,8 @@ Chipper::Chipper( const Configuration& config,
 	_time = 0;
 	_inject_slot = -1;
 	last_channel = _inputs-1;
+
+	router_type = Find_Edge_Router(id, config.GetInt("k") );
 }
 
 Chipper::~Chipper()
@@ -101,14 +103,31 @@ int Chipper::GetInjectStatus()
 {
 	for ( int input = 0; input < _inputs - 1; ++input )
 	{
+		if( !IsChannelValid( input ) )
+			continue;
 		map<int,Flit*>::iterator f = _stage_1[input].find(GetSimTime());
 		if(f == _stage_1[input].end())
 		{
-			// _inject_slot = input;
 			return 1;
 		}
 	}
-	// _inject_slot = -1;
+	return 0;
+}
+
+int Chipper::IsChannelValid( int input )
+{
+	if(input == 0)
+		if((router_type == 0)||(router_type == 1)||(router_type == 4)||(router_type == 5)||(router_type == 6)||(router_type == 7))
+			return 1;
+	if(input == 1)
+		if((router_type == 1)||(router_type == 2)||(router_type == 3)||(router_type == 4)||(router_type == 7)||(router_type == 8))
+			return 1;
+	if(input == 2)
+		if((router_type == 0)||(router_type == 1)||(router_type == 2)||(router_type == 3)||(router_type == 4)||(router_type == 5))
+			return 1;
+	if(input == 3)
+		if((router_type == 3)||(router_type == 4)||(router_type == 5)||(router_type == 6)||(router_type == 7)||(router_type == 8))
+			return 1;
 	return 0;
 }
 
@@ -330,7 +349,7 @@ void Chipper::_stage1_to_stage2()
 		it = _stage_1[input].find(_time);
 		if(it == _stage_1[input].end())
 		{
-			if(_inject_slot == -1)
+			if((_inject_slot == -1)&&(IsChannelValid(input)))
 				_inject_slot = input;
 			continue;
 		}
@@ -355,9 +374,10 @@ void Chipper::_stage1_to_stage2()
     	{
     		if(f->watch) {
 				*gWatchOut << GetSimTime() << " | "
-							<< "router" << GetID() << " | "
+							<< "node" << GetID() << " | "
 							<< "Receiving flit " << f->id
 							<< " at time " << _time
+							<< " at slot " << _inject_slot
 							<< " with priority " << f->pri
 							<< " and golden status " << f->golden
 							<< "." << endl;
@@ -392,10 +412,47 @@ void Chipper::_stage2_to_output()
 //	Nandan:	Routing stage of CHIPPER
 void Chipper::Permute()
 {
-	Partial_Permute(2,0,1);
-	Partial_Permute(3,1,1);
-	Partial_Permute(3,2,2);
-	Partial_Permute(1,0,0);
+	if(router_type == 0)
+		Partial_Permute(2,0,1);
+	else if(router_type == 1)
+	{
+		Partial_Permute(2,0,1);
+		Partial_Permute(2,1,1);
+		Partial_Permute(1,0,0);
+	}
+	else if(router_type == 2)
+		Partial_Permute(2,1,1);
+	else if(router_type == 3)
+	{
+		Partial_Permute(3,1,1);
+		Partial_Permute(2,1,1);
+		Partial_Permute(3,2,2);
+	}
+	else if(router_type == 4)
+	{
+		Partial_Permute(2,0,1);
+		Partial_Permute(3,1,1);
+		Partial_Permute(3,2,2);
+		Partial_Permute(1,0,0);
+	}
+	else if(router_type == 5)
+	{
+		Partial_Permute(2,0,1);
+		Partial_Permute(3,0,1);
+		Partial_Permute(3,2,2);
+	}
+	else if(router_type == 6)
+		Partial_Permute(3,0,2);
+	else if(router_type == 7)
+	{
+		Partial_Permute(3,1,1);
+		Partial_Permute(3,0,1);
+		Partial_Permute(1,0,0);
+	}
+	else if (router_type == 8)
+		Partial_Permute(3,1,2);
+	// end permute part
+
 	for(int i=0;i < _inputs-1;++i)
 	{
 		Flit *f;
@@ -543,6 +600,27 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 			}
 		}
 	}	
+}
+
+int Chipper::Find_Edge_Router(int router_number, int k)
+{
+	if(router_number == 0)
+		return 0;
+	else if(router_number == (k-1) )
+		return 2;
+	else if(router_number == ((k*k)-1) )
+		return 8;
+	else if(router_number == ((k*k)-1-k) )
+		return 6;
+	else if(router_number > ((k*k)-1-k) && (router_number < ((k*k)-1) ) )
+		return 7;
+	else if( (router_number%k) == 0 )
+		return 5;
+	else if( (router_number/k) == 0 )
+		return 1;
+	else if( (router_number%k) == (k-1) )
+		return 3;
+	else return 4;
 }
 
 void Chipper::CheckSanity()

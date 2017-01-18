@@ -20,6 +20,7 @@ class Chipper : public Router {
 	vector<map<int, Flit *> > _stage_2;
 	//	No need for extra flags showing occupancy as each buffer is timed
 
+	int router_type;
 	int _time;
 	int _inject_slot;
 	int last_channel;
@@ -36,6 +37,8 @@ class Chipper : public Router {
   	void _stage2_to_output();
   	void Partial_Permute(int dir1, int dir2, int perm_num);
   	void CheckSanity();
+  	int Find_Edge_Router(int id, int k);
+  	int IsChannelValid( int input );
 
 public:
 	Chipper(	const Configuration& config,
