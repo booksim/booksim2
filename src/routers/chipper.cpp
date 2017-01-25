@@ -164,6 +164,7 @@ void Chipper::_SendFlits( )
 			}
 			(f->second)->hops++;
   			_output_channels[output]->Send( f->second );
+  			_output_channels[output]->ReadInputs();
   			buffer_timed.erase(f);
   		}
     }
@@ -187,6 +188,8 @@ void Chipper::_InternalStep( )
 	_stage1_to_output();
 
 	CheckSanity();
+
+	WriteOutputs();
 }
 
 // Added by HH
