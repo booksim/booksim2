@@ -20,6 +20,8 @@ class Chipper : public Router {
 	vector<map<int, Flit *> > _stage_2;
 	//	No need for extra flags showing occupancy as each buffer is timed
 
+	queue< Flit * > _inject_queue;
+
 	int router_type;
 	int _time;
 	int _inject_slot;
@@ -50,8 +52,8 @@ public:
 	virtual void AddOutputChannel(FlitChannel * channel, CreditChannel * ignored);
 
 	int GetInjectStatus();
+	void QueueFlit( Flit * f );
 	virtual void ReadInputs();
-	// virtual void Evaluate( );
 	virtual void WriteOutputs();
 
 	//	Ameya: Just for sake of avoiding pure virual func

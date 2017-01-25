@@ -202,6 +202,9 @@ public:
 
   inline int NumInputs() const {return _inputs;}
   inline int NumOutputs() const {return _outputs;}
+
+  //  Ameya
+  virtual void QueueFlit( Flit * f ) {};
 };
 
 #endif

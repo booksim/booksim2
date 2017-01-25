@@ -101,17 +101,7 @@ void Chipper::Display( ostream & os ) const
 //	Ameya: Returns 1 if there is empty slot in _stage_1
 int Chipper::GetInjectStatus()
 {
-	for ( int input = 0; input < _inputs - 1; ++input )
-	{
-		if( !IsChannelValid( input ) )
-			continue;
-		map<int,Flit*>::iterator f = _stage_1[input].find(GetSimTime());
-		if(f == _stage_1[input].end())
-		{
-			return 1;
-		}
-	}
-	return 0;
+	return ( _inject_queue.empty() );
 }
 
 int Chipper::IsChannelValid( int input )
@@ -185,7 +175,12 @@ void Chipper::_SendFlits( )
   			buffer_timed.erase(f);
   		}
     }
- }
+}
+
+void Chipper::QueueFlit( Flit * f )
+{
+	_inject_queue.push(f);
+}
 
 void Chipper::_InternalStep( )
 {

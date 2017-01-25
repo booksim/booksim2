@@ -83,9 +83,10 @@ void BlessTrafficManager::_Step( )
 
                 f = pp.front();
                 if( _net[subnet]->CheckInject(n) )
-                {                  
-                    f->itime = _time;
-                    f->pri = numeric_limits<int>::max() - f->itime;
+                {
+                    //  Operation moved to chipper.cpp to note correct inject time
+                    // f->itime = _time;
+                    // f->pri = numeric_limits<int>::max() - f->itime;
                     assert(f->pri >= 0);
 
                     _last_class[n][subnet] = f->cl;
@@ -111,8 +112,9 @@ void BlessTrafficManager::_Step( )
 #ifdef TRACK_FLOWS
                     ++_injected_flits[f->cl][n];
 #endif
-                    
-                    _net[subnet]->WriteFlit(f, n);
+                    //  Edit 25/01/17
+                    // _net[subnet]->WriteFlit(f, n);
+                    _router[subnet][n]->QueueFlit(f);
 
                     pp.pop_front();
                 }
