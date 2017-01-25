@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <cassert>
+#include <limits>
 
 #include "chipper.hpp"
 #include "stats.hpp"
@@ -34,7 +35,6 @@ Chipper::Chipper( const Configuration& config,
 	_output_buffer.resize(_outputs-1);
 
 	_stage_1.resize(_inputs-1);
-	_stage_2.resize(_inputs-1);
 
 	_time = 0;
 	_inject_slot = -1;
@@ -58,14 +58,6 @@ Chipper::~Chipper()
 		{
 			(_stage_1[i].begin()->second)->Free();
 			_stage_1[i].erase(_stage_1[i].begin());
-		}
-	}
-	
-	for ( int i = 0; i < _inputs-1; ++i ) {
-		while (!_stage_2[i].empty())
-		{
-			(_stage_2[i].begin()->second)->Free();
-			_stage_2[i].erase(_stage_2[i].begin());
 		}
 	}
 	
@@ -190,11 +182,9 @@ void Chipper::_InternalStep( )
 
 	_input_to_stage1();
 
-	_stage1_to_stage2();
-
 	Permute();
 
-	_stage2_to_output();
+	_stage1_to_output();
 
 	CheckSanity();
 }
@@ -317,41 +307,21 @@ void Chipper::_EjectFlits(){
 	}	
 }
 
+//	Ameya:	Incorporates inject
 void Chipper::_input_to_stage1()
-{
-    map<int, Flit*>::iterator it;
-    for ( int input = 0; input < _inputs-1; ++input ){
-        it =_input_buffer[input].find(_time);
-        if(it == _input_buffer[input].end())
-        	continue;
-        if((it->second)->watch) {
-			*gWatchOut << GetSimTime() << " | "
-				<< "node" << GetID() << " | "
-				<< "Flit " << (it->second)->id
-				<< " headed for " << (it->second)->dest
-				<< " written from _input_buffer to _stage_1 in slot "
-				<< input
-				<< "." << endl;
-		}
-        _stage_1[input].insert(make_pair(it->first+1, it->second));
-        _input_buffer[input].erase(it);
-    }
-}
-
-void Chipper::_stage1_to_stage2()
 {
 	map<int, Flit*>::iterator it,it1;
 	for ( int input = 0; input < _inputs-1; ++input )      // Nandan: Adding the delay associated with the pipe
 	{
-		it = _stage_1[input].find(_time);
-		if(it == _stage_1[input].end())
+		it = _input_buffer[input].find(_time);
+		if(it == _input_buffer[input].end())
 		{
 			if((_inject_slot == -1)&&(IsChannelValid(input)))
 			{	
 				_inject_slot = input;
 				//	Precaution (possibly redundant)
-				it1 = _stage_2[_inject_slot].find(_time+1);
-				if(!(it1 == _stage_2[_inject_slot].end()))
+				it1 = _stage_1[_inject_slot].find(_time+1);
+				if(!(it1 == _stage_1[_inject_slot].end()))
 				{
 					ostringstream err;
 			        err << GetSimTime() << " | Magic flit: " << GetID();
@@ -366,27 +336,32 @@ void Chipper::_stage1_to_stage2()
 				<< "node" << GetID() << " | "
 				<< "Flit " << (it->second)->id
 				<< " headed for " << (it->second)->dest
-				<< " written from _stage_1 to _stage_2 in slot "
+				<< " written from _input_buffer to _stage_1 in slot "
 				<< input
 				<< "." << endl;
 		}
-		_stage_2[input].insert(make_pair(it->first+1, it->second));
-		_stage_1[input].erase(it);
+		_stage_1[input].insert(make_pair(it->first+1, it->second));
+		_input_buffer[input].erase(it);
     }
 
-    if(_inject_slot > -1)
+    if((_inject_slot > -1)&&(!_inject_queue.empty()))
     {
     	assert(_inject_slot < _inputs - 1);
     	//	Precaution (possibly redundant)
-    	it1 = _stage_2[_inject_slot].find(_time+1);
-		if(!(it1 == _stage_2[_inject_slot].end()))
+    	it1 = _stage_1[_inject_slot].find(_time+1);
+		if(!(it1 == _stage_1[_inject_slot].end()))
 		{
 			ostringstream err;
             err << GetSimTime() << " | Flit pile up at inject stage of router: " << GetID();
             Error( err.str( ) );
 		}
 		//	End precaution
-    	Flit *f = _input_channels[last_channel]->Receive();
+    	Flit *f = _inject_queue.front();
+    	_inject_queue.pop();
+
+    	f->itime = _time;
+        f->pri = numeric_limits<int>::max() - f->itime;
+
     	if(f)
     	{
     		if(f->watch) {
@@ -400,30 +375,31 @@ void Chipper::_stage1_to_stage2()
 							<< " and golden status " << f->golden
 							<< "." << endl;
 			}
-    		_stage_2[_inject_slot].insert(make_pair(_time+1, f));
+    		_stage_1[_inject_slot].insert(make_pair(_time+1, f));
     	}
-    	_inject_slot = -1;
     }
+
+    _inject_slot = -1;
 }
 
-void Chipper::_stage2_to_output()
+void Chipper::_stage1_to_output()
 {
 	map<int, Flit*>::iterator it;
     for ( int input = 0; input < _inputs-1; ++input ){
-        it = _stage_2[input].find(_time);
-        if(it == _stage_2[input].end())
+        it = _stage_1[input].find(_time);
+        if(it == _stage_1[input].end())
         	continue;
         if((it->second)->watch) {
 			*gWatchOut << GetSimTime() << " | "
 				<< "node" << GetID() << " | "
 				<< "Flit " << (it->second)->id
 				<< " headed for " << (it->second)->dest
-				<< " written from _stage_2 to _output_buffer in slot "
+				<< " written from _stage_1 to _output_buffer in slot "
 				<< input
 				<< "." << endl;
 		}
         _output_buffer[input].insert(make_pair(it->first+1, it->second));
-        _stage_2[input].erase(it);
+        _stage_1[input].erase(it);
     }
 }
 
@@ -475,8 +451,8 @@ void Chipper::Permute()
 	{
 		Flit *f;
 		map<int, Flit*>::iterator it;
-		it = _stage_2[i].find(_time);
-		if(it == _stage_2[i].end())
+		it = _stage_1[i].find(_time);
+		if(it == _stage_1[i].end())
 		{
 			continue;
 		}
@@ -514,8 +490,8 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 	Flit *f1;
 	Flit *f2;
 	map<int, Flit*>::iterator it1,it2;
-	it1 = _stage_2[dir1].find(_time);
-	if(it1 == _stage_2[dir1].end())
+	it1 = _stage_1[dir1].find(_time);
+	if(it1 == _stage_1[dir1].end())
 	{
 		f1 = NULL;
 	}
@@ -523,8 +499,8 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 	{
 		f1 = it1->second;
 	}
-	it2 = _stage_2[dir2].find(_time);
-	if(it2 == _stage_2[dir2].end())
+	it2 = _stage_1[dir2].find(_time);
+	if(it2 == _stage_1[dir2].end())
 	{
 		f2 = NULL;
 	}
@@ -538,8 +514,8 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 	{
 		if(_rf(GetID(), f2->dest, true) > perm_num)
 		{
-			_stage_2[dir2].erase(it2);
-			_stage_2[dir1].insert(pair<int, Flit *>(_time, f2) );
+			_stage_1[dir2].erase(it2);
+			_stage_1[dir1].insert(pair<int, Flit *>(_time, f2) );
 		}
 		return;
 	}
@@ -547,8 +523,8 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 	{
 		if(_rf(GetID(), f1->dest, true) <= perm_num)
 		{
-			_stage_2[dir1].erase(it1);
-			_stage_2[dir2].insert(pair<int, Flit *>(_time, f1) );
+			_stage_1[dir1].erase(it1);
+			_stage_1[dir2].insert(pair<int, Flit *>(_time, f1) );
 		}
 		return;
 	}
@@ -558,20 +534,20 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 		{
 			if(_rf(GetID(), f1->dest, true) <= perm_num)
 			{
-				_stage_2[dir1].erase(it1);
-				_stage_2[dir2].erase(it2);
-				_stage_2[dir2].insert( pair<int, Flit *>(_time, f1) );
-				_stage_2[dir1].insert( pair<int, Flit *>(_time, f2) );
+				_stage_1[dir1].erase(it1);
+				_stage_1[dir2].erase(it2);
+				_stage_1[dir2].insert( pair<int, Flit *>(_time, f1) );
+				_stage_1[dir1].insert( pair<int, Flit *>(_time, f2) );
 			}
 		}
 		else
 		{
 			if(_rf(GetID(), f2->dest, true) > perm_num)
 			{
-				_stage_2[dir1].erase(it1);
-				_stage_2[dir2].erase(it2);
-				_stage_2[dir2].insert( pair<int, Flit *>(_time, f1) );
-				_stage_2[dir1].insert( pair<int, Flit *>(_time, f2) );
+				_stage_1[dir1].erase(it1);
+				_stage_1[dir2].erase(it2);
+				_stage_1[dir2].insert( pair<int, Flit *>(_time, f1) );
+				_stage_1[dir1].insert( pair<int, Flit *>(_time, f2) );
 			}
 		}
 	}
@@ -579,20 +555,20 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 	{
 		if(_rf(GetID(), f1->dest, true) <= perm_num)
 		{
-			_stage_2[dir1].erase(it1);
-			_stage_2[dir2].erase(it2);
-			_stage_2[dir2].insert( pair<int, Flit *>(_time, f1) );
-			_stage_2[dir1].insert( pair<int, Flit *>(_time, f2) );
+			_stage_1[dir1].erase(it1);
+			_stage_1[dir2].erase(it2);
+			_stage_1[dir2].insert( pair<int, Flit *>(_time, f1) );
+			_stage_1[dir1].insert( pair<int, Flit *>(_time, f2) );
 		}
 	}
 	else if((f2->golden == 1))
 	{
 		if(_rf(GetID(), f2->dest, true) > perm_num)
 		{
-			_stage_2[dir1].erase(it1);
-			_stage_2[dir2].erase(it2);
-			_stage_2[dir2].insert( pair<int, Flit *>(_time, f1) );
-			_stage_2[dir1].insert( pair<int, Flit *>(_time, f2) );
+			_stage_1[dir1].erase(it1);
+			_stage_1[dir2].erase(it2);
+			_stage_1[dir2].insert( pair<int, Flit *>(_time, f1) );
+			_stage_1[dir1].insert( pair<int, Flit *>(_time, f2) );
 		}
 	}
 	else
@@ -601,20 +577,20 @@ void Chipper::Partial_Permute(int dir1, int dir2, int perm_num)
 		{
 			if(_rf(GetID(), f1->dest, true) <= perm_num)
 			{
-				_stage_2[dir1].erase(it1);
-				_stage_2[dir2].erase(it2);
-				_stage_2[dir2].insert( pair<int, Flit *>(_time, f1) );
-				_stage_2[dir1].insert( pair<int, Flit *>(_time, f2) );
+				_stage_1[dir1].erase(it1);
+				_stage_1[dir2].erase(it2);
+				_stage_1[dir2].insert( pair<int, Flit *>(_time, f1) );
+				_stage_1[dir1].insert( pair<int, Flit *>(_time, f2) );
 			}
 		}
 		else
 		{
 			if(_rf(GetID(), f2->dest, true) > perm_num)
 			{
-				_stage_2[dir1].erase(it1);
-				_stage_2[dir2].erase(it2);
-				_stage_2[dir2].insert( pair<int, Flit *>(_time, f1) );
-				_stage_2[dir1].insert( pair<int, Flit *>(_time, f2) );
+				_stage_1[dir1].erase(it1);
+				_stage_1[dir2].erase(it2);
+				_stage_1[dir2].insert( pair<int, Flit *>(_time, f1) );
+				_stage_1[dir1].insert( pair<int, Flit *>(_time, f2) );
 			}
 		}
 	}	
@@ -657,15 +633,6 @@ void Chipper::CheckSanity()
 		{
 			ostringstream err;
             err << "Flit pile up at _stage_1 of router: " << GetID();
-            Error( err.str( ) );
-		}
-	}
-
-	for ( int i = 0; i < _inputs-1; ++i ) {
-		if(_stage_2[i].size() > 2)
-		{
-			ostringstream err;
-            err << "Flit pile up at _stage_2 of router: " << GetID();
             Error( err.str( ) );
 		}
 	}

@@ -17,7 +17,7 @@ class Chipper : public Router {
 	vector<map<int, Flit *> > _input_buffer;
 	vector<map<int, Flit *> > _output_buffer;
 	vector<map<int, Flit *> > _stage_1;
-	vector<map<int, Flit *> > _stage_2;
+	// vector<map<int, Flit *> > _stage_2;
 	//	No need for extra flags showing occupancy as each buffer is timed
 
 	queue< Flit * > _inject_queue;
@@ -34,9 +34,8 @@ class Chipper : public Router {
   	void _SendFlits( );
   	void _EjectFlits();
   	void _input_to_stage1();
-  	void _stage1_to_stage2();
   	void Permute();
-  	void _stage2_to_output();
+  	void _stage1_to_output();
   	void Partial_Permute(int dir1, int dir2, int perm_num);
   	void CheckSanity();
   	int Find_Edge_Router(int id, int k);
