@@ -58,7 +58,7 @@ internal_speedup  = 1.0;
 
 // Traffic
 traffic = transpose;
-packet_size = 4;
+packet_size = 1;
 
 
 // Simulation

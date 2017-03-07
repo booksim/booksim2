@@ -352,6 +352,73 @@ void BlessTrafficManager::_RetireFlit( Flit *f, int dest )
     }
 
     map<int, Stat_Util *>::iterator iter = _retire_stats[f->cl].find(f->pid);
+    if( iter == _retire_stats[f->cl].end() )
+    {
+        //  First flit of packet is being retired
+        first = 1;
+        Stat_Util *s = new Stat_Util;
+        s->f = f;
+        s->pending = (f->size) - 1;
+        if(s->pending==0)
+        {
+            if ( f->watch ) {
+                *gWatchOut << GetSimTime() << " | "
+                    << "node" << dest << " | "
+                    << "Retiring packet " << f->pid
+                    << " (plat = " << f->atime - f->ctime
+                    << ", nlat = " << f->atime - f->itime
+                    << ", frag = 0"
+                    << ", src = " << f->src
+                    << ", dest = " << f->dest
+                    << ", golden = " << f->golden
+                    << ")." << endl;
+            }
+
+            // code the source of request, look carefully, its tricky ;)
+            if (f->type == Flit::READ_REQUEST || f->type == Flit::WRITE_REQUEST) {
+                PacketReplyInfo* rinfo = PacketReplyInfo::New();
+                rinfo->source = f->src;
+                rinfo->time = f->atime;
+                rinfo->record = f->record;
+                rinfo->type = f->type;
+                _repliesPending[dest].push_back(rinfo);
+            } else {
+                if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY  ){
+                    _requestsOutstanding[dest]--;
+                } else if(f->type == Flit::ANY_TYPE) {
+                    _requestsOutstanding[f->src]--;
+                }
+            }
+
+            // Only record statistics once per packet (at tail)
+            // and based on the simulation state
+            if ( ( _sim_state == warming_up ) || f->record ) {
+
+                _hop_stats[f->cl]->AddSample( f->hops );
+
+                if((_slowest_packet[f->cl] < 0) ||
+                   (_plat_stats[f->cl]->Max() < (f->atime - f->itime)))
+                    _slowest_packet[f->cl] = f->pid;
+                _plat_stats[f->cl]->AddSample( f->atime - f->ctime);
+                _nlat_stats[f->cl]->AddSample( f->atime - f->itime);
+                _frag_stats[f->cl]->AddSample( 0 );
+
+                if(_pair_stats){
+                    _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->ctime );
+                    _pair_nlat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->itime );
+                }
+            }
+
+            ++_accepted_packets[f->cl][dest];   //  Ameya: Moved here from _Step()
+
+            //  To ensure flit is freed
+            first = 0;
+        }
+        else
+        {
+            _retire_stats[f->cl].insert(make_pair(f->pid, s));
+        }
+    }
     if( iter != _retire_stats[f->cl].end() )
     {
         Stat_Util *prime = iter->second;
@@ -368,7 +435,7 @@ void BlessTrafficManager::_RetireFlit( Flit *f, int dest )
                     << "Retiring packet " << f->pid
                     << " (plat = " << f->atime - head->ctime
                     << ", nlat = " << f->atime - head->itime
-                    << ", frag = " << (f->atime - head->atime) - (f->id - head->id) // NB: In the spirit of solving problems using ugly hacks, we compute the packet length by taking advantage of the fact that the IDs of flits within a packet are contiguous.
+                    << ", frag = " << (f->atime - head->atime) - (f->size)
                     << ", src = " << head->src
                     << ", dest = " << head->dest
                     << ", golden = " << head->golden
@@ -414,82 +481,7 @@ void BlessTrafficManager::_RetireFlit( Flit *f, int dest )
             ++_accepted_packets[f->cl][dest];   //  Ameya: Moved here from _Step()        
         }
     }
-    else
-    {
-        //  First flit of packet is being retired
-        first = 1;
-        Stat_Util *s = new Stat_Util;
-        s->f = f;
-        s->pending = (f->size) - 1;
-        _retire_stats[f->cl].insert(make_pair(f->pid, s));
-    }
-    // if ( f->tail ) {
-    //     Flit * head;
-    //     if(f->head) {
-    //         head = f;
-    //     } else {
-    //         map<int, Flit *>::iterator iter = _retired_packets[f->cl].find(f->pid);
-    //         assert(iter != _retired_packets[f->cl].end());
-    //         head = iter->second;
-    //         _retired_packets[f->cl].erase(iter);
-    //         assert(head->head);
-    //         assert(f->pid == head->pid);
-    //     }
-    //     if ( f->watch ) {
-    //         *gWatchOut << GetSimTime() << " | "
-    //                    << "node" << dest << " | "
-    //                    << "Retiring packet " << f->pid
-    //                    << " (plat = " << f->atime - head->ctime
-    //                    << ", nlat = " << f->atime - head->itime
-    //                    << ", frag = " << (f->atime - head->atime) - (f->id - head->id) // NB: In the spirit of solving problems using ugly hacks, we compute the packet length by taking advantage of the fact that the IDs of flits within a packet are contiguous.
-    //                    << ", src = " << head->src
-    //                    << ", dest = " << head->dest
-    //                    << ", golden = " << head->golden
-    //                    << ")." << endl;
-    //     }
-
-    //     //code the source of request, look carefully, its tricky ;)
-    //     if (f->type == Flit::READ_REQUEST || f->type == Flit::WRITE_REQUEST) {
-    //         PacketReplyInfo* rinfo = PacketReplyInfo::New();
-    //         rinfo->source = f->src;
-    //         rinfo->time = f->atime;
-    //         rinfo->record = f->record;
-    //         rinfo->type = f->type;
-    //         _repliesPending[dest].push_back(rinfo);
-    //     } else {
-    //         if(f->type == Flit::READ_REPLY || f->type == Flit::WRITE_REPLY  ){
-    //             _requestsOutstanding[dest]--;
-    //         } else if(f->type == Flit::ANY_TYPE) {
-    //             _requestsOutstanding[f->src]--;
-    //         }
-
-    //     }
-
-    //     // Only record statistics once per packet (at tail)
-    //     // and based on the simulation state
-    //     if ( ( _sim_state == warming_up ) || f->record ) {
-
-    //         _hop_stats[f->cl]->AddSample( f->hops );
-
-    //         if((_slowest_packet[f->cl] < 0) ||
-    //            (_plat_stats[f->cl]->Max() < (f->atime - head->itime)))
-    //             _slowest_packet[f->cl] = f->pid;
-    //         _plat_stats[f->cl]->AddSample( f->atime - head->ctime);
-    //         _nlat_stats[f->cl]->AddSample( f->atime - head->itime);
-    //         _frag_stats[f->cl]->AddSample( (f->atime - head->atime) - (f->id - head->id) );
-
-    //         if(_pair_stats){
-    //             _pair_plat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->ctime );
-    //             _pair_nlat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - head->itime );
-    //         }
-    //     }
-
-    //     if(f != head) {
-    //         head->Free();
-    //     }
-
-    // }
-
+        
     if(f->golden)
     {
         if ( _golden_flits.empty() )
@@ -506,7 +498,7 @@ void BlessTrafficManager::_RetireFlit( Flit *f, int dest )
             _golden_in_flight = 0;
         }
     }
-
+    // cout<<f->pid<<endl;
     if(!first) {
         f->Free();
     }
