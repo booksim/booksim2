@@ -16,8 +16,8 @@
 class BlessTrafficManager : public TrafficManager {
 private:
   int _golden_turn;
-  int _golden_in_flight;
-  vector<int> _golden_flits;
+  int _golden_packet;
+  int _golden_epoch;
   
   struct Stat_Util{
     Flit * f;
@@ -25,12 +25,11 @@ private:
   };
   
   vector<map<int, Stat_Util*> > _retire_stats;
+  vector<map<int, vector<Flit *> > > _router_flits_in_flight;
 
 protected:
 
-  int _IsGoldenTurn( int source ) { return (_golden_turn == source);}
-  int _IsGoldenInFlight() { return _golden_in_flight; }
-  void _UpdateGoldenStatus( int source );
+  void _UpdateGoldenStatus( );
   void _RetireFlit( Flit *f, int dest );
   virtual void _Step( );
   void _GeneratePacket( int source, int stype, int cl, int time );

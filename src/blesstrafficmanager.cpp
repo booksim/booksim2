@@ -13,9 +13,11 @@
 
 BlessTrafficManager::BlessTrafficManager( const Configuration &config, 
 					  const vector<Network *> & net )
-: TrafficManager(config, net), _golden_turn(0), _golden_in_flight(0)
+: TrafficManager(config, net), _golden_turn(0), _golden_packet(-1)
 {
+    _golden_epoch = config.GetInt("k")*config.GetInt("n");
     _retire_stats.resize(config.GetInt("classes"));
+    _router_flits_in_flight.resize(_routers);
 }
 
 BlessTrafficManager::~BlessTrafficManager( ) {}
@@ -32,6 +34,9 @@ void BlessTrafficManager::_Step( )
     }
 
     vector<map<int, Flit *> > flits(_subnets);
+
+    if(GetSimTime()%_golden_epoch == 0)
+        _UpdateGoldenStatus();     
 
     for ( int subnet = 0; subnet < _subnets; ++subnet )
     {
@@ -218,6 +223,8 @@ void BlessTrafficManager::_GeneratePacket( int source, int stype,
                    << "." << endl;
     }
 
+    //  For fast location of golden flits
+    vector<Flit *> pkt;
     for ( int i = 0; i < size; ++i ) {
         Flit * f  = Flit::New();
         f->id     = _cur_id++;
@@ -230,8 +237,11 @@ void BlessTrafficManager::_GeneratePacket( int source, int stype,
         f->record = record;
         f->cl     = cl;
         f->size   = size;
+        f->golden = 0;
 
         _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
+        pkt.push_back( f );
+
         if(record) {
             _measured_in_flight_flits[f->cl].insert(make_pair(f->id, f));
         }
@@ -246,42 +256,10 @@ void BlessTrafficManager::_GeneratePacket( int source, int stype,
         } else {
             f->head = false;
         }
-        // switch( _pri_type ) {
-        // case class_based:
-        //     f->pri = _class_priority[cl];
-        //     assert(f->pri >= 0);
-        //     break;
-        // case age_based:
-        //     f->pri = numeric_limits<int>::max() - time;
-        //     assert(f->pri >= 0);
-        //     break;
-        // case sequence_based:
-        //     f->pri = numeric_limits<int>::max() - _packet_seq_no[source];
-        //     assert(f->pri >= 0);
-        //     break;
-        // default:
-        //     f->pri = 0;
-        // }
-        // f->pri = size - i;
-        // if ( i == ( size - 1 ) ) { // Tail flit
-        //     f->tail = true;
-        // } else {
-        //     f->tail = false;
-        // }
 
         f->pri = numeric_limits<int>::max() - time;
         assert(f->pri >= 0);
-
-        if(!_IsGoldenInFlight() && _IsGoldenTurn(source))
-        {
-            f->golden = 1;
-            _golden_flits.push_back(f->id);
-        }
-        else
-        {
-            f->golden = 0;
-        }
-
+        
         f->vc  = -1;
 
         if ( f->watch ) {
@@ -290,24 +268,29 @@ void BlessTrafficManager::_GeneratePacket( int source, int stype,
                        << "Enqueuing flit " << f->id
                        << " (packet " << f->pid
                        << ") at time " << time
-                       << " with golden status " << f->golden
                        << "." << endl;
         }
 
         _partial_packets[source][cl].push_back( f );
     }
 
-    if(!_IsGoldenInFlight() && _IsGoldenTurn(source))
-    {
-        assert(!_golden_flits.empty());
-        _UpdateGoldenStatus(source);
-    }
+    _router_flits_in_flight[source].insert(make_pair(pid, pkt));
 }
 
-void BlessTrafficManager::_UpdateGoldenStatus( int source )
+void BlessTrafficManager::_UpdateGoldenStatus( )
 {
-    _golden_in_flight = 1;
-    _golden_turn = (source + 1)%_nodes;
+    assert(GetSimTime()%_golden_epoch == 0);
+    map<int, vector<Flit *> >::iterator iter = _router_flits_in_flight[_golden_turn].find(_golden_packet);
+    _golden_turn = (_golden_turn + 1)%_routers;
+    if(!_router_flits_in_flight[_golden_turn].empty())
+    {
+        iter = _router_flits_in_flight[_golden_turn].begin();
+        _golden_packet = iter->first;
+        vector<Flit *>& pkt = iter->second;
+        vector<Flit *>::iterator flt;
+        for(flt = pkt.begin(); flt != pkt.end(); ++flt)
+            (*flt)->golden = 1;
+    }
 }
 
 void BlessTrafficManager::_RetireFlit( Flit *f, int dest )
@@ -318,6 +301,23 @@ void BlessTrafficManager::_RetireFlit( Flit *f, int dest )
 
     assert(_total_in_flight_flits[f->cl].count(f->id) > 0);
     _total_in_flight_flits[f->cl].erase(f->id);
+    
+    assert(_router_flits_in_flight[f->src].count(f->pid) > 0);
+    map<int, vector<Flit *> >::iterator iter1 = _router_flits_in_flight[f->src].find(f->pid);
+    vector<Flit *>& pkt = iter1->second;
+    vector<Flit *>::iterator flt;
+    for(flt = pkt.begin(); flt != pkt.end(); ++flt)
+    {
+        if( (*flt)->id == f->id)
+        {
+            pkt.erase(flt);
+            break;
+        }
+    }
+    if(pkt.empty())
+    {
+        _router_flits_in_flight[f->src].erase(iter1);
+    }
 
     if(f->record) {
         assert(_measured_in_flight_flits[f->cl].count(f->id) > 0);
@@ -481,24 +481,7 @@ void BlessTrafficManager::_RetireFlit( Flit *f, int dest )
             ++_accepted_packets[f->cl][dest];   //  Ameya: Moved here from _Step()        
         }
     }
-        
-    if(f->golden)
-    {
-        if ( _golden_flits.empty() )
-        {
-            ostringstream err;
-            err << "Flit " << f->id << " claiming to be golden at " << dest;
-            Error( err.str( ) );
-        }
-        vector<int>::iterator it = find( _golden_flits.begin(), _golden_flits.end(), f->id );
-        assert( it != _golden_flits.end());
-        _golden_flits.erase(it);
-        if( _golden_flits.empty() )
-        {
-            _golden_in_flight = 0;
-        }
-    }
-    // cout<<f->pid<<endl;
+    
     if(!first) {
         f->Free();
     }
