@@ -15,7 +15,7 @@ BlessTrafficManager::BlessTrafficManager( const Configuration &config,
 					  const vector<Network *> & net )
 : TrafficManager(config, net), _golden_turn(0), _golden_packet(-1)
 {
-    _golden_epoch = config.GetInt("k")*config.GetInt("n");
+    _golden_epoch = config.GetInt("k")*config.GetInt("n")*3;    //  3 -> 3-cycle router
     _retire_stats.resize(config.GetInt("classes"));
     _router_flits_in_flight.resize(_routers);
 }
@@ -281,6 +281,10 @@ void BlessTrafficManager::_UpdateGoldenStatus( )
 {
     assert(GetSimTime()%_golden_epoch == 0);
     map<int, vector<Flit *> >::iterator iter = _router_flits_in_flight[_golden_turn].find(_golden_packet);
+    
+    if((iter->second).size()>0)
+        getchar();
+    
     _golden_turn = (_golden_turn + 1)%_routers;
     if(!_router_flits_in_flight[_golden_turn].empty())
     {
@@ -289,7 +293,20 @@ void BlessTrafficManager::_UpdateGoldenStatus( )
         vector<Flit *>& pkt = iter->second;
         vector<Flit *>::iterator flt;
         for(flt = pkt.begin(); flt != pkt.end(); ++flt)
+        {
             (*flt)->golden = 1;
+            if ( (*flt)->watch ) {
+                *gWatchOut << GetSimTime() << " | "
+                           << " BlessTrafficManager | "
+                           << "Updating priority to golden for flit" << (*flt)->id
+                           << " (packet " << (*flt)->pid
+                           << ", src = " << (*flt)->src
+                           << ", dest = " << (*flt)->dest
+                           << ", golden = " << (*flt)->golden
+                           << ", hops = " << (*flt)->hops
+                           << ")." << endl;
+            }
+        }
     }
 }
 
