@@ -157,6 +157,8 @@ BookSimConfig::BookSimConfig( )
   _int_map["alloc_iters"] = 1;
   
   //==== Traffic ========================================
+  _int_map["file_inject"] = 0;	//	Ameya: option for getting inject data from benchmark files
+  AddStrField("inject_file", "");
 
   _int_map["classes"] = 1;
 

@@ -13,17 +13,31 @@
 
 BlessTrafficManager::BlessTrafficManager( const Configuration &config, 
 					  const vector<Network *> & net )
-: TrafficManager(config, net), _golden_turn(0), _golden_packet(-1)
+: TrafficManager(config, net), _golden_turn(0), _golden_packet(-1), position(0)
 {
     _golden_epoch = config.GetInt("k")*config.GetInt("n")*3;    //  3 -> 3-cycle router
     _retire_stats.resize(config.GetInt("classes"));
     _router_flits_in_flight.resize(_routers);
+
+    _file_inject = config.GetInt("file_inject");
+    _eoif = 1;
+    if(_file_inject)
+    {
+        _eoif = 0;
+        _inject_file = config.GetStr("inject_file");
+        assert(_inject_file != "");
+    }
 }
 
 BlessTrafficManager::~BlessTrafficManager( ) {}
 
 void BlessTrafficManager::_Step( )
 {
+    if((_time == 0)&&(_file_inject))
+    {
+        _Read_File(position);
+    }
+
     bool flits_in_flight = false;
     for(int c = 0; c < _classes; ++c) {
         flits_in_flight |= !_total_in_flight_flits[c].empty();
@@ -162,7 +176,7 @@ void BlessTrafficManager::_GeneratePacket( int source, int stype,
     int size = _GetNextPacketSize(cl); //input size
     int pid = _cur_pid++;
     assert(_cur_pid);
-    int packet_destination = _traffic_pattern[cl]->dest(source);
+    int packet_destination = ((_file_inject==1)? f_dest : _traffic_pattern[cl]->dest(source));  //  Nandan
     bool record = false;
     bool watch = gWatchOut && (_packets_to_watch.count(pid) > 0);
     if(_use_read_write[cl]){
@@ -275,6 +289,10 @@ void BlessTrafficManager::_GeneratePacket( int source, int stype,
     }
 
     _router_flits_in_flight[source].insert(make_pair(pid, pkt));
+
+    //  Nandan
+    if(_file_inject)
+        _Read_File(position);
 }
 
 void BlessTrafficManager::_UpdateGoldenStatus( )
@@ -282,8 +300,9 @@ void BlessTrafficManager::_UpdateGoldenStatus( )
     assert(GetSimTime()%_golden_epoch == 0);
     map<int, vector<Flit *> >::iterator iter = _router_flits_in_flight[_golden_turn].find(_golden_packet);
     
-    if((iter->second).size()>0)
-        getchar();
+    // Ameya: check exclusion
+    // if((iter->second).size()>0)
+    //     getchar();
     
     _golden_turn = (_golden_turn + 1)%_routers;
     if(!_router_flits_in_flight[_golden_turn].empty())
@@ -502,4 +521,100 @@ void BlessTrafficManager::_RetireFlit( Flit *f, int dest )
     if(!first) {
         f->Free();
     }
+}
+
+void BlessTrafficManager::_Inject()
+{
+    if(_file_inject)
+    {
+        for ( int input = 0; input < _nodes; ++input ) {
+            for ( int c = 0; c < _classes; ++c ) {
+                int stype = _IssuePacket( input, request_type, c );
+
+                if ( stype != 0 ) { //generate a packet
+                    _GeneratePacket( input, stype, c, _time);
+                }
+                
+                if ( ( _sim_state == draining ) &&
+                     ( _qtime[input][c] > _drain_time ) ) {
+                    _qdrained[input][c] = true;
+                }
+            }
+        }
+    }
+    else
+    {
+        TrafficManager::_Inject();
+    }
+}
+
+int BlessTrafficManager::_IssuePacket( int source, char request_type, int cl)
+{
+    assert(_file_inject==1);
+    int result = 0;
+    if((_time == f_time)&&(source == f_source))
+    {
+        if(request_type == 'r')     //  READ_REQUEST
+        {
+            result = 1;
+            _requestsOutstanding[source]++;
+        }
+        else    //  assume WRITE_REQUEST
+        {
+            result = 2;
+            _requestsOutstanding[source]++;
+        }
+    }
+    else if(_use_read_write[cl]){       //  no allocated packet in inject file
+        if (!_repliesPending[source].empty()) {
+            if(_repliesPending[source].front()->time <= _time) {
+                result = -1;
+            }
+        }
+    }
+
+    if(result != 0) {
+        _packet_seq_no[source]++;
+    }
+    return result;
+}
+
+void BlessTrafficManager::_Read_File( int position )
+{
+    ifstream spec;
+    spec.open(_inject_file.c_str(), std::ios::in);
+    string a;
+    // string b;
+    int j;
+    spec.seekg(position);
+    for(j = 0; j < 4; j++)
+    {
+        if(j == 0)
+            spec >> f_time;
+        if(j == 1)
+            spec >> a;
+        if(j == 2)
+            spec >> request_type;
+        if(j == 3)
+            spec >> f_source;
+    }                                   
+    position = spec.tellg();
+    if( spec.eof() )
+    {
+        // check
+        _eoif = 1;
+    }
+    // string::iterator itb = b.begin(); 
+    // for (string::iterator ita=a.begin() + 2; ita!=a.end(); ++ita)
+    // {
+    //     *itb = *ita;
+    //     itb++; 
+    // }
+    f_dest = Calculate_Dest( a ); // check this
+    spec.close();
+}
+
+int BlessTrafficManager::Calculate_Dest( string address )
+{
+    return 0;
 }
