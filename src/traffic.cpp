@@ -498,7 +498,7 @@ HotSpotTrafficPattern::HotSpotTrafficPattern(int nodes, vector<int> hotspots,
     int const hotspot = _hotspots[i];
     assert((hotspot >= 0) && (hotspot < _nodes));
     int const rate = _rates[i];
-    assert(rate >= 0);
+    assert(rate > 0);
     _max_val += rate;
   }
 }
