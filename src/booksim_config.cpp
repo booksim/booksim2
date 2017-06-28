@@ -7,7 +7,7 @@
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
 
- Redistributions of source code must retain the above copyright notice, this 
+ Redistributions of source code must retain the above copyright notice, this
  list of conditions and the following disclaimer.
  Redistributions in binary form must reproduce the above copyright notice, this
  list of conditions and the following disclaimer in the documentation and/or
@@ -15,7 +15,7 @@
 
  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -36,7 +36,7 @@
 #include "booksim_config.hpp"
 
 BookSimConfig::BookSimConfig( )
-{ 
+{
   //========================================================
   // Network options
   //========================================================
@@ -54,7 +54,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["c"] = 1; //concentration
   AddStrField( "routing_function", "none" );
 
-  //simulator tries to correclty adjust latency for node/router placement 
+  //simulator tries to correctly adjust latency for node/router placement
   _int_map["use_noc_latency"] = 1;
 
 
@@ -80,7 +80,7 @@ BookSimConfig::BookSimConfig( )
 
   //==== General options ===================================
 
-  AddStrField( "router", "iq" ); 
+  AddStrField( "router", "iq" );
 
   _int_map["output_delay"] = 0;
   _int_map["credit_delay"] = 0;
@@ -102,8 +102,8 @@ BookSimConfig::BookSimConfig( )
   _int_map["spec_check_cred"] = 1 ;
   _int_map["spec_mask_by_reqs"] = 0 ;
   AddStrField("spec_sw_allocator", "prio");
-  
-  _int_map["num_vcs"]         = 16;  
+
+  _int_map["num_vcs"]         = 16;
   _int_map["vc_buf_size"]     = 8;  //per vc buffer size
   _int_map["buf_size"]        = -1; //shared buffer size
   AddStrField("buffer_policy", "private"); //buffer sharing policy
@@ -132,25 +132,25 @@ BookSimConfig::BookSimConfig( )
   _int_map["input_speedup"]     = 1;  // expansion of input ports into crossbar
   _int_map["output_speedup"]    = 1;  // expansion of output ports into crossbar
 
-  _int_map["routing_delay"]    = 1;  
-  _int_map["vc_alloc_delay"]   = 1;  
-  _int_map["sw_alloc_delay"]   = 1;  
+  _int_map["routing_delay"]    = 1;
+  _int_map["vc_alloc_delay"]   = 1;
+  _int_map["sw_alloc_delay"]   = 1;
   _int_map["st_prepare_delay"] = 0;
   _int_map["st_final_delay"]   = 1;
 
   //==== Event-driven =====================================
 
-  _int_map["vct"] = 0; 
+  _int_map["vct"] = 0;
 
   //==== Allocators ========================================
 
-  AddStrField( "vc_allocator", "islip" ); 
-  AddStrField( "sw_allocator", "islip" ); 
-  
+  AddStrField( "vc_allocator", "islip" );
+  AddStrField( "sw_allocator", "islip" );
+
   AddStrField( "arb_type", "round_robin" );
-  
+
   _int_map["alloc_iters"] = 1;
-  
+
   //==== Traffic ========================================
 
   _int_map["classes"] = 1;
@@ -165,7 +165,7 @@ BookSimConfig::BookSimConfig( )
 
   _float_map["injection_rate"]       = 0.1;
   AddStrField("injection_rate", ""); // workaraound to allow for vector specification
-  
+
   _int_map["injection_rate_uses_flits"] = 0;
 
   // number of flits per packet
@@ -265,7 +265,7 @@ BookSimConfig::BookSimConfig( )
   //_int_map["flit_timing"]     = 0;  // know what you're doing
   //_int_map["split_packets"]   = 0;  // know what you're doing
 
-  _int_map["seed"]            = 0; //random seed for simulation, e.g. traffic 
+  _int_map["seed"]            = 0; //random seed for simulation, e.g. traffic
   AddStrField("seed", ""); // workaround to allow special "time" value
 
   _int_map["print_activity"] = 0;
@@ -277,7 +277,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["viewer_trace"] = 0;
 
   AddStrField("watch_file", "");
-  
+
   AddStrField("watch_flits", "");
   AddStrField("watch_packets", "");
   AddStrField("watch_transactions", "");
@@ -304,7 +304,7 @@ BookSimConfig::BookSimConfig( )
 
   // batch only -- packet sequence numbers
   AddStrField("sent_packets_out", "");
-  
+
   //==================Power model params=====================
   _int_map["sim_power"] = 0;
   AddStrField("power_output_file","pwr_tmp");
@@ -319,7 +319,7 @@ BookSimConfig::BookSimConfig( )
 
 
 PowerConfig::PowerConfig( )
-{ 
+{
 
   _int_map["H_INVD2"] = 0;
   _int_map["W_INVD2"] = 0;
