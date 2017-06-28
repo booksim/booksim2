@@ -111,6 +111,11 @@ public:
     return _output_channels[output];
   }
 
+  virtual int GetInjectStatus()
+  {
+    return 0;
+  }
+
   virtual void ReadInputs( ) = 0;
   virtual void Evaluate( );
   virtual void WriteOutputs( ) = 0;
@@ -197,6 +202,9 @@ public:
 
   inline int NumInputs() const {return _inputs;}
   inline int NumOutputs() const {return _outputs;}
+
+  //  Ameya
+  virtual void QueueFlit( Flit * f ) {};
 };
 
 #endif

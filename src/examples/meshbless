@@ -64,7 +64,13 @@ packet_size = 1;
 // Simulation
 sim_type = latency;
 
-injection_rate = 0.005;
+injection_rate = 0.05;
+
+//watch_file = /home/ameya/ProjectU/booksim2-master/tempwatch;
+
+bufferless = 1;
+
+router = chipper;
 
 watch_file=tempwatch;
 watch_out=tempout;

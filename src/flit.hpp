@@ -66,6 +66,9 @@ public:
   int  dest;
 
   int  pri;
+  //  Ameya: For bufferless routing
+  int  golden;
+  int size;
 
   int  hops;
   bool watch;

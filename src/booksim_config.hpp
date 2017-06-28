@@ -35,6 +35,7 @@ protected:
 
 public:
   BookSimConfig( );
+  void CheckConsistency();		//	Ameya
 };
 
 #endif

@@ -6,7 +6,7 @@
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
 
- Redistributions of source code must retain the above copyright notice, this 
+ Redistributions of source code must retain the above copyright notice, this
  list of conditions and the following disclaimer.
  Redistributions in binary form must reproduce the above copyright notice, this
  list of conditions and the following disclaimer in the documentation and/or
@@ -14,7 +14,7 @@
 
  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -26,7 +26,7 @@
 
 /*config_utils.cpp
  *
- *The configuration object which contained the parsed data from the 
+ *The configuration object which contained the parsed data from the
  *configuration file
  */
 
@@ -55,7 +55,7 @@ void Configuration::AddStrField(string const & field, string const & value)
 void Configuration::Assign(string const & field, string const & value)
 {
   map<string, string>::const_iterator match;
-  
+
   match = _str_map.find(field);
   if(match != _str_map.end()) {
     _str_map[field] = value;
@@ -67,7 +67,7 @@ void Configuration::Assign(string const & field, string const & value)
 void Configuration::Assign(string const & field, int value)
 {
   map<string, int>::const_iterator match;
-  
+
   match = _int_map.find(field);
   if(match != _int_map.end()) {
     _int_map[field] = value;
@@ -79,7 +79,7 @@ void Configuration::Assign(string const & field, int value)
 void Configuration::Assign(string const & field, double value)
 {
   map<string, double>::const_iterator match;
-  
+
   match = _float_map.find(field);
   if(match != _float_map.end()) {
     _float_map[field] = value;
@@ -115,7 +115,7 @@ int Configuration::GetInt(string const & field) const
 }
 
 double Configuration::GetFloat(string const & field) const
-{  
+{
   map<string,double>::const_iterator match;
 
   match = _float_map.find(field);
@@ -239,9 +239,9 @@ bool ParseArgs(Configuration * cf, int argc, char * * argv)
       ifstream in(argv[i]);
       cout << "BEGIN Configuration File: " << argv[i] << endl;
       while (!in.eof()) {
-	char c;
-	in.get(c);
-	cout << c ;
+        	char c;
+        	in.get(c);
+        	cout << c ;
       }
       cout << "END Configuration File: " << argv[i] << endl;
       rc = true;
@@ -260,11 +260,11 @@ bool ParseArgs(Configuration * cf, int argc, char * * argv)
 //However, it can't and won't write out  empty strings since the booksim yacc
 //parser won't be abled to parse blank strings
 void Configuration::WriteFile(string const & filename) {
-  
+
   ostream *config_out= new ofstream(filename.c_str());
-  
-  
-  for(map<string,string>::const_iterator i = _str_map.begin(); 
+
+
+  for(map<string,string>::const_iterator i = _str_map.begin();
       i!=_str_map.end();
       i++){
     //the parser won't read empty strings
@@ -272,15 +272,15 @@ void Configuration::WriteFile(string const & filename) {
       *config_out<<i->first<<" = "<<i->second<<";"<<endl;
     }
   }
-  
-  for(map<string, int>::const_iterator i = _int_map.begin(); 
+
+  for(map<string, int>::const_iterator i = _int_map.begin();
       i!=_int_map.end();
       i++){
     *config_out<<i->first<<" = "<<i->second<<";"<<endl;
 
   }
 
-  for(map<string, double>::const_iterator i = _float_map.begin(); 
+  for(map<string, double>::const_iterator i = _float_map.begin();
       i!=_float_map.end();
       i++){
     *config_out<<i->first<<" = "<<i->second<<";"<<endl;
@@ -288,16 +288,16 @@ void Configuration::WriteFile(string const & filename) {
   }
   config_out->flush();
   delete config_out;
- 
+
 }
 
 
 
 void Configuration::WriteMatlabFile(ostream * config_out) const {
 
-  
-  
-  for(map<string,string>::const_iterator i = _str_map.begin(); 
+
+
+  for(map<string,string>::const_iterator i = _str_map.begin();
       i!=_str_map.end();
       i++){
     //the parser won't read blanks lolz
@@ -305,15 +305,15 @@ void Configuration::WriteMatlabFile(ostream * config_out) const {
       *config_out<<"%"<<i->first<<" = \'"<<i->second<<"\';"<<endl;
     }
   }
-  
-  for(map<string, int>::const_iterator i = _int_map.begin(); 
+
+  for(map<string, int>::const_iterator i = _int_map.begin();
       i!=_int_map.end();
       i++){
     *config_out<<"%"<<i->first<<" = "<<i->second<<";"<<endl;
 
   }
 
-  for(map<string, double>::const_iterator i = _float_map.begin(); 
+  for(map<string, double>::const_iterator i = _float_map.begin();
       i!=_float_map.end();
       i++){
     *config_out<<"%"<<i->first<<" = "<<i->second<<";"<<endl;
@@ -333,7 +333,7 @@ vector<string> tokenize_str(string const & data)
   }
 
   // doesn't start with an opening brace --> treat as single element
-  // note that this element can potentially contain nested lists 
+  // note that this element can potentially contain nested lists
   if(data[0] != '{') {
     values.push_back(data);
     return values;
@@ -345,7 +345,7 @@ vector<string> tokenize_str(string const & data)
   size_t curr = start;
 
   while(string::npos != (curr = data.find_first_of("{,}", curr))) {
-    
+
     if(data[curr] == '{') {
       ++nested;
     } else if((data[curr] == '}') && nested) {
@@ -374,7 +374,7 @@ vector<int> tokenize_int(string const & data)
   }
 
   // doesn't start with an opening brace --> treat as single element
-  // note that this element can potentially contain nested lists 
+  // note that this element can potentially contain nested lists
   if(data[0] != '{') {
     values.push_back(atoi(data.c_str()));
     return values;
@@ -386,7 +386,7 @@ vector<int> tokenize_int(string const & data)
   size_t curr = start;
 
   while(string::npos != (curr = data.find_first_of("{,}", curr))) {
-    
+
     if(data[curr] == '{') {
       ++nested;
     } else if((data[curr] == '}') && nested) {
@@ -415,7 +415,7 @@ vector<double> tokenize_float(string const & data)
   }
 
   // doesn't start with an opening brace --> treat as single element
-  // note that this element can potentially contain nested lists 
+  // note that this element can potentially contain nested lists
   if(data[0] != '{') {
     values.push_back(atof(data.c_str()));
     return values;
@@ -427,7 +427,7 @@ vector<double> tokenize_float(string const & data)
   size_t curr = start;
 
   while(string::npos != (curr = data.find_first_of("{,}", curr))) {
-    
+
     if(data[curr] == '{') {
       ++nested;
     } else if((data[curr] == '}') && nested) {

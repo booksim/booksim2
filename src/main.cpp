@@ -7,7 +7,7 @@
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
 
- Redistributions of source code must retain the above copyright notice, this 
+ Redistributions of source code must retain the above copyright notice, this
  list of conditions and the following disclaimer.
  Redistributions in binary form must reproduce the above copyright notice, this
  list of conditions and the following disclaimer in the documentation and/or
@@ -15,7 +15,7 @@
 
  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -53,7 +53,6 @@
 #include "network.hpp"
 #include "injection.hpp"
 #include "power_module.hpp"
-
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -110,9 +109,8 @@ bool Simulate( BookSimConfig const & config )
   }
 
   /*tcc and characterize are legacy
-   *not sure how to use them 
+   *not sure how to use them
    */
-
   assert(trafficManager == NULL);
   trafficManager = TrafficManager::New( config, net ) ;
 
@@ -160,16 +158,19 @@ int main( int argc, char **argv )
   if ( !ParseArgs( &config, argc, argv ) ) {
     cerr << "Usage: " << argv[0] << " configfile... [param=value...]" << endl;
     return 0;
- } 
+ }
 
-  
+
+  /*basic consistency chcks for bufferless
+  */
+  config.CheckConsistency();  //  Ameya
   /*initialize routing, traffic, injection functions
    */
   InitializeRoutingMap( config );
 
   gPrintActivity = (config.GetInt("print_activity") > 0);
   gTrace = (config.GetInt("viewer_trace") > 0);
-  
+
   string watch_out_file = config.GetStr( "watch_out" );
   if(watch_out_file == "") {
     gWatchOut = NULL;
@@ -178,7 +179,7 @@ int main( int argc, char **argv )
   } else {
     gWatchOut = new ofstream(watch_out_file.c_str());
   }
-  
+
 
   /*configure and run the simulator
    */

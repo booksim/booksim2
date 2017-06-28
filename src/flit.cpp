@@ -77,6 +77,9 @@ void Flit::Reset()
   src = -1;
   dest = -1;
   pri = 0;
+  //  Ameya
+  golden = 0;
+  size = 0;
   intm =-1;
   ph = -1;
   data = 0;
