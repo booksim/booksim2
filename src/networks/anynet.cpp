@@ -402,7 +402,15 @@ void AnyNet::readFile(){
 	  //ignore
 	} else {
 	  link_weight= atoi(temp.c_str());
-	  router_list[head_type][head_id][body_id].second=link_weight;
+	  if(head_type == ROUTER && body_type == NODE) {
+      router_list[NODE][head_id][body_id].second = link_weight;
+    } else if (head_type == NODE && body_type == ROUTER) {  
+      router_list[NODE][body_id][head_id].second = link_weight;
+    } else if (head_type == ROUTER && body_type == ROUTER) {
+      router_list[ROUTER][head_id][body_id].second = link_weight;
+    } else {
+      assert(0);
+    }
 	  break;
 	}
 	//intentionally letting it flow through
