@@ -146,8 +146,8 @@ int dragonfly_port(int rID, int source, int dest){
 }
 
 
-DragonFlyNew::DragonFlyNew( const Configuration &config, const string & name ) :
-  Network( config, name )
+DragonFlyNew::DragonFlyNew( const Configuration &config, const string & name, Module * clock ) :
+  Network( config, name, clock )
 {
 
   _ComputeSize( config );

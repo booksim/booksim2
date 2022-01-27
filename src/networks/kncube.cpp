@@ -42,8 +42,8 @@
  //#include "iq_router.hpp"
 
 
-KNCube::KNCube( const Configuration &config, const string & name, bool mesh ) :
-Network( config, name )
+KNCube::KNCube( const Configuration &config, const string & name, bool mesh, Module * clock ) :
+Network( config, name, clock)
 {
   _mesh = mesh;
 

@@ -55,7 +55,7 @@ class FlatFlyOnChip : public Network {
   int _InChannel( int stage, int addr, int port ) const;
 
 public:
-  FlatFlyOnChip( const Configuration &config, const string & name );
+  FlatFlyOnChip( const Configuration &config, const string & name, Module * clock );
 
   int GetN( ) const;
   int GetK( ) const;

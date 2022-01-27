@@ -55,8 +55,8 @@
 
  //#define FATTREE_DEBUG
 
-FatTree::FatTree( const Configuration& config,const string & name )
-  : Network( config ,name)
+FatTree::FatTree( const Configuration& config,const string & name, Module * clock )
+  : Network( config ,name, clock)
 {
   
 

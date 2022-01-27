@@ -45,8 +45,8 @@
 #include "qtree.hpp"
 #include "misc_utils.hpp"
 
-QTree::QTree( const Configuration& config, const string & name )
-: Network ( config, name )
+QTree::QTree( const Configuration& config, const string & name, Module * clock )
+: Network ( config, name, clock )
 {
   _ComputeSize( config );
   _Alloc( );

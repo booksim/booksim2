@@ -52,8 +52,8 @@
 #include "tree4.hpp"
 #include "misc_utils.hpp"
 
-Tree4::Tree4( const Configuration& config, const string & name )
-: Network ( config, name )
+Tree4::Tree4( const Configuration& config, const string & name, Module * clock )
+: Network ( config, name, clock )
 {
   _ComputeSize( config );
   _Alloc( );

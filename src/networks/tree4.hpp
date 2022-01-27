@@ -61,7 +61,7 @@ class Tree4 : public Network {
 
 public:
 
-  Tree4( const Configuration& config, const string & name );
+  Tree4( const Configuration& config, const string & name, Module * clock );
   static void RegisterRoutingFunctions() ;
   
   static int HeightFromID( int id );
