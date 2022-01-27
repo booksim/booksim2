@@ -292,9 +292,9 @@ protected:
 public:
 
   static TrafficManager * New(Configuration const & config, 
-			      vector<Network *> const & net);
+			      vector<Network *> const & net, Module *clock);
 
-  TrafficManager( const Configuration &config, const vector<Network *> & net );
+  TrafficManager( const Configuration &config, const vector<Network *> & net, Module *clock );
   virtual ~TrafficManager( );
 
   bool Run( );
