@@ -64,6 +64,8 @@ public:
 
   virtual int GetSimTime() const;
   virtual int getTime() const;
+  virtual Module * GetClock() const;
+  //Not making a setter method for _clock.
 };
 
 #endif

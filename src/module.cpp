@@ -113,3 +113,8 @@ int Module::getTime() const
   this->Error("This Module is incapable of providing any timestamps.");
   __builtin_unreachable(); //just to prevent warnings (-Wreturn-type)
 }
+
+Module * Module::GetClock() const 
+{
+  return this->_clock;
+}
