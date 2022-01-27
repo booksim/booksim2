@@ -48,7 +48,6 @@ protected:
   Module *_clock; 
 
 public:
-  Module( Module *parent, const string& name );
   Module( Module *parent, const string& name, Module *clock);
   virtual ~Module( ) { }
   

@@ -38,19 +38,6 @@
 #include "booksim.hpp"
 #include "module.hpp"
 
-Module::Module( Module *parent, const string& name )
-    : _clock(nullptr)
-{
-  _name = name;
-
-  if ( parent ) { 
-    parent->_AddChild( this );
-    _fullname = parent->_fullname + "/" + name;
-  } else {
-    _fullname = name;
-  }
-}
-
 Module::Module(Module *parent, const string &name, Module *clock)
     : _name(name), _clock(clock)
 {
