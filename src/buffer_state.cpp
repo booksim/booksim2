@@ -70,19 +70,19 @@ BufferState::BufferPolicy * BufferState::BufferPolicy::New(Configuration const &
   BufferPolicy * sp = NULL;
   string buffer_policy = config.GetStr("buffer_policy");
   if(buffer_policy == "private") {
-    sp = new PrivateBufferPolicy(config, parent, name);
+    sp = new PrivateBufferPolicy(config, parent, name, parent->_clock);
   } else if(buffer_policy == "shared") {
-    sp = new SharedBufferPolicy(config, parent, name);
+    sp = new SharedBufferPolicy(config, parent, name, parent->_clock);
   } else if(buffer_policy == "limited") {
-    sp = new LimitedSharedBufferPolicy(config, parent, name);
+    sp = new LimitedSharedBufferPolicy(config, parent, name, parent->_clock);
   } else if(buffer_policy == "dynamic") {
-    sp = new DynamicLimitedSharedBufferPolicy(config, parent, name);
+    sp = new DynamicLimitedSharedBufferPolicy(config, parent, name, parent->_clock);
   } else if(buffer_policy == "shifting") {
-    sp = new ShiftingDynamicLimitedSharedBufferPolicy(config, parent, name);
+    sp = new ShiftingDynamicLimitedSharedBufferPolicy(config, parent, name, parent->_clock);
   } else if(buffer_policy == "feedback") {
-    sp = new FeedbackSharedBufferPolicy(config, parent, name);
+    sp = new FeedbackSharedBufferPolicy(config, parent, name, parent->_clock);
   } else if(buffer_policy == "simplefeedback") {
-    sp = new SimpleFeedbackSharedBufferPolicy(config, parent, name);
+    sp = new SimpleFeedbackSharedBufferPolicy(config, parent, name, parent->_clock);
   } else {
     cout << "Unknown buffer policy: " << buffer_policy << endl;
   }
