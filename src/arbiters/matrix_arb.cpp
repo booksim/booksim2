@@ -35,8 +35,8 @@
 #include <iostream>
 using namespace std ;
 
-MatrixArbiter::MatrixArbiter( Module *parent, const string &name, int size )
-  : Arbiter( parent, name, size ), _last_req(-1) {
+MatrixArbiter::MatrixArbiter( Module *parent, const string &name, int size, Module *clock )
+  : Arbiter( parent, name, size, clock ), _last_req(-1) {
   _matrix.resize(size);
   for ( int i = 0 ; i < size ; i++ ) {
     _matrix[i].resize(size);

@@ -58,7 +58,7 @@ protected:
 public:
   int  _num_reqs ;
   // Constructors
-  Arbiter( Module *parent, const string &name, int size ) ;
+  Arbiter( Module *parent, const string &name, int size, Module *clock ) ;
   
   // Print priority matrix to standard output
   virtual void PrintState() const = 0 ;

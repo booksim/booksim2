@@ -38,8 +38,8 @@
 using namespace std ;
 
 TreeArbiter::TreeArbiter( Module *parent, const string &name,
-			  int size, int groups, const string & arb_type ) 
-  : Arbiter( parent, name, size ) {
+			  int size, int groups, const string & arb_type, Module *clock ) 
+  : Arbiter( parent, name, size, clock ) {
   assert(size % groups == 0);
   _group_arbiters.resize(groups);
   _group_reqs.resize(groups, 0);

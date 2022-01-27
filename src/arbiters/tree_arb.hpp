@@ -48,7 +48,7 @@ class TreeArbiter : public Arbiter {
 public:
 
   // Constructors
-  TreeArbiter( Module *parent, const string &name, int size, int groups, const string & arb_type ) ;
+  TreeArbiter( Module *parent, const string &name, int size, int groups, const string & arb_type, Module *clock ) ;
 
   ~TreeArbiter();
 
