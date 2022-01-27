@@ -746,7 +746,7 @@ void EventRouter::Display( ostream & os ) const
 
 EventNextVCState::EventNextVCState( const Configuration& config, 
 				    Module *parent, const string& name, Module * clock ) :
-  Module( parent, name )
+  Module( parent, name, clock)
 {
   _buf_size = config.GetInt( "vc_buf_size" );
   _vcs      = config.GetInt( "num_vcs" );

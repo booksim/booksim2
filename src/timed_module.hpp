@@ -33,7 +33,7 @@
 class TimedModule : public Module {
 
 public:
-  TimedModule(Module * parent, string const & name, Module * clock) : Module(parent, name) {}
+  TimedModule(Module * parent, string const & name, Module * clock) : Module(parent, name, clock) {}
   virtual ~TimedModule() {}
   
   virtual void ReadInputs() = 0;
