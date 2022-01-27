@@ -43,10 +43,9 @@ private:
 
 vector<Module *> _children;
 
-  Module *_clock; 
-
 protected:
   void _AddChild( Module *child );
+  Module *_clock; 
 
 public:
   Module( Module *parent, const string& name );
