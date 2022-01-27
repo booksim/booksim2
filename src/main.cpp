@@ -92,29 +92,16 @@ ostream * gWatchOut;
 
 bool Simulate( BookSimConfig const & config )
 {
-  vector<Network *> net;
-
-  int subnets = config.GetInt("subnets");
-  /*To include a new network, must register the network here
-   *add an else if statement with the name of the network
-   */
-  net.resize(subnets);
-  for (int i = 0; i < subnets; ++i) {
-    ostringstream name;
-    name << "network_" << i;
-    net[i] = Network::New( config, name.str(), trafficManager);
-  }
-
   /*tcc and characterize are legacy
    *not sure how to use them 
    */
 
   assert(trafficManager == NULL);
-  trafficManager = TrafficManager::New( config, net, trafficManager ) ;
+  trafficManager = TrafficManager::New(config);
+  auto net = trafficManager->GetNetworks();
 
   /*Start the simulation run
    */
-
   double total_time; /* Amount of time we've run */
   struct timeval start_time, end_time; /* Time before/after user code */
   total_time = 0.0;
@@ -129,10 +116,12 @@ bool Simulate( BookSimConfig const & config )
 
   cout<<"Total run time "<<total_time<<endl;
 
-  for (int i=0; i<subnets; ++i) {
+  for (size_t i = 0; i < net.size(); ++i)
+  {
 
-    ///Power analysis
-    if(config.GetInt("sim_power") > 0){
+    /// Power analysis
+    if (config.GetInt("sim_power") > 0)
+    {
       Power_Module pnet(net[i], config, trafficManager);
       pnet.run();
     }

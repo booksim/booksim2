@@ -40,30 +40,34 @@
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
-TrafficManager * TrafficManager::New(Configuration const & config, vector<Network *> const & net, Module *clock)
+TrafficManager * TrafficManager::New(Configuration const & config, vector<Network *> const & net)
 {
     TrafficManager * result = NULL;
     string sim_type = config.GetStr("sim_type");
     if((sim_type == "latency") || (sim_type == "throughput")) {
-        result = new TrafficManager(config, net, clock);
+        result = new TrafficManager(config, net);
     } else if(sim_type == "batch") {
-        result = new BatchTrafficManager(config, net, clock);
+        result = new BatchTrafficManager(config, net);
     } else {
         cerr << "Unknown simulation type: " << sim_type << endl;
     } 
     return result;
 }
 
-TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net, Module *clock )
-    : Module( 0, "traffic_manager", clock ), _net(net), _empty_network(false), _deadlock_timer(0), _reset_time(0), _drain_time(-1), _cur_id(0), _cur_pid(0), _time(0)
+TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net)
+    : Module( 0, "traffic_manager", this ), _net(net), _empty_network(false), _deadlock_timer(0), _reset_time(0), _drain_time(-1), _cur_id(0), _cur_pid(0), _time(0)
 {
+    _vcs = config.GetInt("num_vcs");
+    _subnets = config.GetInt("subnets");
+
+    if (_net.empty())
+    {
+        this->PopulateNet(config);
+    }
 
     _nodes = _net[0]->NumNodes( );
     _routers = _net[0]->NumRouters( );
 
-    _vcs = config.GetInt("num_vcs");
-    _subnets = config.GetInt("subnets");
- 
     _subnet.resize(Flit::NUM_FLIT_TYPES);
     _subnet[Flit::READ_REQUEST] = config.GetInt("read_request_subnet");
     _subnet[Flit::READ_REPLY] = config.GetInt("read_reply_subnet");
@@ -2288,3 +2292,23 @@ double TrafficManager::_GetAveragePacketSize(int cl) const
     }
     return (double)sum / (double)(_packet_size_max_val[cl] + 1);
 }
+
+void TrafficManager::PopulateNet( const Configuration & config )
+{
+    _net.resize(_subnets);
+    for(int i = 0; i<_subnets; i++) 
+    {
+        assert(_net[i] == nullptr);
+        _net[i] = Network::New( config, this->Name() + to_string(i), this);
+    }
+}
+
+vector<Network *> & TrafficManager::GetNetworks()
+{
+    return _net;
+}
+
+Network * TrafficManager::GetNetwork( int index )
+{
+    return _net[index];
+} 

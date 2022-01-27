@@ -288,13 +288,13 @@ protected:
 
   int _GetNextPacketSize(int cl) const;
   double _GetAveragePacketSize(int cl) const;
+  void PopulateNet( const Configuration & config );
 
 public:
 
-  static TrafficManager * New(Configuration const & config, 
-			      vector<Network *> const & net, Module *clock);
-
-  TrafficManager( const Configuration &config, const vector<Network *> & net, Module *clock );
+  static TrafficManager * New(Configuration const & config, vector<Network *> const & net = vector<Network *>());
+  
+  TrafficManager( const Configuration &config, const vector<Network *> & net );
   virtual ~TrafficManager( );
 
   bool Run( );
@@ -308,7 +308,8 @@ public:
   int getTime() const override { return _time;};
   Stats * getStats(const string & name) { return _stats[name]; }
 
-
+  vector<Network *> & GetNetworks();
+  Network * GetNetwork(int index);
 };
 
 template<class T>
