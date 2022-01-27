@@ -445,30 +445,30 @@ Allocator *Allocator::NewAllocator( Module *parent, const string& name,
     }
   }
   if ( alloc_name == "max_size" ) {
-    a = new MaxSizeMatch( parent, name, inputs, outputs );
+    a = new MaxSizeMatch( parent, name, inputs, outputs, parent->GetClock() );
   } else if ( alloc_name == "pim" ) {
     int iters = param_str.empty() ? (config ? config->GetInt("alloc_iters") : 1) : atoi(param_str.c_str());
-    a = new PIM( parent, name, inputs, outputs, iters );
+    a = new PIM( parent, name, inputs, outputs, iters, parent->GetClock() );
   } else if ( alloc_name == "islip" ) {
     int iters = param_str.empty() ? (config ? config->GetInt("alloc_iters") : 1) : atoi(param_str.c_str());
-    a = new iSLIP_Sparse( parent, name, inputs, outputs, iters );
+    a = new iSLIP_Sparse( parent, name, inputs, outputs, iters, parent->GetClock() );
   } else if ( alloc_name == "loa" ) {
-    a = new LOA( parent, name, inputs, outputs );
+    a = new LOA( parent, name, inputs, outputs, parent->GetClock() );
   } else if ( alloc_name == "wavefront" ) {
-    a = new Wavefront( parent, name, inputs, outputs );
+    a = new Wavefront( parent, name, inputs, outputs, parent->GetClock() );
   } else if ( alloc_name == "rr_wavefront" ) {
-    a = new Wavefront( parent, name, inputs, outputs, true );
+    a = new Wavefront( parent, name, inputs, outputs, parent->GetClock(), true );
   } else if ( alloc_name == "select" ) {
     int iters = param_str.empty() ? (config ? config->GetInt("alloc_iters") : 1) : atoi(param_str.c_str());
-    a = new SelAlloc( parent, name, inputs, outputs, iters );
+    a = new SelAlloc( parent, name, inputs, outputs, iters, parent->GetClock() );
   } else if (alloc_name == "separable_input_first") {
     string arb_type = param_str.empty() ? (config ? config->GetStr("arb_type") : "round_robin") : param_str;
     a = new SeparableInputFirstAllocator( parent, name, inputs, outputs,
-					  arb_type );
+					  arb_type, parent->GetClock() );
   } else if (alloc_name == "separable_output_first") {
     string arb_type = param_str.empty() ? (config ? config->GetStr("arb_type") : "round_robin") : param_str;
     a = new SeparableOutputFirstAllocator( parent, name, inputs, outputs,
-					   arb_type );
+					   arb_type, parent->GetClock() );
   }
 
 //==================================================

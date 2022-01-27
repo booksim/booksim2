@@ -50,7 +50,7 @@ protected:
 public:
   
   SeparableAllocator( Module* parent, const string& name, int inputs,
-		      int outputs, const string& arb_type ) ;
+		      int outputs, const string& arb_type, Module *clock ) ;
   
   virtual ~SeparableAllocator() ;
 

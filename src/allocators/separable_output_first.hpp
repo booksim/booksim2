@@ -41,7 +41,7 @@ class SeparableOutputFirstAllocator : public SeparableAllocator {
 public:
   
   SeparableOutputFirstAllocator( Module* parent, const string& name, int inputs,
-				 int outputs, const string& arb_type ) ;
+				 int outputs, const string& arb_type, Module *clock ) ;
   
   virtual void Allocate() ;
 

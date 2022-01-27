@@ -38,9 +38,8 @@
 #include "arbiter.hpp"
 
 SeparableAllocator::SeparableAllocator( Module* parent, const string& name,
-					int inputs, int outputs,
-					const string& arb_type )
-  : SparseAllocator( parent, name, inputs, outputs )
+					int inputs, int outputs,const string& arb_type, Module *clock )
+  : SparseAllocator( parent, name, inputs, outputs, clock )
 {
   
   _input_arb.resize(inputs);
