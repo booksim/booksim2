@@ -45,7 +45,7 @@ BatchTrafficManager::BatchTrafficManager( const Configuration &config,
   _batch_size = config.GetInt( "batch_size" );
   _batch_count = config.GetInt( "batch_count" );
 
-  _batch_time = new Stats( this, "batch_time", 1.0, 1000 );
+  _batch_time = new Stats( this, "batch_time", this->_clock, 1.0, 1000);
   _stats["batch_time"] = _batch_time;
   
   string sent_packets_out_file = config.GetStr( "sent_packets_out" );

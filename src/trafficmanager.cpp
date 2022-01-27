@@ -515,27 +515,27 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
         ostringstream tmp_name;
 
         tmp_name << "plat_stat_" << c;
-        _plat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+        _plat_stats[c] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 1000 );
         _stats[tmp_name.str()] = _plat_stats[c];
         tmp_name.str("");
 
         tmp_name << "nlat_stat_" << c;
-        _nlat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+        _nlat_stats[c] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 1000 );
         _stats[tmp_name.str()] = _nlat_stats[c];
         tmp_name.str("");
 
         tmp_name << "flat_stat_" << c;
-        _flat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+        _flat_stats[c] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 1000 );
         _stats[tmp_name.str()] = _flat_stats[c];
         tmp_name.str("");
 
         tmp_name << "frag_stat_" << c;
-        _frag_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
+        _frag_stats[c] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 100 );
         _stats[tmp_name.str()] = _frag_stats[c];
         tmp_name.str("");
 
         tmp_name << "hop_stat_" << c;
-        _hop_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 20 );
+        _hop_stats[c] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 20 );
         _stats[tmp_name.str()] = _hop_stats[c];
         tmp_name.str("");
 
@@ -561,17 +561,17 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
             for ( int i = 0; i < _nodes; ++i ) {
                 for ( int j = 0; j < _nodes; ++j ) {
                     tmp_name << "pair_plat_stat_" << c << "_" << i << "_" << j;
-                    _pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+                    _pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 250 );
                     _stats[tmp_name.str()] = _pair_plat[c][i*_nodes+j];
                     tmp_name.str("");
 	  
                     tmp_name << "pair_nlat_stat_" << c << "_" << i << "_" << j;
-                    _pair_nlat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+                    _pair_nlat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 250 );
                     _stats[tmp_name.str()] = _pair_nlat[c][i*_nodes+j];
                     tmp_name.str("");
 	  
                     tmp_name << "pair_flat_stat_" << c << "_" << i << "_" << j;
-                    _pair_flat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+                    _pair_flat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 250 );
                     _stats[tmp_name.str()] = _pair_flat[c][i*_nodes+j];
                     tmp_name.str("");
                 }
