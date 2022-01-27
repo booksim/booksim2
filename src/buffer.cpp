@@ -47,7 +47,7 @@ Module( parent, name, clock ), _occupancy(0)
   for(int i = 0; i < num_vcs; ++i) {
     ostringstream vc_name;
     vc_name << "vc_" << i;
-    _vc[i] = new VC(config, outputs, this, vc_name.str( ) );
+    _vc[i] = new VC(config, outputs, this, vc_name.str( ), this->_clock );
   }
 
 #ifdef TRACK_BUFFERS

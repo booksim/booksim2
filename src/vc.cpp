@@ -46,8 +46,8 @@ const char * const VC::VCSTATE[] = {"idle",
 				    "active"};
 
 VC::VC( const Configuration& config, int outputs, 
-	Module *parent, const string& name )
-  : Module( parent, name ), 
+	Module *parent, const string& name, Module * clock )
+  : Module( parent, name, clock ), 
     _state(idle), _out_port(-1), _out_vc(-1), _pri(0), _watched(false), 
     _expected_pid(-1), _last_id(-1), _last_pid(-1)
 {
