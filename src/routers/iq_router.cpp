@@ -85,7 +85,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   for ( int i = 0; i < _inputs; ++i ) {
     ostringstream module_name;
     module_name << "buf_" << i;
-    _buf[i] = new Buffer(config, _outputs, this, module_name.str( ) );
+    _buf[i] = new Buffer(config, _outputs, this, module_name.str( ), this->_clock);
     module_name.str("");
   }
 

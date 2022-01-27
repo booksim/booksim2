@@ -69,7 +69,7 @@ EventRouter::EventRouter( const Configuration& config,
 
   for ( int i = 0; i < _inputs; ++i ) {
     module_name << "buf_" << i;
-    _buf[i] = new Buffer( config, _outputs, this, module_name.str( ) );
+    _buf[i] = new Buffer( config, _outputs, this, module_name.str( ), this->_clock);
     module_name.seekp( 0, ios::beg );
     _active[i].resize(_vcs, false);
   }
