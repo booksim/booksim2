@@ -82,7 +82,7 @@ ChaosRouter::ChaosRouter( const Configuration& config,
 
   _crossbar_pipe = 
     new PipelineFIFO<Flit>( this, "crossbar_pipeline", _outputs, 
-			    _crossbar_delay );
+			    _crossbar_delay, this->_clock );
 
   // Input and output queues
 

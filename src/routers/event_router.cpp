@@ -108,15 +108,15 @@ EventRouter::EventRouter( const Configuration& config,
 
   _crossbar_pipe = 
     new PipelineFIFO<Flit>( this, "crossbar_pipeline", _outputs, 
-			    _crossbar_delay );
+			    _crossbar_delay, this->_clock);
 
   _credit_pipe =
     new PipelineFIFO<Credit>( this, "credit_pipeline", _inputs,
-			      _credit_delay );
+			      _credit_delay, this->_clock );
 
   _arrival_pipe =
     new PipelineFIFO<tArrivalEvent>( this, "arrival_pipeline", _inputs,
-				     0 /* FIX THIS EVENTUALLY */);
+				     0 /* FIX THIS EVENTUALLY */, this->_clock);
 
   // Queues
 
