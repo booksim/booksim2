@@ -447,7 +447,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
   
   out_vc = f->ph;
   if (debug)
-    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+    *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 	       << "	through output port : " << out_port 
 	       << " out vc: " << out_vc << endl;
   outputs->AddRange( out_port, out_vc, out_vc );

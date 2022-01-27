@@ -911,7 +911,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	_ran_intm = find_ran_intm(flatfly_transformation(f->src), dest);
 	tmp_out_port =  flatfly_outport(dest, rID);
 	if (f->watch){
-	  *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+	  *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		     << " MIN tmp_out_port: " << tmp_out_port;
 	}
 
@@ -921,7 +921,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	tmp_out_port =  flatfly_outport(_ran_intm, rID);
 
 	if (f->watch){
-	  *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+	  *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		     << " NONMIN tmp_out_port: " << tmp_out_port << endl;
 	}
 	if (_ran_intm >= rID*_concentration && _ran_intm < (rID+1)*_concentration) {
@@ -1084,7 +1084,7 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	_ran_intm = find_ran_intm(flatfly_transformation(f->src), dest);
 	tmp_out_port =  flatfly_outport(dest, rID);
 	if (f->watch){
-	  *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+	  *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		     << " MIN tmp_out_port: " << tmp_out_port;
 	}
 
@@ -1094,7 +1094,7 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	tmp_out_port =  flatfly_outport(_ran_intm, rID);
 
 	if (f->watch){
-	  *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+	  *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		     << " NONMIN tmp_out_port: " << tmp_out_port << endl;
 	}
 	if (_ran_intm >= rID*_concentration && _ran_intm < (rID+1)*_concentration) {

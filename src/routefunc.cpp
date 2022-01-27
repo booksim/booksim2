@@ -659,9 +659,9 @@ void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
     vcEnd = gWriteReplyEndVC;
   }
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
-
+  
   if ( !inject && f->watch ) {
-    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+    *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 	       << "Adding VC range [" 
 	       << vcBegin << "," 
 	       << vcEnd << "]"
@@ -711,7 +711,7 @@ void dim_order_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
   }
   
   if( !inject && f->watch ) {
-    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+    *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 	       << "Adding VC range [" 
 	       << vcBegin << "," 
 	       << vcEnd << "]"
@@ -766,7 +766,7 @@ void dim_order_pni_mesh( const Router *r, const Flit *f, int in_channel, OutputS
   }
 
   if( !inject && f->watch ) {
-    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+    *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 	       << "Adding VC range [" 
 	       << vcBegin << "," 
 	       << vcEnd << "]"
@@ -972,7 +972,7 @@ void min_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
   outputs->AddRange( out_port, 0, vcBegin, vcBegin );
   
   if ( f->watch ) {
-      *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+      *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		  << "Adding VC range [" 
 		  << vcBegin << "," 
 		  << vcBegin << "]"
@@ -993,7 +993,7 @@ void min_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
 	// Add minimal direction in dimension 'n'
 	if ( ( cur % gK ) < ( dest % gK ) ) { // Right
 	  if ( f->watch ) {
-	    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+	    *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 			<< "Adding VC range [" 
 		       << (vcBegin+1) << "," 
 			<< vcEnd << "]"
@@ -1007,7 +1007,7 @@ void min_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
 	  outputs->AddRange( 2*n, vcBegin+1, vcEnd, 1 ); 
 	} else { // Left
 	  if ( f->watch ) {
-	    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+	    *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 			<< "Adding VC range [" 
 		       << (vcBegin+1) << "," 
 			<< vcEnd << "]"
@@ -1084,7 +1084,7 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
     assert( n < gN );
 
     if ( f->watch ) {
-      *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+      *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		  << "PLANAR ADAPTIVE: flit " << f->id 
 		  << " in adaptive plane " << n << "." << endl;
     }
@@ -1101,7 +1101,7 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
 	fault = false;
 
 	if ( f->watch ) {
-	  *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+	  *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		      << "PLANAR ADAPTIVE: increasing in dimension " << n
 		      << "." << endl;
 	}
@@ -1115,7 +1115,7 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
 	fault = false;
 
 	if ( f->watch ) {
-	  *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+	  *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		      << "PLANAR ADAPTIVE: decreasing in dimension " << n
 		      << "." << endl;
 	}
@@ -1154,7 +1154,7 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
       }
 
       if ( f->watch ) {
-	*gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+	*gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		    << "PLANAR ADAPTIVE: avoiding 180 in dimension " << n
 		    << "." << endl;
       }
@@ -1494,7 +1494,7 @@ void valiant_ni_torus( const Router *r, const Flit *f, int in_channel,
     }
 
     if (f->watch) {
-      *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+      *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		 << "Adding VC range [" 
 		 << vcBegin << "," 
 		 << vcEnd << "]"
@@ -1562,7 +1562,7 @@ void dim_order_torus( const Router *r, const Flit *f, int in_channel,
     }
 
     if ( f->watch ) {
-      *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+      *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		 << "Adding VC range [" 
 		 << vcBegin << "," 
 		 << vcEnd << "]"
@@ -1627,7 +1627,7 @@ void dim_order_ni_torus( const Router *r, const Flit *f, int in_channel,
     }
 
     if ( f->watch ) {
-      *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+      *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		 << "Adding VC range [" 
 		 << vcBegin << "," 
 		 << vcEnd << "]"
@@ -1695,7 +1695,7 @@ void dim_order_bal_torus( const Router *r, const Flit *f, int in_channel,
     }
 
     if ( f->watch ) {
-      *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+      *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		 << "Adding VC range [" 
 		 << vcBegin << "," 
 		 << vcEnd << "]"
