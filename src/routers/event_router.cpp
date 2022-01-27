@@ -37,11 +37,8 @@
 
 EventRouter::EventRouter( const Configuration& config,
 		    Module *parent, const string & name, int id,
-		    int inputs, int outputs )
-  : Router( config,
-	    parent, name,
-	    id,
-	    inputs, outputs )
+		    int inputs, int outputs, Module * clock )
+  : Router( config, parent, name, id, inputs, outputs, clock )
 {
   ostringstream module_name;
   
@@ -80,7 +77,7 @@ EventRouter::EventRouter( const Configuration& config,
 
   for ( int o = 0; o < _outputs; ++o ) {
     module_name << "output" << o << "_vc_state";
-    _output_state[o] = new EventNextVCState(config, this, module_name.str());
+    _output_state[o] = new EventNextVCState(config, this, module_name.str(), this->_clock);
     module_name.seekp( 0, ios::beg );
   }
 
@@ -748,7 +745,7 @@ void EventRouter::Display( ostream & os ) const
 }
 
 EventNextVCState::EventNextVCState( const Configuration& config, 
-				    Module *parent, const string& name ) :
+				    Module *parent, const string& name, Module * clock ) :
   Module( parent, name )
 {
   _buf_size = config.GetInt( "vc_buf_size" );

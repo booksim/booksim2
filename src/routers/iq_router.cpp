@@ -48,8 +48,8 @@
 #include "buffer_monitor.hpp"
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
-		    string const & name, int id, int inputs, int outputs )
-: Router( config, parent, name, id, inputs, outputs ), _active(false)
+		    string const & name, int id, int inputs, int outputs, Module * clock)
+: Router( config, parent, name, id, inputs, outputs, clock ), _active(false)
 {
   _vcs         = config.GetInt( "num_vcs" );
 

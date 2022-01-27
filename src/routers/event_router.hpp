@@ -69,7 +69,7 @@ private:
 public:
 
   EventNextVCState( const Configuration& config, 
-		    Module *parent, const string& name );
+		    Module *parent, const string& name, Module * clock );
 
   eNextVCState GetState( int vc ) const;
   int GetPresence( int vc ) const;
@@ -163,7 +163,7 @@ class EventRouter : public Router {
 public:
   EventRouter( const Configuration& config,
 	       Module *parent, const string & name, int id,
-	       int inputs, int outputs );
+	       int inputs, int outputs, Module * clock );
   virtual ~EventRouter( );
 
   virtual void ReadInputs( );

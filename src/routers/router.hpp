@@ -93,7 +93,7 @@ protected:
 public:
   Router( const Configuration& config,
 	  Module *parent, const string & name, int id,
-	  int inputs, int outputs );
+	  int inputs, int outputs, Module * clock );
 
   static Router *NewRouter( const Configuration& config,
 			    Module *parent, const string & name, int id,

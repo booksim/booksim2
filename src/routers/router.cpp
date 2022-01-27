@@ -57,8 +57,8 @@ int const Router::STALL_CROSSBAR_CONFLICT = -6;
 
 Router::Router( const Configuration& config,
 		Module *parent, const string & name, int id,
-		int inputs, int outputs ) :
-TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
+		int inputs, int outputs, Module * clock ) :
+TimedModule( parent, name , clock), _id( id ), _inputs( inputs ), _outputs( outputs ),
    _partial_internal_cycles(0.0)
 {
   _crossbar_delay   = ( config.GetInt( "st_prepare_delay" ) + 
@@ -133,11 +133,11 @@ Router *Router::NewRouter( const Configuration& config,
   const string type = config.GetStr( "router" );
   Router *r = NULL;
   if ( type == "iq" ) {
-    r = new IQRouter( config, parent, name, id, inputs, outputs );
+    r = new IQRouter( config, parent, name, id, inputs, outputs, parent->GetClock() );
   } else if ( type == "event" ) {
-    r = new EventRouter( config, parent, name, id, inputs, outputs );
+    r = new EventRouter( config, parent, name, id, inputs, outputs, parent->GetClock() );
   } else if ( type == "chaos" ) {
-    r = new ChaosRouter( config, parent, name, id, inputs, outputs );
+    r = new ChaosRouter( config, parent, name, id, inputs, outputs, parent->GetClock() );
   } else {
     cerr << "Unknown router type: " << type << endl;
   }
