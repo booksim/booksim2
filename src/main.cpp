@@ -102,7 +102,7 @@ bool Simulate( BookSimConfig const & config )
   for (int i = 0; i < subnets; ++i) {
     ostringstream name;
     name << "network_" << i;
-    net[i] = Network::New( config, name.str() );
+    net[i] = Network::New( config, name.str(), trafficManager);
   }
 
   /*tcc and characterize are legacy
