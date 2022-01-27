@@ -58,8 +58,8 @@
 //this is a hack, I can't easily get the routing talbe out of the network
 map<int, int>* global_routing_table;
 
-AnyNet::AnyNet( const Configuration &config, const string & name )
-  :  Network( config, name ){
+AnyNet::AnyNet( const Configuration &config, const string & name, Module * clock )
+  :  Network( config, name, clock ){
 
   router_list.resize(2);
   _ComputeSize( config );

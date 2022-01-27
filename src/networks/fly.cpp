@@ -34,8 +34,8 @@
 
 //#define DEBUG_FLY
 
-KNFly::KNFly( const Configuration &config, const string & name ) :
-Network( config, name )
+KNFly::KNFly( const Configuration &config, const string & name, Module * clock ) :
+Network( config, name, clock )
 {
   _ComputeSize( config );
   _Alloc( );

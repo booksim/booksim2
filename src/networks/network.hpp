@@ -72,10 +72,10 @@ protected:
   void _Alloc( );
 
 public:
-  Network( const Configuration &config, const string & name );
+  Network( const Configuration &config, const string & name, Module * clock );
   virtual ~Network( );
 
-  static Network *New( const Configuration &config, const string & name );
+  static Network *New( const Configuration &config, const string & name, Module * clock );
 
   virtual void WriteFlit( Flit *f, int source );
   virtual Flit *ReadFlit( int dest );

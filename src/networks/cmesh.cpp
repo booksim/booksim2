@@ -53,8 +53,8 @@ int CMesh::_memo_NodeShiftX = 0 ;
 int CMesh::_memo_NodeShiftY = 0 ;
 int CMesh::_memo_PortShiftY = 0 ;
 
-CMesh::CMesh( const Configuration& config, const string & name ) 
-  : Network(config, name) 
+CMesh::CMesh( const Configuration& config, const string & name, Module * clock ) 
+  : Network(config, name, clock) 
 {
   _ComputeSize( config );
   _Alloc();
