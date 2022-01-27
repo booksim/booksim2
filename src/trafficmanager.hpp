@@ -305,8 +305,9 @@ public:
   virtual void DisplayOverallStats( ostream & os = cout ) const ;
   virtual void DisplayOverallStatsCSV( ostream & os = cout ) const ;
 
-  inline int getTime() { return _time;}
+  int getTime() const override { return _time;};
   Stats * getStats(const string & name) { return _stats[name]; }
+
 
 };
 

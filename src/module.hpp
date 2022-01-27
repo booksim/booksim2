@@ -34,18 +34,23 @@
 #include <vector>
 #include <iostream>
 
+class TrafficManager;
+
 class Module {
 private:
   string _name;
   string _fullname;
 
-  vector<Module *> _children;
+vector<Module *> _children;
+
+  Module *_clock; 
 
 protected:
   void _AddChild( Module *child );
 
 public:
   Module( Module *parent, const string& name );
+  Module( Module *parent, const string& name, Module *clock);
   virtual ~Module( ) { }
   
   inline const string & Name() const { return _name; }
@@ -57,6 +62,9 @@ public:
   void Debug( const string& msg ) const;
 
   virtual void Display( ostream & os = cout ) const;
+
+  virtual int GetSimTime() const;
+  virtual int getTime() const;
 };
 
 #endif

@@ -39,6 +39,7 @@
 #include "module.hpp"
 
 Module::Module( Module *parent, const string& name )
+    : _clock(nullptr)
 {
   _name = name;
 
@@ -46,6 +47,20 @@ Module::Module( Module *parent, const string& name )
     parent->_AddChild( this );
     _fullname = parent->_fullname + "/" + name;
   } else {
+    _fullname = name;
+  }
+}
+
+Module::Module(Module *parent, const string &name, Module *clock)
+    : _name(name), _clock(clock)
+{
+  if (parent)
+  {
+    parent->_AddChild(this);
+    _fullname = parent->_fullname + "/" + name;
+  }
+  else
+  {
     _fullname = name;
   }
 }
@@ -85,4 +100,16 @@ void Module::Debug( const string& msg ) const
 void Module::Display( ostream & os ) const 
 {
   os << "Display method not implemented for " << _fullname << endl;
+}
+
+//its a bad design - but it keeps the original code.
+int Module::GetSimTime() const
+{
+  return this->_clock->getTime();
+}
+
+int Module::getTime() const
+{
+  this->Error("This Module is incapable of providing any timestamps.");
+  __builtin_unreachable(); //just to prevent warnings (-Wreturn-type)
 }
