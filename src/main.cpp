@@ -63,10 +63,6 @@
  /* the current traffic manager instance */
 TrafficManager * trafficManager = NULL;
 
-int GetSimTime() {
-  return trafficManager->getTime();
-}
-
 class Stats;
 Stats * GetStats(const std::string & name) {
   Stats* test =  trafficManager->getStats(name);

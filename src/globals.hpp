@@ -33,8 +33,6 @@
 
 /*all declared in main.cpp*/
 
-int GetSimTime();
-
 class Stats;
 Stats * GetStats(const std::string & name);
 
