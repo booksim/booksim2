@@ -133,7 +133,7 @@ bool Simulate( BookSimConfig const & config )
 
     ///Power analysis
     if(config.GetInt("sim_power") > 0){
-      Power_Module pnet(net[i], config);
+      Power_Module pnet(net[i], config, trafficManager);
       pnet.run();
     }
 
