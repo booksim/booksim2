@@ -34,8 +34,8 @@
 //#define DEBUG_PIM
 
 PIM::PIM( Module *parent, const string& name,
-	  int inputs, int outputs, int iters ) :
-  DenseAllocator( parent, name, inputs, outputs ),
+	  int inputs, int outputs, int iters, Module *clock ) :
+  DenseAllocator( parent, name, inputs, outputs, clock ),
   _PIM_iter(iters)
 {
 }

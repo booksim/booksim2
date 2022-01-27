@@ -49,8 +49,8 @@
 //==================================================
 
 Allocator::Allocator( Module *parent, const string& name,
-		      int inputs, int outputs ) :
-Module( parent, name ), _inputs( inputs ), _outputs( outputs ), _dirty( false )
+		      int inputs, int outputs, Module *clock ) :
+Module( parent, name, clock ), _inputs( inputs ), _outputs( outputs ), _dirty( false )
 {
   _inmatch.resize(_inputs, -1);   
   _outmatch.resize(_outputs, -1);
@@ -112,8 +112,8 @@ void Allocator::PrintGrants( ostream * os ) const
 //==================================================
 
 DenseAllocator::DenseAllocator( Module *parent, const string& name,
-				int inputs, int outputs ) :
-  Allocator( parent, name, inputs, outputs )
+				int inputs, int outputs, Module *clock ) :
+  Allocator( parent, name, inputs, outputs, clock )
 {
   _request.resize(_inputs);
 
@@ -256,8 +256,8 @@ void DenseAllocator::PrintRequests( ostream * os ) const
 //==================================================
 
 SparseAllocator::SparseAllocator( Module *parent, const string& name,
-				  int inputs, int outputs ) :
-  Allocator( parent, name, inputs, outputs )
+				  int inputs, int outputs, Module *clock ) :
+  Allocator( parent, name, inputs, outputs, clock )
 {
   _in_req.resize(_inputs);
   _out_req.resize(_outputs);

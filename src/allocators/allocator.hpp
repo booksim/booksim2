@@ -56,7 +56,7 @@ public:
   };
 
   Allocator( Module *parent, const string& name,
-	     int inputs, int outputs );
+	     int inputs, int outputs, Module *clock );
 
   virtual void Clear( );
   
@@ -98,7 +98,7 @@ protected:
 
 public:
   DenseAllocator( Module *parent, const string& name,
-		  int inputs, int outputs );
+		  int inputs, int outputs, Module *clock );
 
   void Clear( );
   
@@ -134,7 +134,7 @@ protected:
 
 public:
   SparseAllocator( Module *parent, const string& name,
-		   int inputs, int outputs );
+		   int inputs, int outputs, Module *clock );
 
   void Clear( );
   
