@@ -88,7 +88,7 @@ EventRouter::EventRouter( const Configuration& config,
   for ( int o = 0; o < _outputs; ++o ) {
     module_name << "arrival_arb_output" << o;
     _arrival_arbiter[o] = 
-      new PriorityArbiter( config, this, module_name.str( ), _inputs );
+      new PriorityArbiter( config, this, module_name.str( ), _inputs, this->_clock );
     module_name.seekp( 0, ios::beg );
   }
 
@@ -97,7 +97,7 @@ EventRouter::EventRouter( const Configuration& config,
   for ( int i = 0; i < _inputs; ++i ) {
     module_name << "transport_arb_input" << i;
     _transport_arbiter[i] = 
-      new PriorityArbiter( config, this, module_name.str( ), _outputs );
+      new PriorityArbiter( config, this, module_name.str( ), _outputs, this->_clock );
     module_name.seekp( 0, ios::beg );
   }
 
