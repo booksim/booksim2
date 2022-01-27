@@ -45,12 +45,6 @@
 //#define DEBUG_FEEDBACK
 //#define DEBUG_SIMPLEFEEDBACK
 
-//legacy
-BufferState::BufferPolicy::BufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-: Module(parent, name), _buffer_state(parent)
-{
-}
-
 BufferState::BufferPolicy::BufferPolicy(Configuration const & config, BufferState * parent, const string & name, Module *clock)
 : Module(parent, name, clock), _buffer_state(parent)
 {
@@ -89,19 +83,6 @@ BufferState::BufferPolicy * BufferState::BufferPolicy::New(Configuration const &
   return sp;
 }
 
-BufferState::PrivateBufferPolicy::PrivateBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-  : BufferPolicy(config, parent, name)
-{
-  int const vcs = config.GetInt( "num_vcs" );
-  int const buf_size = config.GetInt("buf_size");
-  if(buf_size <= 0) {
-    _vc_buf_size = config.GetInt("vc_buf_size");
-  } else {
-    _vc_buf_size = buf_size / vcs;
-  }
-  assert(_vc_buf_size > 0);
-}
-
 BufferState::PrivateBufferPolicy::PrivateBufferPolicy(Configuration const & config, BufferState * parent, const string & name, Module * clock)
   : BufferPolicy(config, parent, name, clock)
 {
@@ -138,78 +119,6 @@ int BufferState::PrivateBufferPolicy::AvailableFor(int vc) const
 int BufferState::PrivateBufferPolicy::LimitFor(int vc) const
 {
   return _vc_buf_size;
-}
-
-BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-  : BufferPolicy(config, parent, name), _shared_buf_occupancy(0)
-{
-  int const vcs = config.GetInt( "num_vcs" );
-  int num_private_bufs = config.GetInt("private_bufs");
-  if(num_private_bufs < 0) {
-    num_private_bufs = vcs;
-  } else if(num_private_bufs == 0) {
-    num_private_bufs = 1;
-  }
-  
-  _private_buf_occupancy.resize(num_private_bufs, 0);
-
-  _buf_size = config.GetInt("buf_size");
-  if(_buf_size < 0) {
-    _buf_size = vcs * config.GetInt("vc_buf_size");
-  }
-
-
-
-  _private_buf_size = config.GetIntArray("private_buf_size");
-  if(_private_buf_size.empty()) {
-    int const bs = config.GetInt("private_buf_size");
-    if(bs < 0) {
-      _private_buf_size.push_back(_buf_size / num_private_bufs);
-    } else {
-      _private_buf_size.push_back(bs);
-    }
-  }
-  _private_buf_size.resize(num_private_bufs, _private_buf_size.back());
-  
-  vector<int> start_vc = config.GetIntArray("private_buf_start_vc");
-  if(start_vc.empty()) {
-    int const sv = config.GetInt("private_buf_start_vc");
-    if(sv < 0) {
-      start_vc.resize(num_private_bufs);
-      for(int i = 0; i < num_private_bufs; ++i) {
-	start_vc[i] = i * vcs / num_private_bufs;
-      }
-    } else {
-      start_vc.push_back(sv);
-    }
-  }
-  
-  vector<int> end_vc = config.GetIntArray("private_buf_end_vc");
-  if(end_vc.empty()) {
-    int const ev = config.GetInt("private_buf_end_vc");
-    if(ev < 0) {
-      end_vc.resize(num_private_bufs);
-      for(int i = 0; i < num_private_bufs; ++i) {
-	end_vc[i] = (i + 1) * vcs / num_private_bufs - 1;
-      }
-    } else {
-      end_vc.push_back(ev);
-    }
-  }
-
-  _private_buf_vc_map.resize(vcs, -1);
-  _shared_buf_size = _buf_size;
-  for(int i = 0; i < num_private_bufs; ++i) {
-    _shared_buf_size -= _private_buf_size[i];
-    assert(start_vc[i] <= end_vc[i]);
-    for(int v = start_vc[i]; v <= end_vc[i]; ++v) {
-      assert(_private_buf_vc_map[v] < 0);
-      _private_buf_vc_map[v] = i;
-    }
-  }
-  assert(_shared_buf_size >= 0);
-
-  _reserved_slots.resize(vcs, 0);
 }
 
 BufferState::SharedBufferPolicy::SharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name, Module * clock)
@@ -354,16 +263,6 @@ int BufferState::SharedBufferPolicy::LimitFor(int vc) const
   return (_private_buf_size[i] + _shared_buf_size);
 }
 
-BufferState::LimitedSharedBufferPolicy::LimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-  : SharedBufferPolicy(config, parent, name), _active_vcs(0)
-{
-  _vcs = config.GetInt("num_vcs");
-  _max_held_slots = config.GetInt("max_held_slots");
-  if(_max_held_slots < 0) {
-    _max_held_slots = _buf_size;
-  }
-}
-
 BufferState::LimitedSharedBufferPolicy::LimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name, Module * clock)
   : SharedBufferPolicy(config, parent, name, clock), _active_vcs(0)
 {
@@ -410,12 +309,6 @@ int BufferState::LimitedSharedBufferPolicy::LimitFor(int vc) const
   return min(SharedBufferPolicy::LimitFor(vc), _max_held_slots);
 }
 
-BufferState::DynamicLimitedSharedBufferPolicy::DynamicLimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-  : LimitedSharedBufferPolicy(config, parent, name)
-{
-  _max_held_slots = _buf_size;
-}
-
 BufferState::DynamicLimitedSharedBufferPolicy::DynamicLimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name, Module * clock)
   : LimitedSharedBufferPolicy(config, parent, name, clock)
 {
@@ -437,12 +330,6 @@ void BufferState::DynamicLimitedSharedBufferPolicy::SendingFlit(Flit const * con
     _max_held_slots = _buf_size / _active_vcs;
   }
   assert(_max_held_slots > 0);
-}
-
-BufferState::ShiftingDynamicLimitedSharedBufferPolicy::ShiftingDynamicLimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-  : DynamicLimitedSharedBufferPolicy(config, parent, name)
-{
-
 }
 
 BufferState::ShiftingDynamicLimitedSharedBufferPolicy::ShiftingDynamicLimitedSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name, Module * clock)
@@ -476,20 +363,6 @@ void BufferState::ShiftingDynamicLimitedSharedBufferPolicy::SendingFlit(Flit con
     }
   }
   assert(_max_held_slots > 0);
-}
-
-BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-  : SharedBufferPolicy(config, parent, name)
-{
-  _aging_scale = config.GetInt("feedback_aging_scale");
-  _offset = config.GetInt("feedback_offset");
-  _vcs = config.GetInt("num_vcs");
-
-  _occupancy_limit.resize(_vcs, _buf_size);
-  _round_trip_time.resize(_vcs, -1);
-  _flit_sent_time.resize(_vcs);
-  _total_mapped_size = _buf_size * _vcs;
-  _min_latency = -1;
 }
 
 BufferState::FeedbackSharedBufferPolicy::FeedbackSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name, Module * clock)
@@ -618,12 +491,6 @@ int BufferState::FeedbackSharedBufferPolicy::LimitFor(int vc) const
   return min(SharedBufferPolicy::LimitFor(vc), _ComputeMaxSlots(vc));
 }
 
-BufferState::SimpleFeedbackSharedBufferPolicy::SimpleFeedbackSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name)
-  : FeedbackSharedBufferPolicy(config, parent, name)
-{
-  _pending_credits.resize(_vcs, 0);
-}
-
 BufferState::SimpleFeedbackSharedBufferPolicy::SimpleFeedbackSharedBufferPolicy(Configuration const & config, BufferState * parent, const string & name, Module * clock)
   : FeedbackSharedBufferPolicy(config, parent, name, clock)
 {
@@ -669,34 +536,6 @@ void BufferState::SimpleFeedbackSharedBufferPolicy::FreeSlotFor(int vc)
 #endif
   }
   SharedBufferPolicy::FreeSlotFor(vc);
-}
-
-BufferState::BufferState( const Configuration& config, Module *parent, const string& name ) : 
-  Module( parent, name ), _occupancy(0)
-{
-  _vcs = config.GetInt( "num_vcs" );
-  _size = config.GetInt("buf_size");
-  if(_size < 0) {
-    _size = _vcs * config.GetInt("vc_buf_size");
-  }
-
-  _buffer_policy = BufferPolicy::New(config, this, "policy");
-
-  _wait_for_tail_credit = config.GetInt( "wait_for_tail_credit" );
-
-  _vc_occupancy.resize(_vcs, 0);
-
-  _in_use_by.resize(_vcs, -1);
-  _tail_sent.resize(_vcs, false);
-
-  _last_id.resize(_vcs, -1);
-  _last_pid.resize(_vcs, -1);
-
-#ifdef TRACK_BUFFERS
-  _classes = config.GetInt("classes");
-  _outstanding_classes.resize(_vcs);
-  _class_occupancy.resize(_classes, 0);
-#endif
 }
 
 BufferState::BufferState( const Configuration& config, Module *parent, const string& name, Module * clock ) : 
