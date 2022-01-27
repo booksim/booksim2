@@ -52,7 +52,7 @@ class Router ;
 
 class FlitChannel : public Channel<Flit> {
 public:
-  FlitChannel(Module * parent, string const & name, int classes);
+  FlitChannel(Module * parent, string const & name, int classes, Module * clock);
 
   void SetSource(Router const * const router, int port) ;
   inline Router const * const GetSource() const {
