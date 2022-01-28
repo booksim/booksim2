@@ -638,7 +638,7 @@ TrafficManager::~TrafficManager( )
 #endif
 
     PacketReplyInfo::FreeAll();
-    Flit::FreeAll();
+    _flitbox.DestroyAll();
     Credit::FreeAll();
 }
 
@@ -742,7 +742,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
         }
     
         if(f != head) {
-            head->Free();
+            _flitbox.RetireItem(head);
         }
     
     }
@@ -750,7 +750,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     if(f->head && !f->tail) {
         _retired_packets[f->cl].insert(make_pair(f->pid, f));
     } else {
-        f->Free();
+        _flitbox.RetireItem(f);
     }
 }
 
@@ -856,7 +856,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     }
   
     for ( int i = 0; i < size; ++i ) {
-        Flit * f  = Flit::New();
+        Flit * f  = _flitbox.NewItem();
         f->id     = _cur_id++;
         assert(_cur_id);
         f->pid    = pid;

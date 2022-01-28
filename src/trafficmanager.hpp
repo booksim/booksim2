@@ -36,7 +36,7 @@
 #include "module.hpp"
 #include "config_utils.hpp"
 #include "network.hpp"
-#include "flit.hpp"
+#include "flitbox.hpp"
 #include "buffer_state.hpp"
 #include "stats.hpp"
 #include "traffic.hpp"
@@ -258,6 +258,9 @@ protected:
   ostream * _free_credits_out;
   ostream * _max_credits_out;
 #endif
+
+  //flits, credits, responses
+  FlitBox _flitbox;
 
   // ============ Internal methods ============ 
 protected:
