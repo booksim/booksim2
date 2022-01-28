@@ -37,6 +37,7 @@
 #include "config_utils.hpp"
 #include "network.hpp"
 #include "flitbox.hpp"
+#include "packet_reply_info_box.hpp"
 #include "buffer_state.hpp"
 #include "stats.hpp"
 #include "traffic.hpp"
@@ -45,7 +46,6 @@
 #include "injection.hpp"
 
 //register the requests to a node
-class PacketReplyInfo;
 
 class TrafficManager : public Module {
 
@@ -261,6 +261,7 @@ protected:
 
   //flits, credits, responses
   FlitBox _flitbox;
+  PckReplyBox _pck_replybox;
 
   // ============ Internal methods ============ 
 protected:

@@ -637,7 +637,7 @@ TrafficManager::~TrafficManager( )
     if(_max_credits_out) delete _max_credits_out;
 #endif
 
-    PacketReplyInfo::FreeAll();
+    _pck_replybox.DestroyAll();
     _flitbox.DestroyAll();
     Credit::FreeAll();
 }
@@ -707,7 +707,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
         //code the source of request, look carefully, its tricky ;)
         if (f->type == Flit::READ_REQUEST || f->type == Flit::WRITE_REQUEST) {
-            PacketReplyInfo* rinfo = PacketReplyInfo::New();
+            PacketReplyInfo* rinfo = _pck_replybox.NewItem();
             rinfo->source = f->src;
             rinfo->time = f->atime;
             rinfo->record = f->record;
@@ -827,7 +827,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
             time = rinfo->time;
             record = rinfo->record;
             _repliesPending[source].pop_front();
-            rinfo->Free();
+            _pck_replybox.RetireItem(rinfo);
         }
     }
 
@@ -1621,7 +1621,7 @@ bool TrafficManager::Run( )
         _requestsOutstanding.assign(_nodes, 0);
         for (int i=0;i<_nodes;i++) {
             while(!_repliesPending[i].empty()) {
-                _repliesPending[i].front()->Free();
+                _pck_replybox.RetireItem(_repliesPending[i].front());
                 _repliesPending[i].pop_front();
             }
         }
