@@ -37,9 +37,6 @@
 #include "booksim.hpp"
 #include "flit.hpp"
 
-stack<Flit *> Flit::_all;
-stack<Flit *> Flit::_free;
-
 ostream& operator<<( ostream& os, const Flit& f )
 {
   os << "  Flit ID: " << f.id << " (" << &f << ")" 
@@ -81,27 +78,3 @@ void Flit::Reset()
   ph = -1;
   data = 0;
 }  
-
-Flit * Flit::New() {
-  Flit * f;
-  if(_free.empty()) {
-    f = new Flit;
-    _all.push(f);
-  } else {
-    f = _free.top();
-    f->Reset();
-    _free.pop();
-  }
-  return f;
-}
-
-void Flit::Free() {
-  _free.push(this);
-}
-
-void Flit::FreeAll() {
-  while(!_all.empty()) {
-    delete _all.top();
-    _all.pop();
-  }
-}
