@@ -41,11 +41,8 @@
 
 Configuration *Configuration::theConfig = 0;
 
-Configuration::Configuration()
-{
-  theConfig = this;
-  _config_file = 0;
-}
+Configuration::Configuration() : _config_file(nullptr)
+{}
 
 void Configuration::AddStrField(string const & field, string const & value)
 {
@@ -151,7 +148,8 @@ void Configuration::ParseFile(string const & filename)
     cerr << "Could not open configuration file " << filename << endl;
     exit(-1);
   }
-
+  
+  assert(HoldsParser());
   yyparse();
 
   fclose(_config_file);
@@ -161,6 +159,7 @@ void Configuration::ParseFile(string const & filename)
 void Configuration::ParseString(string const & str)
 {
   _config_string = str + ';';
+  assert(HoldsParser());
   yyparse();
   _config_string = "";
 }
@@ -228,6 +227,7 @@ bool ParseArgs(Configuration * cf, int argc, char * * argv)
 {
   bool rc = false;
 
+  cf->LockParser();
   //all dashed variables are ignored by the arg parser
   for(int i = 1; i < argc; ++i) {
     string arg(argv[i]);
@@ -251,7 +251,7 @@ bool ParseArgs(Configuration * cf, int argc, char * * argv)
       cf->ParseString(argv[i]);
     }
   }
-
+  cf->ReleaseParser();
   return rc;
 }
 
@@ -444,4 +444,20 @@ vector<double> tokenize_float(string const & data)
   assert(!nested);
 
   return values;
+}
+
+void Configuration::LockParser()
+{
+  assert(!HoldsParser());
+  theConfig = this;
+}
+
+bool Configuration::HoldsParser()
+{
+  return theConfig && theConfig == this;
+}
+
+void Configuration::ReleaseParser()
+{
+  theConfig = nullptr;
 }
