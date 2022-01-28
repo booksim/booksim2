@@ -1107,7 +1107,7 @@ void IQRouter::_SWHoldUpdate( )
 			 << "." << endl;
 	    }
 	    int in_channel = channel->GetSinkPort();
-	    _rf(router, f, in_channel, &f->la_route_set, false);
+	    _rf(router, f, in_channel, &f->la_route_set, false, &_rc );
 	  }
 	} else {
 	  f->la_route_set.Clear();
@@ -2017,7 +2017,7 @@ void IQRouter::_SWAllocUpdate( )
 			 << "." << endl;
 	    }
 	    int in_channel = channel->GetSinkPort();
-	    _rf(router, f, in_channel, &f->la_route_set, false);
+	    _rf(router, f, in_channel, &f->la_route_set, false, &_rc );
 	  }
 	} else {
 	  f->la_route_set.Clear();
@@ -2358,7 +2358,7 @@ void IQRouter::_UpdateNOQ(int input, int vc, Flit const * f) {
   if(router) {
     int in_channel = channel->GetSinkPort();
     OutputSet nos;
-    _rf(router, f, in_channel, &nos, false);
+    _rf(router, f, in_channel, &nos, false, &_rc );
     sl = nos.GetSet();
     assert(sl.size() == 1);
     OutputSet::sSetElement const & se = *sl.begin();

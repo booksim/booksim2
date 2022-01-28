@@ -36,6 +36,7 @@
 #include "credit.hpp"
 #include "flitchannel.hpp"
 #include "channel.hpp"
+#include "routefunc.hpp"
 #include "config_utils.hpp"
 #include "creditbox.hpp"
 
@@ -90,6 +91,12 @@ protected:
 #endif
 
   CreditBox * _credits;
+
+  /* The member `tRoutingFunction _rf` is also common among all 3 router types. 
+  * Therefore, why not move it here???
+  */
+  // tRoutingFunction _rf;
+  RoutingConfig _rc;
 
   virtual void _InternalStep() = 0;
 

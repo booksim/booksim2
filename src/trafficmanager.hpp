@@ -106,6 +106,7 @@ protected:
   tRoutingFunction _rf;
   bool _lookahead_routing;
   bool _noq;
+  RoutingConfig _rc;
 
   // ============ Injection queues ============ 
 

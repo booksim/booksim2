@@ -58,8 +58,8 @@ int const Router::STALL_CROSSBAR_CONFLICT = -6;
 Router::Router( const Configuration& config,
 		Module *parent, const string & name, int id,
 		int inputs, int outputs, Module * clock, CreditBox * credits ) :
-TimedModule( parent, name , clock), _id( id ), _inputs( inputs ), _outputs( outputs ),
-  _partial_internal_cycles(0.0), _credits(credits)
+TimedModule( parent, name, clock), _id( id ), _inputs( inputs ), _outputs( outputs ),
+  _partial_internal_cycles(0.0), _credits(credits), _rc(config)
 {
   _crossbar_delay   = ( config.GetInt( "st_prepare_delay" ) + 
 			config.GetInt( "st_final_delay" ) );

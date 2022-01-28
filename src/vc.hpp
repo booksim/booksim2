@@ -70,6 +70,7 @@ private:
 
   bool _lookahead_routing;
 
+  RoutingConfig _rc;
 public:
   
   VC( const Configuration& config, int outputs,

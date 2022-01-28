@@ -49,7 +49,7 @@ VC::VC( const Configuration& config, int outputs,
 	Module *parent, const string& name, Module * clock )
   : Module( parent, name, clock ), 
     _state(idle), _out_port(-1), _out_vc(-1), _pri(0), _watched(false), 
-    _expected_pid(-1), _last_id(-1), _last_pid(-1)
+    _expected_pid(-1), _last_id(-1), _last_pid(-1), _rc(config)
 {
   _lookahead_routing = !config.GetInt("routing_delay");
   _route_set = _lookahead_routing ? NULL : new OutputSet( );
@@ -187,7 +187,7 @@ void VC::UpdatePriority()
 
 void VC::Route( tRoutingFunction rf, const Router* router, const Flit* f, int in_channel )
 {
-  rf( router, f, in_channel, _route_set, false );
+  rf( router, f, in_channel, _route_set, false, &_rc );
   _out_port = -1;
   _out_vc = -1;
 }

@@ -55,7 +55,8 @@ TrafficManager * TrafficManager::New(Configuration const & config, vector<Networ
 }
 
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net)
-    : Module( 0, "traffic_manager", this ), _net(net), _empty_network(false), _deadlock_timer(0), _reset_time(0), _drain_time(-1), _cur_id(0), _cur_pid(0), _time(0)
+    : Module( 0, "traffic_manager", this ), _net(net), _rc(config), _empty_network(false), 
+    _deadlock_timer(0), _reset_time(0), _drain_time(-1), _cur_id(0), _cur_pid(0),_time(0)
 {
     _vcs = config.GetInt("num_vcs");
     _subnets = config.GetInt("subnets");
@@ -1062,7 +1063,7 @@ void TrafficManager::_Step( )
                 if(cf->head && cf->vc == -1) { // Find first available VC
 	  
                     OutputSet route_set;
-                    _rf(NULL, cf, -1, &route_set, true);
+                    _rf(NULL, cf, -1, &route_set, true, &_rc );
                     set<OutputSet::sSetElement> const & os = route_set.GetSet();
                     assert(os.size() == 1);
                     OutputSet::sSetElement const & se = *os.begin();
@@ -1081,7 +1082,7 @@ void TrafficManager::_Step( )
                         // first hop, we have to temporarily set cf's VC to be non-negative 
                         // in order to avoid seting of an assertion in the routing function.
                         cf->vc = vc_start;
-                        _rf(router, cf, in_channel, &cf->la_route_set, false);
+                        _rf(router, cf, in_channel, &cf->la_route_set, false, &_rc );
                         cf->vc = -1;
 
                         if(cf->watch) {
@@ -1169,7 +1170,7 @@ void TrafficManager::_Step( )
                             const Router * router = inject->GetSink();
                             assert(router);
                             int in_channel = inject->GetSinkPort();
-                            _rf(router, f, in_channel, &f->la_route_set, false);
+                            _rf(router, f, in_channel, &f->la_route_set, false, &_rc );
                             if(f->watch) {
                                 *gWatchOut << GetSimTime() << " | "
                                            << "node" << n << " | "
