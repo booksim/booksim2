@@ -408,12 +408,12 @@ void DragonFlyNew::RegisterRoutingFunctions(){
 
 
 void min_dragonflynew( const Router *r, const Flit *f, int in_channel, 
-		       OutputSet *outputs, bool inject )
+		       OutputSet *outputs, bool inject, RoutingConfig *rc )
 {
   outputs->Clear( );
 
   if(inject) {
-    int inject_vc= RandomInt(gNumVCs-1);
+    int inject_vc= RandomInt(rc->NumVCs-1);
     outputs->AddRange(-1, inject_vc, inject_vc);
     return;
   }
@@ -456,14 +456,14 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
 //Basic adaptive routign algorithm for the dragonfly
 void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel, 
-			OutputSet *outputs, bool inject )
+			OutputSet *outputs, bool inject, RoutingConfig *rc )
 {
   //need 3 VCs for deadlock freedom
 
-  assert(gNumVCs==3);
+  assert(rc->NumVCs==3);
   outputs->Clear( );
   if(inject) {
-    int inject_vc= RandomInt(gNumVCs-1);
+    int inject_vc= RandomInt(rc->NumVCs-1);
     outputs->AddRange(-1, inject_vc, inject_vc);
     return;
   }

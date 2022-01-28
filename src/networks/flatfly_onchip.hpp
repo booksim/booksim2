@@ -65,19 +65,19 @@ public:
   void InsertRandomFaults( const Configuration &config );
 };
 void adaptive_xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
-		  OutputSet *outputs, bool inject );
+		  OutputSet *outputs, bool inject, RoutingConfig *rc );
 void xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
-		  OutputSet *outputs, bool inject );
+		  OutputSet *outputs, bool inject, RoutingConfig *rc );
 void min_flatfly( const Router *r, const Flit *f, int in_channel, 
-		  OutputSet *outputs, bool inject );
+		  OutputSet *outputs, bool inject, RoutingConfig *rc );
 void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
-			  OutputSet *outputs, bool inject );
+			  OutputSet *outputs, bool inject, RoutingConfig *rc );
 void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
-			  OutputSet *outputs, bool inject );
+			  OutputSet *outputs, bool inject, RoutingConfig *rc );
 void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
-			      OutputSet *outputs, bool inject );
+			      OutputSet *outputs, bool inject, RoutingConfig *rc );
 void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
-			  OutputSet *outputs, bool inject );
+			  OutputSet *outputs, bool inject, RoutingConfig *rc );
 
 int find_distance (int src, int dest);
 int find_ran_intm (int src, int dest);

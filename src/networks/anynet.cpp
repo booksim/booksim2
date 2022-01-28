@@ -212,7 +212,7 @@ void AnyNet::RegisterRoutingFunctions() {
 }
 
 void min_anynet( const Router *r, const Flit *f, int in_channel, 
-		 OutputSet *outputs, bool inject ){
+		 OutputSet *outputs, bool inject, RoutingConfig *rc ){
   int out_port=-1;
   if(!inject){
     assert(global_routing_table[r->GetID()].count(f->dest)!=0);
@@ -220,19 +220,19 @@ void min_anynet( const Router *r, const Flit *f, int in_channel,
   }
  
 
-  int vcBegin = 0, vcEnd = gNumVCs-1;
+  int vcBegin = 0, vcEnd = rc->NumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
-    vcBegin = gReadReqBeginVC;
-    vcEnd   = gReadReqEndVC;
+    vcBegin = rc->ReadReqBeginVC;
+    vcEnd   = rc->ReadReqEndVC;
   } else if ( f->type == Flit::WRITE_REQUEST ) {
-    vcBegin = gWriteReqBeginVC;
-    vcEnd   = gWriteReqEndVC;
+    vcBegin = rc->WriteReqBeginVC;
+    vcEnd   = rc->WriteReqEndVC;
   } else if ( f->type ==  Flit::READ_REPLY ) {
-    vcBegin = gReadReplyBeginVC;
-    vcEnd   = gReadReplyEndVC;
+    vcBegin = rc->ReadReplyBeginVC;
+    vcEnd   = rc->ReadReplyEndVC;
   } else if ( f->type ==  Flit::WRITE_REPLY ) {
-    vcBegin = gWriteReplyBeginVC;
-    vcEnd   = gWriteReplyEndVC;
+    vcBegin = rc->WriteReplyBeginVC;
+    vcEnd   = rc->WriteReplyEndVC;
   }
 
   outputs->Clear( );
