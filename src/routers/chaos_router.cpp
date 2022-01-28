@@ -36,8 +36,8 @@
 #include "globals.hpp"
 
 ChaosRouter::ChaosRouter( const Configuration& config, Module *parent, const string & name, 
-        int id, int inputs, int outputs, Module * clock )
-  : Router( config, parent, name, id, inputs, outputs, clock )
+        int id, int inputs, int outputs, Module * clock, CreditBox * credits )
+  : Router( config, parent, name, id, inputs, outputs, clock, credits )
 {
   int i;
 
@@ -215,7 +215,7 @@ void ChaosRouter::ReadInputs( )
 	Error( "Next queue count fell below zero!" );
       }
 
-      c->Free();
+      _credits->RetireItem(c);
     }
   }
 }
@@ -576,7 +576,7 @@ void ChaosRouter::_OutputAdvance( )
 	  _input_mq_match[i]     = -1;
 	}
 	
-	c = Credit::New( );
+	c = _credits->NewItem();
 	c->vc.insert(0);
 	_credit_queue[i].push( c );
       }

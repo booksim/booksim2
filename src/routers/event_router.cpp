@@ -37,8 +37,8 @@
 
 EventRouter::EventRouter( const Configuration& config,
 		    Module *parent, const string & name, int id,
-		    int inputs, int outputs, Module * clock )
-  : Router( config, parent, name, id, inputs, outputs, clock )
+		    int inputs, int outputs, Module * clock, CreditBox * credits )
+  : Router( config, parent, name, id, inputs, outputs, clock, credits )
 {
   ostringstream module_name;
   
@@ -514,7 +514,7 @@ void EventRouter::_ArrivalArb( int output )
       }
     }
 
-    c->Free();
+    _credits->RetireItem(c);
   }
 
   // Now process arrival events
@@ -667,7 +667,7 @@ void EventRouter::_TransportArb( int input )
       }
     }
 
-    c = Credit::New( );
+    c = _credits->NewItem();
     c->vc.insert(f->vc);
     c->head          = f->head;
     c->tail          = f->tail;

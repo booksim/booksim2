@@ -48,8 +48,8 @@
 #include "buffer_monitor.hpp"
 
 IQRouter::IQRouter( Configuration const & config, Module *parent, 
-		    string const & name, int id, int inputs, int outputs, Module * clock)
-: Router( config, parent, name, id, inputs, outputs, clock ), _active(false)
+		    string const & name, int id, int inputs, int outputs, Module * clock, CreditBox * credits)
+: Router( config, parent, name, id, inputs, outputs, clock, credits ), _active(false)
 {
   _vcs         = config.GetInt( "num_vcs" );
 
@@ -448,7 +448,7 @@ void IQRouter::_InputQueuing( )
 #endif
 
     dest_buf->ProcessCredit(c);
-    c->Free();
+    _credits->RetireItem(c);
     _proc_credits.pop_front();
   }
 }
@@ -1124,7 +1124,7 @@ void IQRouter::_SWHoldUpdate( )
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
       
       if(_out_queue_credits.count(input) == 0) {
-	_out_queue_credits.insert(make_pair(input, Credit::New()));
+	_out_queue_credits.insert(make_pair(input, _credits->NewItem()));
       }
       _out_queue_credits.find(input)->second->vc.insert(vc);
       
@@ -2034,7 +2034,7 @@ void IQRouter::_SWAllocUpdate( )
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
 
       if(_out_queue_credits.count(input) == 0) {
-	_out_queue_credits.insert(make_pair(input, Credit::New()));
+	_out_queue_credits.insert(make_pair(input, _credits->NewItem()));
       }
       _out_queue_credits.find(input)->second->vc.insert(vc);
 
