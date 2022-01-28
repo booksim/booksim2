@@ -45,8 +45,8 @@
 #include "qtree.hpp"
 #include "misc_utils.hpp"
 
-QTree::QTree( const Configuration& config, const string & name, Module * clock )
-: Network ( config, name, clock )
+QTree::QTree( const Configuration& config, const string & name, Module * clock, CreditBox *credits )
+: Network ( config, name, clock, credits )
 {
   _ComputeSize( config );
   _Alloc( );
@@ -94,7 +94,7 @@ void QTree::_BuildNet( const Configuration& config )
       int d = ( h == 0 ) ? _k : _k + 1;
       _routers[r] = Router::NewRouter( config, this,
 				       routerName.str( ),
-				       id, d, d);
+				       id, d, d, _credits);
       _timed_modules.push_back(_routers[r]);
     }
   }

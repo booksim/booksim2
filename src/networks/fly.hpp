@@ -42,7 +42,7 @@ class KNFly : public Network {
   int _InChannel( int stage, int addr, int port ) const;
  
 public:
-  KNFly( const Configuration &config, const string & name, Module * clock );
+  KNFly( const Configuration &config, const string & name, Module * clock, CreditBox *credits );
 
   int GetN( ) const;
   int GetK( ) const;

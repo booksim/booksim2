@@ -49,8 +49,8 @@
 #include "dragonfly.hpp"
 
 
-Network::Network( const Configuration &config, const string & name, Module * clock ) :
-  TimedModule( 0, name, clock )
+Network::Network( const Configuration &config, const string & name, Module * clock, CreditBox *credits ) :
+  TimedModule( 0, name, clock ), _credits(credits)
 {
   _size     = -1; 
   _nodes    = -1; 
@@ -77,40 +77,40 @@ Network::~Network( )
   }
 }
 
-Network * Network::New(const Configuration & config, const string & name, Module * clock)
+Network * Network::New(const Configuration & config, const string & name, Module * clock, CreditBox *credits)
 {
   const string topo = config.GetStr( "topology" );
   Network * n = NULL;
   if ( topo == "torus" ) {
     KNCube::RegisterRoutingFunctions() ;
-    n = new KNCube( config, name, false, clock );
+    n = new KNCube( config, name, false, clock, credits );
   } else if ( topo == "mesh" ) {
     KNCube::RegisterRoutingFunctions() ;
-    n = new KNCube( config, name, true, clock );
+    n = new KNCube( config, name, true, clock, credits );
   } else if ( topo == "cmesh" ) {
     CMesh::RegisterRoutingFunctions() ;
-    n = new CMesh( config, name, clock);
+    n = new CMesh( config, name, clock, credits );
   } else if ( topo == "fly" ) {
     KNFly::RegisterRoutingFunctions() ;
-    n = new KNFly( config, name, clock );
+    n = new KNFly( config, name, clock, credits );
   } else if ( topo == "qtree" ) {
     QTree::RegisterRoutingFunctions() ;
-    n = new QTree( config, name, clock );
+    n = new QTree( config, name, clock, credits );
   } else if ( topo == "tree4" ) {
     Tree4::RegisterRoutingFunctions() ;
-    n = new Tree4( config, name, clock );
+    n = new Tree4( config, name, clock, credits );
   } else if ( topo == "fattree" ) {
     FatTree::RegisterRoutingFunctions() ;
-    n = new FatTree( config, name, clock );
+    n = new FatTree( config, name, clock, credits );
   } else if ( topo == "flatfly" ) {
     FlatFlyOnChip::RegisterRoutingFunctions() ;
-    n = new FlatFlyOnChip( config, name, clock );
+    n = new FlatFlyOnChip( config, name, clock, credits );
   } else if ( topo == "anynet"){
     AnyNet::RegisterRoutingFunctions() ;
-    n = new AnyNet(config, name, clock );
+    n = new AnyNet(config, name, clock, credits );
   } else if ( topo == "dragonflynew"){
     DragonFlyNew::RegisterRoutingFunctions() ;
-    n = new DragonFlyNew(config, name, clock);
+    n = new DragonFlyNew(config, name, clock, credits);
   } else {
     cerr << "Unknown topology: " << topo << endl;
   }

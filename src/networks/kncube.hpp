@@ -47,7 +47,7 @@ class KNCube : public Network {
   int _RightNode( int node, int dim );
 
 public:
-  KNCube( const Configuration &config, const string & name, bool mesh, Module * clock );
+  KNCube( const Configuration &config, const string & name, bool mesh, Module * clock, CreditBox *credits );
   static void RegisterRoutingFunctions();
 
   int GetN( ) const;

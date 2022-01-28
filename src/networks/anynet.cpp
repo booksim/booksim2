@@ -58,8 +58,8 @@
 //this is a hack, I can't easily get the routing talbe out of the network
 map<int, int>* global_routing_table;
 
-AnyNet::AnyNet( const Configuration &config, const string & name, Module * clock )
-  :  Network( config, name, clock ){
+AnyNet::AnyNet( const Configuration &config, const string & name, Module * clock, CreditBox *credits )
+  :  Network( config, name, clock, credits ){
 
   router_list.resize(2);
   _ComputeSize( config );
@@ -151,7 +151,7 @@ void AnyNet::_BuildNet( const Configuration &config ){
     router_name << "router";
     router_name << "_" <<  node ;
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
-    					node, radix, radix );
+    					node, radix, radix, _credits );
     _timed_modules.push_back(_routers[node]);
     //add injeciton ejection channels
     map<int, pair<int,int> >::iterator nniter;

@@ -146,8 +146,8 @@ int dragonfly_port(int rID, int source, int dest){
 }
 
 
-DragonFlyNew::DragonFlyNew( const Configuration &config, const string & name, Module * clock ) :
-  Network( config, name, clock )
+DragonFlyNew::DragonFlyNew( const Configuration &config, const string & name, Module * clock, CreditBox *credits ) :
+  Network( config, name, clock, credits )
 {
 
   _ComputeSize( config );
@@ -243,7 +243,7 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
     router_name << "_" <<  node ;
 
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
-					node, _k, _k );
+					node, _k, _k, _credits );
     _timed_modules.push_back(_routers[node]);
 
     router_name.str("");

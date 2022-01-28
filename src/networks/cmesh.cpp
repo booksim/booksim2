@@ -53,8 +53,8 @@ int CMesh::_memo_NodeShiftX = 0 ;
 int CMesh::_memo_NodeShiftY = 0 ;
 int CMesh::_memo_PortShiftY = 0 ;
 
-CMesh::CMesh( const Configuration& config, const string & name, Module * clock ) 
-  : Network(config, name, clock) 
+CMesh::CMesh( const Configuration& config, const string & name, Module * clock, CreditBox *credits ) 
+  : Network(config, name, clock, credits) 
 {
   _ComputeSize( config );
   _Alloc();
@@ -143,7 +143,8 @@ void CMesh::_BuildNet( const Configuration& config ) {
 					name.str(), 
 					node,
 					degree_in,
-					degree_out);
+					degree_out,
+          _credits);
     _timed_modules.push_back(_routers[node]);
     name.str("");
 

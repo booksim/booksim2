@@ -46,7 +46,7 @@
 
 class CMesh : public Network {
 public:
-  CMesh( const Configuration &config, const string & name, Module * clock );
+  CMesh( const Configuration &config, const string & name, Module * clock, CreditBox *credits );
   int GetN() const;
   int GetK() const;
 

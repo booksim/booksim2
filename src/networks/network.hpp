@@ -53,6 +53,8 @@ protected:
   int _channels;
   int _classes;
 
+  CreditBox * _credits;
+
   vector<Router *> _routers;
 
   vector<FlitChannel *> _inject;
@@ -72,10 +74,10 @@ protected:
   void _Alloc( );
 
 public:
-  Network( const Configuration &config, const string & name, Module * clock );
+  Network( const Configuration &config, const string & name, Module * clock, CreditBox *credits );
   virtual ~Network( );
 
-  static Network *New( const Configuration &config, const string & name, Module * clock );
+  static Network *New( const Configuration &config, const string & name, Module * clock, CreditBox *credits);
 
   virtual void WriteFlit( Flit *f, int source );
   virtual Flit *ReadFlit( int dest );

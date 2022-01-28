@@ -55,8 +55,8 @@
 
  //#define FATTREE_DEBUG
 
-FatTree::FatTree( const Configuration& config,const string & name, Module * clock )
-  : Network( config ,name, clock)
+FatTree::FatTree( const Configuration& config,const string & name, Module * clock, CreditBox *credits )
+  : Network( config ,name, clock, credits)
 {
   
 
@@ -121,7 +121,7 @@ void FatTree::_BuildNet( const Configuration& config )
       name.str("");
       name << "router_level" << level << "_" << pos;
       Router * r = Router::NewRouter( config, this, name.str( ), id,
-				      degree, degree );
+				      degree, degree, _credits );
       _Router( level, pos ) = r;
       _timed_modules.push_back(r);
     }

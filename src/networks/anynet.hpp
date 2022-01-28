@@ -53,7 +53,7 @@ class AnyNet : public Network {
   void route(int r_start);
 
 public:
-  AnyNet( const Configuration &config, const string & name, Module * clock );
+  AnyNet( const Configuration &config, const string & name, Module * clock, CreditBox *credits );
   ~AnyNet();
 
   int GetN( ) const{ return -1;}
