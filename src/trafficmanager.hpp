@@ -261,6 +261,7 @@ protected:
 
   //flits, credits, responses
   FlitBox _flitbox;
+  CreditBox _creditbox;
   PckReplyBox _pck_replybox;
 
   // ============ Internal methods ============ 

@@ -637,9 +637,10 @@ TrafficManager::~TrafficManager( )
     if(_max_credits_out) delete _max_credits_out;
 #endif
 
-    _pck_replybox.DestroyAll();
     _flitbox.DestroyAll();
-    Credit::FreeAll();
+    _creditbox.DestroyAll();
+    _pck_replybox.DestroyAll();
+    
 }
 
 
@@ -1001,7 +1002,7 @@ void TrafficManager::_Step( )
                 }
 #endif
                 _buf_states[n][subnet]->ProcessCredit(c);
-                c->Free();
+                _creditbox.RetireItem(c);
             }
         }
         _net[subnet]->ReadInputs( );
@@ -1253,7 +1254,7 @@ void TrafficManager::_Step( )
                                << " into subnet " << subnet 
                                << "." << endl;
                 }
-                Credit * const c = Credit::New();
+                Credit * const c = _creditbox.NewItem();
                 c->vc.insert(f->vc);
                 _net[subnet]->WriteCredit(c, n);
 	
@@ -1675,7 +1676,7 @@ bool TrafficManager::Run( )
             }
         }
         //wait until all the credits are drained as well
-        while(Credit::OutStanding()!=0){
+        while(_creditbox.OutStanding()!=0){
             _Step();
         }
         _empty_network = false;
@@ -2299,7 +2300,7 @@ void TrafficManager::PopulateNet( const Configuration & config )
     for(int i = 0; i<_subnets; i++) 
     {
         assert(_net[i] == nullptr);
-        _net[i] = Network::New( config, this->Name() + to_string(i), this);
+        _net[i] = Network::New( config, this->Name() + to_string(i), this, &_creditbox);
     }
 }
 
