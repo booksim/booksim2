@@ -45,12 +45,15 @@ typedef Channel<Credit> CreditChannel;
 class Router : public TimedModule {
 
 protected:
-
-  static int const STALL_BUFFER_BUSY;
-  static int const STALL_BUFFER_CONFLICT;
-  static int const STALL_BUFFER_FULL;
-  static int const STALL_BUFFER_RESERVED;
-  static int const STALL_CROSSBAR_CONFLICT;
+  enum StallCause
+  {
+    STALL_BUFFER_BUSY = -2,
+    STALL_BUFFER_CONFLICT = -3,
+    STALL_BUFFER_FULL = -4,
+    STALL_BUFFER_RESERVED = -5,
+    STALL_CROSSBAR_CONFLICT = -6,
+    NUM_STALL_CAUSE = 5
+  };
 
   int _id;
   
