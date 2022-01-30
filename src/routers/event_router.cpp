@@ -36,7 +36,7 @@
 #include "globals.hpp"
 
 EventRouter::EventRouter( const Configuration& config,
-		    Module *parent, const string & name, int id,
+		    Network *parent, const string & name, int id,
 		    int inputs, int outputs, Module * clock, CreditBox * credits )
   : Router( config, parent, name, id, inputs, outputs, clock, credits )
 {

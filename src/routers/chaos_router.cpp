@@ -35,7 +35,7 @@
 #include "random_utils.hpp"
 #include "globals.hpp"
 
-ChaosRouter::ChaosRouter( const Configuration& config, Module *parent, const string & name, 
+ChaosRouter::ChaosRouter( const Configuration& config, Network *parent, const string & name, 
         int id, int inputs, int outputs, Module * clock, CreditBox * credits )
   : Router( config, parent, name, id, inputs, outputs, clock, credits )
 {

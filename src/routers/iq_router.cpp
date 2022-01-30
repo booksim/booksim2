@@ -47,7 +47,7 @@
 #include "switch_monitor.hpp"
 #include "buffer_monitor.hpp"
 
-IQRouter::IQRouter( Configuration const & config, Module *parent, 
+IQRouter::IQRouter( Configuration const & config, Network *parent, 
 		    string const & name, int id, int inputs, int outputs, Module * clock, CreditBox * credits)
 : Router( config, parent, name, id, inputs, outputs, clock, credits ), _active(false)
 {

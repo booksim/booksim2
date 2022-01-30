@@ -151,7 +151,7 @@ class IQRouter : public Router {
 public:
 
   IQRouter( Configuration const & config,
-	    Module *parent, string const & name, int id,
+	    Network *parent, string const & name, int id,
 	    int inputs, int outputs, Module * clock, CreditBox * credits );
   
   virtual ~IQRouter( );

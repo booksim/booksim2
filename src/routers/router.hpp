@@ -39,6 +39,9 @@
 #include "routefunc.hpp"
 #include "config_utils.hpp"
 #include "creditbox.hpp"
+#include "network.hpp"
+
+class Network;
 
 typedef Channel<Credit> CreditChannel;
 
@@ -101,15 +104,17 @@ protected:
   // tRoutingFunction _rf;
   RoutingConfig _rc;
 
+  Network *_owner;
+
   virtual void _InternalStep() = 0;
 
 public:
   Router( const Configuration& config,
-	  Module *parent, const string & name, int id,
+	  Network *parent, const string & name, int id,
 	  int inputs, int outputs, Module * clock, CreditBox * credits );
 
   static Router *NewRouter( const Configuration& config,
-			    Module *parent, const string & name, int id,
+			    Network *parent, const string & name, int id,
 			    int inputs, int outputs, CreditBox * credits );
 
   virtual void AddInputChannel( FlitChannel *channel, CreditChannel *backchannel );
@@ -210,6 +215,8 @@ public:
 
   inline int NumInputs() const {return _inputs;}
   inline int NumOutputs() const {return _outputs;}
+
+  inline Network *GetOWner() const {return _owner;}
 };
 
 #endif
