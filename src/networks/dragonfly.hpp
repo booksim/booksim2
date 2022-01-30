@@ -56,15 +56,20 @@ class DragonFlyNew : public Network {
 public:
   DragonFlyNew( const Configuration &config, const string & name, Module * clock, CreditBox *credits );
 
+  /// Why are these not inline and const?
   int GetN( ) const;
   int GetK( ) const;
+
+  int GetP( ) const {return _p;}
+  int GetA( ) const {return _a;}
+  int GetG( ) const {return _g;}
 
   double Capacity( ) const;
   static void RegisterRoutingFunctions();
   void InsertRandomFaults( const Configuration &config );
 
 };
-int dragonfly_port(int rID, int source, int dest);
+int dragonfly_port(int rID, int source, int dest, int routers, int ports);
 
 void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 		       OutputSet *outputs, bool inject, RoutingConfig *rc );
