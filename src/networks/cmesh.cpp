@@ -47,14 +47,8 @@
 #include "misc_utils.hpp"
 #include "cmesh.hpp"
 
-int CMesh::_cX = 0 ;
-int CMesh::_cY = 0 ;
-int CMesh::_memo_NodeShiftX = 0 ;
-int CMesh::_memo_NodeShiftY = 0 ;
-int CMesh::_memo_PortShiftY = 0 ;
-
 CMesh::CMesh( const Configuration& config, const string & name, Module * clock, CreditBox *credits ) 
-  : Network(config, name, clock, credits) 
+  : Network(config, name, clock, credits), _cX(0), _cY(0), _memo_NodeShiftX(0), _memo_NodeShiftY(0), _memo_PortShiftY(0)
 {
   _ComputeSize( config );
   _Alloc();
@@ -314,7 +308,7 @@ void CMesh::_BuildNet( const Configuration& config ) {
 //
 // ----------------------------------------------------------------------
 
-int CMesh::NodeToRouter( int address ) {
+int CMesh::NodeToRouter( int address ) const {
 
   int y  = (address /  (_cX*gK))/_cY ;
   int x  = (address %  (_cX*gK))/_cY ;
@@ -323,7 +317,7 @@ int CMesh::NodeToRouter( int address ) {
   return router ;
 }
 
-int CMesh::NodeToPort( int address ) {
+int CMesh::NodeToPort( int address ) const {
   
   const int maskX  = _cX - 1 ;
   const int maskY  = _cY - 1 ;
@@ -481,17 +475,27 @@ void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel,
     out_port = -1;
 
   } else {
-
+    /**
+     * This dynamic_cast is Bad. 
+     * However the legacy code is using a constant interface of `tRoutingFunction`
+     * for handling routing of every single networks type Booksim2 supports,
+     * leaving no other options without back pain.
+     */
+    const CMesh *net = dynamic_cast<const CMesh *>(r->GetOWner());
+    if(!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
     // Current Router
     int cur_router = r->GetID();
 
     // Destination Router
-    int dest_router = CMesh::NodeToRouter( f->dest ) ;  
+    int dest_router = net->NodeToRouter( f->dest ) ;  
 
     if (dest_router == cur_router) {
 
       // Forward to processing element
-      out_port = CMesh::NodeToPort( f->dest );      
+      out_port = net->NodeToPort( f->dest );      
 
     } else {
 
@@ -621,17 +625,28 @@ void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
     out_port = -1;
 
   } else {
+    /**
+     * This dynamic_cast is Bad. 
+     * However the legacy code is using a constant interface of `tRoutingFunction`
+     * for handling routing of every single networks type Booksim2 supports,
+     * leaving no other options without back pain.
+     */
+    const CMesh *net = dynamic_cast<const CMesh *>(r->GetOWner());
+    if(!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
 
     // Current Router
     int cur_router = r->GetID();
 
     // Destination Router
-    int dest_router = CMesh::NodeToRouter( f->dest );  
+    int dest_router = net->NodeToRouter( f->dest );  
 
     if (dest_router == cur_router) {
 
       // Forward to processing element
-      out_port = CMesh::NodeToPort( f->dest );
+      out_port = net->NodeToPort( f->dest );
 
     } else {
 
@@ -748,17 +763,27 @@ void dor_cmesh( const Router *r, const Flit *f, int in_channel,
     out_port = -1;
 
   } else {
-
+    /**
+     * This dynamic_cast is Bad.
+     * However the legacy code is using a constant interface of `tRoutingFunction`
+     * for handling routing of every single networks type Booksim2 supports,
+     * leaving no other options without back pain.
+     */
+    const CMesh *net = dynamic_cast<const CMesh *>(r->GetOWner());
+    if (!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
     // Current Router
     int cur_router = r->GetID();
 
     // Destination Router
-    int dest_router = CMesh::NodeToRouter( f->dest ) ;  
+    int dest_router = net->NodeToRouter( f->dest ) ;  
   
     if (dest_router == cur_router) {
 
       // Forward to processing element
-      out_port = CMesh::NodeToPort( f->dest ) ;
+      out_port = net->NodeToPort( f->dest ) ;
 
     } else {
 
@@ -830,24 +855,36 @@ void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel,
   if(inject) {
 
     out_port = -1;
-
-  } else {
+  }
+  else
+  {
+    /**
+     * This dynamic_cast is Bad.
+     * However the legacy code is using a constant interface of `tRoutingFunction`
+     * for handling routing of every single networks type Booksim2 supports,
+     * leaving no other options without back pain.
+     */
+    const CMesh *net = dynamic_cast<const CMesh *>(r->GetOWner());
+    if (!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
 
     // Current Router
     int cur_router = r->GetID();
 
     // Destination Router
-    int dest_router = CMesh::NodeToRouter( f->dest ) ;  
-  
-    if (dest_router == cur_router) {
+    int dest_router = net->NodeToRouter(f->dest);
+
+    if (dest_router == cur_router)
+    {
 
       // Forward to processing element
-      out_port = CMesh::NodeToPort( f->dest );
-
+      out_port = net->NodeToPort(f->dest);
     } else {
 
       // Forward to neighbouring router
-      out_port = cmesh_next_no_express( cur_router, dest_router );
+      out_port = cmesh_next_no_express(cur_router, dest_router);
     }
   }
 

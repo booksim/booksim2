@@ -50,19 +50,20 @@ public:
   int GetN() const;
   int GetK() const;
 
-  static int NodeToRouter( int address ) ;
-  static int NodeToPort( int address ) ;
+  int NodeToRouter( int address ) const;
+  int NodeToPort( int address ) const;
 
   static void RegisterRoutingFunctions() ;
 
 private:
 
-  static int _cX ;
-  static int _cY ;
+  int _cX ;
+  int _cY ;
 
-  static int _memo_NodeShiftX ;
-  static int _memo_NodeShiftY ;
-  static int _memo_PortShiftY ;
+  ///TODO: Obsolete, Only has writes and no reads. Consider Removing.
+  int _memo_NodeShiftX ;
+  int _memo_NodeShiftY ;
+  int _memo_PortShiftY ;
 
   void _ComputeSize( const Configuration &config );
   void _BuildNet( const Configuration& config );
