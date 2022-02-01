@@ -60,10 +60,6 @@
 
 //#define DEBUG_FLATFLY
 
-static int _xcount;
-static int _ycount;
-static int _xrouter;
-static int _yrouter;
 
 FlatFlyOnChip::FlatFlyOnChip( const Configuration &config, const string & name, Module * clock, CreditBox *credits ) :
   Network( config, name, clock, credits )
@@ -356,21 +352,31 @@ void adaptive_xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
     out_port = -1;
 
   } else {
-
-    int dest = flatfly_transformation(f->dest);
+    /**
+     * This dynamic_cast is Bad. 
+     * However the legacy code is using a constant interface of `tRoutingFunction`
+     * for handling routing of every single networks type Booksim2 supports,
+     * leaving no other options without back pain.
+     */
+    const FlatFlyOnChip *net = dynamic_cast<const FlatFlyOnChip *>(r->GetOWner());
+    if(!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
+    int dest = net->flatfly_transformation(f->dest);
     int targetr = (int)(dest/gC);
 
     if(targetr==r->GetID()){ //if we are at the final router, yay, output to client
       out_port = dest % gC;
 
     } else {
-   
+
       //each class must have at least 2 vcs assigned or else xy_yx will deadlock
       int const available_vcs = (vcEnd - vcBegin + 1) / 2;
       assert(available_vcs > 0);
 
-      int out_port_xy =  flatfly_outport(dest, r->GetID());
-      int out_port_yx =  flatfly_outport_yx(dest, r->GetID());
+      int out_port_xy =  net->flatfly_outport(dest, r->GetID());
+      int out_port_yx =  net->flatfly_outport_yx(dest, r->GetID());
 
       // Route order (XY or YX) determined when packet is injected
       //  into the network, adaptively
@@ -433,8 +439,18 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
     out_port = -1;
 
   } else {
-
-    int dest = flatfly_transformation(f->dest);
+    /**
+     * This dynamic_cast is Bad. 
+     * However the legacy code is using a constant interface of `tRoutingFunction`
+     * for handling routing of every single networks type Booksim2 supports,
+     * leaving no other options without back pain.
+     */
+    const FlatFlyOnChip *net = dynamic_cast<const FlatFlyOnChip *>(r->GetOWner());
+    if(!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
+    int dest = net->flatfly_transformation(f->dest);
     int targetr = (int)(dest/gC);
 
     if(targetr==r->GetID()){ //if we are at the final router, yay, output to client
@@ -452,10 +468,10 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
 		       (f->vc < (vcBegin + available_vcs)));
 
       if(x_then_y) {
-	out_port = flatfly_outport(dest, r->GetID());
+	out_port = net->flatfly_outport(dest, r->GetID());
 	vcEnd -= available_vcs;
       } else {
-	out_port = flatfly_outport_yx(dest, r->GetID());
+	out_port = net->flatfly_outport_yx(dest, r->GetID());
 	vcBegin += available_vcs;
       }
     }
@@ -467,7 +483,7 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
   outputs->AddRange( out_port , vcBegin, vcEnd );
 }
 
-int flatfly_outport_yx(int dest, int rID) {
+int FlatFlyOnChip::flatfly_outport_yx(int dest, int rID) const {
   int dest_rID = (int) (dest / gC);
   int _dim   = gN;
   int output = -1, dID, sID;
@@ -526,24 +542,34 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
     out_port = -1;
 
   } else {
-
+    /**
+     * This dynamic_cast is Bad. 
+     * However the legacy code is using a constant interface of `tRoutingFunction`
+     * for handling routing of every single networks type Booksim2 supports,
+     * leaving no other options without back pain.
+     */
+    const FlatFlyOnChip *net = dynamic_cast<const FlatFlyOnChip *>(r->GetOWner());
+    if(!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
     if ( in_channel < gC ){
       f->ph = 0;
       f->intm = RandomInt( powi( gK, gN )*gC-1);
     }
 
-    int intm = flatfly_transformation(f->intm);
-    int dest = flatfly_transformation(f->dest);
+    int intm = net->flatfly_transformation(f->intm);
+    int dest = net->flatfly_transformation(f->dest);
 
     if((int)(intm/gC) == r->GetID() || (int)(dest/gC)== r->GetID()){
       f->ph = 1;
     }
 
     if(f->ph == 0) {
-      out_port = flatfly_outport(intm, r->GetID());
+      out_port = net->flatfly_outport(intm, r->GetID());
     } else {
       assert(f->ph == 1);
-      out_port = flatfly_outport(dest, r->GetID());
+      out_port = net->flatfly_outport(dest, r->GetID());
     }
 
     if((int)(dest/gC) != r->GetID()) {
@@ -595,8 +621,18 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
     out_port = -1;
 
   } else {
-
-    int dest  = flatfly_transformation(f->dest);
+    /**
+     * This dynamic_cast is Bad. 
+     * However the legacy code is using a constant interface of `tRoutingFunction`
+     * for handling routing of every single networks type Booksim2 supports,
+     * leaving no other options without back pain.
+     */
+    const FlatFlyOnChip *net = dynamic_cast<const FlatFlyOnChip *>(r->GetOWner());
+    if(!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
+    int dest  = net->flatfly_transformation(f->dest);
     int targetr= (int)(dest/gC);
     //int xdest = ((int)(dest/gC)) % gK;
     //int xcurr = ((r->GetID())) % gK;
@@ -607,7 +643,7 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
     if(targetr==r->GetID()){ //if we are at the final router, yay, output to client
       out_port = dest % gC;
     } else{ //else select a dimension at random
-      out_port = flatfly_outport(dest, r->GetID());
+      out_port = net->flatfly_outport(dest, r->GetID());
     }
 
   }
@@ -650,8 +686,18 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     out_port = -1;
 
   } else {
-
-    int dest  = flatfly_transformation(f->dest);
+    /**
+     * This dynamic_cast is Bad. 
+     * However the legacy code is using a constant interface of `tRoutingFunction`
+     * for handling routing of every single networks type Booksim2 supports,
+     * leaving no other options without back pain.
+     */
+    const FlatFlyOnChip *net = dynamic_cast<const FlatFlyOnChip *>(r->GetOWner());
+    if(!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
+    int dest  = net->flatfly_transformation(f->dest);
 
     int rID =  r->GetID();
     int _concentration = gC;
@@ -694,7 +740,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     if (dest >= rID*_concentration && dest < (rID+1)*_concentration) {
       if (f->ph == 1) {
 	f->ph = 2;
-	dest = flatfly_transformation(f->dest);
+	dest = net->flatfly_transformation(f->dest);
 	if (debug)   cout << "      done routing to intermediate ";
       }
       else  {
@@ -716,11 +762,11 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 
       if (f->ph == 0) {
 	//find the min port and min distance
-	_min_hop = find_distance(flatfly_transformation(f->src),dest);
+	_min_hop = net->find_distance(net->flatfly_transformation(f->src),dest);
 	if(x_then_y){
-	  tmp_out_port =  flatfly_outport(dest, rID);
+	  tmp_out_port =  net->flatfly_outport(dest, rID);
 	} else {
-	  tmp_out_port =  flatfly_outport_yx(dest, rID);
+	  tmp_out_port =  net->flatfly_outport_yx(dest, rID);
 	}
 	if (f->watch){
 	  cout << " MIN tmp_out_port: " << tmp_out_port;
@@ -729,12 +775,12 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	_min_queucnt =   r->GetUsedCredit(tmp_out_port);
 
 	//find the nonmin router, nonmin port, nonmin count
-	_ran_intm = find_ran_intm(flatfly_transformation(f->src), dest);
-	_nonmin_hop = find_distance(flatfly_transformation(f->src),_ran_intm) +    find_distance(_ran_intm, dest);
+	_ran_intm = net->find_ran_intm(net->flatfly_transformation(f->src), dest);
+	_nonmin_hop = net->find_distance(net->flatfly_transformation(f->src),_ran_intm) + net->find_distance(_ran_intm, dest);
 	if(x_then_y){
-	  tmp_out_port =  flatfly_outport(_ran_intm, rID);
+	  tmp_out_port =  net->flatfly_outport(_ran_intm, rID);
 	} else {
-	  tmp_out_port =  flatfly_outport_yx(_ran_intm, rID);
+	  tmp_out_port =  net->flatfly_outport_yx(_ran_intm, rID);
 	}
 
 	if (f->watch){
@@ -762,19 +808,19 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	  dest = f->intm;
 	  if (dest >= rID*_concentration && dest < (rID+1)*_concentration) {
 	    f->ph = 2;
-	    dest = flatfly_transformation(f->dest);
+	    dest = net->flatfly_transformation(f->dest);
 	  }
 	}
       }
 
       //dest here should be == intm if ph==1, or dest == dest if ph == 2
       if(x_then_y){
-	out_port =  flatfly_outport(dest, rID);
+	out_port =  net->flatfly_outport(dest, rID);
 	if(out_port >= gC) {
 	  vcEnd -= xy_available_vcs;
 	}
       } else {
-	out_port =  flatfly_outport_yx(dest, rID);
+	out_port =  net->flatfly_outport_yx(dest, rID);
 	if(out_port >= gC) {
 	  vcBegin += xy_available_vcs;
 	}
@@ -849,8 +895,18 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     out_port = -1;
 
   } else {
-
-    int dest  = flatfly_transformation(f->dest);
+    /**
+     * This dynamic_cast is Bad. 
+     * However the legacy code is using a constant interface of `tRoutingFunction`
+     * for handling routing of every single networks type Booksim2 supports,
+     * leaving no other options without back pain.
+     */
+    const FlatFlyOnChip *net = dynamic_cast<const FlatFlyOnChip *>(r->GetOWner());
+    if(!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
+    int dest  = net->flatfly_transformation(f->dest);
 
     int rID =  r->GetID();
     int _concentration = gC;
@@ -894,7 +950,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 
       if (f->ph == 1) {
 	f->ph = 2;
-	dest = flatfly_transformation(f->dest);
+	dest = net->flatfly_transformation(f->dest);
 	if (debug)   cout << "      done routing to intermediate ";
       }
       else  {
@@ -907,9 +963,9 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     if (!found) {
 
       if (f->ph == 0) {
-	_min_hop = find_distance(flatfly_transformation(f->src),dest);
-	_ran_intm = find_ran_intm(flatfly_transformation(f->src), dest);
-	tmp_out_port =  flatfly_outport(dest, rID);
+	_min_hop = net->find_distance(net->flatfly_transformation(f->src),dest);
+	_ran_intm = net->find_ran_intm(net->flatfly_transformation(f->src), dest);
+	tmp_out_port =  net->flatfly_outport(dest, rID);
 	if (f->watch){
 	  *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		     << " MIN tmp_out_port: " << tmp_out_port;
@@ -917,8 +973,8 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 
 	_min_queucnt =   r->GetUsedCredit(tmp_out_port);
 
-	_nonmin_hop = find_distance(flatfly_transformation(f->src),_ran_intm) +    find_distance(_ran_intm, dest);
-	tmp_out_port =  flatfly_outport(_ran_intm, rID);
+	_nonmin_hop = net->find_distance(net->flatfly_transformation(f->src),_ran_intm) + net->find_distance(_ran_intm, dest);
+	tmp_out_port = net->flatfly_outport(_ran_intm, rID);
 
 	if (f->watch){
 	  *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
@@ -946,13 +1002,13 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	  dest = f->intm;
 	  if (dest >= rID*_concentration && dest < (rID+1)*_concentration) {
 	    f->ph = 2;
-	    dest = flatfly_transformation(f->dest);
+	    dest = net->flatfly_transformation(f->dest);
 	  }
 	}
       }
 
       // find minimal correct dimension to route through
-      out_port =  flatfly_outport(dest, rID);
+      out_port =  net->flatfly_outport(dest, rID);
 
       // if we haven't reached our destination, restrict VCs appropriately to avoid routing deadlock
       if(out_port >= gC) {
@@ -1022,8 +1078,18 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     out_port = -1;
 
   } else {
-
-    int dest  = flatfly_transformation(f->dest);
+    /**
+     * This dynamic_cast is Bad. 
+     * However the legacy code is using a constant interface of `tRoutingFunction`
+     * for handling routing of every single networks type Booksim2 supports,
+     * leaving no other options without back pain.
+     */
+    const FlatFlyOnChip *net = dynamic_cast<const FlatFlyOnChip *>(r->GetOWner());
+    if(!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
+    int dest  = net->flatfly_transformation(f->dest);
 
     int rID =  r->GetID();
     int _concentration = gC;
@@ -1067,7 +1133,7 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 
       if (f->ph == 1) {
 	f->ph = 2;
-	dest = flatfly_transformation(f->dest);
+	dest = net->flatfly_transformation(f->dest);
 	if (debug)   cout << "      done routing to intermediate ";
       }
       else  {
@@ -1080,9 +1146,9 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     if (!found) {
 
       if (f->ph == 0) {
-	_min_hop = find_distance(flatfly_transformation(f->src),dest);
-	_ran_intm = find_ran_intm(flatfly_transformation(f->src), dest);
-	tmp_out_port =  flatfly_outport(dest, rID);
+	_min_hop = net->find_distance(net->flatfly_transformation(f->src),dest);
+	_ran_intm = net->find_ran_intm(net->flatfly_transformation(f->src), dest);
+	tmp_out_port =  net->flatfly_outport(dest, rID);
 	if (f->watch){
 	  *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 		     << " MIN tmp_out_port: " << tmp_out_port;
@@ -1090,8 +1156,8 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 
 	_min_queucnt =   r->GetUsedCredit(tmp_out_port);
 
-	_nonmin_hop = find_distance(flatfly_transformation(f->src),_ran_intm) +    find_distance(_ran_intm, dest);
-	tmp_out_port =  flatfly_outport(_ran_intm, rID);
+	_nonmin_hop = net->find_distance(net->flatfly_transformation(f->src),_ran_intm) + net->find_distance(_ran_intm, dest);
+	tmp_out_port =  net->flatfly_outport(_ran_intm, rID);
 
 	if (f->watch){
 	  *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
@@ -1119,13 +1185,13 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 	  dest = f->intm;
 	  if (dest >= rID*_concentration && dest < (rID+1)*_concentration) {
 	    f->ph = 2;
-	    dest = flatfly_transformation(f->dest);
+	    dest = net->flatfly_transformation(f->dest);
 	  }
 	}
       }
 
       // find minimal correct dimension to route through
-      out_port =  flatfly_outport(dest, rID);
+      out_port =  net->flatfly_outport(dest, rID);
 
       // if we haven't reached our destination, restrict VCs appropriately to avoid routing deadlock
       if(out_port >= gC) {
@@ -1169,7 +1235,12 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 
     assert(inject ? (f->ph == -1) : (f->ph == 1 || f->ph == 2));
 
-    int next_coord = flatfly_transformation(f->dest);
+    const FlatFlyOnChip *net = dynamic_cast<const FlatFlyOnChip *>(r->GetOWner());
+    if(!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
+    int next_coord = net->flatfly_transformation(f->dest);
     if(inject) {
       next_coord /= gC;
       next_coord %= gK;
@@ -1201,7 +1272,7 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 //=============================================================^M
 // UGAL : calculate distance (hop cnt)  between src and destination
 //=============================================================^M
-int find_distance (int src, int dest) {
+int FlatFlyOnChip::find_distance (int src, int dest) const {
   int dist = 0;
   int _dim   = gN;
   
@@ -1229,7 +1300,7 @@ int find_distance (int src, int dest) {
 //=============================================================^M
 // UGAL : find random node for load balancing
 //=============================================================^M
-int find_ran_intm (int src, int dest) {
+int FlatFlyOnChip::find_ran_intm (int src, int dest) const {
   int _dim   = gN;
   int _dim_size;
   int _ran_dest = 0;
@@ -1272,7 +1343,7 @@ int find_ran_intm (int src, int dest) {
 // given the dimension and destination
 //=============================================================
 // starting from DIM 0 (x first)
-int flatfly_outport(int dest, int rID) {
+int FlatFlyOnChip::flatfly_outport(int dest, int rID) const {
   int dest_rID = (int) (dest / gC);
   int _dim   = gN;
   int output = -1, dID, sID;
@@ -1306,7 +1377,7 @@ int flatfly_outport(int dest, int rID) {
   return -1;
 }
 
-int flatfly_transformation(int dest){
+int FlatFlyOnChip::flatfly_transformation(int dest) const {
   //the magic of destination transformation
 
   //destination transformation, translate how the nodes are actually arranged

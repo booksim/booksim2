@@ -48,6 +48,11 @@ class FlatFlyOnChip : public Network {
   int _stages;
   int _num_of_switch;
 
+  int _xcount;
+  int _ycount;
+  int _xrouter;
+  int _yrouter;
+
   void _ComputeSize( const Configuration &config );
   void _BuildNet( const Configuration &config );
 
@@ -60,9 +65,21 @@ public:
   int GetN( ) const;
   int GetK( ) const;
 
+  /// xcount == ycount for flatflys
+  int GetCount( ) const {return _xcount;}
+  int GetXRouter( ) const {return _xrouter;}
+  int GetYRouter( ) const {return _yrouter;}
+
   static void RegisterRoutingFunctions() ;
   double Capacity( ) const;
   void InsertRandomFaults( const Configuration &config );
+
+  int find_distance (int src, int dest) const;
+  int find_ran_intm (int src, int dest) const;
+  int flatfly_outport(int dest, int rID) const;
+  int flatfly_transformation(int dest) const;
+  int flatfly_outport_yx(int dest, int rID) const;
+
 };
 void adaptive_xyyx_flatfly( const Router *r, const Flit *f, int in_channel, 
 		  OutputSet *outputs, bool inject, RoutingConfig *rc );
@@ -78,11 +95,5 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 			      OutputSet *outputs, bool inject, RoutingConfig *rc );
 void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
 			  OutputSet *outputs, bool inject, RoutingConfig *rc );
-
-int find_distance (int src, int dest);
-int find_ran_intm (int src, int dest);
-int flatfly_outport(int dest, int rID);
-int flatfly_transformation(int dest);
-int flatfly_outport_yx(int dest, int rID);
 
 #endif
