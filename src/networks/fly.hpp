@@ -31,7 +31,7 @@
 #include "network.hpp"
 
 class KNFly : public Network {
-
+///TODO: remove repeated members
   int _k;
   int _n;
 

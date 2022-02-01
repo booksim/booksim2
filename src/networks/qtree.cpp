@@ -61,8 +61,9 @@ void QTree::_ComputeSize( const Configuration& config )
   _n = config.GetInt( "n" );
 
   assert( _k == 4 && _n == 3 );
-
-  gK = _k; gN = _n;
+  
+  _radix = _k;
+  _dim = _n;
 
   _nodes = powi( _k, _n );
 

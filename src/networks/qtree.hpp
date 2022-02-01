@@ -45,7 +45,7 @@
 #include "network.hpp"
 
 class QTree : public Network {
-
+///TODO: remove repeated members
   int _k;
   int _n;
 

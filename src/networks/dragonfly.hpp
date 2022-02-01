@@ -32,7 +32,7 @@
 #include "routefunc.hpp"
 
 class DragonFlyNew : public Network {
-
+///TODO: remove repeated members
   int _m;
   int _n;
   int _r;

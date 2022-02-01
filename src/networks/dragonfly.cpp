@@ -178,7 +178,8 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
 
   
   // FIX...
-  gK = _p; gN = _n;
+  _radix = _k;
+  _dim = _n;
 
   // with 1 dimension, total of 2p routers per group
   // N = 2p * p * (2p^2 + 1)

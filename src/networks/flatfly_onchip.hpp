@@ -38,6 +38,7 @@ class FlatFlyOnChip : public Network {
 
   int _m;
   int _n;
+///TODO: remove repeated members
   int _r;
   int _k;
   int _c;

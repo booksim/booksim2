@@ -50,7 +50,7 @@
 
 
 Network::Network( const Configuration &config, const string & name, Module * clock, CreditBox *credits ) :
-  TimedModule( 0, name, clock ), _credits(credits)
+  TimedModule( 0, name, clock ), _credits(credits), _radix(0), _dim(0), _conc(0)
 {
   _size     = -1; 
   _nodes    = -1; 

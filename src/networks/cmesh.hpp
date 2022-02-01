@@ -55,6 +55,13 @@ public:
 
   static void RegisterRoutingFunctions() ;
 
+  int cmesh_xy(int cur, int dest) const;
+  int cmesh_yx(int cur, int dest) const;
+  int cmesh_xy_no_express( int cur, int dest ) const;
+  int cmesh_yx_no_express( int cur, int dest ) const;
+  int cmesh_next( int cur, int dest ) const;
+  int cmesh_next_no_express( int cur, int dest ) const;
+
 private:
 
   int _cX ;
@@ -67,7 +74,8 @@ private:
 
   void _ComputeSize( const Configuration &config );
   void _BuildNet( const Configuration& config );
-
+  
+  ///TODO: remove repeated members
   int _k ;
   int _n ;
   int _c ;

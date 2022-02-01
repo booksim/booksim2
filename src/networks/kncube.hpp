@@ -33,7 +33,7 @@
 class KNCube : public Network {
 
   bool _mesh;
-
+///TODO: remove repeated members
   int _k;
   int _n;
 

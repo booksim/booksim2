@@ -85,9 +85,9 @@ void FlatFlyOnChip::_ComputeSize( const Configuration &config )
   _xrouter = config.GetInt("xr");
   _yrouter = config.GetInt("yr");
   assert(_xrouter == _yrouter);
-  gK = _k; 
-  gN = _n;
-  gC = _c;
+  _radix = _k; 
+  _dim = _n;
+  _conc = _c;
   
   assert(_c == _xrouter*_yrouter);
 
@@ -364,10 +364,10 @@ void adaptive_xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
       r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
     }
     int dest = net->flatfly_transformation(f->dest);
-    int targetr = (int)(dest/gC);
+    int targetr = (int)(dest/net->GetConc());
 
     if(targetr==r->GetID()){ //if we are at the final router, yay, output to client
-      out_port = dest % gC;
+      out_port = dest % net->GetConc();
 
     } else {
 
@@ -381,7 +381,7 @@ void adaptive_xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
       // Route order (XY or YX) determined when packet is injected
       //  into the network, adaptively
       bool x_then_y;
-      if(in_channel < gC){
+      if(in_channel < net->GetConc()){
 	int credit_xy = r->GetUsedCredit(out_port_xy);
 	int credit_yx = r->GetUsedCredit(out_port_yx);
 	if(credit_xy > credit_yx) {
@@ -451,10 +451,10 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
       r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
     }
     int dest = net->flatfly_transformation(f->dest);
-    int targetr = (int)(dest/gC);
+    int targetr = (int)(dest/net->GetConc());
 
     if(targetr==r->GetID()){ //if we are at the final router, yay, output to client
-      out_port = dest % gC;
+      out_port = dest % net->GetConc();
 
     } else {
    
@@ -463,7 +463,7 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
       assert(available_vcs > 0);
 
       // randomly select dimension order at first hop
-      bool x_then_y = ((in_channel < gC) ?
+      bool x_then_y = ((in_channel < net->GetConc()) ?
 		       (RandomInt(1) > 0) : 
 		       (f->vc < (vcBegin + available_vcs)));
 
@@ -484,20 +484,19 @@ void xyyx_flatfly( const Router *r, const Flit *f, int in_channel,
 }
 
 int FlatFlyOnChip::flatfly_outport_yx(int dest, int rID) const {
-  int dest_rID = (int) (dest / gC);
-  int _dim   = gN;
+  int dest_rID = (int) (dest / _conc);
   int output = -1, dID, sID;
   
   if(dest_rID==rID){
-    return dest % gC;
+    return dest % _conc;
   }
 
   for (int d=_dim-1;d >= 0; d--) {
-    int power = powi(gK,d);
+    int power = powi(_radix,d);
     dID = int(dest_rID / power);
     sID = int(rID / power);
     if ( dID != sID ) {
-      output = gC + ((gK-1)*d) - 1;
+      output = _conc + ((_radix-1)*d) - 1;
       if (dID > sID) {
 	output += dID;
       } else {
@@ -553,15 +552,15 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
     {
       r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
     }
-    if ( in_channel < gC ){
+    if ( in_channel < net->GetConc() ){
       f->ph = 0;
-      f->intm = RandomInt( powi( gK, gN )*gC-1);
+      f->intm = RandomInt( powi( net->GetRadix(), net->GetDim() )*net->GetConc()-1);
     }
 
     int intm = net->flatfly_transformation(f->intm);
     int dest = net->flatfly_transformation(f->dest);
 
-    if((int)(intm/gC) == r->GetID() || (int)(dest/gC)== r->GetID()){
+    if((int)(intm/net->GetConc()) == r->GetID() || (int)(dest/net->GetConc())== r->GetID()){
       f->ph = 1;
     }
 
@@ -572,7 +571,7 @@ void valiant_flatfly( const Router *r, const Flit *f, int in_channel,
       out_port = net->flatfly_outport(dest, r->GetID());
     }
 
-    if((int)(dest/gC) != r->GetID()) {
+    if((int)(dest/net->GetConc()) != r->GetID()) {
 
       //each class must have at least 2 vcs assigned or else valiant valiant will deadlock
       int const available_vcs = (vcEnd - vcBegin + 1) / 2;
@@ -633,15 +632,15 @@ void min_flatfly( const Router *r, const Flit *f, int in_channel,
       r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
     }
     int dest  = net->flatfly_transformation(f->dest);
-    int targetr= (int)(dest/gC);
-    //int xdest = ((int)(dest/gC)) % gK;
-    //int xcurr = ((r->GetID())) % gK;
+    int targetr= (int)(dest/net->GetConc());
+    //int xdest = ((int)(dest/net->GetConc())) % net->GetRadix();
+    //int xcurr = ((r->GetID())) % net->GetRadix();
 
-    //int ydest = ((int)(dest/gC)) / gK;
-    //int ycurr = ((r->GetID())) / gK;
+    //int ydest = ((int)(dest/net->GetConc())) / net->GetRadix();
+    //int ycurr = ((r->GetID())) / net->GetRadix();
 
     if(targetr==r->GetID()){ //if we are at the final router, yay, output to client
-      out_port = dest % gC;
+      out_port = dest % net->GetConc();
     } else{ //else select a dimension at random
       out_port = net->flatfly_outport(dest, r->GetID());
     }
@@ -700,7 +699,9 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     int dest  = net->flatfly_transformation(f->dest);
 
     int rID =  r->GetID();
-    int _concentration = gC;
+    int _concentration = net->GetConc();
+    int _radix = net->GetRadix();
+    int _dimension = net->GetDim();
     int found;
     int debug = 0;
     int tmp_out_port, _ran_intm;
@@ -708,7 +709,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     int threshold = 2;
 
 
-    if ( in_channel < gC ){
+    if ( in_channel < _concentration ){
       if(gTrace){
 	cout<<"New Flit "<<f->src<<endl;
       }
@@ -745,7 +746,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       }
       else  {
 	found = 1;
-	out_port = dest % gC;
+	out_port = dest % _concentration;
 	if (debug)   cout << "      final routing to destination ";
       }
     }
@@ -756,7 +757,7 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       assert(xy_available_vcs > 0);
 
       // randomly select dimension order at first hop
-      bool x_then_y = ((in_channel < gC) ?
+      bool x_then_y = ((in_channel < _concentration) ?
 		       (RandomInt(1) > 0) : 
 		       (f->vc < (vcBegin + xy_available_vcs)));
 
@@ -816,18 +817,18 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       //dest here should be == intm if ph==1, or dest == dest if ph == 2
       if(x_then_y){
 	out_port =  net->flatfly_outport(dest, rID);
-	if(out_port >= gC) {
+	if(out_port >= _concentration) {
 	  vcEnd -= xy_available_vcs;
 	}
       } else {
 	out_port =  net->flatfly_outport_yx(dest, rID);
-	if(out_port >= gC) {
+	if(out_port >= _concentration) {
 	  vcBegin += xy_available_vcs;
 	}
       }
 
       // if we haven't reached our destination, restrict VCs appropriately to avoid routing deadlock
-      if(out_port >= gC) {
+      if(out_port >= _concentration) {
 
 	int const ph_available_vcs = xy_available_vcs / 2;
 	assert(ph_available_vcs > 0);
@@ -848,10 +849,10 @@ void ugal_xyyx_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       cout << *f; exit (-1);
     }
 
-    if (out_port >= gN*(gK-1) + gC)  {
+    if (out_port >= _dimension*(_radix-1) + _concentration)  {
       cout << " ERROR: output port too big! " << endl;
       cout << " OUTPUT select: " << out_port << endl;
-      cout << " router radix: " <<  gN*(gK-1) + gK << endl;
+      cout << " router radix: " <<  _dimension*(_radix-1) + _radix << endl;
       exit (-1);
     }
 
@@ -909,14 +910,16 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     int dest  = net->flatfly_transformation(f->dest);
 
     int rID =  r->GetID();
-    int _concentration = gC;
+    int _concentration = net->GetConc();
+    int _radix = net->GetRadix();
+    int _dimension = net->GetDim();
     int found;
     int debug = 0;
     int tmp_out_port, _ran_intm;
     int _min_hop, _nonmin_hop, _min_queucnt, _nonmin_queucnt;
     int threshold = 2;
 
-    if ( in_channel < gC ){
+    if ( in_channel < _concentration ){
       if(gTrace){
 	cout<<"New Flit "<<f->src<<endl;
       }
@@ -955,7 +958,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       }
       else  {
 	found = 1;
-	out_port = dest % gC;
+	out_port = dest % _concentration;
 	if (debug)   cout << "      final routing to destination ";
       }
     }
@@ -1011,7 +1014,7 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       out_port =  net->flatfly_outport(dest, rID);
 
       // if we haven't reached our destination, restrict VCs appropriately to avoid routing deadlock
-      if(out_port >= gC) {
+      if(out_port >= _concentration) {
 	int const available_vcs = (vcEnd - vcBegin + 1) / 2;
 	assert(available_vcs > 0);
 	if(f->ph == 1) {
@@ -1030,10 +1033,10 @@ void ugal_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       cout << *f; exit (-1);
     }
 
-    if (out_port >= gN*(gK-1) + gC)  {
+    if (out_port >= _dimension*(_radix-1) + _concentration)  {
       cout << " ERROR: output port too big! " << endl;
       cout << " OUTPUT select: " << out_port << endl;
-      cout << " router radix: " <<  gN*(gK-1) + gK << endl;
+      cout << " router radix: " <<  _dimension*(_radix-1) + _radix << endl;
       exit (-1);
     }
 
@@ -1071,35 +1074,40 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
   }
   assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
 
-  int out_port;
+  int out_port, _concentration = 0, _radix = 0, _dim = 0;
+  /**
+   * This dynamic_cast is Bad. 
+   * However the legacy code is using a constant interface of `tRoutingFunction`
+   * for handling routing of every single networks type Booksim2 supports,
+   * leaving no other options without back pain.
+   */
+  const FlatFlyOnChip *net = dynamic_cast<const FlatFlyOnChip *>(r->GetOWner());
+  if(net)
+  {
+    _concentration = net->GetConc();
+    _radix = net->GetRadix();
+    _dim = net->GetDim();
+  } else {
+    r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+  }
+
 
   if(inject) {
     
     out_port = -1;
 
   } else {
-    /**
-     * This dynamic_cast is Bad. 
-     * However the legacy code is using a constant interface of `tRoutingFunction`
-     * for handling routing of every single networks type Booksim2 supports,
-     * leaving no other options without back pain.
-     */
-    const FlatFlyOnChip *net = dynamic_cast<const FlatFlyOnChip *>(r->GetOWner());
-    if(!net)
-    {
-      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
-    }
+
     int dest  = net->flatfly_transformation(f->dest);
 
     int rID =  r->GetID();
-    int _concentration = gC;
     int found;
     int debug = 0;
     int tmp_out_port, _ran_intm;
     int _min_hop, _nonmin_hop, _min_queucnt, _nonmin_queucnt;
     int threshold = 2;
 
-    if ( in_channel < gC ){
+    if ( in_channel < _concentration ){
       if(gTrace){
 	cout<<"New Flit "<<f->src<<endl;
       }
@@ -1138,7 +1146,7 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       }
       else  {
 	found = 1;
-	out_port = dest % gC;
+	out_port = dest % _concentration;
 	if (debug)   cout << "      final routing to destination ";
       }
     }
@@ -1194,7 +1202,7 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       out_port =  net->flatfly_outport(dest, rID);
 
       // if we haven't reached our destination, restrict VCs appropriately to avoid routing deadlock
-      if(out_port >= gC) {
+      if(out_port >= _concentration) {
 	int const available_vcs = (vcEnd - vcBegin + 1) / 2;
 	assert(available_vcs > 0);
 	if(f->ph == 1) {
@@ -1213,10 +1221,10 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
       cout << *f; exit (-1);
     }
 
-    if (out_port >= gN*(gK-1) + gC)  {
+    if (out_port >= _dim*(_radix-1) + _concentration)  {
       cout << " ERROR: output port too big! " << endl;
       cout << " OUTPUT select: " << out_port << endl;
-      cout << " router radix: " <<  gN*(gK-1) + gK << endl;
+      cout << " router radix: " <<  _dim*(_radix-1) + _radix << endl;
       exit (-1);
     }
 
@@ -1227,37 +1235,31 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
     }
   }
 
-  if(inject || (out_port >= gC)) {
+  if(inject || (out_port >= _concentration)) {
 
     // NOTE: for "proper" flattened butterfly configurations (i.e., ones 
     // derived from flattening an actual butterfly), gK and gC are the same!
-    assert(gK == gC);
+    assert(_radix == _concentration);
 
     assert(inject ? (f->ph == -1) : (f->ph == 1 || f->ph == 2));
-
-    const FlatFlyOnChip *net = dynamic_cast<const FlatFlyOnChip *>(r->GetOWner());
-    if(!net)
-    {
-      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
-    }
     int next_coord = net->flatfly_transformation(f->dest);
     if(inject) {
-      next_coord /= gC;
-      next_coord %= gK;
+      next_coord /= _concentration;
+      next_coord %= _radix;
     } else {
-      int next_dim = (out_port - gC) / (gK - 1) + 1;
-      if(next_dim == gN) {
-	next_coord %= gC;
+      int next_dim = (out_port - _concentration) / (_radix - 1) + 1;
+      if(next_dim == _dim) {
+	next_coord %= _concentration;
       } else {
-	next_coord /= gC;
+	next_coord /= _concentration;
 	for(int d = 0; d < next_dim; ++d) {
-	  next_coord /= gK;
+	  next_coord /= _radix;
 	}
-	next_coord %= gK;
+	next_coord %= _radix;
       }
     }
-    assert(next_coord >= 0 && next_coord < gK);
-    int vcs_per_dest = (vcEnd - vcBegin + 1) / gK;
+    assert(next_coord >= 0 && next_coord < _radix);
+    int vcs_per_dest = (vcEnd - vcBegin + 1) / _radix;
     assert(vcs_per_dest > 0);
     vcBegin += next_coord * vcs_per_dest;
     vcEnd = vcBegin + vcs_per_dest - 1;
@@ -1274,22 +1276,22 @@ void ugal_pni_flatfly_onchip( const Router *r, const Flit *f, int in_channel,
 //=============================================================^M
 int FlatFlyOnChip::find_distance (int src, int dest) const {
   int dist = 0;
-  int _dim   = gN;
   
-  int src_tmp= (int) src / gC;
-  int dest_tmp = (int) dest / gC;
+  int src_tmp= (int) src / _conc;
+  int dest_tmp = (int) dest / _conc;
   
   //  cout << " HOP CNT between  src: " << src << " dest: " << dest;
   for (int d=0;d < _dim; d++) {
-    //int _dim_size = powi(gK, d )*gC;
+    //int _dim_size = powi(_radix, d )*_conc;
     //if ((int)(src / _dim_size) !=  (int)(dest / _dim_size))
     //   dist++;
-    int src_id = src_tmp % gK;
-    int dest_id = dest_tmp % gK;
+    int src_id = src_tmp % _radix;
+    int dest_id = dest_tmp % _radix;
     if (src_id !=  dest_id)
       dist++;
-    src_tmp = (int) (src_tmp / gK);
-    dest_tmp = (int) (dest_tmp / gK);
+    
+    src_tmp = (int) (src_tmp / _radix);
+    dest_tmp = (int) (dest_tmp / _radix);
   }
   
   //  cout << " : " << dist << endl;
@@ -1301,7 +1303,6 @@ int FlatFlyOnChip::find_distance (int src, int dest) const {
 // UGAL : find random node for load balancing
 //=============================================================^M
 int FlatFlyOnChip::find_ran_intm (int src, int dest) const {
-  int _dim   = gN;
   int _dim_size;
   int _ran_dest = 0;
   int debug = 0;
@@ -1309,27 +1310,27 @@ int FlatFlyOnChip::find_ran_intm (int src, int dest) const {
   if (debug) 
     cout << " INTM node for  src: " << src << " dest: " <<dest << endl;
   
-  src = (int) (src / gC);
-  dest = (int) (dest / gC);
+  src = (int) (src / _conc);
+  dest = (int) (dest / _conc);
   
-  _ran_dest = RandomInt(gC - 1);
+  _ran_dest = RandomInt(_conc - 1);
   if (debug) cout << " ............ _ran_dest : " << _ran_dest << endl;
   for (int d=0;d < _dim; d++) {
     
-    _dim_size = powi(gK, d)*gC;
-    if ((src % gK) ==  (dest % gK)) {
-      _ran_dest += (src % gK) * _dim_size;
+    _dim_size = powi(_radix, d)*_conc;
+    if ((src % _radix) ==  (dest % _radix)) {
+      _ran_dest += (src % _radix) * _dim_size;
       if (debug) 
-	cout << "    share same dimension : " << d << " int node : " << _ran_dest << " src ID : " << src % gK << endl;
+	cout << "    share same dimension : " << d << " int node : " << _ran_dest << " src ID : " << src % _radix << endl;
     } else {
       // src and dest are in the same dimension "d" + 1
       // ==> thus generate a random destination within
-      _ran_dest += RandomInt(gK - 1) * _dim_size;
+      _ran_dest += RandomInt(_radix - 1) * _dim_size;
       if (debug) 
 	cout << "    different  dimension : " << d << " int node : " << _ran_dest << " _dim_size: " << _dim_size << endl;
     }
-    src = (int) (src / gK);
-    dest = (int) (dest / gK);
+    src = (int) (src / _radix);
+    dest = (int) (dest / _radix);
   }
   
   if (debug) cout << " intermediate destination NODE: " << _ran_dest << endl;
@@ -1344,20 +1345,19 @@ int FlatFlyOnChip::find_ran_intm (int src, int dest) const {
 //=============================================================
 // starting from DIM 0 (x first)
 int FlatFlyOnChip::flatfly_outport(int dest, int rID) const {
-  int dest_rID = (int) (dest / gC);
-  int _dim   = gN;
+  int dest_rID = (int) (dest / _conc);
   int output = -1, dID, sID;
   
   if(dest_rID==rID){
-    return dest % gC;
+    return dest % _conc;
   }
 
 
   for (int d=0;d < _dim; d++) {
-    dID = (dest_rID % gK);
-    sID = (rID % gK);
+    dID = (dest_rID % _radix);
+    sID = (rID % _radix);
     if ( dID != sID ) {
-      output = gC + ((gK-1)*d) - 1;
+      output = _conc + ((_radix-1)*d) - 1;
       if (dID > sID) {
 
 	output += dID;
@@ -1367,8 +1367,8 @@ int FlatFlyOnChip::flatfly_outport(int dest, int rID) const {
       
       return output;
     }
-    dest_rID = (int) (dest_rID / gK);
-    rID      = (int) (rID / gK);
+    dest_rID = (int) (dest_rID / _radix);
+    rID      = (int) (rID / _radix);
   }
   if (output == -1) {
     cout << " ERROR ---- FLATFLY_OUTPORT function : output not found " << endl;
@@ -1394,7 +1394,7 @@ int FlatFlyOnChip::flatfly_transformation(int dest) const {
   int vertical = (dest/(_xcount*_xrouter))/(_yrouter);
   int vertical_rem = (dest/(_xcount*_xrouter))%(_yrouter);
   //transform the destination to as if node0 was 0,1,2,3 and so forth
-  dest = (vertical*_xcount + horizontal)*gC+_xrouter*vertical_rem+horizontal_rem;
+  dest = (vertical*_xcount + horizontal)*_conc+_xrouter*vertical_rem+horizontal_rem;
   //cout<<"Transformed destination "<<dest<<endl<<endl;
   return dest;
 }

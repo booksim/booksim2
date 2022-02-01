@@ -71,8 +71,9 @@ void FatTree::_ComputeSize( const Configuration& config )
 
   _k = config.GetInt( "k" );
   _n = config.GetInt( "n" );
-   
-  gK = _k; gN = _n;
+  
+  _radix = _k;
+  _dim = _n;
   
   _nodes = powi( _k, _n );
 
@@ -132,10 +133,10 @@ void FatTree::_BuildNet( const Configuration& config )
   //
 
   //
-  // Router Connection Rule: Output Ports <gK Move DOWN Network
-  //                         Output Ports >=gK Move UP Network
-  //                         Input Ports <gK from DOWN Network
-  //                         Input Ports >=gK  from up Network
+  // Router Connection Rule: Output Ports <_radix Move DOWN Network
+  //                         Output Ports >=_radix Move UP Network
+  //                         Input Ports <_radix from DOWN Network
+  //                         Input Ports >=_radix  from up Network
 
   // Connecting  Injection & Ejection Channels  
   for ( pos = 0 ; pos < nPos ; ++pos ) {
@@ -215,8 +216,8 @@ void FatTree::_BuildNet( const Configuration& config )
 	int link = 
 	  ((level+1)*chan_per_level - chan_per_direction)  //which levellevel
 	  +neighborhood*level_offset   //region in level
-	  +port*routers_per_branch*gK  //sub region in region
-	  +(neighborhood_pos)%routers_per_branch*gK  //router in subregion
+	  +port*routers_per_branch*_radix  //sub region in region
+	  +(neighborhood_pos)%routers_per_branch*_radix  //router in subregion
 	  +(neighborhood_pos)/routers_per_branch; //port on router
 
 	_Router(level, pos)->AddInputChannel( _chan[link],
@@ -244,8 +245,8 @@ void FatTree::_BuildNet( const Configuration& config )
 	int link = 
 	  ((level-1)*chan_per_level) //which levellevel
 	  +neighborhood*level_offset   //region in level
-	  +port*routers_per_branch*gK  //sub region in region
-	  +(neighborhood_pos)%routers_per_branch*gK //router in subregion
+	  +port*routers_per_branch*_radix  //sub region in region
+	  +(neighborhood_pos)%routers_per_branch*_radix //router in subregion
 	  +(neighborhood_pos)/routers_per_branch; //port on router
 
 	_Router(level, pos)->AddInputChannel( _chan[link],

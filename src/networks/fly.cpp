@@ -46,9 +46,10 @@ void KNFly::_ComputeSize( const Configuration &config )
 {
   _k = config.GetInt( "k" );
   _n = config.GetInt( "n" );
-
-  gK = _k; gN = _n;
-
+  
+  _radix = _k;
+  _dim = _n;
+  
   _nodes = powi( _k, _n );
 
   // n stages of k^(n-1) k x k switches

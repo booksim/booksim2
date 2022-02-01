@@ -67,7 +67,11 @@ protected:
   vector<CreditChannel *> _chan_cred;
 
   deque<TimedModule *> _timed_modules;
-
+  
+  int _radix;
+  int _dim;
+  int _conc;
+  
   virtual void _ComputeSize( const Configuration &config ) = 0;
   virtual void _BuildNet( const Configuration &config ) = 0;
 
@@ -114,6 +118,10 @@ public:
   const vector<Router *> & GetRouters(){return _routers;}
   Router * GetRouter(int index) {return _routers[index];}
   int NumRouters() const {return _size;}
+
+  int GetRadix() const {return _radix;}
+  int GetDim() const {return _dim;}
+  int GetConc() const {return _conc;}
 };
 
 #endif 

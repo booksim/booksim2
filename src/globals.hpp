@@ -38,10 +38,6 @@ Stats * GetStats(const std::string & name);
 
 extern bool gPrintActivity;
 
-extern int gK;
-extern int gN;
-extern int gC;
-
 extern int gNodes;
 
 extern bool gTrace;
