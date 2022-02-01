@@ -89,7 +89,7 @@ public:
   virtual void    WriteCredit( Credit *c, int dest );
   virtual Credit *ReadCredit( int source );
 
-  inline int NumNodes( ) const {return _nodes;}
+  int NumNodes( ) const {return _nodes;}
 
   virtual void InsertRandomFaults( const Configuration &config );
   void OutChannelFault( int r, int c, bool fault = true );

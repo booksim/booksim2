@@ -430,7 +430,7 @@ void fattree_anca( const Router *r, const Flit *f,
 //         pick xy or yx min routing adaptively at the source router
 // ===
 
-int dor_next_mesh( int cur, int dest, int dimension, int radix, bool descending = false );
+int dor_next_mesh( int cur, int dest, int dimension, int radix, int nodes, bool descending = false );
 
 void adaptive_xy_yx_mesh( const Router *r, const Flit *f, 
 		 int in_channel, OutputSet *outputs, bool inject, RoutingConfig *rc )
@@ -605,7 +605,7 @@ void xy_yx_mesh( const Router *r, const Flit *f,
 
 //=============================================================
 
-int dor_next_mesh( int cur, int dest, int dimension, int radix, bool descending )
+int dor_next_mesh( int cur, int dest, int dimension, int radix, int nodes, bool descending )
 {
   if ( cur == dest ) {
     return 2*dimension;  // Eject
@@ -615,11 +615,11 @@ int dor_next_mesh( int cur, int dest, int dimension, int radix, bool descending 
 
   if(descending) {
     for ( dim_left = ( dimension - 1 ); dim_left > 0; --dim_left ) {
-      if ( ( cur * radix / gNodes ) != ( dest * radix / gNodes ) ) { break; }
-      cur = (cur * radix) % gNodes; dest = (dest * radix) % gNodes;
+      if ( ( cur * radix / nodes ) != ( dest * radix / nodes ) ) { break; }
+      cur = (cur * radix) % nodes; dest = (dest * radix) % nodes;
     }
-    cur = (cur * radix) / gNodes;
-    dest = (dest * radix) / gNodes;
+    cur = (cur * radix) / nodes;
+    dest = (dest * radix) / nodes;
   } else {
     for ( dim_left = 0; dim_left < ( dimension - 1 ); ++dim_left ) {
       if ( ( cur % radix ) != ( dest % radix ) ) { break; }
@@ -716,7 +716,7 @@ void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
     r->Error("The Network that this router belongs to doesn't support this routing method.");
   }
 
-  int out_port = inject ? -1 : dor_next_mesh( r->GetID( ), f->dest, net->GetDim(), net->GetRadix() );
+  int out_port = inject ? -1 : dor_next_mesh( r->GetID( ), f->dest, net->GetDim(), net->GetRadix(), net->NumNodes() );
   
   int vcBegin = 0, vcEnd = rc->NumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -761,7 +761,7 @@ void dim_order_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
     r->Error("The Network that this router belongs to doesn't support this routing method.");
   }
 
-  int out_port = inject ? -1 : dor_next_mesh( r->GetID( ), f->dest, net->GetDim(), net->GetRadix() );
+  int out_port = inject ? -1 : dor_next_mesh( r->GetID( ), f->dest, net->GetDim(), net->GetRadix(), net->NumNodes() );
   
   int vcBegin = 0, vcEnd = rc->NumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -818,7 +818,7 @@ void dim_order_pni_mesh( const Router *r, const Flit *f, int in_channel, OutputS
   }
   int radix = net->GetRadix();
 
-  int out_port = inject ? -1 : dor_next_mesh( r->GetID(), f->dest, net->GetDim(), radix );
+  int out_port = inject ? -1 : dor_next_mesh( r->GetID(), f->dest, net->GetDim(), radix, net->NumNodes() );
   
   int vcBegin = 0, vcEnd = rc->NumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -943,7 +943,7 @@ void romm_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outpu
       f->ph = 1; // Go to phase 1
     }
 
-    out_port = dor_next_mesh( r->GetID( ), (f->ph == 0) ? f->intm : f->dest, dimension, radix );
+    out_port = dor_next_mesh( r->GetID( ), (f->ph == 0) ? f->intm : f->dest, dimension, radix, net->NumNodes() );
 
     // at the destination router, we don't need to separate VCs by phase
     if(r->GetID() != f->dest) {
@@ -1022,7 +1022,7 @@ void romm_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *ou
       f->ph = 1; // Go to phase 1
     }
 
-    out_port = dor_next_mesh( r->GetID( ), (f->ph == 0) ? f->intm : f->dest, dimension, radix );
+    out_port = dor_next_mesh( r->GetID( ), (f->ph == 0) ? f->intm : f->dest, dimension, radix, net->NumNodes() );
 
   }
 
@@ -1080,7 +1080,7 @@ void min_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
   }
   
   // DOR for the escape channel (VC 0), low priority 
-  int out_port = dor_next_mesh( r->GetID( ), f->dest, dimension, radix );    
+  int out_port = dor_next_mesh( r->GetID( ), f->dest, dimension, radix, net->NumNodes() );    
   outputs->AddRange( out_port, 0, vcBegin, vcBegin );
   
   if ( f->watch ) {
@@ -1436,7 +1436,7 @@ void valiant_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *ou
       f->ph = 1; // Go to phase 1
     }
 
-    out_port = dor_next_mesh( r->GetID( ), (f->ph == 0) ? f->intm : f->dest, dimension, radix );
+    out_port = dor_next_mesh( r->GetID( ), (f->ph == 0) ? f->intm : f->dest, dimension, radix, net->NumNodes() );
 
     // at the destination router, we don't need to separate VCs by phase
     if(r->GetID() != f->dest) {
