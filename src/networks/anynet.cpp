@@ -55,8 +55,6 @@
 #include <sstream>
 #include <limits>
 #include <algorithm>
-//this is a hack, I can't easily get the routing talbe out of the network
-map<int, int>* global_routing_table;
 
 AnyNet::AnyNet( const Configuration &config, const string & name, Module * clock, CreditBox *credits )
   :  Network( config, name, clock, credits ){
@@ -215,10 +213,19 @@ void min_anynet( const Router *r, const Flit *f, int in_channel,
 		 OutputSet *outputs, bool inject, RoutingConfig *rc ){
   int out_port=-1;
   if(!inject){
-    assert(global_routing_table[r->GetID()].count(f->dest)!=0);
-    out_port=global_routing_table[r->GetID()][f->dest];
+    /**
+     * This dynamic_cast is Bad. 
+     * However the legacy code is using a constant interface of `tRoutingFunction`
+     * for handling routing of every single networks type Booksim2 supports,
+     * leaving no other options without back pain.
+     */
+    const AnyNet *net = dynamic_cast<const AnyNet *>(r->GetOWner());
+    if(!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
+    out_port = net->LookupRoute(r->GetID(), f->dest);
   }
- 
 
   int vcBegin = 0, vcEnd = rc->NumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
@@ -246,7 +253,6 @@ void AnyNet::buildRoutingTable(){
   for(int i = 0; i<_size; i++){
     route(i);
   }
-  global_routing_table = &routing_table[0];
 }
 
 
@@ -507,3 +513,8 @@ void AnyNet::readFile(){
   
 }
 
+int AnyNet::LookupRoute(int rid, int dest) const
+{
+  assert(routing_table[rid].count(dest));
+  return routing_table[rid].at(dest);
+}

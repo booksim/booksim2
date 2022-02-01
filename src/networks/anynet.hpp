@@ -59,6 +59,8 @@ public:
   int GetN( ) const{ return -1;}
   int GetK( ) const{ return -1;}
 
+  int LookupRoute(int rid, int dest) const;
+
   static void RegisterRoutingFunctions();
   double Capacity( ) const {return -1;}
   void InsertRandomFaults( const Configuration &config ){}
