@@ -34,24 +34,16 @@
 
 //register the requests to a node
 class PacketReplyInfo {
-
 public:
   int source;
   int time;
   bool record;
   Flit::FlitType type;
 
-  static PacketReplyInfo* New();
-  void Free();
-  static void FreeAll();
-
-private:
-
-  static stack<PacketReplyInfo*> _all;
-  static stack<PacketReplyInfo*> _free;
-
+  void Reset(){};
   PacketReplyInfo() {}
   ~PacketReplyInfo() {}
 };
+
 
 #endif

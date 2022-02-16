@@ -42,15 +42,6 @@ public:
   int  id;
 
   void Reset();
-  
-  static Credit * New();
-  void Free();
-  static void FreeAll();
-  static int OutStanding();
-private:
-
-  static stack<Credit *> _all;
-  static stack<Credit *> _free;
 
   Credit();
   ~Credit() {}

@@ -42,8 +42,8 @@
 
 SeparableOutputFirstAllocator::
 SeparableOutputFirstAllocator( Module* parent, const string& name, int inputs,
-			       int outputs, const string& arb_type )
-  : SeparableAllocator( parent, name, inputs, outputs, arb_type )
+			       int outputs, const string& arb_type, Module *clock )
+  : SeparableAllocator( parent, name, inputs, outputs, arb_type, clock )
 {}
 
 void SeparableOutputFirstAllocator::Allocate() {

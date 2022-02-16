@@ -34,18 +34,21 @@
 #include <vector>
 #include <iostream>
 
+class TrafficManager;
+
 class Module {
 private:
   string _name;
   string _fullname;
 
-  vector<Module *> _children;
+vector<Module *> _children;
 
 protected:
   void _AddChild( Module *child );
+  Module *_clock; 
 
 public:
-  Module( Module *parent, const string& name );
+  Module( Module *parent, const string& name, Module *clock);
   virtual ~Module( ) { }
   
   inline const string & Name() const { return _name; }
@@ -57,6 +60,11 @@ public:
   void Debug( const string& msg ) const;
 
   virtual void Display( ostream & os = cout ) const;
+
+  virtual int GetSimTime() const;
+  virtual int getTime() const;
+  virtual Module * GetClock() const;
+  //Not making a setter method for _clock.
 };
 
 #endif

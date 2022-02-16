@@ -42,7 +42,7 @@ class MaxSizeMatch : public DenseAllocator {
 
 public:
   MaxSizeMatch( Module *parent, const string& name,
-		int inputs, int ouputs ); 
+		int inputs, int ouputs, Module *clock ); 
   ~MaxSizeMatch( );
   
   void Allocate( );

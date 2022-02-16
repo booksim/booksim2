@@ -45,7 +45,7 @@ class Stats : public Module {
   vector<int> _hist;
 
 public:
-  Stats( Module *parent, const string &name,
+  Stats( Module *parent, const string &name, Module * clock,
 	 double bin_size = 1.0, int num_bins = 10 );
 
   void Clear( );

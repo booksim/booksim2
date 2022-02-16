@@ -84,6 +84,17 @@ public:
 
   static Configuration * GetTheConfig();
 
+  /*
+   * Not A good Approach
+   * - Relies on global objects
+   * - Why use extern C when C++ bison/flex is available? 
+   * But it still keeps the original design and avoids overhaul of the lexer/parser
+   * Use these wrappers before calling yyparse();
+  */
+  void LockParser();
+  bool HoldsParser();
+  void ReleaseParser();
+
 };
 
 bool ParseArgs(Configuration * cf, int argc, char **argv);

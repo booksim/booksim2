@@ -3,3 +3,7 @@
 ._*
 .Apple*
 .DS_Store
+.vscode/**
+.local/**
+**/.gdb*
+**/peda*

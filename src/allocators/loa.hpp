@@ -41,7 +41,7 @@ class LOA : public DenseAllocator {
 
 public:
   LOA( Module *parent, const string& name,
-       int inputs, int outputs );
+       int inputs, int outputs, Module *clock );
 
   void Allocate( );
 };

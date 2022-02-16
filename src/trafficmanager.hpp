@@ -36,7 +36,8 @@
 #include "module.hpp"
 #include "config_utils.hpp"
 #include "network.hpp"
-#include "flit.hpp"
+#include "flitbox.hpp"
+#include "packet_reply_info_box.hpp"
 #include "buffer_state.hpp"
 #include "stats.hpp"
 #include "traffic.hpp"
@@ -45,7 +46,6 @@
 #include "injection.hpp"
 
 //register the requests to a node
-class PacketReplyInfo;
 
 class TrafficManager : public Module {
 
@@ -106,6 +106,7 @@ protected:
   tRoutingFunction _rf;
   bool _lookahead_routing;
   bool _noq;
+  RoutingConfig _rc;
 
   // ============ Injection queues ============ 
 
@@ -259,6 +260,11 @@ protected:
   ostream * _max_credits_out;
 #endif
 
+  //flits, credits, responses
+  FlitBox _flitbox;
+  CreditBox _creditbox;
+  PckReplyBox _pck_replybox;
+
   // ============ Internal methods ============ 
 protected:
 
@@ -288,12 +294,12 @@ protected:
 
   int _GetNextPacketSize(int cl) const;
   double _GetAveragePacketSize(int cl) const;
+  void PopulateNet( const Configuration & config );
 
 public:
 
-  static TrafficManager * New(Configuration const & config, 
-			      vector<Network *> const & net);
-
+  static TrafficManager * New(Configuration const & config, vector<Network *> const & net = vector<Network *>());
+  
   TrafficManager( const Configuration &config, const vector<Network *> & net );
   virtual ~TrafficManager( );
 
@@ -305,9 +311,11 @@ public:
   virtual void DisplayOverallStats( ostream & os = cout ) const ;
   virtual void DisplayOverallStatsCSV( ostream & os = cout ) const ;
 
-  inline int getTime() { return _time;}
+  int getTime() const override { return _time;};
   Stats * getStats(const string & name) { return _stats[name]; }
 
+  vector<Network *> & GetNetworks();
+  Network * GetNetwork(int index);
 };
 
 template<class T>

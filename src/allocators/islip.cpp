@@ -34,8 +34,8 @@
 //#define DEBUG_ISLIP
 
 iSLIP_Sparse::iSLIP_Sparse( Module *parent, const string& name,
-			    int inputs, int outputs, int iters ) :
-  SparseAllocator( parent, name, inputs, outputs ),
+			    int inputs, int outputs, int iters, Module *clock ) :
+  SparseAllocator( parent, name, inputs, outputs, clock ),
   _iSLIP_iter(iters)
 {
   _gptrs.resize(_outputs, 0);

@@ -63,10 +63,6 @@
  /* the current traffic manager instance */
 TrafficManager * trafficManager = NULL;
 
-int GetSimTime() {
-  return trafficManager->getTime();
-}
-
 class Stats;
 Stats * GetStats(const std::string & name) {
   Stats* test =  trafficManager->getStats(name);
@@ -78,10 +74,6 @@ Stats * GetStats(const std::string & name) {
 
 /* printing activity factor*/
 bool gPrintActivity;
-
-int gK;//radix
-int gN;//dimension
-int gC;//concentration
 
 int gNodes;
 
@@ -96,29 +88,16 @@ ostream * gWatchOut;
 
 bool Simulate( BookSimConfig const & config )
 {
-  vector<Network *> net;
-
-  int subnets = config.GetInt("subnets");
-  /*To include a new network, must register the network here
-   *add an else if statement with the name of the network
-   */
-  net.resize(subnets);
-  for (int i = 0; i < subnets; ++i) {
-    ostringstream name;
-    name << "network_" << i;
-    net[i] = Network::New( config, name.str() );
-  }
-
   /*tcc and characterize are legacy
    *not sure how to use them 
    */
 
   assert(trafficManager == NULL);
-  trafficManager = TrafficManager::New( config, net ) ;
+  trafficManager = TrafficManager::New(config);
+  auto net = trafficManager->GetNetworks();
 
   /*Start the simulation run
    */
-
   double total_time; /* Amount of time we've run */
   struct timeval start_time, end_time; /* Time before/after user code */
   total_time = 0.0;
@@ -133,11 +112,13 @@ bool Simulate( BookSimConfig const & config )
 
   cout<<"Total run time "<<total_time<<endl;
 
-  for (int i=0; i<subnets; ++i) {
+  for (size_t i = 0; i < net.size(); ++i)
+  {
 
-    ///Power analysis
-    if(config.GetInt("sim_power") > 0){
-      Power_Module pnet(net[i], config);
+    /// Power analysis
+    if (config.GetInt("sim_power") > 0)
+    {
+      Power_Module pnet(net[i], config, trafficManager);
       pnet.run();
     }
 

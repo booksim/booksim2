@@ -33,7 +33,7 @@
 class KNCube : public Network {
 
   bool _mesh;
-
+///TODO: remove repeated members
   int _k;
   int _n;
 
@@ -47,7 +47,7 @@ class KNCube : public Network {
   int _RightNode( int node, int dim );
 
 public:
-  KNCube( const Configuration &config, const string & name, bool mesh );
+  KNCube( const Configuration &config, const string & name, bool mesh, Module * clock, CreditBox *credits );
   static void RegisterRoutingFunctions();
 
   int GetN( ) const;

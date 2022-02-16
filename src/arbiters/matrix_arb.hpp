@@ -50,7 +50,7 @@ class MatrixArbiter : public Arbiter {
 public:
 
   // Constructors
-  MatrixArbiter( Module *parent, const string &name, int size ) ;
+  MatrixArbiter( Module *parent, const string &name, int size, Module *clock ) ;
 
   // Print priority matrix to standard output
   virtual void PrintState() const ;

@@ -33,16 +33,10 @@
 
 /*all declared in main.cpp*/
 
-int GetSimTime();
-
 class Stats;
 Stats * GetStats(const std::string & name);
 
 extern bool gPrintActivity;
-
-extern int gK;
-extern int gN;
-extern int gC;
 
 extern int gNodes;
 

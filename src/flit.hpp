@@ -7,7 +7,7 @@
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
 
- Redistributions of source code must retain the above copyright notice, this 
+ Redistributions of source code must retain the above copyright notice, this
  list of conditions and the following disclaimer.
  Redistributions in binary form must reproduce the above copyright notice, this
  list of conditions and the following disclaimer in the documentation and/or
@@ -15,7 +15,7 @@
 
  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -34,16 +34,19 @@
 #include "booksim.hpp"
 #include "outputset.hpp"
 
-class Flit {
+class Flit
+{
 
 public:
-
-  const static int NUM_FLIT_TYPES = 5;
-  enum FlitType { READ_REQUEST  = 0, 
-		  READ_REPLY    = 1,
-		  WRITE_REQUEST = 2,
-		  WRITE_REPLY   = 3,
-                  ANY_TYPE      = 4 };
+  enum FlitType
+  {
+    READ_REQUEST,
+    READ_REPLY,
+    WRITE_REQUEST,
+    WRITE_REPLY,
+    ANY_TYPE,
+    NUM_FLIT_TYPES = 5
+  };
   FlitType type;
 
   int vc;
@@ -52,25 +55,25 @@ public:
 
   bool head;
   bool tail;
-  
-  int  ctime;
-  int  itime;
-  int  atime;
 
-  int  id;
-  int  pid;
+  int ctime;
+  int itime;
+  int atime;
+
+  int id;
+  int pid;
 
   bool record;
 
-  int  src;
-  int  dest;
+  int src;
+  int dest;
 
-  int  pri;
+  int pri;
 
-  int  hops;
+  int hops;
   bool watch;
-  int  subnetwork;
-  
+  int subnetwork;
+
   // intermediate destination (if any)
   mutable int intm;
 
@@ -78,27 +81,17 @@ public:
   mutable int ph;
 
   // Fields for arbitrary data
-  void* data ;
+  void *data;
 
   // Lookahead route info
   OutputSet la_route_set;
 
   void Reset();
 
-  static Flit * New();
-  void Free();
-  static void FreeAll();
-
-private:
-
   Flit();
   ~Flit() {}
-
-  static stack<Flit *> _all;
-  static stack<Flit *> _free;
-
 };
 
-ostream& operator<<( ostream& os, const Flit& f );
+ostream &operator<<(ostream &os, const Flit &f);
 
 #endif

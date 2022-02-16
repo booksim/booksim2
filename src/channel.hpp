@@ -49,7 +49,7 @@ using namespace std;
 template<typename T>
 class Channel : public TimedModule {
 public:
-  Channel(Module * parent, string const & name);
+  Channel(Module * parent, string const & name, Module * clock);
   virtual ~Channel() {}
 
   // Physical Parameters
@@ -75,8 +75,8 @@ protected:
 };
 
 template<typename T>
-Channel<T>::Channel(Module * parent, string const & name)
-  : TimedModule(parent, name), _delay(1), _input(0), _output(0) {
+Channel<T>::Channel(Module * parent, string const & name, Module * clock)
+  : TimedModule(parent, name, clock), _delay(1), _input(0), _output(0) {
 }
 
 template<typename T>

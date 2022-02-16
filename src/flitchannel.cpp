@@ -45,8 +45,8 @@
 //  $Date: 2007/06/27 23:10:17 $
 //  $Id$
 // ----------------------------------------------------------------------
-FlitChannel::FlitChannel(Module * parent, string const & name, int classes)
-: Channel<Flit>(parent, name), _routerSource(NULL), _routerSourcePort(-1), 
+FlitChannel::FlitChannel(Module * parent, string const & name, int classes, Module * clock)
+: Channel<Flit>(parent, name, clock), _routerSource(NULL), _routerSourcePort(-1), 
   _routerSink(NULL), _routerSinkPort(-1), _idle(0) {
   _active.resize(classes, 0);
 }
