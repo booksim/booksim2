@@ -63,7 +63,7 @@ class FatTree : public Network {
 
 public:
 
-  FatTree( const Configuration& config ,const string & name );
+  FatTree( const Configuration& config ,const string & name, Module * clock, CreditBox *credits );
   static void RegisterRoutingFunctions() ;
 
   //

@@ -40,8 +40,7 @@
 #include "vc.hpp"
 #include "packet_reply_info.hpp"
 
-TrafficManager * TrafficManager::New(Configuration const & config,
-                                     vector<Network *> const & net)
+TrafficManager * TrafficManager::New(Configuration const & config, vector<Network *> const & net)
 {
     TrafficManager * result = NULL;
     string sim_type = config.GetStr("sim_type");
@@ -55,16 +54,21 @@ TrafficManager * TrafficManager::New(Configuration const & config,
     return result;
 }
 
-TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
-    : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _reset_time(0), _drain_time(-1), _cur_id(0), _cur_pid(0), _time(0)
+TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net)
+    : Module( 0, "traffic_manager", this ), _net(net), _rc(config), _empty_network(false), 
+    _deadlock_timer(0), _reset_time(0), _drain_time(-1), _cur_id(0), _cur_pid(0),_time(0)
 {
+    _vcs = config.GetInt("num_vcs");
+    _subnets = config.GetInt("subnets");
+
+    if (_net.empty())
+    {
+        this->PopulateNet(config);
+    }
 
     _nodes = _net[0]->NumNodes( );
     _routers = _net[0]->NumRouters( );
 
-    _vcs = config.GetInt("num_vcs");
-    _subnets = config.GetInt("subnets");
- 
     _subnet.resize(Flit::NUM_FLIT_TYPES);
     _subnet[Flit::READ_REQUEST] = config.GetInt("read_request_subnet");
     _subnet[Flit::READ_REPLY] = config.GetInt("read_reply_subnet");
@@ -245,7 +249,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
         for ( int subnet = 0; subnet < _subnets; ++subnet ) {
             ostringstream tmp_name;
             tmp_name << "terminal_buf_state_" << source << "_" << subnet;
-            BufferState * bs = new BufferState( config, this, tmp_name.str( ) );
+            BufferState * bs = new BufferState( config, this, tmp_name.str( ), this->_clock);
             int vc_alloc_delay = config.GetInt("vc_alloc_delay");
             int sw_alloc_delay = config.GetInt("sw_alloc_delay");
             int router_latency = config.GetInt("routing_delay") + (config.GetInt("speculative") ? max(vc_alloc_delay, sw_alloc_delay) : (vc_alloc_delay + sw_alloc_delay));
@@ -515,27 +519,27 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
         ostringstream tmp_name;
 
         tmp_name << "plat_stat_" << c;
-        _plat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+        _plat_stats[c] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 1000 );
         _stats[tmp_name.str()] = _plat_stats[c];
         tmp_name.str("");
 
         tmp_name << "nlat_stat_" << c;
-        _nlat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+        _nlat_stats[c] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 1000 );
         _stats[tmp_name.str()] = _nlat_stats[c];
         tmp_name.str("");
 
         tmp_name << "flat_stat_" << c;
-        _flat_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 1000 );
+        _flat_stats[c] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 1000 );
         _stats[tmp_name.str()] = _flat_stats[c];
         tmp_name.str("");
 
         tmp_name << "frag_stat_" << c;
-        _frag_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 100 );
+        _frag_stats[c] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 100 );
         _stats[tmp_name.str()] = _frag_stats[c];
         tmp_name.str("");
 
         tmp_name << "hop_stat_" << c;
-        _hop_stats[c] = new Stats( this, tmp_name.str( ), 1.0, 20 );
+        _hop_stats[c] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 20 );
         _stats[tmp_name.str()] = _hop_stats[c];
         tmp_name.str("");
 
@@ -561,17 +565,17 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
             for ( int i = 0; i < _nodes; ++i ) {
                 for ( int j = 0; j < _nodes; ++j ) {
                     tmp_name << "pair_plat_stat_" << c << "_" << i << "_" << j;
-                    _pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+                    _pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 250 );
                     _stats[tmp_name.str()] = _pair_plat[c][i*_nodes+j];
                     tmp_name.str("");
 	  
                     tmp_name << "pair_nlat_stat_" << c << "_" << i << "_" << j;
-                    _pair_nlat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+                    _pair_nlat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 250 );
                     _stats[tmp_name.str()] = _pair_nlat[c][i*_nodes+j];
                     tmp_name.str("");
 	  
                     tmp_name << "pair_flat_stat_" << c << "_" << i << "_" << j;
-                    _pair_flat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+                    _pair_flat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), this->_clock, 1.0, 250 );
                     _stats[tmp_name.str()] = _pair_flat[c][i*_nodes+j];
                     tmp_name.str("");
                 }
@@ -634,9 +638,10 @@ TrafficManager::~TrafficManager( )
     if(_max_credits_out) delete _max_credits_out;
 #endif
 
-    PacketReplyInfo::FreeAll();
-    Flit::FreeAll();
-    Credit::FreeAll();
+    _flitbox.DestroyAll();
+    _creditbox.DestroyAll();
+    _pck_replybox.DestroyAll();
+    
 }
 
 
@@ -704,7 +709,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
 
         //code the source of request, look carefully, its tricky ;)
         if (f->type == Flit::READ_REQUEST || f->type == Flit::WRITE_REQUEST) {
-            PacketReplyInfo* rinfo = PacketReplyInfo::New();
+            PacketReplyInfo* rinfo = _pck_replybox.NewItem();
             rinfo->source = f->src;
             rinfo->time = f->atime;
             rinfo->record = f->record;
@@ -739,7 +744,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
         }
     
         if(f != head) {
-            head->Free();
+            _flitbox.RetireItem(head);
         }
     
     }
@@ -747,7 +752,7 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     if(f->head && !f->tail) {
         _retired_packets[f->cl].insert(make_pair(f->pid, f));
     } else {
-        f->Free();
+        _flitbox.RetireItem(f);
     }
 }
 
@@ -824,7 +829,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
             time = rinfo->time;
             record = rinfo->record;
             _repliesPending[source].pop_front();
-            rinfo->Free();
+            _pck_replybox.RetireItem(rinfo);
         }
     }
 
@@ -853,7 +858,7 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     }
   
     for ( int i = 0; i < size; ++i ) {
-        Flit * f  = Flit::New();
+        Flit * f  = _flitbox.NewItem();
         f->id     = _cur_id++;
         assert(_cur_id);
         f->pid    = pid;
@@ -998,7 +1003,7 @@ void TrafficManager::_Step( )
                 }
 #endif
                 _buf_states[n][subnet]->ProcessCredit(c);
-                c->Free();
+                _creditbox.RetireItem(c);
             }
         }
         _net[subnet]->ReadInputs( );
@@ -1058,7 +1063,7 @@ void TrafficManager::_Step( )
                 if(cf->head && cf->vc == -1) { // Find first available VC
 	  
                     OutputSet route_set;
-                    _rf(NULL, cf, -1, &route_set, true);
+                    _rf(NULL, cf, -1, &route_set, true, &_rc );
                     set<OutputSet::sSetElement> const & os = route_set.GetSet();
                     assert(os.size() == 1);
                     OutputSet::sSetElement const & se = *os.begin();
@@ -1077,7 +1082,7 @@ void TrafficManager::_Step( )
                         // first hop, we have to temporarily set cf's VC to be non-negative 
                         // in order to avoid seting of an assertion in the routing function.
                         cf->vc = vc_start;
-                        _rf(router, cf, in_channel, &cf->la_route_set, false);
+                        _rf(router, cf, in_channel, &cf->la_route_set, false, &_rc );
                         cf->vc = -1;
 
                         if(cf->watch) {
@@ -1165,7 +1170,7 @@ void TrafficManager::_Step( )
                             const Router * router = inject->GetSink();
                             assert(router);
                             int in_channel = inject->GetSinkPort();
-                            _rf(router, f, in_channel, &f->la_route_set, false);
+                            _rf(router, f, in_channel, &f->la_route_set, false, &_rc );
                             if(f->watch) {
                                 *gWatchOut << GetSimTime() << " | "
                                            << "node" << n << " | "
@@ -1250,7 +1255,7 @@ void TrafficManager::_Step( )
                                << " into subnet " << subnet 
                                << "." << endl;
                 }
-                Credit * const c = Credit::New();
+                Credit * const c = _creditbox.NewItem();
                 c->vc.insert(f->vc);
                 _net[subnet]->WriteCredit(c, n);
 	
@@ -1618,7 +1623,7 @@ bool TrafficManager::Run( )
         _requestsOutstanding.assign(_nodes, 0);
         for (int i=0;i<_nodes;i++) {
             while(!_repliesPending[i].empty()) {
-                _repliesPending[i].front()->Free();
+                _pck_replybox.RetireItem(_repliesPending[i].front());
                 _repliesPending[i].pop_front();
             }
         }
@@ -1672,7 +1677,7 @@ bool TrafficManager::Run( )
             }
         }
         //wait until all the credits are drained as well
-        while(Credit::OutStanding()!=0){
+        while(_creditbox.OutStanding()!=0){
             _Step();
         }
         _empty_network = false;
@@ -2289,3 +2294,23 @@ double TrafficManager::_GetAveragePacketSize(int cl) const
     }
     return (double)sum / (double)(_packet_size_max_val[cl] + 1);
 }
+
+void TrafficManager::PopulateNet( const Configuration & config )
+{
+    _net.resize(_subnets);
+    for(int i = 0; i<_subnets; i++) 
+    {
+        assert(_net[i] == nullptr);
+        _net[i] = Network::New( config, this->Name() + to_string(i), this, &_creditbox);
+    }
+}
+
+vector<Network *> & TrafficManager::GetNetworks()
+{
+    return _net;
+}
+
+Network * TrafficManager::GetNetwork( int index )
+{
+    return _net[index];
+} 

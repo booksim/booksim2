@@ -34,8 +34,8 @@
 
 //#define DEBUG_FLY
 
-KNFly::KNFly( const Configuration &config, const string & name ) :
-Network( config, name )
+KNFly::KNFly( const Configuration &config, const string & name, Module * clock, CreditBox *credits ) :
+Network( config, name, clock, credits )
 {
   _ComputeSize( config );
   _Alloc( );
@@ -46,9 +46,10 @@ void KNFly::_ComputeSize( const Configuration &config )
 {
   _k = config.GetInt( "k" );
   _n = config.GetInt( "n" );
-
-  gK = _k; gN = _n;
-
+  
+  _radix = _k;
+  _dim = _n;
+  
   _nodes = powi( _k, _n );
 
   // n stages of k^(n-1) k x k switches
@@ -72,7 +73,7 @@ void KNFly::_BuildNet( const Configuration &config )
 
       router_name << "router_" << stage << "_" << addr;
       _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
-					  node, _k, _k );
+					  node, _k, _k, _credits );
       _timed_modules.push_back(_routers[node]);
       router_name.str("");
 

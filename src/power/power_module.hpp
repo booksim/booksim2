@@ -115,8 +115,8 @@ protected:
   double W_ND2D1;
   double H_SRAM;
   double W_SRAM;
-  double  ChannelPitch ;
-  double   CrossbarPitch;
+  double ChannelPitch ;
+  double CrossbarPitch;
   ////////////////////////////////End of Constants/////////////////////////////
 
   /////////////results///////////////////
@@ -176,7 +176,7 @@ protected:
   double areaOutputModule(double Outputs);
 
 public:
-  Power_Module(Network * net, const Configuration &config);
+  Power_Module(Network * net, const Configuration &config, Module * clock);
   ~Power_Module();
 
   void run();

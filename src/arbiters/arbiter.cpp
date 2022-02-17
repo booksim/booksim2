@@ -41,8 +41,8 @@
 
 using namespace std ;
 
-Arbiter::Arbiter( Module *parent, const string &name, int size )
-  : Module( parent, name ),
+Arbiter::Arbiter( Module *parent, const string &name, int size, Module *clock )
+  : Module( parent, name, clock ),
     _size(size), _selected(-1), _highest_pri(numeric_limits<int>::min()),
     _best_input(-1), _num_reqs(0)
 {
@@ -93,9 +93,9 @@ Arbiter *Arbiter::NewArbiter( Module *parent, const string& name,
 {
   Arbiter *a = NULL;
   if(arb_type == "round_robin") {
-    a = new RoundRobinArbiter( parent, name, size );
+    a = new RoundRobinArbiter( parent, name, size, parent->GetClock() );
   } else if(arb_type == "matrix") {
-    a = new MatrixArbiter( parent, name, size );
+    a = new MatrixArbiter( parent, name, size, parent->GetClock() );
   } else if(arb_type.substr(0, 5) == "tree(") {
     size_t left = 4;
     size_t middle = arb_type.find_first_of(',');
@@ -105,7 +105,7 @@ Arbiter *Arbiter::NewArbiter( Module *parent, const string& name,
     string groups_str = arb_type.substr(left+1, middle-left-1);
     int groups = atoi(groups_str.c_str());
     string sub_arb_type = arb_type.substr(middle+1, right-middle-1);
-    a = new TreeArbiter( parent, name, size, groups, sub_arb_type );
+    a = new TreeArbiter( parent, name, size, groups, sub_arb_type, parent->GetClock() );
   } else assert(false);
   return a;
 }

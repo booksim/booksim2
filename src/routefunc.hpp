@@ -28,21 +28,28 @@
 #ifndef _ROUTEFUNC_HPP_
 #define _ROUTEFUNC_HPP_
 
+class Configuration;
+
+struct RoutingConfig
+{
+  int NumVCs;
+  int ReadReqBeginVC, ReadReqEndVC;
+  int WriteReqBeginVC, WriteReqEndVC;
+  int ReadReplyBeginVC, ReadReplyEndVC;
+  int WriteReplyBeginVC, WriteReplyEndVC;
+
+  RoutingConfig(const Configuration &config);
+};
+
 #include "flit.hpp"
 #include "router.hpp"
 #include "outputset.hpp"
 #include "config_utils.hpp"
 
-typedef void (*tRoutingFunction)( const Router *, const Flit *, int in_channel, OutputSet *, bool );
+typedef void (*tRoutingFunction)( const Router *, const Flit *, int in_channel, OutputSet *, bool, RoutingConfig * );
 
 void InitializeRoutingMap( const Configuration & config );
 
 extern map<string, tRoutingFunction> gRoutingFunctionMap;
-
-extern int gNumVCs;
-extern int gReadReqBeginVC, gReadReqEndVC;
-extern int gWriteReqBeginVC, gWriteReqEndVC;
-extern int gReadReplyBeginVC, gReadReplyEndVC;
-extern int gWriteReplyBeginVC, gWriteReplyEndVC;
 
 #endif

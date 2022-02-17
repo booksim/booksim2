@@ -49,17 +49,11 @@
 #include "chaos_router.hpp"
 ///////////////////////////////////////////////////////
 
-int const Router::STALL_BUFFER_BUSY = -2;
-int const Router::STALL_BUFFER_CONFLICT = -3;
-int const Router::STALL_BUFFER_FULL = -4;
-int const Router::STALL_BUFFER_RESERVED = -5;
-int const Router::STALL_CROSSBAR_CONFLICT = -6;
-
 Router::Router( const Configuration& config,
-		Module *parent, const string & name, int id,
-		int inputs, int outputs ) :
-TimedModule( parent, name ), _id( id ), _inputs( inputs ), _outputs( outputs ),
-   _partial_internal_cycles(0.0)
+		Network *parent, const string & name, int id,
+		int inputs, int outputs, Module * clock, CreditBox * credits ) :
+TimedModule( parent, name, clock), _id( id ), _inputs( inputs ), _outputs( outputs ),
+  _partial_internal_cycles(0.0), _credits(credits), _rc(config), _owner(parent)
 {
   _crossbar_delay   = ( config.GetInt( "st_prepare_delay" ) + 
 			config.GetInt( "st_final_delay" ) );
@@ -127,17 +121,17 @@ bool Router::IsFaultyOutput( int c ) const
 
 /*Router constructor*/
 Router *Router::NewRouter( const Configuration& config,
-			   Module *parent, const string & name, int id,
-			   int inputs, int outputs )
+			   Network *parent, const string & name, int id,
+			   int inputs, int outputs, CreditBox * credits )
 {
   const string type = config.GetStr( "router" );
   Router *r = NULL;
   if ( type == "iq" ) {
-    r = new IQRouter( config, parent, name, id, inputs, outputs );
+    r = new IQRouter( config, parent, name, id, inputs, outputs, parent->GetClock(), credits );
   } else if ( type == "event" ) {
-    r = new EventRouter( config, parent, name, id, inputs, outputs );
+    r = new EventRouter( config, parent, name, id, inputs, outputs, parent->GetClock(), credits );
   } else if ( type == "chaos" ) {
-    r = new ChaosRouter( config, parent, name, id, inputs, outputs );
+    r = new ChaosRouter( config, parent, name, id, inputs, outputs, parent->GetClock(), credits );
   } else {
     cerr << "Unknown router type: " << type << endl;
   }

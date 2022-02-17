@@ -50,7 +50,7 @@ class Buffer : public Module {
 public:
   
   Buffer( const Configuration& config, int outputs,
-	  Module *parent, const string& name );
+	  Module *parent, const string& name, Module * clock );
   ~Buffer();
 
   void AddFlit( int vc, Flit *f );

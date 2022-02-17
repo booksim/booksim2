@@ -38,8 +38,8 @@
 using namespace std ;
 
 RoundRobinArbiter::RoundRobinArbiter( Module *parent, const string &name,
-				      int size ) 
-  : Arbiter( parent, name, size ), _pointer( 0 ) {
+				      int size, Module *clock ) 
+  : Arbiter( parent, name, size, clock ), _pointer( 0 ) {
 }
 
 void RoundRobinArbiter::PrintState() const  {

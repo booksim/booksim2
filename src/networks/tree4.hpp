@@ -45,7 +45,7 @@
 #include "network.hpp"
 
 class Tree4 : public Network {
-
+///TODO: remove repeated members
   int _k;
   int _n;
 
@@ -61,7 +61,7 @@ class Tree4 : public Network {
 
 public:
 
-  Tree4( const Configuration& config, const string & name );
+  Tree4( const Configuration& config, const string & name, Module * clock, CreditBox *credits );
   static void RegisterRoutingFunctions() ;
   
   static int HeightFromID( int id );

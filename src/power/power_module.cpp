@@ -31,8 +31,8 @@
 #include "switch_monitor.hpp"
 #include "iq_router.hpp"
 
-Power_Module::Power_Module(Network * n , const Configuration &config)
-  : Module( 0, "power_module" ){
+Power_Module::Power_Module(Network * n , const Configuration &config, Module * clock)
+  : Module( 0, "power_module", clock ){
 
   
   string pfile = config.GetStr("tech_file");

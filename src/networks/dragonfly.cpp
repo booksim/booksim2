@@ -37,10 +37,9 @@
 
 #define DRAGON_LATENCY
 
-int gP, gA, gG;
-
+/// Never being uesd and not even defined in headers. Obsolete?
 //calculate the hop count between src and estination
-int dragonflynew_hopcnt(int src, int dest) 
+int dragonflynew_hopcnt(int src, int dest, int routers, int ports) 
 {
   int hopcnt;
   int dest_grp_ID, src_grp_ID; 
@@ -49,15 +48,15 @@ int dragonflynew_hopcnt(int src, int dest)
   int grp_output, dest_grp_output;
   int grp_output_RID;
 
-  int _grp_num_routers= gA;
-  int _grp_num_nodes =_grp_num_routers*gP;
+  int _grp_num_routers= routers;
+  int _grp_num_nodes =_grp_num_routers*ports;
   
   dest_grp_ID = int(dest/_grp_num_nodes);
   src_grp_ID = int(src / _grp_num_nodes);
   
   //source and dest are in the same group, either 0-1 hop
   if (dest_grp_ID == src_grp_ID) {
-    if ((int)(dest / gP) == (int)(src /gP))
+    if ((int)(dest / ports) == (int)(src /ports))
       hopcnt = 0;
     else
       hopcnt = 1;
@@ -74,20 +73,20 @@ int dragonflynew_hopcnt(int src, int dest)
       grp_output = dest_grp_ID - 1;
       dest_grp_output = src_grp_ID;
     }
-    grp_output_RID = ((int) (grp_output / (gP))) + src_grp_ID * _grp_num_routers;
-    src_intm = grp_output_RID * gP;
+    grp_output_RID = ((int) (grp_output / (ports))) + src_grp_ID * _grp_num_routers;
+    src_intm = grp_output_RID * ports;
 
-    grp_output_RID = ((int) (dest_grp_output / (gP))) + dest_grp_ID * _grp_num_routers;
-    dest_intm = grp_output_RID * gP;
+    grp_output_RID = ((int) (dest_grp_output / (ports))) + dest_grp_ID * _grp_num_routers;
+    dest_intm = grp_output_RID * ports;
 
     //hop count in source group
-    if ((int)( src_intm / gP) == (int)( src / gP ) )
+    if ((int)( src_intm / ports) == (int)( src / ports ) )
       src_hopcnt = 0;
     else
       src_hopcnt = 1; 
 
     //hop count in destination group
-    if ((int)( dest_intm / gP) == (int)( dest / gP ) ){
+    if ((int)( dest_intm / ports) == (int)( dest / ports ) ){
       dest_hopcnt = 0;
     }else{
       dest_hopcnt = 1;
@@ -102,9 +101,9 @@ int dragonflynew_hopcnt(int src, int dest)
 
 
 //packet output port based on the source, destination and current location
-int dragonfly_port(int rID, int source, int dest){
-  int _grp_num_routers= gA;
-  int _grp_num_nodes =_grp_num_routers*gP;
+int dragonfly_port(int rID, int source, int dest, int routers, int ports){
+  int _grp_num_routers= routers;
+  int _grp_num_nodes =_grp_num_routers*ports;
 
   int out_port = -1;
   int grp_ID = int(rID / _grp_num_routers); 
@@ -114,30 +113,30 @@ int dragonfly_port(int rID, int source, int dest){
   
   //which router within this group the packet needs to go to
   if (dest_grp_ID == grp_ID) {
-    grp_RID = int(dest / gP);
+    grp_RID = int(dest / ports);
   } else {
     if (grp_ID > dest_grp_ID) {
       grp_output = dest_grp_ID;
     } else {
       grp_output = dest_grp_ID - 1;
     }
-    grp_RID = int(grp_output /gP) + grp_ID * _grp_num_routers;
+    grp_RID = int(grp_output /ports) + grp_ID * _grp_num_routers;
   }
 
   //At the last hop
-  if (dest >= rID*gP && dest < (rID+1)*gP) {    
-    out_port = dest%gP;
+  if (dest >= rID*ports && dest < (rID+1)*ports) {    
+    out_port = dest%ports;
   } else if (grp_RID == rID) {
     //At the optical link
-    out_port = gP + (gA-1) + grp_output %(gP);
+    out_port = ports + (routers-1) + grp_output %(ports);
   } else {
     //need to route within a group
     assert(grp_RID!=-1);
 
     if (rID < grp_RID){
-      out_port = (grp_RID % _grp_num_routers) - 1 + gP;
+      out_port = (grp_RID % _grp_num_routers) - 1 + ports;
     }else{
-      out_port = (grp_RID % _grp_num_routers) + gP;
+      out_port = (grp_RID % _grp_num_routers) + ports;
     }
   }  
  
@@ -146,8 +145,8 @@ int dragonfly_port(int rID, int source, int dest){
 }
 
 
-DragonFlyNew::DragonFlyNew( const Configuration &config, const string & name ) :
-  Network( config, name )
+DragonFlyNew::DragonFlyNew( const Configuration &config, const string & name, Module * clock, CreditBox *credits ) :
+  Network( config, name, clock, credits )
 {
 
   _ComputeSize( config );
@@ -179,7 +178,8 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
 
   
   // FIX...
-  gK = _p; gN = _n;
+  _radix = _k;
+  _dim = _n;
 
   // with 1 dimension, total of 2p routers per group
   // N = 2p * p * (2p^2 + 1)
@@ -202,13 +202,8 @@ void DragonFlyNew::_ComputeSize( const Configuration &config )
   _channels = _num_of_switch * (_k - _p); 
   _size = _num_of_switch;
 
-
-  
-  gG = _g;
-  gP = _p;
-  gA = _a;
-  _grp_num_routers = gA;
-  _grp_num_nodes =_grp_num_routers*gP;
+  _grp_num_routers = _a;
+  _grp_num_nodes =_grp_num_routers * _p;
 
 }
 
@@ -243,7 +238,7 @@ void DragonFlyNew::_BuildNet( const Configuration &config )
     router_name << "_" <<  node ;
 
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
-					node, _k, _k );
+					node, _k, _k, _credits );
     _timed_modules.push_back(_routers[node]);
 
     router_name.str("");
@@ -408,17 +403,28 @@ void DragonFlyNew::RegisterRoutingFunctions(){
 
 
 void min_dragonflynew( const Router *r, const Flit *f, int in_channel, 
-		       OutputSet *outputs, bool inject )
+		       OutputSet *outputs, bool inject, RoutingConfig *rc )
 {
   outputs->Clear( );
 
   if(inject) {
-    int inject_vc= RandomInt(gNumVCs-1);
+    int inject_vc= RandomInt(rc->NumVCs-1);
     outputs->AddRange(-1, inject_vc, inject_vc);
     return;
   }
+  /**
+   * This dynamic_cast is Bad.
+   * However the legacy code is using a constant interface of `tRoutingFunction`
+   * for handling routing of every single networks type Booksim2 supports,
+   * leaving no other options without back pain.
+   */
+  const DragonFlyNew *net = dynamic_cast<const DragonFlyNew *>(r->GetOWner());
+  if (!net)
+  {
+    r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+  }
 
-  int _grp_num_routers= gA;
+  int _grp_num_routers= net->GetA();
 
   int dest  = f->dest;
   int rID =  r->GetID(); 
@@ -429,7 +435,7 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
   int out_vc = 0;
   int dest_grp_ID=-1;
 
-  if ( in_channel < gP ) {
+  if ( in_channel < net->GetP() ) {
     out_vc = 0;
     f->ph = 0;
     if (dest_grp_ID == grp_ID) {
@@ -438,16 +444,16 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
   } 
 
 
-  out_port = dragonfly_port(rID, f->src, dest);
+  out_port = dragonfly_port(rID, f->src, dest, net->GetA(), net->GetP());
 
   //optical dateline
-  if (out_port >=gP + (gA-1)) {
+  if (out_port >=net->GetP() + (net->GetA() - 1)) {
     f->ph = 1;
   }  
   
   out_vc = f->ph;
   if (debug)
-    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+    *gWatchOut << r->GetSimTime() << " | " << r->FullName() << " | "
 	       << "	through output port : " << out_port 
 	       << " out vc: " << out_vc << endl;
   outputs->AddRange( out_port, out_vc, out_vc );
@@ -456,25 +462,37 @@ void min_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
 //Basic adaptive routign algorithm for the dragonfly
 void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel, 
-			OutputSet *outputs, bool inject )
+			OutputSet *outputs, bool inject, RoutingConfig *rc )
 {
   //need 3 VCs for deadlock freedom
 
-  assert(gNumVCs==3);
+  assert(rc->NumVCs==3);
   outputs->Clear( );
   if(inject) {
-    int inject_vc= RandomInt(gNumVCs-1);
+    int inject_vc= RandomInt(rc->NumVCs-1);
     outputs->AddRange(-1, inject_vc, inject_vc);
     return;
   }
-  
+    /**
+     * This dynamic_cast is Bad.
+     * However the legacy code is using a constant interface of `tRoutingFunction`
+     * for handling routing of every single networks type Booksim2 supports,
+     * leaving no other options without back pain.
+     */
+    const DragonFlyNew *net = dynamic_cast<const DragonFlyNew *>(r->GetOWner());
+    if (!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
+
+
   //this constant biases the adaptive decision toward minimum routing
   //negative value woudl biases it towards nonminimum routing
   int adaptive_threshold = 30;
 
-  int _grp_num_routers= gA;
-  int _grp_num_nodes =_grp_num_routers*gP;
-  int _network_size =  gA * gP * gG;
+  const int _grp_num_routers = net->GetA();
+  int _grp_num_nodes =_grp_num_routers * net->GetP();
+  int _network_size =  net->GetA() * net->GetP() * net->GetG();
 
  
   int dest  = f->dest;
@@ -496,7 +514,7 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
   int min_router_output, nonmin_router_output;
   
   //at the source router, make the adaptive routing decision
-  if ( in_channel < gP )   {
+  if ( in_channel < net->GetP() )   {
     //dest are in the same group, only use minimum routing
     if (dest_grp_ID == grp_ID) {
       f->ph = 2;
@@ -513,11 +531,11 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 	f->ph = 1;
       } else {
 	//congestion metrics using queue length, obtained by GetUsedCredit()
-	min_router_output = dragonfly_port(rID, f->src, f->dest); 
+	min_router_output = dragonfly_port(rID, f->src, f->dest, net->GetA(), net->GetP()); 
       	min_queue_size = max(r->GetUsedCredit(min_router_output), 0) ; 
 
       
-	nonmin_router_output = dragonfly_port(rID, f->src, f->intm);
+	nonmin_router_output = dragonfly_port(rID, f->src, f->intm, net->GetA(), net->GetP());
 	nonmin_queue_size = max(r->GetUsedCredit(nonmin_router_output), 0);
 
 	//congestion comparison, could use hopcnt instead of 1 and 2
@@ -533,7 +551,7 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
   //transition from nonminimal phase to minimal
   if(f->ph==0){
-    intm_rID= (int)(f->intm/gP);
+    intm_rID= (int)(f->intm/net->GetP());
     if( rID == intm_rID){
       f->ph = 1;
     }
@@ -541,17 +559,17 @@ void ugal_dragonflynew( const Router *r, const Flit *f, int in_channel,
 
   //port assignement based on the phase
   if(f->ph == 0){
-    out_port = dragonfly_port(rID, f->src, f->intm);
+    out_port = dragonfly_port(rID, f->src, f->intm, net->GetA(), net->GetP());
   } else if(f->ph == 1){
-    out_port = dragonfly_port(rID, f->src, f->dest);
+    out_port = dragonfly_port(rID, f->src, f->dest, net->GetA(), net->GetP());
   } else if(f->ph == 2){
-    out_port = dragonfly_port(rID, f->src, f->dest);
+    out_port = dragonfly_port(rID, f->src, f->dest, net->GetA(), net->GetP());
   } else {
     assert(false);
   }
 
   //optical dateline
-  if (f->ph == 1 && out_port >=gP + (gA-1)) {
+  if (f->ph == 1 && out_port >=net->GetP() + (net->GetA() - 1)) {
     f->ph = 2;
   }  
 

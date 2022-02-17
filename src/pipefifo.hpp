@@ -42,7 +42,7 @@ template<class T> class PipelineFIFO : public Module {
   vector<vector<T*> > _data;
 
 public:
-  PipelineFIFO( Module *parent, const string& name, int lanes, int depth );
+  PipelineFIFO( Module *parent, const string& name, int lanes, int depth, Module * clock );
   ~PipelineFIFO( );
 
   void Write( T* val, int lane = 0 );
@@ -53,17 +53,16 @@ public:
   void Advance( );
 };
 
-template<class T> PipelineFIFO<T>::PipelineFIFO( Module *parent, 
-						 const string& name, 
-						 int lanes, int depth ) :
-  Module( parent, name ),
-  _lanes( lanes ), _depth( depth )
+template <class T>
+PipelineFIFO<T>::PipelineFIFO(Module *parent, const string &name, int lanes, int depth, Module *clock)
+ : Module(parent, name, clock), _lanes(lanes), _depth(depth)
 {
   _pipe_len = depth + 1;
   _pipe_ptr = 0;
 
   _data.resize(_lanes);
-  for ( int l = 0; l < _lanes; ++l ) {
+  for (int l = 0; l < _lanes; ++l)
+  {
     _data[l].resize(_pipe_len, 0);
   }
 }

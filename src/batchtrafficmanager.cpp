@@ -34,7 +34,7 @@
 #include "batchtrafficmanager.hpp"
 
 BatchTrafficManager::BatchTrafficManager( const Configuration &config, 
-					  const vector<Network *> & net )
+					  const vector<Network *> & net)
 : TrafficManager(config, net), _last_id(-1), _last_pid(-1), 
    _overall_min_batch_time(0), _overall_avg_batch_time(0), 
    _overall_max_batch_time(0)
@@ -45,7 +45,7 @@ BatchTrafficManager::BatchTrafficManager( const Configuration &config,
   _batch_size = config.GetInt( "batch_size" );
   _batch_count = config.GetInt( "batch_count" );
 
-  _batch_time = new Stats( this, "batch_time", 1.0, 1000 );
+  _batch_time = new Stats( this, "batch_time", this->_clock, 1.0, 1000);
   _stats["batch_time"] = _batch_time;
   
   string sent_packets_out_file = config.GetStr( "sent_packets_out" );

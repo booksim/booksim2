@@ -36,12 +36,9 @@
 #include "globals.hpp"
 
 EventRouter::EventRouter( const Configuration& config,
-		    Module *parent, const string & name, int id,
-		    int inputs, int outputs )
-  : Router( config,
-	    parent, name,
-	    id,
-	    inputs, outputs )
+		    Network *parent, const string & name, int id,
+		    int inputs, int outputs, Module * clock, CreditBox * credits )
+  : Router( config, parent, name, id, inputs, outputs, clock, credits )
 {
   ostringstream module_name;
   
@@ -69,7 +66,7 @@ EventRouter::EventRouter( const Configuration& config,
 
   for ( int i = 0; i < _inputs; ++i ) {
     module_name << "buf_" << i;
-    _buf[i] = new Buffer( config, _outputs, this, module_name.str( ) );
+    _buf[i] = new Buffer( config, _outputs, this, module_name.str( ), this->_clock);
     module_name.seekp( 0, ios::beg );
     _active[i].resize(_vcs, false);
   }
@@ -80,7 +77,7 @@ EventRouter::EventRouter( const Configuration& config,
 
   for ( int o = 0; o < _outputs; ++o ) {
     module_name << "output" << o << "_vc_state";
-    _output_state[o] = new EventNextVCState(config, this, module_name.str());
+    _output_state[o] = new EventNextVCState(config, this, module_name.str(), this->_clock);
     module_name.seekp( 0, ios::beg );
   }
 
@@ -91,7 +88,7 @@ EventRouter::EventRouter( const Configuration& config,
   for ( int o = 0; o < _outputs; ++o ) {
     module_name << "arrival_arb_output" << o;
     _arrival_arbiter[o] = 
-      new PriorityArbiter( config, this, module_name.str( ), _inputs );
+      new PriorityArbiter( config, this, module_name.str( ), _inputs, this->_clock );
     module_name.seekp( 0, ios::beg );
   }
 
@@ -100,7 +97,7 @@ EventRouter::EventRouter( const Configuration& config,
   for ( int i = 0; i < _inputs; ++i ) {
     module_name << "transport_arb_input" << i;
     _transport_arbiter[i] = 
-      new PriorityArbiter( config, this, module_name.str( ), _outputs );
+      new PriorityArbiter( config, this, module_name.str( ), _outputs, this->_clock );
     module_name.seekp( 0, ios::beg );
   }
 
@@ -108,15 +105,15 @@ EventRouter::EventRouter( const Configuration& config,
 
   _crossbar_pipe = 
     new PipelineFIFO<Flit>( this, "crossbar_pipeline", _outputs, 
-			    _crossbar_delay );
+			    _crossbar_delay, this->_clock);
 
   _credit_pipe =
     new PipelineFIFO<Credit>( this, "credit_pipeline", _inputs,
-			      _credit_delay );
+			      _credit_delay, this->_clock );
 
   _arrival_pipe =
     new PipelineFIFO<tArrivalEvent>( this, "arrival_pipeline", _inputs,
-				     0 /* FIX THIS EVENTUALLY */);
+				     0 /* FIX THIS EVENTUALLY */, this->_clock);
 
   // Queues
 
@@ -517,7 +514,7 @@ void EventRouter::_ArrivalArb( int output )
       }
     }
 
-    c->Free();
+    _credits->RetireItem(c);
   }
 
   // Now process arrival events
@@ -670,7 +667,7 @@ void EventRouter::_TransportArb( int input )
       }
     }
 
-    c = Credit::New( );
+    c = _credits->NewItem();
     c->vc.insert(f->vc);
     c->head          = f->head;
     c->tail          = f->tail;
@@ -748,8 +745,8 @@ void EventRouter::Display( ostream & os ) const
 }
 
 EventNextVCState::EventNextVCState( const Configuration& config, 
-				    Module *parent, const string& name ) :
-  Module( parent, name )
+				    Module *parent, const string& name, Module * clock ) :
+  Module( parent, name, clock)
 {
   _buf_size = config.GetInt( "vc_buf_size" );
   _vcs      = config.GetInt( "num_vcs" );

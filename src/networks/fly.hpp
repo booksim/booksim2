@@ -31,7 +31,7 @@
 #include "network.hpp"
 
 class KNFly : public Network {
-
+///TODO: remove repeated members
   int _k;
   int _n;
 
@@ -42,7 +42,7 @@ class KNFly : public Network {
   int _InChannel( int stage, int addr, int port ) const;
  
 public:
-  KNFly( const Configuration &config, const string & name );
+  KNFly( const Configuration &config, const string & name, Module * clock, CreditBox *credits );
 
   int GetN( ) const;
   int GetK( ) const;

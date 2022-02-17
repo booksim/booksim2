@@ -32,8 +32,8 @@
 #include "buffer.hpp"
 
 Buffer::Buffer( const Configuration& config, int outputs, 
-		Module *parent, const string& name ) :
-Module( parent, name ), _occupancy(0)
+		Module *parent, const string& name, Module * clock ) :
+Module( parent, name, clock ), _occupancy(0)
 {
   int num_vcs = config.GetInt( "num_vcs" );
 
@@ -47,7 +47,7 @@ Module( parent, name ), _occupancy(0)
   for(int i = 0; i < num_vcs; ++i) {
     ostringstream vc_name;
     vc_name << "vc_" << i;
-    _vc[i] = new VC(config, outputs, this, vc_name.str( ) );
+    _vc[i] = new VC(config, outputs, this, vc_name.str( ), this->_clock );
   }
 
 #ifdef TRACK_BUFFERS

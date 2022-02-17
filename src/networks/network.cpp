@@ -49,8 +49,8 @@
 #include "dragonfly.hpp"
 
 
-Network::Network( const Configuration &config, const string & name ) :
-  TimedModule( 0, name )
+Network::Network( const Configuration &config, const string & name, Module * clock, CreditBox *credits ) :
+  TimedModule( 0, name, clock ), _credits(credits), _radix(0), _dim(0), _conc(0)
 {
   _size     = -1; 
   _nodes    = -1; 
@@ -77,40 +77,40 @@ Network::~Network( )
   }
 }
 
-Network * Network::New(const Configuration & config, const string & name)
+Network * Network::New(const Configuration & config, const string & name, Module * clock, CreditBox *credits)
 {
   const string topo = config.GetStr( "topology" );
   Network * n = NULL;
   if ( topo == "torus" ) {
     KNCube::RegisterRoutingFunctions() ;
-    n = new KNCube( config, name, false );
+    n = new KNCube( config, name, false, clock, credits );
   } else if ( topo == "mesh" ) {
     KNCube::RegisterRoutingFunctions() ;
-    n = new KNCube( config, name, true );
+    n = new KNCube( config, name, true, clock, credits );
   } else if ( topo == "cmesh" ) {
     CMesh::RegisterRoutingFunctions() ;
-    n = new CMesh( config, name );
+    n = new CMesh( config, name, clock, credits );
   } else if ( topo == "fly" ) {
     KNFly::RegisterRoutingFunctions() ;
-    n = new KNFly( config, name );
+    n = new KNFly( config, name, clock, credits );
   } else if ( topo == "qtree" ) {
     QTree::RegisterRoutingFunctions() ;
-    n = new QTree( config, name );
+    n = new QTree( config, name, clock, credits );
   } else if ( topo == "tree4" ) {
     Tree4::RegisterRoutingFunctions() ;
-    n = new Tree4( config, name );
+    n = new Tree4( config, name, clock, credits );
   } else if ( topo == "fattree" ) {
     FatTree::RegisterRoutingFunctions() ;
-    n = new FatTree( config, name );
+    n = new FatTree( config, name, clock, credits );
   } else if ( topo == "flatfly" ) {
     FlatFlyOnChip::RegisterRoutingFunctions() ;
-    n = new FlatFlyOnChip( config, name );
+    n = new FlatFlyOnChip( config, name, clock, credits );
   } else if ( topo == "anynet"){
     AnyNet::RegisterRoutingFunctions() ;
-    n = new AnyNet(config, name);
+    n = new AnyNet(config, name, clock, credits );
   } else if ( topo == "dragonflynew"){
     DragonFlyNew::RegisterRoutingFunctions() ;
-    n = new DragonFlyNew(config, name);
+    n = new DragonFlyNew(config, name, clock, credits);
   } else {
     cerr << "Unknown topology: " << topo << endl;
   }
@@ -144,12 +144,12 @@ void Network::_Alloc( )
   for ( int s = 0; s < _nodes; ++s ) {
     ostringstream name;
     name << Name() << "_fchan_ingress" << s;
-    _inject[s] = new FlitChannel(this, name.str(), _classes);
+    _inject[s] = new FlitChannel(this, name.str(), _classes, this->_clock);
     _inject[s]->SetSource(NULL, s);
     _timed_modules.push_back(_inject[s]);
     name.str("");
     name << Name() << "_cchan_ingress" << s;
-    _inject_cred[s] = new CreditChannel(this, name.str());
+    _inject_cred[s] = new CreditChannel(this, name.str(), this->_clock);
     _timed_modules.push_back(_inject_cred[s]);
   }
   _eject.resize(_nodes);
@@ -157,12 +157,12 @@ void Network::_Alloc( )
   for ( int d = 0; d < _nodes; ++d ) {
     ostringstream name;
     name << Name() << "_fchan_egress" << d;
-    _eject[d] = new FlitChannel(this, name.str(), _classes);
+    _eject[d] = new FlitChannel(this, name.str(), _classes, this->_clock);
     _eject[d]->SetSink(NULL, d);
     _timed_modules.push_back(_eject[d]);
     name.str("");
     name << Name() << "_cchan_egress" << d;
-    _eject_cred[d] = new CreditChannel(this, name.str());
+    _eject_cred[d] = new CreditChannel(this, name.str(), this->_clock);
     _timed_modules.push_back(_eject_cred[d]);
   }
   _chan.resize(_channels);
@@ -170,11 +170,11 @@ void Network::_Alloc( )
   for ( int c = 0; c < _channels; ++c ) {
     ostringstream name;
     name << Name() << "_fchan_" << c;
-    _chan[c] = new FlitChannel(this, name.str(), _classes);
+    _chan[c] = new FlitChannel(this, name.str(), _classes, this->_clock);
     _timed_modules.push_back(_chan[c]);
     name.str("");
     name << Name() << "_cchan_" << c;
-    _chan_cred[c] = new CreditChannel(this, name.str());
+    _chan_cred[c] = new CreditChannel(this, name.str(), this->_clock);
     _timed_modules.push_back(_chan_cred[c]);
   }
 }

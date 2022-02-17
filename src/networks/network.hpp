@@ -53,6 +53,8 @@ protected:
   int _channels;
   int _classes;
 
+  CreditBox * _credits;
+
   vector<Router *> _routers;
 
   vector<FlitChannel *> _inject;
@@ -65,17 +67,21 @@ protected:
   vector<CreditChannel *> _chan_cred;
 
   deque<TimedModule *> _timed_modules;
-
+  
+  int _radix;
+  int _dim;
+  int _conc;
+  
   virtual void _ComputeSize( const Configuration &config ) = 0;
   virtual void _BuildNet( const Configuration &config ) = 0;
 
   void _Alloc( );
 
 public:
-  Network( const Configuration &config, const string & name );
+  Network( const Configuration &config, const string & name, Module * clock, CreditBox *credits );
   virtual ~Network( );
 
-  static Network *New( const Configuration &config, const string & name );
+  static Network *New( const Configuration &config, const string & name, Module * clock, CreditBox *credits);
 
   virtual void WriteFlit( Flit *f, int source );
   virtual Flit *ReadFlit( int dest );
@@ -83,7 +89,7 @@ public:
   virtual void    WriteCredit( Credit *c, int dest );
   virtual Credit *ReadCredit( int source );
 
-  inline int NumNodes( ) const {return _nodes;}
+  int NumNodes( ) const {return _nodes;}
 
   virtual void InsertRandomFaults( const Configuration &config );
   void OutChannelFault( int r, int c, bool fault = true );
@@ -112,6 +118,10 @@ public:
   const vector<Router *> & GetRouters(){return _routers;}
   Router * GetRouter(int index) {return _routers[index];}
   int NumRouters() const {return _size;}
+
+  int GetRadix() const {return _radix;}
+  int GetDim() const {return _dim;}
+  int GetConc() const {return _conc;}
 };
 
 #endif 

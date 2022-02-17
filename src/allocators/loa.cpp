@@ -32,8 +32,8 @@
 #include "random_utils.hpp"
 
 LOA::LOA( Module *parent, const string& name,
-	  int inputs, int outputs ) :
-  DenseAllocator( parent, name, inputs, outputs )
+	  int inputs, int outputs, Module *clock ) :
+  DenseAllocator( parent, name, inputs, outputs, clock )
 {
   _req.resize(inputs);
   _counts.resize(outputs);

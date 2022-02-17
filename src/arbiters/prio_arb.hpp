@@ -52,7 +52,7 @@ protected:
 public:
   PriorityArbiter( const Configuration &config,
 		   Module *parent, const string& name,
-		   int inputs );
+		   int inputs, Module * clock );
 
   void Clear( );
 

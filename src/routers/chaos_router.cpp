@@ -35,13 +35,9 @@
 #include "random_utils.hpp"
 #include "globals.hpp"
 
-ChaosRouter::ChaosRouter( const Configuration& config,
-		    Module *parent, const string & name, int id,
-		    int inputs, int outputs )
-  : Router( config,
-	    parent, name,
-	    id,
-	    inputs, outputs )
+ChaosRouter::ChaosRouter( const Configuration& config, Network *parent, const string & name, 
+        int id, int inputs, int outputs, Module * clock, CreditBox * credits )
+  : Router( config, parent, name, id, inputs, outputs, clock, credits )
 {
   int i;
 
@@ -82,7 +78,7 @@ ChaosRouter::ChaosRouter( const Configuration& config,
 
   _crossbar_pipe = 
     new PipelineFIFO<Flit>( this, "crossbar_pipeline", _outputs, 
-			    _crossbar_delay );
+			    _crossbar_delay, this->_clock );
 
   // Input and output queues
 
@@ -152,7 +148,7 @@ void ChaosRouter::ReadInputs( )
 	  } else {
 	    _input_state[input] = filling;
 	  }
-	  _rf( this, f, input, _input_route[input], false );
+	  _rf( this, f, input, _input_route[input], false, &_rc );
 	} else {
 	  cout << *f;
 	  Error( "Empty buffer received non-head flit!" );
@@ -219,7 +215,7 @@ void ChaosRouter::ReadInputs( )
 	Error( "Next queue count fell below zero!" );
       }
 
-      c->Free();
+      _credits->RetireItem(c);
     }
   }
 }
@@ -526,7 +522,7 @@ void ChaosRouter::_OutputAdvance( )
 	mq = _input_mq_match[i];
 
 	if ( f->head ) {
-	  _rf( this, f, i, _mq_route[mq], false );
+	  _rf( this, f, i, _mq_route[mq], false, &_rc );
 	  _mq_age[mq] = 0;
 
 	  if ( _multi_state[mq] == empty ) {
@@ -573,14 +569,14 @@ void ChaosRouter::_OutputAdvance( )
 	    _input_state[i] = filling;
 	    f2 = _input_frame[i].front( );
 	    // update routes
-	    _rf( this, f2, i, _input_route[i], false );
+	    _rf( this, f2, i, _input_route[i], false, &_rc );
 	  }
 	  
 	  _input_output_match[i] = -1;
 	  _input_mq_match[i]     = -1;
 	}
 	
-	c = Credit::New( );
+	c = _credits->NewItem();
 	c->vc.insert(0);
 	_credit_queue[i].push( c );
       }

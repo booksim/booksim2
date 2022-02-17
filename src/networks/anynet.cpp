@@ -55,11 +55,9 @@
 #include <sstream>
 #include <limits>
 #include <algorithm>
-//this is a hack, I can't easily get the routing talbe out of the network
-map<int, int>* global_routing_table;
 
-AnyNet::AnyNet( const Configuration &config, const string & name )
-  :  Network( config, name ){
+AnyNet::AnyNet( const Configuration &config, const string & name, Module * clock, CreditBox *credits )
+  :  Network( config, name, clock, credits ){
 
   router_list.resize(2);
   _ComputeSize( config );
@@ -151,7 +149,7 @@ void AnyNet::_BuildNet( const Configuration &config ){
     router_name << "router";
     router_name << "_" <<  node ;
     _routers[node] = Router::NewRouter( config, this, router_name.str( ), 
-    					node, radix, radix );
+    					node, radix, radix, _credits );
     _timed_modules.push_back(_routers[node]);
     //add injeciton ejection channels
     map<int, pair<int,int> >::iterator nniter;
@@ -212,27 +210,36 @@ void AnyNet::RegisterRoutingFunctions() {
 }
 
 void min_anynet( const Router *r, const Flit *f, int in_channel, 
-		 OutputSet *outputs, bool inject ){
+		 OutputSet *outputs, bool inject, RoutingConfig *rc ){
   int out_port=-1;
   if(!inject){
-    assert(global_routing_table[r->GetID()].count(f->dest)!=0);
-    out_port=global_routing_table[r->GetID()][f->dest];
+    /**
+     * This dynamic_cast is Bad. 
+     * However the legacy code is using a constant interface of `tRoutingFunction`
+     * for handling routing of every single networks type Booksim2 supports,
+     * leaving no other options without back pain.
+     */
+    const AnyNet *net = dynamic_cast<const AnyNet *>(r->GetOWner());
+    if(!net)
+    {
+      r->Error("This router doesn't belong to any Networks, or the Network it belongs doesn't support this routing method.");
+    }
+    out_port = net->LookupRoute(r->GetID(), f->dest);
   }
- 
 
-  int vcBegin = 0, vcEnd = gNumVCs-1;
+  int vcBegin = 0, vcEnd = rc->NumVCs-1;
   if ( f->type == Flit::READ_REQUEST ) {
-    vcBegin = gReadReqBeginVC;
-    vcEnd   = gReadReqEndVC;
+    vcBegin = rc->ReadReqBeginVC;
+    vcEnd   = rc->ReadReqEndVC;
   } else if ( f->type == Flit::WRITE_REQUEST ) {
-    vcBegin = gWriteReqBeginVC;
-    vcEnd   = gWriteReqEndVC;
+    vcBegin = rc->WriteReqBeginVC;
+    vcEnd   = rc->WriteReqEndVC;
   } else if ( f->type ==  Flit::READ_REPLY ) {
-    vcBegin = gReadReplyBeginVC;
-    vcEnd   = gReadReplyEndVC;
+    vcBegin = rc->ReadReplyBeginVC;
+    vcEnd   = rc->ReadReplyEndVC;
   } else if ( f->type ==  Flit::WRITE_REPLY ) {
-    vcBegin = gWriteReplyBeginVC;
-    vcEnd   = gWriteReplyEndVC;
+    vcBegin = rc->WriteReplyBeginVC;
+    vcEnd   = rc->WriteReplyEndVC;
   }
 
   outputs->Clear( );
@@ -246,7 +253,6 @@ void AnyNet::buildRoutingTable(){
   for(int i = 0; i<_size; i++){
     route(i);
   }
-  global_routing_table = &routing_table[0];
 }
 
 
@@ -402,7 +408,15 @@ void AnyNet::readFile(){
 	  //ignore
 	} else {
 	  link_weight= atoi(temp.c_str());
-	  router_list[head_type][head_id][body_id].second=link_weight;
+	  if(head_type == ROUTER && body_type == NODE) {
+      router_list[NODE][head_id][body_id].second = link_weight;
+    } else if (head_type == NODE && body_type == ROUTER) {  
+      router_list[NODE][body_id][head_id].second = link_weight;
+    } else if (head_type == ROUTER && body_type == ROUTER) {
+      router_list[ROUTER][head_id][body_id].second = link_weight;
+    } else {
+      assert(0);
+    }
 	  break;
 	}
 	//intentionally letting it flow through
@@ -499,3 +513,8 @@ void AnyNet::readFile(){
   
 }
 
+int AnyNet::LookupRoute(int rid, int dest) const
+{
+  assert(routing_table[rid].count(dest));
+  return routing_table[rid].at(dest);
+}

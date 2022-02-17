@@ -47,9 +47,9 @@
 #include "switch_monitor.hpp"
 #include "buffer_monitor.hpp"
 
-IQRouter::IQRouter( Configuration const & config, Module *parent, 
-		    string const & name, int id, int inputs, int outputs )
-: Router( config, parent, name, id, inputs, outputs ), _active(false)
+IQRouter::IQRouter( Configuration const & config, Network *parent, 
+		    string const & name, int id, int inputs, int outputs, Module * clock, CreditBox * credits)
+: Router( config, parent, name, id, inputs, outputs, clock, credits ), _active(false)
 {
   _vcs         = config.GetInt( "num_vcs" );
 
@@ -85,7 +85,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   for ( int i = 0; i < _inputs; ++i ) {
     ostringstream module_name;
     module_name << "buf_" << i;
-    _buf[i] = new Buffer(config, _outputs, this, module_name.str( ) );
+    _buf[i] = new Buffer(config, _outputs, this, module_name.str( ), this->_clock);
     module_name.str("");
   }
 
@@ -94,7 +94,7 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   for (int j = 0; j < _outputs; ++j) {
     ostringstream module_name;
     module_name << "next_vc_o" << j;
-    _next_buf[j] = new BufferState( config, this, module_name.str( ) );
+    _next_buf[j] = new BufferState( config, this, module_name.str( ), this->_clock);
     module_name.str("");
   }
 
@@ -448,7 +448,7 @@ void IQRouter::_InputQueuing( )
 #endif
 
     dest_buf->ProcessCredit(c);
-    c->Free();
+    _credits->RetireItem(c);
     _proc_credits.pop_front();
   }
 }
@@ -1107,7 +1107,7 @@ void IQRouter::_SWHoldUpdate( )
 			 << "." << endl;
 	    }
 	    int in_channel = channel->GetSinkPort();
-	    _rf(router, f, in_channel, &f->la_route_set, false);
+	    _rf(router, f, in_channel, &f->la_route_set, false, &_rc );
 	  }
 	} else {
 	  f->la_route_set.Clear();
@@ -1124,7 +1124,7 @@ void IQRouter::_SWHoldUpdate( )
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
       
       if(_out_queue_credits.count(input) == 0) {
-	_out_queue_credits.insert(make_pair(input, Credit::New()));
+	_out_queue_credits.insert(make_pair(input, _credits->NewItem()));
       }
       _out_queue_credits.find(input)->second->vc.insert(vc);
       
@@ -2017,7 +2017,7 @@ void IQRouter::_SWAllocUpdate( )
 			 << "." << endl;
 	    }
 	    int in_channel = channel->GetSinkPort();
-	    _rf(router, f, in_channel, &f->la_route_set, false);
+	    _rf(router, f, in_channel, &f->la_route_set, false, &_rc );
 	  }
 	} else {
 	  f->la_route_set.Clear();
@@ -2034,7 +2034,7 @@ void IQRouter::_SWAllocUpdate( )
       _crossbar_flits.push_back(make_pair(-1, make_pair(f, make_pair(expanded_input, expanded_output))));
 
       if(_out_queue_credits.count(input) == 0) {
-	_out_queue_credits.insert(make_pair(input, Credit::New()));
+	_out_queue_credits.insert(make_pair(input, _credits->NewItem()));
       }
       _out_queue_credits.find(input)->second->vc.insert(vc);
 
@@ -2358,7 +2358,7 @@ void IQRouter::_UpdateNOQ(int input, int vc, Flit const * f) {
   if(router) {
     int in_channel = channel->GetSinkPort();
     OutputSet nos;
-    _rf(router, f, in_channel, &nos, false);
+    _rf(router, f, in_channel, &nos, false, &_rc );
     sl = nos.GetSet();
     assert(sl.size() == 1);
     OutputSet::sSetElement const & se = *sl.begin();

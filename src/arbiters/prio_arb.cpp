@@ -33,8 +33,8 @@
 
 PriorityArbiter::PriorityArbiter( const Configuration &config,
 				  Module *parent, const string& name,
-				  int inputs ) 
-: Module( parent, name ), _rr_ptr(0), _inputs( inputs )
+				  int inputs, Module * clock ) 
+: Module( parent, name, clock ), _rr_ptr(0), _inputs( inputs )
 {
 
 }

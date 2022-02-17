@@ -40,7 +40,7 @@ class iSLIP_Sparse : public SparseAllocator {
 
 public:
   iSLIP_Sparse( Module *parent, const string& name,
-		int inputs, int outputs, int iters );
+		int inputs, int outputs, int iters, Module *clock );
 
   void Allocate( );
 };

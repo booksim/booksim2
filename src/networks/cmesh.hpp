@@ -46,27 +46,36 @@
 
 class CMesh : public Network {
 public:
-  CMesh( const Configuration &config, const string & name );
+  CMesh( const Configuration &config, const string & name, Module * clock, CreditBox *credits );
   int GetN() const;
   int GetK() const;
 
-  static int NodeToRouter( int address ) ;
-  static int NodeToPort( int address ) ;
+  int NodeToRouter( int address ) const;
+  int NodeToPort( int address ) const;
 
   static void RegisterRoutingFunctions() ;
 
+  int cmesh_xy(int cur, int dest) const;
+  int cmesh_yx(int cur, int dest) const;
+  int cmesh_xy_no_express( int cur, int dest ) const;
+  int cmesh_yx_no_express( int cur, int dest ) const;
+  int cmesh_next( int cur, int dest ) const;
+  int cmesh_next_no_express( int cur, int dest ) const;
+
 private:
 
-  static int _cX ;
-  static int _cY ;
+  int _cX ;
+  int _cY ;
 
-  static int _memo_NodeShiftX ;
-  static int _memo_NodeShiftY ;
-  static int _memo_PortShiftY ;
+  ///TODO: Obsolete, Only has writes and no reads. Consider Removing.
+  int _memo_NodeShiftX ;
+  int _memo_NodeShiftY ;
+  int _memo_PortShiftY ;
 
   void _ComputeSize( const Configuration &config );
   void _BuildNet( const Configuration& config );
-
+  
+  ///TODO: remove repeated members
   int _k ;
   int _n ;
   int _c ;
@@ -81,15 +90,15 @@ private:
 // Routing Functions
 //
 void xy_yx_cmesh( const Router *r, const Flit *f, int in_channel, 
-		  OutputSet *outputs, bool inject ) ;
+		  OutputSet *outputs, bool inject, RoutingConfig *rc ) ;
 
 void xy_yx_no_express_cmesh( const Router *r, const Flit *f, int in_channel, 
-			     OutputSet *outputs, bool inject ) ;
+			     OutputSet *outputs, bool inject, RoutingConfig *rc ) ;
 
 void dor_cmesh( const Router *r, const Flit *f, int in_channel, 
-		OutputSet *outputs, bool inject ) ;
+		OutputSet *outputs, bool inject, RoutingConfig *rc ) ;
 
 void dor_no_express_cmesh( const Router *r, const Flit *f, int in_channel, 
-			   OutputSet *outputs, bool inject ) ;
+			   OutputSet *outputs, bool inject, RoutingConfig *rc ) ;
 
 #endif

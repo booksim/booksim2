@@ -35,8 +35,8 @@
 #include "wavefront.hpp"
 
 Wavefront::Wavefront( Module *parent, const string& name,
-		      int inputs, int outputs, bool skip_diags ) :
-  DenseAllocator( parent, name, inputs, outputs ),
+		      int inputs, int outputs, Module *clock, bool skip_diags ) :
+  DenseAllocator( parent, name, inputs, outputs, clock ),
   _last_in(-1), _last_out(-1), _skip_diags(skip_diags), 
   _square(max(inputs, outputs)), _pri(0), _num_requests(0)
 {

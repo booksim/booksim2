@@ -37,7 +37,7 @@ class PIM : public DenseAllocator {
 
 public:
   PIM( Module *parent, const string& name,
-       int inputs, int outputs, int iters );
+       int inputs, int outputs, int iters, Module *clock );
 
   ~PIM( );
 

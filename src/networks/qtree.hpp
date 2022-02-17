@@ -45,7 +45,7 @@
 #include "network.hpp"
 
 class QTree : public Network {
-
+///TODO: remove repeated members
   int _k;
   int _n;
 
@@ -58,7 +58,7 @@ class QTree : public Network {
 
 public:
 
-  QTree( const Configuration& config, const string & name );
+  QTree( const Configuration& config, const string & name, Module * clock, CreditBox *credits );
   static void RegisterRoutingFunctions() ;
 
   static int HeightFromID( int id );

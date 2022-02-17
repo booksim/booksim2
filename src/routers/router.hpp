@@ -36,19 +36,27 @@
 #include "credit.hpp"
 #include "flitchannel.hpp"
 #include "channel.hpp"
+#include "routefunc.hpp"
 #include "config_utils.hpp"
+#include "creditbox.hpp"
+#include "network.hpp"
+
+class Network;
 
 typedef Channel<Credit> CreditChannel;
 
 class Router : public TimedModule {
 
 protected:
-
-  static int const STALL_BUFFER_BUSY;
-  static int const STALL_BUFFER_CONFLICT;
-  static int const STALL_BUFFER_FULL;
-  static int const STALL_BUFFER_RESERVED;
-  static int const STALL_CROSSBAR_CONFLICT;
+  enum StallCause
+  {
+    STALL_BUFFER_BUSY = -2,
+    STALL_BUFFER_CONFLICT = -3,
+    STALL_BUFFER_FULL = -4,
+    STALL_BUFFER_RESERVED = -5,
+    STALL_CROSSBAR_CONFLICT = -6,
+    NUM_STALL_CAUSE = 5
+  };
 
   int _id;
   
@@ -88,16 +96,26 @@ protected:
   vector<int> _crossbar_conflict_stalls;
 #endif
 
+  CreditBox * _credits;
+
+  /* The member `tRoutingFunction _rf` is also common among all 3 router types. 
+  * Therefore, why not move it here???
+  */
+  // tRoutingFunction _rf;
+  RoutingConfig _rc;
+
+  Network *_owner;
+
   virtual void _InternalStep() = 0;
 
 public:
   Router( const Configuration& config,
-	  Module *parent, const string & name, int id,
-	  int inputs, int outputs );
+	  Network *parent, const string & name, int id,
+	  int inputs, int outputs, Module * clock, CreditBox * credits );
 
   static Router *NewRouter( const Configuration& config,
-			    Module *parent, const string & name, int id,
-			    int inputs, int outputs );
+			    Network *parent, const string & name, int id,
+			    int inputs, int outputs, CreditBox * credits );
 
   virtual void AddInputChannel( FlitChannel *channel, CreditChannel *backchannel );
   virtual void AddOutputChannel( FlitChannel *channel, CreditChannel *backchannel );
@@ -197,6 +215,8 @@ public:
 
   inline int NumInputs() const {return _inputs;}
   inline int NumOutputs() const {return _outputs;}
+
+  inline Network *GetOWner() const {return _owner;}
 };
 
 #endif
