@@ -740,6 +740,67 @@ void minimal_oblivious_torus(const Router *r, const Flit *f,
     outputs->AddRange(out_port, vcBegin, vcEnd);
 }
 
+//
+//
+
+void load_balanced_oblivious_torus(const Router *r, const Flit *f,
+                                   int in_channel, OutputSet *outputs, bool inject) {
+    int vcBegin = 0, vcEnd = gNumVCs-1;
+    if (f->type == Flit::READ_REQUEST) {
+        vcBegin = gReadReqBeginVC;
+        vcEnd = gReadReqEndVC;
+    } else if (f->type == Flit::WRITE_REQUEST) {
+        vcBegin = gWriteReqBeginVC;
+        vcEnd = gWriteReqEndVC;
+    } else if (f->type == Flit::READ_REPLY) {
+        vcBegin = gReadReplyBeginVC;
+        vcEnd = gReadReplyEndVC;
+    } else if (f->type == Flit::WRITE_REPLY) {
+        vcBegin = gWriteReplyBeginVC;
+        vcEnd = gWriteReplyEndVC;
+    }
+    assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
+
+    int out_port;
+
+    if(inject) {
+        out_port = -1;
+    } else if(r->GetID() == f->dest) {
+        out_port = 2 * gN; // Assuming 2*gN is the local port in torus topology
+    } else {
+        int current_row = r->GetID() / gN;
+        int current_col = r->GetID() % gN;
+        int dest_row = f->dest / gN;
+        int dest_col = f->dest % gN;
+
+        int delta_row = abs(dest_row - current_row);
+        int delta_col = abs(dest_col - current_col);
+
+        // Adjust for torus wraparound and load balance using VCs
+        delta_row = min(delta_row, gN - delta_row);
+        delta_col = min(delta_col, gN - delta_col);
+
+        bool use_alternate_path = (f->vc % 2 == 0); // Alternate path based on VC
+
+        if(delta_col > delta_row) {
+            if(((dest_col > current_col && delta_col <= gN / 2) || (dest_col < current_col && delta_col > gN / 2)) ^ use_alternate_path) {
+                out_port = 0; // Right or alternate
+            } else {
+                out_port = 1; // Left or alternate
+            }
+        } else {
+            if(((dest_row > current_row && delta_row <= gN / 2) || (dest_row < current_row && delta_row > gN / 2)) ^ use_alternate_path) {
+                out_port = 2; // Up or alternate
+            } else {
+                out_port = 3; // Down or alternate
+            }
+        }
+    }
+
+    outputs->Clear();
+    outputs->AddRange(out_port, vcBegin, vcEnd);
+}
+
 //=============================================================
 
 void dim_order_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
