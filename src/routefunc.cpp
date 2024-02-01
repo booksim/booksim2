@@ -2120,4 +2120,11 @@ void InitializeRoutingMap( const Configuration & config )
 
   gRoutingFunctionMap["chaos_mesh"]  = &chaos_mesh;
   gRoutingFunctionMap["chaos_torus"] = &chaos_torus;
+
+  // ===================================================
+  // Amir Arsalan Yavari
+  gRoutingFunctionMap["minimal_oblivious_torus"]          = &minimal_oblivious_torus;
+  gRoutingFunctionMap["load_balanced_oblivious_torus"]          = &load_balanced_oblivious_torus;
+  // End Amir Arsalan Yavari
+  // ===================================================
 }
