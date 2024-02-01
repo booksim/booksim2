@@ -677,6 +677,69 @@ void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
   outputs->AddRange( out_port, vcBegin, vcEnd );
 }
 
+// Added by: AMIR ARSALAN YAVARI
+//=============================================================
+
+void minimal_oblivious_torus(const Router *r, const Flit *f,
+                             int in_channel, OutputSet *outputs, bool inject) {
+    int vcBegin = 0, vcEnd = gNumVCs-1;
+    if (f->type == Flit::READ_REQUEST) {
+        vcBegin = gReadReqBeginVC;
+        vcEnd = gReadReqEndVC;
+    } else if (f->type == Flit::WRITE_REQUEST) {
+        vcBegin = gWriteReqBeginVC;
+        vcEnd = gWriteReqEndVC;
+    } else if (f->type == Flit::READ_REPLY) {
+        vcBegin = gReadReplyBeginVC;
+        vcEnd = gReadReplyEndVC;
+    } else if (f->type == Flit::WRITE_REPLY) {
+        vcBegin = gWriteReplyBeginVC;
+        vcEnd = gWriteReplyEndVC;
+    }
+    assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
+
+    int out_port;
+
+    if(inject) {
+        out_port = -1;
+    } else if(r->GetID() == f->dest) {
+        out_port = 2 * gN; // Assuming 2*gN is the local port in torus topology
+    } else {
+        // Calculate the minimum distance in both directions on a torus
+        // Assuming gN is the width/height of the torus and IDs are 0-based
+        int current_row = r->GetID() / gN;
+        int current_col = r->GetID() % gN;
+        int dest_row = f->dest / gN;
+        int dest_col = f->dest % gN;
+
+        int delta_row = abs(dest_row - current_row);
+        int delta_col = abs(dest_col - current_col);
+
+        // Adjust for torus wraparound
+        delta_row = min(delta_row, gN - delta_row);
+        delta_col = min(delta_col, gN - delta_col);
+
+        // Determine the output port based on the minimal distance
+        // Assuming ports are ordered: 0-right, 1-left, 2-up, 3-down, 4-local
+        if(delta_col > delta_row) {
+            if((dest_col > current_col && delta_col <= gN / 2) || (dest_col < current_col && delta_col > gN / 2)) {
+                out_port = 0; // Right
+            } else {
+                out_port = 1; // Left
+            }
+        } else {
+            if((dest_row > current_row && delta_row <= gN / 2) || (dest_row < current_row && delta_row > gN / 2)) {
+                out_port = 2; // Up
+            } else {
+                out_port = 3; // Down
+            }
+        }
+    }
+
+    outputs->Clear();
+    outputs->AddRange(out_port, vcBegin, vcEnd);
+}
+
 //=============================================================
 
 void dim_order_ni_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
