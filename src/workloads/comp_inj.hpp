@@ -18,21 +18,33 @@
 #include "swm.hpp"
 #include "roi.hpp"
 #include "wkld_comp.hpp"
-
+#include "msg.hpp"
 
 class ComponentInjectionProcess : public InjectionProcess {
     WorkloadComponent * _upstream;
+    CoalType _coal_type;
+    int active_nodes;
   public:
-    bool test(int src)               { return _upstream->test(src); }
-    WorkloadMessagePtr get(int src)  { return _upstream->get(src); }
-    void next(int src)               { _upstream->next(src); }
+    bool test(int src)               { if(src < active_nodes) return _upstream->test(src); else return false; }
+    WorkloadMessagePtr get(int src)  { if(src < active_nodes) return _upstream->get(src); else return NULL; }
+    void next(int src)               { if(src < active_nodes ) _upstream->next(src); }
     void eject(WorkloadMessagePtr m) { _upstream->eject(m); }
 
 	ComponentInjectionProcess(int nodes, const string& params, Configuration const * const config);
 
-    virtual ~ComponentInjectionProcess();
+    typedef pair<string, vector<string> > comp_spec_t;          // component specifier: kind, options
+    static vector<comp_spec_t> ParseComponents(const string &); // parse components string
+
+    virtual CoalType get_coal_type() { return _coal_type; }
+
   private:
-    void _ParseComp(const string &, string &, vector<string> &);
+    static map<string, vector<comp_spec_t> > _comp_spec_cache;
+
+    static void                _ParseOneComp(const string &, comp_spec_t &);
+    static vector<comp_spec_t> _ParseComponentsFromString(const string &);
+    static string              _ComponentsStringFromFile(const string &);
+    static void                _RmEolSpacesComments(char *);
+    static const char*         _RmBolSpaces(const char *i) { const char *o; for(o=i; *o && isspace(*o); ++o) {}; return o; }
 };
 
 

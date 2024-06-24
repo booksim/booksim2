@@ -15,23 +15,42 @@
 //
 //
 //
-std::map<WorkloadMessage::msg_t, std::string> type_to_string = {
-   {WorkloadMessage::DummyRequest, "DummyRequest"},
-   {WorkloadMessage::GetRequest, "GetRequest"},
-   {WorkloadMessage::NbGetRequest, "NbGetRequest"},
-   {WorkloadMessage::PutRequest, "PutRequest"},
-   {WorkloadMessage::SendRequest, "SendRequest"},
-   {WorkloadMessage::RecvRequest, "RecvRequest"}
-};
+
+// static members
+int SwmThread::sim_terminate = 0;
+
+// pipetrace
+namespace pt
+{
+    // record types
+    Pipe_Recordtype* SwmPe = pipe_new_recordtype("SWM_PE", "Scalable workload model Processing element");
+    // data types
+    Pipe_Datatype* SwmPeId     = pipe_new_datatype("PE",       Pipe_Integer, "SWM PE identifier");
+    Pipe_Datatype* SwmPeTarget = pipe_new_datatype("target",   Pipe_Integer, "SWM message target PE");
+    Pipe_Datatype* SwmMarkerId = pipe_new_datatype("markerID", Pipe_Integer, "SWM marker ID");
+    // event types
+    Pipe_Eventtype* SwmStart    = pipe_new_eventtype("swm_start",     '*', Pipe_Green,  "PE started");
+    Pipe_Eventtype* SwmEnd      = pipe_new_eventtype("swm_end",       '*', Pipe_Red,    "PE finished");
+    Pipe_Eventtype* SwmWork     = pipe_new_eventtype("swm_working",   'W', Pipe_Blue,   "PE working");
+    Pipe_Eventtype* SwmOverhead = pipe_new_eventtype("swm_overhead",  'w', Pipe_Gray,   "PE communication overhead work");
+    Pipe_Eventtype* SwmMsgPut   = pipe_new_eventtype("swm_msg_put",   'P', Pipe_Yellow, "PE has PUT message");
+    Pipe_Eventtype* SwmMsgGet   = pipe_new_eventtype("swm_msg_get",   'G', Pipe_Yellow, "PE has GET message");
+    Pipe_Eventtype* SwmMsgGetNb = pipe_new_eventtype("swm_msg_getnb", 'G', Pipe_Green,  "PE has GET message (nonblocking)");
+    Pipe_Eventtype* SwmMsgSend  = pipe_new_eventtype("swm_msg_send",  'S', Pipe_Yellow, "PE has SEND message");
+    Pipe_Eventtype* SwmMsgAccel = pipe_new_eventtype("swm_msg_accel", 'X', Pipe_Purple, "PE has ACCELREQ message");
+    Pipe_Eventtype* SwmWait     = pipe_new_eventtype("swm_wait",      '~', Pipe_White,  "PE waiting for message");
+    Pipe_Eventtype* SwmQuiet    = pipe_new_eventtype("swm_quiet",     '_', Pipe_White,  "PE quiet waiting");
+    Pipe_Eventtype* SwmMarker   = pipe_new_eventtype("swm_marker",    'm', Pipe_Orange, "PE at marker instruction");
+    Pipe_Eventtype* SwmYield    = pipe_new_eventtype("swm_yield",     'y', Pipe_Orange, "PE yield");
+}
 
 static int clear_stats_cnt = 0;
 // Notify booksim to clear the stats
-void SwmThread::clear_stats()
+void SwmThread::clear_stats() 
 {
-   if(_track_acks)
-      quiet();
+   quiet();
 
-   clear_stats_cnt++;
+   clear_stats_cnt++; 
    if(clear_stats_cnt == _np) {
       gClearStats = true;
       clear_stats_cnt = 0;
@@ -44,14 +63,59 @@ void SwmThread::start()
    _coro = new coro_t(std::bind(&SwmThread::wrapper, this, std::placeholders::_1));
 }
 
+void SwmThread::parse_args(int &argc, char ** &argv)
+{
+    string args = _config->GetStr("swm_args");
+    vector<string> arg_tokens = tokenize_str(args);
+
+    // Create the `argv` array.
+    argc = arg_tokens.size()+1;
+    argv = new char*[argc + 1];
+    string name = "swm";
+    argv[0] = new char[name.length()+1];
+    strcpy(argv[0], name.c_str());
+    for (int i = 1; i < argc; ++i) {
+        argv[i] = new char[arg_tokens[i-1].length() + 1];
+        strcpy(argv[i], arg_tokens[i-1].c_str());
+    }
+    argv[argc] = nullptr;
+}
+
+void SwmThread::wrapper(sink_t &sink)
+{
+    _sink = &sink;
+
+    gSwm = true;
+    if(!_config->GetInt("roi")) {
+        gSimEnabled = true;
+    }
+
+    // parse arguments for the swm workloads
+    int argc=0;
+    char ** argv=nullptr;
+    parse_args(argc, argv);
+
+    // SWM behavior
+    behavior(argc, argv);
+
+    // wait for the completion of outstanding
+    // requests and replies
+    quiet();
+
+    _state = done;
+
+    sim_terminate++;
+    if(sim_terminate == _np)
+        gSimEnabled = false;
+}
+
+
 // SWM INTERFACE
 
 // simulate some number of cycles of local work
 void SwmThread::work(cycle_t cycles)
 {
-    if (!gSimEnabled){
-        return;
-    }
+   _record_event(_time, pt::SwmWork, cycles);
    _state = ready;
    _time += cycles;
 }
@@ -59,98 +123,119 @@ void SwmThread::work(cycle_t cycles)
 // generate a PUT message
 void SwmThread::put(int size, int dest)
 {
-    if (!gSimEnabled){
-        return;
-    }
-      _state = message;
-      _put++;
-      _time += _put_overhead;
-      DBGPRINT("PUT to " << dest);
-      (*_sink)({WorkloadMessage::PutRequest, 0, _me, dest, size, false});
+   _record_event(_time, pt::SwmOverhead, _put_overhead);
+   _state = message;
+   _put++;
+   _time += _put_overhead;
+   _record_event(_time, pt::SwmMsgPut, 1, pt::SwmPeTarget, dest);
+   DBGPRINT("PUT to " << dest);
+   (*_sink)(new GeneratorWorkloadMessage(this, _me, dest, WorkloadMessage::PutRequest, false, size));
 }
 
 // generate a GET request message
 void SwmThread::get(int size, int dest)
 {
-    if (!gSimEnabled){
-        return;
-    }
-      _state = message;
-      _get++;
-      _time += _get_overhead;
-      DBGPRINT("GET from " << dest);
-      (*_sink)({WorkloadMessage::GetRequest, 0, _me, dest, size, false});
+   _record_event(_time, pt::SwmOverhead, _get_overhead);
+   _state = message;
+   _get++;
+   _time += _get_overhead;
+   _record_event(_time, pt::SwmMsgGet, 1, pt::SwmPeTarget, dest);
+   DBGPRINT("GET from " << dest);
+   (*_sink)(new GeneratorWorkloadMessage(this, _me, dest, WorkloadMessage::GetRequest, false, size));
 }
 
 // generate a non-blocking GET request message
 void SwmThread::getnb(int size, int dest)
 {
+   _record_event(_time, pt::SwmOverhead, _get_overhead);
    _state = message;
    _get++;
    _time += _get_overhead;
+   _record_event(_time, pt::SwmMsgGetNb, 1, pt::SwmPeTarget, dest);
    DBGPRINT("NBGET from " << dest);
-   (*_sink)({WorkloadMessage::NbGetRequest, 0, _me, dest, size, false});
+   (*_sink)(new GeneratorWorkloadMessage(this, _me, dest, WorkloadMessage::NbGetRequest, false, size));
 }
 
 // generate a SEND message
 void SwmThread::send(int size, int dest)
 {
+   _record_event(_time, pt::SwmOverhead, _send_overhead);
    _state = message;
    _send++;
    //_time += PUT_OVHD;
    DBGPRINT("SEND to " << dest);
    _time += _send_overhead;
-   (*_sink)({WorkloadMessage::SendRequest, 0, _me, dest, size, false});
+   _record_event(_time, pt::SwmMsgSend, 1, pt::SwmPeTarget, dest);
+   (*_sink)(new GeneratorWorkloadMessage(this, _me, dest, WorkloadMessage::SendRequest, false, size));
 }
 
 // RECV a message
 void SwmThread::recv(int src)
 {
+   _record_event(_time, pt::SwmOverhead, _recv_overhead, pt::SwmPeTarget, src);
+   //_time += _recv_overhead;
    // first see if it matches any previously received messages
    for (auto i = _recvd.begin(); i != _recvd.end(); ++i)
    {
-      DBGPRINT("RECV from " << i->source);
-      if (i->source == src) {
+      DBGPRINT("RECV from " << (*i)->Source());
+      if ((*i)->Source() == src) {
+         _time += _recv_overhead;
          _recvd.erase(i);
          return;
       }
    }
    // if not, put myself into wait state and yield a bogus message
    _state = wait;
-   DBGPRINT("RECV wait for data to arrive state is wait");
-   _time += _recv_overhead;
-   (*_sink)({WorkloadMessage::RecvRequest, 0, _me, src, 0/*bogus size*/, 0});
+   DBGPRINT("RECV wait for data to arrive state is wait src " <<  src);
+   _record_event(_time, pt::SwmWait, 1, pt::SwmPeTarget, src);
+   (*_sink)(new GeneratorWorkloadMessage(this, _me, src, WorkloadMessage::RecvRequest));
 }
 
 // wait for non-blocking get replies and acks
-void SwmThread::quiet()
+void SwmThread::quiet() 
 {
    while(!_outstanding_acks.empty()) {
       _state = quiet_wait;
-      auto i = _outstanding_acks.front();
-      DBGPRINT("outstanding acks " << _outstanding_acks.size() << " waiting for reply from " << i.dest);
-      (*_sink)({i.type, 0, _me, i.dest, 0/*bogus size*/, 0});
+      auto msg = _outstanding_acks.front();
+      _record_event(_time, pt::SwmQuiet, 1, pt::SwmPeTarget, msg->Dest());
+      DBGPRINT("outstanding acks " << _outstanding_acks.size() << " waiting for reply from " << msg->Dest());
+      (*_sink)(msg);
    }
+}
+
+// local accelerator request message
+void SwmThread::ACCELREQ(WorkloadMessagePtr m)
+{
+   _record_event(_time, pt::SwmOverhead, _xlmsg_overhead);
+   _state = message;
+   _xlmsg++;
+   _time += _xlmsg_overhead;
+   _record_event(_time, pt::SwmMsgAccel);
+   DBGPRINT("ACCELREQ: " << *m);
+   (*_sink)(m);
 }
 
 // TODO: maybe have another state called "yield"
 void SwmThread::thread_yield()
 {
-   // Dummy request to yield to the other threads
+   // Dummy request to yield to the other threads 
+   _record_event(_time, pt::SwmYield);
    _state = message;
-   (*_sink)({WorkloadMessage::DummyRequest, 0, _me, _me, 0/*bogus size*/, 0});
+   (*_sink)(new GeneratorWorkloadMessage(this, _me, _me, WorkloadMessage::DummyRequest));
 }
 
 void SwmThread::SwmMarker(int marker)
 {
+   _record_event(_time, pt::SwmMarker, 1, pt::SwmMarkerId, marker);
    _state = message;
-   (*_sink)({WorkloadMessage::DummyRequest, marker, _me, _me, 0/*bogus size*/, 0});
+   (*_sink)(new MarkerMessage(this, _me, marker));
 }
 
 void SwmThread::SwmEndMarker(int marker)
 {
+   _record_event(_time, pt::SwmMarker, 1, pt::SwmMarkerId, marker);
    _state = message;
-   (*_sink)({WorkloadMessage::DummyRequest, marker, _me, _me, 0/*bogus size*/, 0});
+   (*_sink)(new MarkerMessage(this, _me, marker));
 }
 
 
@@ -171,13 +256,13 @@ void SwmThread::go(cycle_t now)
 // update state and maybe advance the model execution
 void SwmThread::next(cycle_t now)
 {
-   if (_state == message && _coro->get().type == WorkloadMessage::GetRequest){
+   auto w = _coro->get();
+   if (_state == message && w->IsBlocking()){
       _state = wait;
    }
    else if (_state != wait) {
-      bool is_dummy = _coro->get().type == WorkloadMessage::DummyRequest;
-      if(_track_acks && !is_dummy)
-         _outstanding_acks.push_back(_coro->get());
+      if(!w->IsDummy())
+         _outstanding_acks.push_back(w);
 
       if(!is_done())
          go(now);
@@ -187,22 +272,22 @@ void SwmThread::next(cycle_t now)
 
 // is the model process waiting for a network reply?
 inline
-bool SwmThread::is_waiting(const pkt_s &m) const
+bool SwmThread::is_waiting(WorkloadMessagePtr m) const
 {
    if (_state != wait) { return false; }
    auto w = _coro->get();
-   return (m.type == WorkloadMessage::GetRequest && w.dest == m.source);
+   return (m->IsBlocking() && w->Dest() == m->Source());
 }
 
 
 // provide a network reply, and advance model execution
-void SwmThread::reply(cycle_t now, const pkt_s &reply)
+void SwmThread::reply(cycle_t now, WorkloadMessagePtr reply)
 {
-   DBGPRINT("got " << (reply.type == WorkloadMessage::GetRequest ? "GET" : reply.type == WorkloadMessage::SendRequest ? "SEND":"PUT") << " reply from " << reply.source);
+   DBGPRINT("got reply " << reply->Source());
    _reply++;
    if (is_waiting(reply))  {
       for (auto i = _outstanding_acks.begin(); i != _outstanding_acks.end(); ++i) {
-         if (i->dest == reply.source) {
+         if ((*i)->Dest() == reply->Source()) {
             _outstanding_acks.erase(i);
             break;
          }
@@ -211,25 +296,27 @@ void SwmThread::reply(cycle_t now, const pkt_s &reply)
    }
    else { // non-blocking get replies that arrive before fence
       for (auto i = _outstanding_acks.begin(); i != _outstanding_acks.end(); ++i) {
-         if (i->dest == reply.source) {
+         if ((*i)->Dest() == reply->Source()) {
             _outstanding_acks.erase(i);
             if(_state == quiet_wait) {
                go(now);
             }
-            break;
+            break; 
          }
       }
    }
 }
 
 // provide a network SEND, and advance model execution
-void SwmThread::sendin(cycle_t now, const pkt_s &sent)
+void SwmThread::sendin(cycle_t now, WorkloadMessagePtr sent)
 {
-   DBGPRINT("got SEND from " << sent.source << " at time " << now);
+   DBGPRINT("got SEND from " << sent->Source() << " at time " << now);
    //
-   bool is_matched = _coro->get().type == WorkloadMessage::RecvRequest && _coro->get().dest == sent.source;
-   if(_state == wait && is_matched) {
-     go(now);
+   auto w = _coro->get();
+   bool is_matched = w->Type() == WorkloadMessage::RecvRequest && w->Dest() == sent->Source(); 
+   if(_state == wait && is_matched) { 
+      _time = max(now, _time) + _recv_overhead; // max so you still incur overhead if message arrives early
+      go(_time); 
    }
    else {
       DBGPRINT("unmatched");

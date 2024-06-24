@@ -37,6 +37,7 @@ SWM_CLASS(SwmHisto)
    void behavior(int argc, char * argv[]);
 
    double gen_interval();
-   void send_packets(int num_of_packets, unsigned int run_till);
+   void send_packets(int num_of_packets, unsigned int run_till, const bool include_itself_target,
+           bool streaming);
 
 };

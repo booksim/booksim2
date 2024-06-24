@@ -7,7 +7,6 @@
 #include "random_utils.hpp"
 #include "outputset.hpp"
 
-
 EndPoint::EndPoint(Configuration const & config, TrafficManager * parent,
                    const string & name, int nodeid):
   TimedModule( parent, name ), _nodeid( nodeid ), _parent( parent ) {
@@ -140,6 +139,7 @@ EndPoint::EndPoint(Configuration const & config, TrafficManager * parent,
   _incoming_packet_flit_countdown = -1;
 
   _cycles_before_standalone_ack = config.GetInt("cycles_before_standalone_ack");
+  _cycles_before_standalone_ack_has_priority = _cycles_before_standalone_ack  * 2;
   _packets_before_standalone_ack = config.GetInt("packets_before_standalone_ack");
   _sack_enabled = config.GetInt("enable_sack");
   _sack_vec_length = config.GetInt("sack_vec_length");
@@ -158,9 +158,26 @@ EndPoint::EndPoint(Configuration const & config, TrafficManager * parent,
   _opb_seq_num_bits  = config.GetInt("opb_seq_num_idx_bits");
   _opb_seq_num_idx_mask = (1UL << _opb_seq_num_bits) - 1;
   _inj_buf_depth = config.GetInt("inj_buf_depth");
+/*
+  // Only use nodeid 0 to check for config errors
+  if (_nodeid == 0) {
+    // The total size of the OPB should match the indicies * ways.
+    unsigned int index_bits = (_opb_seq_num_bits + config.GetInt("opb_dest_idx_bits"));
+    if (((1UL << index_bits) * _opb_ways) != _opb_max_pkt_occupancy) {
+      cout << "ERROR: Inconsistent OPB configuration!  OPB max occupancy specified as: " << _opb_max_pkt_occupancy
+           << ".  Seq bits: " << _opb_seq_num_bits << ", dest bits: " << config.GetInt("opb_dest_idx_bits")
+           << ", num ways: " << _opb_ways << "   => " << (1UL << index_bits) * _opb_ways << endl;
+      exit(1);
+    }
+  }
+*/
 
   int flit_size = 32; // in bytes
   _retry_timer_timeout = config.GetInt("retry_timer_timeout");
+
+  if (_mypolicy_constant.policy == HC_HOMA_POLICY)
+    _retry_timer_timeout = _estimate_round_trip_cycle * 3;
+
   _max_retry_attempts = config.GetInt("max_retry_attempts");
   _response_timer_timeout = config.GetInt("response_timer_timeout");
   _rget_req_pull_timeout = config.GetInt("rget_req_pull_timeout");
@@ -171,7 +188,9 @@ EndPoint::EndPoint(Configuration const & config, TrafficManager * parent,
   _xaction_size_limit_per_dest = int(config.GetInt("endpoint_xaction_size_limit_per_dest_in_kb") * 1000 / gFlitSize);
   _get_inbound_size_limit_per_dest = int(config.GetInt("endpoint_get_inbound_size_limit_per_dest_in_kb") * 1000 / gFlitSize);
   _rget_inbound_size_limit_per_dest = int(config.GetInt("endpoint_rget_inbound_size_limit_per_dest_in_kb") * 1000 / gFlitSize);
+  //_rget_inbound_size_limit_per_dest = config.GetInt("endpoint_rget_inbound_size_limit_per_dest");
 
+  //_global_get_req_size_limit = config.GetInt("endpoint_global_get_req_size_limit");
   _global_get_req_size_limit = int(config.GetInt("endpoint_global_get_req_size_limit_in_kb") * 1000 / gFlitSize);
 
   _use_new_rget_metering = config.GetInt("endpoint_use_new_rget_metering");
@@ -312,7 +331,6 @@ EndPoint::EndPoint(Configuration const & config, TrafficManager * parent,
     _mypolicy_constant.speculative_ack_queue_size =
       config.GetInt("speculative_ack_queue_size");
 
-    _mypolicy_endpoint.rget_get_allowance = 0;
     _mypolicy_endpoint.max_ratio_valid = false;
     _mypolicy_endpoint.suppress_request = false;
     _mypolicy_endpoint.reserved_space = 0;
@@ -321,10 +339,16 @@ EndPoint::EndPoint(Configuration const & config, TrafficManager * parent,
     _mypolicy_endpoint.next_fairness_reset_time = _mypolicy_constant.fairness_reset_period;
 
     assert(_mypolicy_constant.max_ack_before_send_packet < 0);
-  } else if (_mypolicy_constant.policy == HC_TCP_LIKE_POLICY) {
+  } else if (_mypolicy_constant.policy == HC_TCP_LIKE_POLICY || _mypolicy_constant.policy == HC_ECN_POLICY) {
     _mypolicy_constant.tcplikepolicy_MSS =
         config.GetInt("host_control_tcplikepolicy_MSS");
 
+    _mypolicy_constant.ecn_period = config.GetInt("ecn_period");
+    _mypolicy_constant.ecn_param_g = config.GetFloat("ecn_param_g");
+
+    _mypolicy_constant.ecn_threshold_percent = config.GetFloat("ecn_threshold_percent");
+    _mypolicy_constant.ecn_threshold = (int) (_put_buffer_meta.load_balance_queue_size *
+        _mypolicy_constant.ecn_threshold_percent);
   }
 
   _mypolicy_endpoint.acked_data_in_queue = 0;
@@ -350,6 +374,8 @@ EndPoint::EndPoint(Configuration const & config, TrafficManager * parent,
   _mypolicy_endpoint.current_host_bandwith = _mypolicy_constant.host_bandwidth_high;
   _mypolicy_endpoint.next_change_bandwidth_time = (*_mypolicy_endpoint.interarrival_logn)(_mypolicy_endpoint.generator);
   _mypolicy_endpoint.host_bandwidth_is_slow = false;
+  _mypolicy_endpoint.ecn_next_check_period = 0;
+
 
   for (unsigned int target = 0; target < _endpoints; target++) {
     // Transmitted sequence numbers start with 1.
@@ -367,9 +393,12 @@ EndPoint::EndPoint(Configuration const & config, TrafficManager * parent,
             .space_after_NACK_reserved = false,
             .speculative_ack_allowance_size = 0,
             .earliest_accum_ack_shared_time = -1,
+            .ecn_count = 0,
+            .ecn_total = 0,
+            .ecn_running_percent = 0.0,
             .halt_active = false,
             .halt_state = -9999,
-            .send_allowance_counter = 0,
+            .send_allowance_counter_size = 0,
             .must_retry_at_least_one_packet = false,
             .time_last_ack_recvd = 999999999,
             .last_valid_ack_seq_num_recvd = 0,
@@ -837,6 +866,11 @@ void EndPoint::GeneratePacketFlits(int dest, Flit::FlitType packet_type, int siz
            << " with packetid: " << pid << ", flitid: " << _parent->_cur_id << endl;
     }
 
+    if (_trace_debug){
+      //_parent->debug_trace_file << _cur_time << ",GENF," << _nodeid << "," << dest << "," << flit_type_strings[packet_type] <<
+        //"," << _packet_seq_num[dest]  << "," << req_seq_num << "," << pid << "," << _parent->_cur_id << "," << size << endl;
+    }
+
     for ( int i = 0; i < size; ++i ) {
         // This is the *original* packet creation.
         // Careful, though... for convenience, this is the copy of the flit that
@@ -984,6 +1018,7 @@ bool EndPoint::check_for_opb_insertion_conflict(int target) {
 // the various buffers and passes it up to the trafficmanager to put the flit
 // onto the network wires.
 Flit * EndPoint::_Step(int subnet) {
+
 
   if(_cur_time == gLastClearStatTime) {
     printf("Displaying and clearing stats...%d\n", _cur_time);
@@ -1160,10 +1195,6 @@ Flit * EndPoint::_Step(int subnet) {
           (flit->type == Flit::RGET_GET_REPLY)) {
 
         int mydest = flit->debug_dest;
-        if (_trace_debug){
-          _parent->debug_trace_file << _cur_time << ",INJWRITEREQQDEST," <<
-                _nodeid << "," << flit->packet_seq_num << "," << mydest << endl;
-        }
         _flits_waiting_to_inject.push({flit, _cur_time + (int)_min_packet_processing_penalty, new_flit});
       } else {
         _flits_waiting_to_inject.push({flit, _cur_time + 1, new_flit});
@@ -1172,7 +1203,6 @@ Flit * EndPoint::_Step(int subnet) {
   }
   //
   // Allowance counter should decrement if host contorl's active and we're sending a relevant packet
-
   if (flit && flit->head){
       if ((flit->type == Flit::WRITE_REQUEST) ||
          (flit->type == Flit::WRITE_REQUEST_NOOP) ||
@@ -1181,22 +1211,15 @@ Flit * EndPoint::_Step(int subnet) {
          ){
           mypolicy_host_control_connection_record * my_state = &_mypolicy_connections[flit->dest];
           if (_mypolicy_constant.policy == HC_MY_POLICY) {
-            if (my_state->send_allowance_counter > 0){
+            assert(flit->size);
+            if (my_state->send_allowance_counter_size >= flit->size){
                 // This variable is ignored duing replay
-                my_state->send_allowance_counter --;
+                my_state->send_allowance_counter_size -= flit->size;
                 my_state->must_retry_at_least_one_packet = false;
                 if (_trace_debug){
                     _parent->debug_trace_file << _cur_time << ",HOSTCTRLALLOWANCEDEST," << _nodeid <<
-                    "," << my_state->send_allowance_counter << "," << flit->dest << endl;
+                    "," << my_state->send_allowance_counter_size << "," << flit->dest << endl;
                 }
-            }
-          }
-      }
-
-      if (flit->type == Flit::RGET_GET_REQUEST) {
-          if (_mypolicy_constant.policy == HC_MY_POLICY) {
-            if (_mypolicy_endpoint.rget_get_allowance) {
-              _mypolicy_endpoint.rget_get_allowance --;
             }
           }
       }
@@ -1211,6 +1234,7 @@ Flit * EndPoint::_Step(int subnet) {
   process_pending_outbound_response_queue();
 
   update_host_bandwidth();
+  sender_process_ecn();
   process_put_queue();
   if (_mypolicy_constant.policy == HC_MY_POLICY){
     process_delayed_ack_if_needed();
@@ -1287,6 +1311,7 @@ Flit * EndPoint::inject_flit(BufferState * const dest_buf) {
             int mydest = flit->debug_dest;
             _parent->debug_trace_file << _cur_time << ",INJWRITEREQDEST," <<
                 _nodeid << "," << flit->packet_seq_num << "," << mydest << endl;
+
         } else if (flit->type == Flit::RGET_REQUEST){
             _parent->debug_trace_file << _cur_time << ",INJRGET," <<
                 _nodeid << "," << flit->packet_seq_num << endl;
@@ -1374,8 +1399,9 @@ bool EndPoint::packet_qualifies_for_retransmission(Flit::FlitType type, int dest
      (type == Flit::READ_REPLY)) {
   } {
 
+      assert(size);
       if (_mypolicy_connections[dest].halt_active &&
-          (!_mypolicy_connections[dest].send_allowance_counter &&
+          (!(_mypolicy_connections[dest].send_allowance_counter_size >= size) &&
            !_mypolicy_connections[dest].must_retry_at_least_one_packet)) {
         blocked_on_metering = true;
       } else {
@@ -1435,11 +1461,12 @@ Flit * EndPoint::find_flit_to_retransmit(BufferState * const dest_buf) {
 
       if (cf->head){
           if (_mypolicy_constant.policy == HC_MY_POLICY) {
+            // For processing NACK
             // If we get -1 packet ID, it means some packet transmission gets cut in the middle.
             // so expected and actual flit id is not the same
 
             if (_mypolicy_connections[dest].halt_active &&
-                !_mypolicy_connections[dest].send_allowance_counter &&
+                !(_mypolicy_connections[dest].send_allowance_counter_size >= cf->size) &&
                 !_mypolicy_connections[dest].must_retry_at_least_one_packet){
               // If there're multiple pending nacks try next available
               int this_dest = _pending_nack_replays.front();
@@ -1448,7 +1475,7 @@ Flit * EndPoint::find_flit_to_retransmit(BufferState * const dest_buf) {
 
               if (_debug_enabled) {
                 cout << _cur_time << ": " << Name() << ": Retransmission blocked by allowance counter"
-                  " for dest " << dest << "counter " <<_mypolicy_connections[dest].send_allowance_counter << endl;
+                  " for dest " << dest << "counter " <<_mypolicy_connections[dest].send_allowance_counter_size << endl;
               }
               return NULL;
             }
@@ -1783,8 +1810,10 @@ Flit * EndPoint::find_timed_out_flit_to_retransmit(BufferState * const dest_buf)
             if (cf->head) { // Find first available output VC
 
               if (_mypolicy_constant.policy == HC_MY_POLICY) {
+                // For processing NACK
+                assert(cf->size);
                 if (_mypolicy_connections[cf->dest].halt_active &&
-                    !_mypolicy_connections[cf->dest].send_allowance_counter &&
+                    !(_mypolicy_connections[cf->dest].send_allowance_counter_size > cf->size) &&
                     !_mypolicy_connections[cf->dest].must_retry_at_least_one_packet){
                   if (from_retry_timer){
                     _retry_timer_expiration_queue.push_front({cached_time, dest, retry_seq_num});
@@ -2298,12 +2327,15 @@ Flit * EndPoint::head_packet_avail_and_qualified(list<Flit *> & packet_buf, int 
     if (!packet_buf.front()->head) {
       flit = packet_buf.front();
     } else {
+      if (has_priority_standalone_ack()){
+        // Allow standalone ack to go if urgent enough
+        return NULL;
+      }
       if ((packet_buf.front()->subnetwork == subnet) &&
            // Dest is not in retry.
            (_retry_state_tracker[dest].dest_retry_state != TIMEOUT_BASED &&
            _retry_state_tracker[dest].dest_retry_state != NACK_BASED
       )) {
-
         if (packet_buf.front()->head && !_put_to_noop &&
             (packet_buf.front()->type == Flit::WRITE_REQUEST)) {
           // Note that if we decide not to convert, and then can't issue the PUT,
@@ -2382,14 +2414,23 @@ bool EndPoint::new_packet_qualifies_for_arb(Flit::FlitType type, int dest, int s
         }
     }
 
+    if (_mypolicy_constant.policy == HC_HOMA_POLICY){
+        // Only tesitng for writes for now
+        // RATE_LIMIT.reliable_size
+        if ((_outstanding_outbound_data_per_dest[dest] + size) > _estimate_round_trip_cycle) {
+          update_stat(_req_inj_blocked_on_size_limit, 1);
+          blocked_on_metering = true;
+        }
+    }
+
      //Host duplicate ack metering
     if (_mypolicy_constant.policy == HC_MY_POLICY) {
       if (_mypolicy_connections[dest].halt_active &&
-          !_mypolicy_connections[dest].send_allowance_counter &&
+          !(_mypolicy_connections[dest].send_allowance_counter_size >= size) &&
           !_mypolicy_connections[dest].must_retry_at_least_one_packet ) {
         blocked_on_metering = true;
       }
-    } else if (_mypolicy_constant.policy == HC_TCP_LIKE_POLICY) {
+    } else if (_mypolicy_constant.policy == HC_TCP_LIKE_POLICY || _mypolicy_constant.policy == HC_ECN_POLICY) {
       // Already done after everything
       //if ((_outstanding_outbound_data_per_dest[dest] + size) >
           //_ack_response_state[dest].host_control_tcplikepolicy_cwd) {
@@ -2443,7 +2484,7 @@ bool EndPoint::new_packet_qualifies_for_arb(Flit::FlitType type, int dest, int s
 
     if (_mypolicy_constant.policy == HC_MY_POLICY) {
       if (_mypolicy_connections[dest].halt_active &&
-          !_mypolicy_connections[dest].send_allowance_counter &&
+          !(_mypolicy_connections[dest].send_allowance_counter_size >= size) &&
           !_mypolicy_connections[dest].must_retry_at_least_one_packet
       ) {
         blocked_on_metering = true;
@@ -2511,13 +2552,6 @@ bool EndPoint::new_packet_qualifies_for_arb(Flit::FlitType type, int dest, int s
       blocked_on_metering = true;
     }
 
-    if (_mypolicy_constant.policy == HC_MY_POLICY) {
-
-      if (!_mypolicy_endpoint.rget_get_allowance) {
-        blocked_on_metering = true;
-      }
-    }
-
       if (_trace_debug){
         _parent->debug_trace_file << _cur_time << ",OUTGETPERDEST," << _nodeid << "," << _outstanding_gets_per_dest[dest] << endl;
         _parent->debug_trace_file << _cur_time << ",OUTINBOUND," << _nodeid << "," << _outstanding_inbound_data_per_dest[dest] << endl;
@@ -2525,14 +2559,14 @@ bool EndPoint::new_packet_qualifies_for_arb(Flit::FlitType type, int dest, int s
   } else if (type == Flit::RGET_GET_REPLY) {
     if (_mypolicy_constant.policy == HC_MY_POLICY) {
       if (_mypolicy_connections[dest].halt_active &&
-          !_mypolicy_connections[dest].send_allowance_counter &&
+          !(_mypolicy_connections[dest].send_allowance_counter_size >= size) &&
           !_mypolicy_connections[dest].must_retry_at_least_one_packet ) {
         blocked_on_metering = true;
       }
     }
   }
 
-  if (_mypolicy_constant.policy == HC_TCP_LIKE_POLICY) {
+  if (_mypolicy_constant.policy == HC_TCP_LIKE_POLICY || _mypolicy_constant.policy == HC_ECN_POLICY) {
     if ((_outstanding_outbound_data_per_dest[dest] + size) >
         _mypolicy_connections[dest].tcplikepolicy_cwd) {
       blocked_on_metering = true;
@@ -2780,6 +2814,14 @@ cout << _cur_time << ": " << Name() << ": Sending RGET_REQUEST to " << flit->des
   }
 }
 
+void EndPoint::update_flit_ack_if_needed_for_ecn(Flit * flit) {
+  if (_mypolicy_constant.policy == HC_ECN_POLICY) {
+    // If there's congestion
+    if (occupied_size() + _mypolicy_endpoint.reserved_space > _mypolicy_constant.ecn_threshold){
+        flit->ecn_congestion_detected = true;
+    }
+  }
+}
 
 void EndPoint::insert_piggybacked_acks(Flit * flit) {
   if (flit->head) {
@@ -2815,7 +2857,9 @@ void EndPoint::insert_piggybacked_acks(Flit * flit) {
         _ack_response_state[flit->dest].packets_recvd_since_last_ack = 0;
       }
 
-
+      if (_mypolicy_constant.policy == HC_ECN_POLICY){
+        update_flit_ack_if_needed_for_ecn(flit);
+      }
 
       if (_trace_debug){
         if (flit->nack_seq_num == -1){
@@ -2844,14 +2888,17 @@ void EndPoint::insert_piggybacked_acks(Flit * flit) {
              << " on packet: " << flit->pid << " (fid: " << flit->id << ")" << endl;
       }
 
-
       if (_mypolicy_constant.policy == HC_MY_POLICY){
         // IF we have a nack, we ack all received sequence numbe and update the acked variable
         flit->nack_seq_num = _ack_response_state[flit->dest].last_valid_seq_num_recvd;
         // We reserve space for first packet coming from the initiator after NACK
         target_reserve_put_space_for_initiator_if_needed(flit->dest);
       } else {
-        flit->nack_seq_num = _ack_response_state[flit->dest].last_valid_seq_num_recvd;
+        if (HC_HOMA_POLICY != _mypolicy_constant.policy) {
+          flit->nack_seq_num = _ack_response_state[flit->dest].last_valid_seq_num_recvd;
+        } else {
+          flit->nack_seq_num = -1;
+        }
       }
       flit->ack_seq_num = -1;
       flit->sack = false;
@@ -2864,6 +2911,9 @@ void EndPoint::insert_piggybacked_acks(Flit * flit) {
       _ack_response_state[flit->dest].outstanding_ack_type_to_return = ACK;
       _ack_response_state[flit->dest].time_last_valid_unacked_packet_recvd = 999999999; // Clear it
       _ack_response_state[flit->dest].packets_recvd_since_last_ack = 0;
+        if(_nodeid == 1){
+          cout << "DDD" << endl;
+        }
       _nacks_sent++;
 
     } else if (_ack_response_state[flit->dest].outstanding_ack_type_to_return == SACK) {
@@ -2903,6 +2953,23 @@ void EndPoint::insert_piggybacked_acks(Flit * flit) {
   }
 }
 
+bool EndPoint::has_priority_standalone_ack() {
+  // This is for my policy, if a standalone has waited for too long and still not sent, we force send it
+
+  if (_mypolicy_constant.policy == HC_MY_POLICY){
+    for(unsigned int initiator = 0; initiator < _endpoints; initiator++) {
+      if ((_ack_response_state[initiator].outstanding_ack_type_to_return == ACK) ||
+          (_ack_response_state[initiator].outstanding_ack_type_to_return == NACK) ||
+          (_ack_response_state[initiator].outstanding_ack_type_to_return == SACK)) {
+
+        bool ack_cond = ((_ack_response_state[initiator].time_last_valid_unacked_packet_recvd +
+                _cycles_before_standalone_ack_has_priority) <= _cur_time);
+        if (ack_cond) return true;
+      }
+    }
+  }
+  return false;
+}
 
 Flit * EndPoint::manufacture_standalone_ack(int subnet, BufferState * dest_buf) {
   // If we don't have any "real" flits to send, but we do have acks to return,
@@ -2933,6 +3000,11 @@ Flit * EndPoint::manufacture_standalone_ack(int subnet, BufferState * dest_buf) 
       // Check to see if we've hit the cycle limit to send a standalone ack.
       if ( ack_cond1 || ack_cond2 || ack_cond3 || ack_cond4) {
 
+        if(_nodeid == 1){
+          cout << _cur_time << ": HEHE " << endl;
+        }
+
+
         // If we're using policy, we may have to skip if it's an ACK
         if (_mypolicy_constant.policy == HC_MY_POLICY &&
             _ack_response_state[initiator].outstanding_ack_type_to_return == ACK){
@@ -2959,6 +3031,11 @@ Flit * EndPoint::manufacture_standalone_ack(int subnet, BufferState * dest_buf) 
           } else {
             ack_flit->ack_seq_num = _ack_response_state[initiator].last_valid_seq_num_recvd;
           }
+
+          if (_mypolicy_constant.policy == HC_ECN_POLICY){
+            update_flit_ack_if_needed_for_ecn(ack_flit);
+          }
+
           if (queue_depth_over_threshold()){
               ack_flit->nack_seq_num = ack_flit->ack_seq_num;
           } else {
@@ -2969,7 +3046,11 @@ Flit * EndPoint::manufacture_standalone_ack(int subnet, BufferState * dest_buf) 
         } else if (_ack_response_state[initiator].outstanding_ack_type_to_return == NACK) {
 
           // IF we have a nack, we ack all received sequence numbe and update the acked variable
-          ack_flit->nack_seq_num = _ack_response_state[initiator].last_valid_seq_num_recvd;
+          if (_mypolicy_constant.policy != HC_HOMA_POLICY) {
+            ack_flit->nack_seq_num = _ack_response_state[initiator].last_valid_seq_num_recvd;
+          } else {
+            ack_flit->nack_seq_num = -1;
+          }
           ack_flit->ack_seq_num = -1;
           ack_flit->sack = false;
           _nacks_sent++;
@@ -3058,7 +3139,11 @@ Flit * EndPoint::manufacture_standalone_ack(int subnet, BufferState * dest_buf) 
           _parent->debug_trace_file << _cur_time << ",NACKALONEDEST," << _nodeid << "," << ack_flit->nack_seq_num <<
             "," << ack_flit->dest << endl;
       } else {
-        exit(1);
+        if(_mypolicy_constant.policy == HC_HOMA_POLICY){
+          // not sure how it reached here
+        } else {
+          exit(1);
+        }
       }
     }
 
@@ -3121,6 +3206,7 @@ void EndPoint::_ReceiveFlit(int subnet, Flit * flit) {
     } else if  (flit->type == Flit::WRITE_REQUEST) {
         _parent->debug_trace_file << _cur_time << ",WRITEDESTR," << _nodeid << "," << flit->packet_seq_num <<
           "," << flit->src << endl;
+        //_parent->debug_trace_file << _cur_time << ",WRITER," << _nodeid << "," << flit->packet_seq_num << endl;
     } else if  (flit->type == Flit::RGET_REQUEST) {
         _parent->debug_trace_file << _cur_time << ",RGETR," << _nodeid << "," << flit->packet_seq_num << endl;
     } else if  (flit->type == Flit::READ_REQUEST) {
@@ -3145,6 +3231,15 @@ void EndPoint::_ReceiveFlit(int subnet, Flit * flit) {
                                      .is_standalone = (flit->type ==  Flit::CTRL_TYPE),
                                      .sack = flit->sack, .sack_vec = flit->sack_vec};
     _received_ack_queue.push_back(local_record);
+  }
+
+  if (_mypolicy_constant.policy == HC_ECN_POLICY) {
+    if (flit->tail) {
+      _mypolicy_connections[flit->src].ecn_total ++;
+      if (flit->ecn_congestion_detected){
+        _mypolicy_connections[flit->src].ecn_count ++;
+      }
+    }
   }
 
   // Push it into the incoming queue for credit and protocol processing.
@@ -3196,9 +3291,9 @@ void EndPoint::process_received_ack_queue() {
     if (_mypolicy_constant.policy == HC_MY_POLICY) {
       if (_mypolicy_connections[initiator].time_last_ack_recvd +
           _mypolicy_constant.time_before_halt_state_timeout <= _cur_time &&
-          _mypolicy_connections[initiator].send_allowance_counter == 0){
+          _mypolicy_connections[initiator].halt_active){
         _mypolicy_connections[initiator].halt_active = false;
-        _mypolicy_connections[initiator].send_allowance_counter = 0;
+        _mypolicy_connections[initiator].send_allowance_counter_size = 0;
         _mypolicy_connections[initiator].halt_state = -1;
         _mypolicy_connections[initiator].time_last_ack_recvd = 999999999;
         if (_trace_debug){
@@ -3282,7 +3377,7 @@ void EndPoint::target_reserve_put_space_for_initiator_if_needed(int initiator) {
 }
 
 
-void EndPoint::mypolicy_update_initiator_state_with_ack(recvd_ack_record record){
+void EndPoint::mypolicy_update_initiator_state_with_ack(recvd_ack_record record, int acked_size){
 
   mypolicy_host_control_connection_record * my_state = &_mypolicy_connections[record.target];
 
@@ -3292,8 +3387,8 @@ void EndPoint::mypolicy_update_initiator_state_with_ack(recvd_ack_record record)
     // NACK
     my_state->halt_state = _mypolicy_constant.max_ack_before_send_packet;
     my_state->halt_active = true;
-    if (!my_state->send_allowance_counter)
-      my_state->send_allowance_counter += 1;
+    if (!my_state->send_allowance_counter_size)
+      my_state->send_allowance_counter_size += acked_size;
     my_state->must_retry_at_least_one_packet = true;
 
     if (_trace_debug){
@@ -3302,7 +3397,7 @@ void EndPoint::mypolicy_update_initiator_state_with_ack(recvd_ack_record record)
         _parent->debug_trace_file << _cur_time << ",HOSTCTRLHALTDEST," << _nodeid <<
         "," << _mypolicy_connections[record.target].halt_state << "," << record.target << endl;
         _parent->debug_trace_file << _cur_time << ",HOSTCTRLALLOWANCEDEST," << _nodeid <<
-        "," << _mypolicy_connections[record.target].send_allowance_counter << "," << record.target
+        "," << _mypolicy_connections[record.target].send_allowance_counter_size << "," << record.target
         << endl;
     }
     return;
@@ -3333,7 +3428,7 @@ void EndPoint::mypolicy_update_initiator_state_with_ack(recvd_ack_record record)
 
   int before_halt_state = my_state->halt_state;
   int before_halt_active = my_state->halt_active;
-  int before_counter = my_state->send_allowance_counter;
+  int before_counter_size = my_state->send_allowance_counter_size;
 
 
   if (my_state->halt_active) {
@@ -3381,15 +3476,15 @@ void EndPoint::mypolicy_update_initiator_state_with_ack(recvd_ack_record record)
     if (!duplicate_ack) {
       if (my_state->halt_state > 0){
         //my_state->send_allowance_counter = (my_state->halt_state + 1);
-        my_state->send_allowance_counter += 2;
+        my_state->send_allowance_counter_size += 2 * acked_size;
       } else {
-        my_state->send_allowance_counter ++;
+        my_state->send_allowance_counter_size += acked_size;
       }
     } else {
       if (_mypolicy_constant.speculative_ack_enabled){
         if (record.is_standalone  &&
             _retry_state_tracker[record.target].dest_retry_state == NACK_BASED){
-          my_state->send_allowance_counter += 1;
+          my_state->send_allowance_counter_size += acked_size;
         }
       }
     }
@@ -3401,7 +3496,7 @@ void EndPoint::mypolicy_update_initiator_state_with_ack(recvd_ack_record record)
     } else if (partial_incremented_ack){
         my_state->halt_active = true;
         my_state->halt_state = 0;
-        my_state->send_allowance_counter += 1;
+        my_state->send_allowance_counter_size += acked_size;
     } else {
 
     }
@@ -3417,15 +3512,14 @@ void EndPoint::mypolicy_update_initiator_state_with_ack(recvd_ack_record record)
         "," << _mypolicy_connections[record.target].halt_active << "," << record.target << endl;
       }
 
-      if (my_state->send_allowance_counter != before_counter){
+      if (my_state->send_allowance_counter_size != before_counter_size){
         _parent->debug_trace_file << _cur_time << ",HOSTCTRLALLOWANCEDEST," << _nodeid <<
-        "," << _mypolicy_connections[record.target].send_allowance_counter << "," << record.target
+        "," << _mypolicy_connections[record.target].send_allowance_counter_size << "," << record.target
         << endl;
       }
     }
 
   my_state->last_valid_ack_seq_num_recvd  = record.ack_seq_num;
-
 }
 
 void EndPoint::process_pending_inbound_response_queue() {
@@ -3486,9 +3580,13 @@ void EndPoint::update_dequeued_state(put_wait_queue_record r) {
 }
 
 void EndPoint::update_host_bandwidth(){
+    // Change logic of host congestion in this function
 
   double fast = _mypolicy_constant.host_bandwidth_high;
   double slow = _mypolicy_constant.host_bandwidth_low;
+
+  //double fast = 100.0 * 2.5 / (gFlitSize * 8);
+  //double slow = 20.0 * 2.5 / (gFlitSize * 8);
 
   if (_cur_time >= _mypolicy_endpoint.next_change_bandwidth_time){
 
@@ -3503,13 +3601,25 @@ void EndPoint::update_host_bandwidth(){
     }
     double gen = (*_mypolicy_endpoint.interarrival_logn)(_mypolicy_endpoint.generator);
 
-    _mypolicy_endpoint.next_change_bandwidth_time = _cur_time + ceil(gen);
-    assert( ceil(gen) > 0 );
-    _mypolicy_endpoint.host_bandwidth_is_slow = !_mypolicy_endpoint.host_bandwidth_is_slow;
+    // TODO: bad. hardcoded at the moment
+    //int change_interval = 5000;
+
+    if (_mypolicy_endpoint.host_bandwidth_is_slow) {
+      // time to drain
+      _mypolicy_endpoint.next_change_bandwidth_time = _cur_time + 2000;
+    }
+    else {
+      // Time to build up
+      _mypolicy_endpoint.next_change_bandwidth_time = _cur_time + 10000;
+    }
+
     if (_trace_debug){
       _parent->debug_trace_file << _cur_time << ",HOSTBAND," << _nodeid << "," <<
-        !_mypolicy_endpoint.host_bandwidth_is_slow<< endl;
+        (int)(_mypolicy_endpoint.current_host_bandwith * (32 * 8) / 2.5)<< endl;
     }
+
+    assert( ceil(gen) > 0 );
+    _mypolicy_endpoint.host_bandwidth_is_slow = !_mypolicy_endpoint.host_bandwidth_is_slow;
   }
 
 }
@@ -3536,9 +3646,17 @@ void EndPoint::process_put_queue() {
         // Still have something left, put back in queue
         _put_buffer_meta.queue.push_front(r);
         assert(this_cycle_processing_power == 0.0);
-      } else {
-        //Should dequeue
-        update_dequeued_state(r);
+        } else {
+
+        if (_mypolicy_constant.policy == HC_HOMA_POLICY){
+          HomaAckQueueRecord(r);
+            if (_trace_debug){
+              _parent->debug_trace_file << _cur_time << ",PUTQDEPTH," << _nodeid << "," << _put_buffer_meta.queue_size - _put_buffer_meta.remaining<< endl;
+            }
+        } else {
+          //Should dequeue
+          update_dequeued_state(r);
+        }
       }
   }
 }
@@ -3584,9 +3702,6 @@ void EndPoint::process_delayed_ack_if_needed() {
                 } else {
                     _mypolicy_endpoint.acked_data_in_queue += r.size;
                 }
-            }
-            if (r.type == Flit::RGET_REQUEST){
-              _mypolicy_endpoint.rget_get_allowance ++;
             }
 
             if (_debug_enabled) {
@@ -3727,6 +3842,49 @@ void EndPoint::process_pending_outbound_response_queue() {
 }
 
 
+void EndPoint::sender_process_ecn() {
+  if (_mypolicy_constant.policy == HC_ECN_POLICY) {
+
+    if(_cur_time > _mypolicy_endpoint.ecn_next_check_period) {
+
+      for(unsigned int target = 0; target < _endpoints; target++) {
+        _mypolicy_connections[target].ecn_running_percent *= (1.0 - _mypolicy_constant.ecn_param_g);
+      }
+
+      _mypolicy_endpoint.ecn_next_check_period = _cur_time + _mypolicy_constant.ecn_period;
+
+      for(unsigned int target = 0; target < _endpoints; target++) {
+          int this_total = _mypolicy_connections[target].ecn_total;
+          if (this_total){
+            double this_count = (double) _mypolicy_connections[target].ecn_count;
+            double new_percent = this_count / (double) this_total;
+            _mypolicy_connections[target].ecn_running_percent += new_percent * _mypolicy_constant.ecn_param_g;
+
+            double old_cwd = _mypolicy_connections[target].tcplikepolicy_cwd;
+            _mypolicy_connections[target].tcplikepolicy_ssthresh =
+                _mypolicy_connections[target].tcplikepolicy_ssthresh * (1 - _mypolicy_connections[target].ecn_running_percent / 2);
+            _mypolicy_connections[target].tcplikepolicy_cwd =
+                _mypolicy_connections[target].tcplikepolicy_cwd * (1 - _mypolicy_connections[target].ecn_running_percent);
+
+            _mypolicy_connections[target].tcplikepolicy_cwd = max(_mypolicy_connections[target].tcplikepolicy_cwd, _mypolicy_constant.tcplikepolicy_MSS);
+            _mypolicy_connections[target].tcplikepolicy_ssthresh = max(_mypolicy_connections[target].tcplikepolicy_ssthresh, _xaction_size_limit_per_dest);
+
+
+            if (old_cwd != _mypolicy_connections[target].tcplikepolicy_cwd) {
+              _parent->debug_trace_file << _cur_time << ",CWD," << _nodeid << "," << _mypolicy_connections[target].tcplikepolicy_cwd << "," <<
+                target << endl;
+
+            }
+
+          }
+        _mypolicy_connections[target].ecn_total = 0;
+        _mypolicy_connections[target].ecn_count = 0;
+
+      }
+    }
+  }
+}
+
 void EndPoint::process_received_acks(recvd_ack_record record) {
   // In the context of this endpoint looking to process acks received and match
   // them up to packets in its OPB, the endpoint sending the ack is considered
@@ -3741,21 +3899,25 @@ void EndPoint::process_received_acks(recvd_ack_record record) {
   // even in the nack case.)  Only one or the other can be set.
   // If both are the same, it means
   if ((ack_seq_num != -1) && (nack_seq_num != -1) &&
-      (ack_seq_num != nack_seq_num && HC_MY_POLICY == _mypolicy_constant.policy)) {
-    cout << _cur_time << ": " << Name() << ": ERROR: Received packet with both ACK "
+      (ack_seq_num != nack_seq_num && HC_MY_POLICY == _mypolicy_constant.policy)) { cout << _cur_time << ": " << Name() << ": ERROR: Received packet with both ACK "
          << "and NACK fields set!" << endl;
     exit(1);
   }
 
+  int packet_size;
+
   if (_mypolicy_constant.policy == HC_MY_POLICY) {
-      mypolicy_update_initiator_state_with_ack(record);
+      packet_size = calculate_to_be_acked_packet_size(target, ack_seq_num, true);
+      mypolicy_update_initiator_state_with_ack(record, packet_size);
+  } else {
+      packet_size = calculate_to_be_acked_packet_size(target, ack_seq_num, false);
   }
 
   if (ack_seq_num != -1) {
     if (_debug_enabled) {
       cout << _cur_time << ": " << Name() << ": Received ACK seq_num: " << ack_seq_num
            << " from node " << target << " on flit: " << flit_id << " packet allowance: " <<
-           _mypolicy_connections[target].send_allowance_counter << " halt active: " <<
+           _mypolicy_connections[target].send_allowance_counter_size << " halt active: " <<
            _mypolicy_connections[target].halt_active << endl;
     }
 
@@ -3783,7 +3945,6 @@ void EndPoint::process_received_acks(recvd_ack_record record) {
       }
     }
 
-    int packet_size = calculate_to_be_acked_packet_size(target, ack_seq_num);
     clear_opb_of_acked_packets(target, ack_seq_num);
 
     if (_mypolicy_constant.policy == HC_MY_POLICY) {
@@ -3792,23 +3953,29 @@ void EndPoint::process_received_acks(recvd_ack_record record) {
       }
     }
 
-    if (_mypolicy_constant.policy == HC_TCP_LIKE_POLICY){
+    if (_mypolicy_constant.policy == HC_TCP_LIKE_POLICY || _mypolicy_constant.policy == HC_ECN_POLICY){
       if (_mypolicy_connections[target].tcplikepolicy_cwd <
           _mypolicy_connections[target].tcplikepolicy_ssthresh) {
+        // Slow start phase
         _mypolicy_connections[target].tcplikepolicy_cwd +=
           (unsigned int) min(packet_size, (int)_mypolicy_constant.tcplikepolicy_MSS);
+
+        if (_trace_debug){
+          _parent->debug_trace_file << _cur_time << ",CWD," << _nodeid << "," <<
+            _mypolicy_connections[target].tcplikepolicy_cwd << "," << target<< endl;
+        }
       } else {
+        // Congestion avoidance phase
         _mypolicy_connections[target].tcplikepolicy_cwd +=
             _mypolicy_constant.tcplikepolicy_MSS * _mypolicy_constant.tcplikepolicy_MSS /
             _mypolicy_connections[target].tcplikepolicy_cwd;
+
+        if (_trace_debug){
+          _parent->debug_trace_file << _cur_time << ",CWD," << _nodeid << "," <<
+            _mypolicy_connections[target].tcplikepolicy_cwd << "," << target << endl;
+        }
       }
 
-      if (_trace_debug && target == 0){
-        //_parent->debug_trace_file << _cur_time << ",CWD," << _nodeid << "," <<
-          //_ack_response_state[target].host_control_tcplikepolicy_cwd << endl;
-        //_parent->debug_trace_file << _cur_time << ",SSTHRESH," << _nodeid << "," <<
-          //_ack_response_state[target].host_control_tcplikepolicy_ssthresh << endl;
-      }
     }
 
 
@@ -3963,11 +4130,16 @@ void EndPoint::process_received_acks(recvd_ack_record record) {
       }
     }
 
-    if (_mypolicy_constant.policy == HC_TCP_LIKE_POLICY){
+    if (_mypolicy_constant.policy == HC_TCP_LIKE_POLICY || _mypolicy_constant.policy == HC_ECN_POLICY){
       _mypolicy_connections[target].tcplikepolicy_ssthresh =
           _mypolicy_connections[target].tcplikepolicy_cwd >> 1;
       _mypolicy_connections[target].tcplikepolicy_cwd =
           _mypolicy_connections[target].tcplikepolicy_cwd >> 1;
+
+      if (_trace_debug){
+        _parent->debug_trace_file << _cur_time << ",CWD," << _nodeid << "," <<
+          _mypolicy_connections[target].tcplikepolicy_cwd << "," << target << endl;
+      }
     }
 
     // If we already processing a NACK-based replay, then clear the OPB as
@@ -4053,20 +4225,31 @@ bool EndPoint::to_be_acked_packets_contain_put(int target, int seq_num_acked, bo
   return false;
 }
 
-int EndPoint::calculate_to_be_acked_packet_size(int target, int seq_num_acked, bool nack_initiated) {
+int EndPoint::calculate_to_be_acked_packet_size(int target, int seq_num_acked, bool nack_initiated,
+    bool nack_non_zero) {
 
-  if (!nack_initiated && (_retry_state_tracker[target].dest_retry_state == NACK_BASED)) {
+  if (!nack_non_zero && !nack_initiated && (_retry_state_tracker[target].dest_retry_state == NACK_BASED)) {
     return 0;
   }
-  int accum_packet_size = 0;
 
-  unsigned int opb_idx = 0;
-  while ((opb_idx < _outstanding_packet_buffer[target].size()) &&
-         (_outstanding_packet_buffer[target][opb_idx]->packet_seq_num <= seq_num_acked)) {
-    opb_idx += calculate_to_be_acked_packet_size_by_index(target, opb_idx, seq_num_acked, accum_packet_size);
+  if (nack_initiated && (_retry_state_tracker[target].dest_retry_state == NACK_BASED)) {
+      int accum_packet_size = 0;
+      unsigned int opb_idx = 0;
+      while ((opb_idx < _outstanding_packet_buffer[target].size()) &&
+             (_outstanding_packet_buffer[target][opb_idx]->packet_seq_num <= seq_num_acked)) {
+        accum_packet_size = 0;
+        opb_idx += calculate_to_be_acked_packet_size_by_index(target, opb_idx, seq_num_acked, accum_packet_size);
+      }
+      return accum_packet_size;
+  } else {
+      int accum_packet_size = 0;
+      unsigned int opb_idx = 0;
+      while ((opb_idx < _outstanding_packet_buffer[target].size()) &&
+             (_outstanding_packet_buffer[target][opb_idx]->packet_seq_num <= seq_num_acked)) {
+        opb_idx += calculate_to_be_acked_packet_size_by_index(target, opb_idx, seq_num_acked, accum_packet_size);
+      }
+      return accum_packet_size;
   }
-
-  return accum_packet_size;
 }
 
 int EndPoint::calculate_to_be_acked_packet_size_by_index(int target, unsigned int opb_idx, unsigned int seq_num_acked, int & accum_packet_size) {
@@ -4660,9 +4843,6 @@ Credit * EndPoint::_ProcessReceivedFlits(int subnet, Flit * & received_flit_ptr)
     received_flit_ptr = _incoming_flit_queue[subnet].front();
     _incoming_flit_queue[subnet].pop_front();
 
-//cout << _cur_time << ": " << Name() << ": Processing received flit from: " << received_flit_ptr->src
-//     << " with seq_num: " << received_flit_ptr->packet_seq_num << endl;
-
     if (received_flit_ptr->watch) {
       *gWatchOut << _cur_time << " | "
                  << Name() << " | "
@@ -4756,10 +4936,18 @@ Credit * EndPoint::_ProcessReceivedFlits(int subnet, Flit * & received_flit_ptr)
           // Load balancing queue is not empty
           shift_load_balance_queue_to_data_queue_if_needed();
           assert(received_flit_ptr->tail || received_flit_ptr->head);
+
           insert_packet_into_load_balance_queue_or_put_queue(
               received_flit_ptr, _incoming_packet_flit_total);
         } else {
+          if (_mypolicy_constant.policy == HC_HOMA_POLICY) {
+            HomaEnqueue(received_flit_ptr, _incoming_packet_flit_total);
+            if (_trace_debug){
+              _parent->debug_trace_file << _cur_time << ",PUTQDEPTH," << _nodeid << "," << _put_buffer_meta.queue_size - _put_buffer_meta.remaining<< endl;
+            }
+          } else {
             UpdateAckAndReadResponseState(received_flit_ptr, _incoming_packet_flit_total);
+          }
         }
       }
 
@@ -4827,13 +5015,17 @@ void EndPoint::setupNackState(int source, int seq_num, Flit * flit, int packet_s
 
 void EndPoint::insert_packet_into_load_balance_queue_or_put_queue(Flit * flit, int packet_size){
 
+  assert(HC_HOMA_POLICY != _mypolicy_constant.policy);
   deque<load_balance_queue_record> * lbq = &_put_buffer_meta.load_balance_queue;
   put_buffer_metadata * pbm = &_put_buffer_meta;
 
     // This should be called only after shift_load_balance_queue_to_data_queue_if_needed
 
-    if ((int)packet_size > pbm->remaining - _mypolicy_endpoint.reserved_space){
+    if ((int) packet_size > pbm->remaining - _mypolicy_endpoint.reserved_space ||
+        lbq->size()
+    ){
         // put queue full for this packet
+        // Or there're packets in front of this in lbq, so can't skip in front
         // So putting it in load balance queue
         if (packet_size <= pbm->load_balance_queue_remaining){
             // load balance queue Still has space
@@ -4897,6 +5089,8 @@ void EndPoint::insert_packet_into_load_balance_queue_or_put_queue(Flit * flit, i
                   }
                 }
                 int before_remaining = pbm->remaining;
+                // Force drop
+                packet->flit->packet_seq_num = INT_MAX;
                 UpdateAckAndReadResponseState(packet->flit, packet->size);
                 assert(before_remaining == pbm->remaining);
                 assert(_ack_response_state[packet->flit->src].outstanding_ack_type_to_return == NACK ||
@@ -5011,11 +5205,128 @@ void EndPoint::shift_load_balance_queue_to_data_queue_if_needed(){
   }
 }
 
+
+void EndPoint::HomaEnqueue(Flit * flit, int packet_size){
+  int source = flit->src;
+  int seq_num = flit->packet_seq_num;
+
+  if (_mypolicy_constant.policy != HC_MY_POLICY) {
+    if (((flit->type == Flit::WRITE_REQUEST) ||
+          (flit->type == Flit::Flit::RGET_GET_REPLY) ||
+          (flit->type == Flit::Flit::READ_REPLY)
+      ) && packet_size > _put_buffer_meta.remaining -
+        _mypolicy_endpoint.reserved_space) {
+          if (_debug_enabled) {
+            // No space reserved, must drop
+            cout << _cur_time << ": " << Name() <<
+              ": Dropping Put packet pid " << flit->pid <<
+              " seq_num: " << flit->packet_seq_num << "from " << source <<
+              " because put wait queue is full with occupancy " <<
+              _put_buffer_meta.queue_size - _put_buffer_meta.remaining <<
+              " total_size: " << _put_buffer_meta.queue_size <<
+              " remaining size: " << _put_buffer_meta.remaining << endl;
+          }
+          return;
+      }
+  }
+
+
+  if (flit->type == Flit::WRITE_REQUEST || flit->type == Flit::RGET_GET_REPLY ||
+      flit->type == Flit::Flit::READ_REPLY){
+
+      // Need this info until response is sent
+      Flit * homa_flit = Flit::New();
+      homa_flit->copy_target(flit);
+
+      put_wait_queue_record put_record = {flit->pid, packet_size, source, (double) packet_size, homa_flit};
+
+      _put_buffer_meta.queue.push_back(put_record);
+      _put_buffer_meta.remaining -= packet_size;
+  }
+}
+
+void EndPoint::HomaAckQueueRecord(put_wait_queue_record r){
+  int source = r.src;
+  Flit * flit = r.homa_flit;
+  int seq_num = flit->packet_seq_num;
+  int packet_size = r.size;
+
+  // GOOD CASE: We received a packet with seq_num 1 greater than the last.
+  // The first sequence number received is 0, and the struct is initialized to
+  // -1, so this works for all cases.
+  if (seq_num == (_ack_response_state[source].last_valid_seq_num_recvd + 1)) {
+
+    if (_mypolicy_constant.policy != HC_MY_POLICY){
+        if (_ack_response_state[source].time_last_valid_unacked_packet_recvd == 999999999) {
+          _ack_response_state[source].time_last_valid_unacked_packet_recvd = _cur_time;
+        }
+    }
+
+    _ack_response_state[source].last_valid_seq_num_recvd = seq_num;
+
+    // To keep track of whether an initiator is retransmitting
+    if (_mypolicy_connections[source].initiator_retransmitting){
+      assert(seq_num <= _mypolicy_connections[source].highest_bad_seq_num_from_initiator);
+      if (seq_num == _mypolicy_connections[source].highest_bad_seq_num_from_initiator){
+        _mypolicy_connections[source].initiator_retransmitting = false;
+        _mypolicy_endpoint.num_initiator_retransmitting--;
+        assert(_mypolicy_endpoint.num_initiator_retransmitting >= 0);
+      }
+    }
+
+    if (_mypolicy_constant.policy != HC_MY_POLICY){
+    // To match hardware, only increment when we receive good packets.
+        _ack_response_state[source].packets_recvd_since_last_ack++;
+    } else {
+    }
+
+    // Every time we get a good sequence number, reset the "_already_nacked" state.
+    _ack_response_state[source].already_nacked_bad_seq_num = false;
+    _ack_response_state[source].outstanding_ack_type_to_return = ACK;
+
+    QueueResponse(flit);
+  }
+  else if (seq_num < (_ack_response_state[source].last_valid_seq_num_recvd + 1)) {
+    // If we set this state to ACK here, is it possible that it will overwrite
+    // a NACK state that we need to address???
+    _ack_response_state[source].outstanding_ack_type_to_return = ACK;
+    ++_duplicate_packets_received_full_sim;
+    _duplicate_flits_received_full_sim += packet_size;
+    if (_parent->_sim_state == TrafficManager::running) {
+      ++_duplicate_packets_received;
+      _duplicate_flits_received += packet_size;
+    }
+  }
+  else if (seq_num > (_ack_response_state[source].last_valid_seq_num_recvd + 1)) {
+    setupNackState(source, seq_num, flit, packet_size);
+
+    ++_bad_packets_received_full_sim;
+    _bad_flits_received_full_sim += packet_size;
+    if (_parent->_sim_state == TrafficManager::running) {
+      ++_bad_packets_received;
+      _bad_flits_received += packet_size;
+    }
+
+  }
+
+  _put_buffer_meta.remaining += r.size;
+
+  // This is only for the homa case
+  flit->Free();
+}
+
 // Called when a full packet was received (upon receipt of the tail flit).
 // This endpoint will update its internal storage of the last packet received,
 // and the ACKs/NACKs that it needs to send back to the source.
 // Receipts of standalone ACKs do not call this function.
-void EndPoint::UpdateAckAndReadResponseState(Flit * flit, int packet_size) {
+
+  // This function can be called with only queuing logic, and only ack logic.
+  // Or both. Normal protocol level ack responses will be sent out immediately
+  // packet is in buffer, but if you don't want that, you can do it after queueing
+  // then you'd need to separate queu and ack logic
+void EndPoint::UpdateAckAndReadResponseState(Flit * flit, int packet_size
+) {
+  assert(HC_HOMA_POLICY != _mypolicy_constant.policy);
   int source = flit->src;
   int seq_num = flit->packet_seq_num;
 
@@ -5046,54 +5357,54 @@ void EndPoint::UpdateAckAndReadResponseState(Flit * flit, int packet_size) {
         if (_ack_response_state[source].time_last_valid_unacked_packet_recvd == 999999999) {
           _ack_response_state[source].time_last_valid_unacked_packet_recvd = _cur_time;
         }
-    } else {
     }
 
-    if (((flit->type == Flit::WRITE_REQUEST) ||
-          (flit->type == Flit::Flit::RGET_GET_REPLY) ||
-          (flit->type == Flit::Flit::READ_REPLY)
-      ) && packet_size > _put_buffer_meta.remaining -
-        _mypolicy_endpoint.reserved_space) {
-      // There is no normal space (unreserved) left
+    if (_mypolicy_constant.policy != HC_MY_POLICY) {
+      if (((flit->type == Flit::WRITE_REQUEST) ||
+            (flit->type == Flit::Flit::RGET_GET_REPLY) ||
+            (flit->type == Flit::Flit::READ_REPLY)
+        ) && packet_size > _put_buffer_meta.remaining -
+          _mypolicy_endpoint.reserved_space) {
 
-      if (_mypolicy_connections[source].space_after_NACK_reserved &&
-          packet_size < _put_buffer_meta.remaining){
-        // Space reserved, and there's reserved space
+        // There is no normal space (unreserved) left
+        if (_mypolicy_connections[source].space_after_NACK_reserved &&
+            packet_size < _put_buffer_meta.remaining){
+          // Space reserved, and there's reserved space
+          _mypolicy_connections[source].space_after_NACK_reserved = false;
+          _mypolicy_endpoint.reserved_space -=
+            _mypolicy_constant.NACK_reservation_size;
+          if (_debug_enabled){
+            cout << _cur_time << ": " << Name() <<
+            ": Admitting because of reservation from " << source <<
+            " final reserved space " <<  _mypolicy_endpoint.reserved_space <<
+            endl;
+          }
+        } else {
+          if (_debug_enabled) {
+            // No space reserved, must drop
+            cout << _cur_time << ": " << Name() <<
+              ": Dropping Put packet pid " << flit->pid <<
+              " seq_num: " << flit->packet_seq_num << "from " << source <<
+              " because put wait queue is full with occupancy " <<
+              _put_buffer_meta.queue_size - _put_buffer_meta.remaining <<
+              " total_size: " << _put_buffer_meta.queue_size <<
+              " remaining size: " << _put_buffer_meta.remaining << endl;
+          }
+          if (_trace_debug) {
+            _parent->debug_trace_file << _cur_time << ",DROPPUT," <<
+              _nodeid << "," << flit->packet_seq_num << endl;
+          }
+          // IF this is the last packet, we still wanna
+
+          setupNackState(source, seq_num, flit, packet_size);
+          return;
+        }
+      } else if (_mypolicy_connections[source].space_after_NACK_reserved) {
+        // Space is reserved when not needed, freeing the space
         _mypolicy_connections[source].space_after_NACK_reserved = false;
         _mypolicy_endpoint.reserved_space -=
-          _mypolicy_constant.NACK_reservation_size;
-        if (_debug_enabled){
-          cout << _cur_time << ": " << Name() <<
-          ": Admitting because of reservation from " << source <<
-          " final reserved space " <<  _mypolicy_endpoint.reserved_space <<
-          endl;
-        }
-      } else {
-        if (_debug_enabled) {
-          // No space reserved, must drop
-          cout << _cur_time << ": " << Name() <<
-            ": Dropping Put packet pid " << flit->pid <<
-            " seq_num: " << flit->packet_seq_num << "from " << source <<
-            " because put wait queue is full with occupancy " <<
-            _put_buffer_meta.queue_size - _put_buffer_meta.remaining <<
-            " total_size: " << _put_buffer_meta.queue_size <<
-            " remaining size: " << _put_buffer_meta.remaining << endl;
-        }
-        if (_trace_debug) {
-          _parent->debug_trace_file << _cur_time << ",DROPPUT," <<
-            _nodeid << "," << flit->packet_seq_num << endl;
-        }
-        // IF this is the last packet, we still wanna
-
-        setupNackState(source, seq_num, flit, packet_size);
-        return;
+        _mypolicy_constant.NACK_reservation_size;
       }
-    } else if (_mypolicy_connections[source].space_after_NACK_reserved) {
-      // Space is reserved when not needed, freeing the space
-      _mypolicy_connections[source].space_after_NACK_reserved = false;
-      _mypolicy_endpoint.reserved_space -=
-      _mypolicy_constant.NACK_reservation_size;
-
     }
 
     _ack_response_state[source].last_valid_seq_num_recvd = seq_num;
@@ -5183,23 +5494,26 @@ void EndPoint::UpdateAckAndReadResponseState(Flit * flit, int packet_size) {
           //}
 
           //_mypolicy_endpoint.ack_queue.insert(_mypolicy_endpoint.ack_queue.begin() + offset_after_acked_packet, rec);
+
           _mypolicy_endpoint.ack_queue.push_back(rec);
-
           ////Oracle
-          sort(_mypolicy_endpoint.ack_queue.begin(),
-               _mypolicy_endpoint.ack_queue.end(),
-                 [this](const to_send_ack_queue_record & a, const to_send_ack_queue_record & b){
+          //if (_mypolicy_endpoint.ack_queue.size()){
+              //sort(_mypolicy_endpoint.ack_queue.begin(),
+                   //_mypolicy_endpoint.ack_queue.end(),
+                     //[this](const to_send_ack_queue_record & a, const to_send_ack_queue_record & b){
 
-                 if (this->_mypolicy_connections[a.source].periodic_ack_occupancy ==
-                     this->_mypolicy_connections[b.source].periodic_ack_occupancy)
-                 {
-                    return a.seq_num < b.seq_num;
-                 } else {
-                   return this->_mypolicy_connections[a.source].periodic_ack_occupancy <
-                           this->_mypolicy_connections[b.source].periodic_ack_occupancy;
-                 }
-                 }
-          );
+                     //if (this->_mypolicy_connections[a.source].periodic_ack_occupancy ==
+                         //this->_mypolicy_connections[b.source].periodic_ack_occupancy)
+                     //{
+                        //return a.seq_num < b.seq_num;
+                     //} else {
+                       //return this->_mypolicy_connections[a.source].periodic_ack_occupancy <
+                               //this->_mypolicy_connections[b.source].periodic_ack_occupancy;
+                     //}
+                     //}
+              //);
+
+          //}
 
           if (_cur_time > _mypolicy_endpoint.next_fairness_reset_time){
             reset_ack_occupancy();
@@ -5274,7 +5588,7 @@ void EndPoint::UpdateAckAndReadResponseState(Flit * flit, int packet_size) {
 
     if (flit->type == Flit::WRITE_REQUEST || flit->type == Flit::RGET_GET_REPLY ||
         flit->type == Flit::Flit::READ_REPLY){
-        put_wait_queue_record put_record = {flit->pid, packet_size, source, seq_num, (double) packet_size};
+        put_wait_queue_record put_record = {flit->pid, packet_size, source, (double) packet_size, flit};
         _put_buffer_meta.queue.push_back(put_record);
         _put_buffer_meta.remaining -= packet_size;
 
@@ -5456,6 +5770,11 @@ void EndPoint::QueueResponse(Flit * flit) {
   int read_size = flit->read_requested_data_size;
   int response_to_seq_num = flit->response_to_seq_num;
   bool record = flit->record;
+
+  if (flit->data) {
+      _parent->_injection_process[flit->cl]->eject(flit->data);
+  } else {
+  }
 
   ++_good_packets_received_full_sim;
   _good_flits_received_full_sim += flit->size;
@@ -5875,12 +6194,6 @@ bool EndPoint::_EndSimulation() {
 
       if (_mypolicy_endpoint.acked_data_in_queue || _mypolicy_endpoint.data_dequeued_but_need_acked){
         cout << _cur_time << ": " << Name() << ": ERROR: End of run check: Acked data in put wait queue  or data_dequeued_but_need_acked:"
-            << _mypolicy_endpoint.acked_data_in_queue << endl;
-        checks_passed = false;
-      }
-
-      if (_mypolicy_endpoint.rget_get_allowance){
-        cout << _cur_time << ": " << Name() << ": ERROR: End of run check: rget get allowance non zero"
             << _mypolicy_endpoint.acked_data_in_queue << endl;
         checks_passed = false;
       }

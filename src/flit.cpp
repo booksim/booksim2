@@ -88,6 +88,7 @@ void Flit::Reset()
   sack_vec = -1;
   read_requested_data_size = 0;
   non_duplicate_ack = false;
+  ecn_congestion_detected = false;
 }
 
 void Flit::copy(Flit * flit) {
@@ -123,6 +124,7 @@ void Flit::copy(Flit * flit) {
   intm = flit->intm;
   ph = flit->ph;
   data = flit->data;
+  ecn_congestion_detected = flit->ecn_congestion_detected;
 
 }
 

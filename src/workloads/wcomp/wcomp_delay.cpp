@@ -12,11 +12,8 @@
 
 //////////////////
 // On-node latency - traffic modifier
-class OnNodeLatency : public WorkloadComponent
+class OnNodeLatency : public WComp<OnNodeLatency>
 {
-    static WorkloadComponent::Factory<OnNodeLatency> _factory;
-
-    WorkloadComponent *const _upstream;
     const int _out_latency;
     const int _in_latency;
 
@@ -28,7 +25,7 @@ class OnNodeLatency : public WorkloadComponent
   public:
     // two configuration parameters: outgoing latency, incoming latency
     OnNodeLatency(int nodes, const vector<string> &options, Configuration const * const config, WorkloadComponent * upstrm)
-      : _upstream(upstrm),
+      : WComp<OnNodeLatency>(upstrm),
         _out_latency(stoi(options[0])),
         _in_latency(stoi(options[1])),
         _outgoing(nodes),
@@ -38,15 +35,18 @@ class OnNodeLatency : public WorkloadComponent
         _upstream->Init(nodes, config);
     }
     bool test(int src) {
+        int now = GetSimTime();
         // check upstream and insert into outgoing delay line
         if (_upstream->test(src)) {
-            _outgoing[src].push_front(qitem_t(_upstream->get(src), GetSimTime() + _out_latency));
+            _outgoing[src].push_front(qitem_t(_upstream->get(src), now + _out_latency));
             _upstream->next(src);
         }
+        // advance the return delay line
+        _clock(now);
         // check if the head of the delay line for this source is ready this cycle
         if (_outgoing[src].empty()) return false;
         auto& head(_outgoing[src].back());
-        return GetSimTime() >= head.second;
+        return now >= head.second;
     }
     void next(int src) {
         WorkloadComponent::next(src); // required
@@ -54,22 +54,27 @@ class OnNodeLatency : public WorkloadComponent
         _outgoing[src].pop_back();
     }
     void eject(WorkloadMessagePtr m) {
+        int now = GetSimTime();
         // insert into the return delay line for the destination
-        _incoming[m->Dest()].push_front(qitem_t(m, GetSimTime() + _in_latency));
-        // eject the heads of the delay lines for all destinations
-        for (auto& q : _incoming) {
-            if (q.empty()) continue;
-            auto& head(q.back());
-            if (GetSimTime() < head.second) continue;
-            _upstream->eject(head.first);
-            q.pop_back();
-        }
+        _incoming[m->Dest()].push_front(qitem_t(m, now + _in_latency));
+        // advance the return delay line
+        _clock(now);
     }
   private:
     virtual WorkloadMessagePtr _get_new(int src) {
         // return the head of the delay line for this source
         return _outgoing[src].back().first;
     }
+    void _clock(int now) {
+        // eject the heads of the delay lines for all destinations
+        for (auto& q : _incoming) {
+            if (q.empty()) continue;
+            auto& head(q.back());
+            if (now < head.second) continue;
+            _upstream->eject(head.first);
+            q.pop_back();
+        }
+    }
 };
 
-WorkloadComponent::Factory<OnNodeLatency> OnNodeLatency::_factory("latency");
+PUBLISH_WORKLOAD_COMPONENT(OnNodeLatency, "latency");

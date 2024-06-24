@@ -1046,8 +1046,6 @@ void IQRouter::_SWHoldUpdate( )
 
     int const expanded_output = item.second.second;
 
-    // Originally it's this, but has since been changed, may need to reverify that this is correct
-    //if(expanded_output >= 0 && ( _output_buffer_size==-1 || _output_buffer[expanded_output/_output_speedup].size()<size_t(_output_buffer_size))) {
     if(expanded_output >= 0 && ( _output_buffer_size==-1 || _output_buffer[expanded_output].size()<size_t(_output_buffer_size))) {
 
       assert(_switch_hold_in[expanded_input] == expanded_output);
@@ -1196,8 +1194,6 @@ void IQRouter::_SWHoldUpdate( )
       }
     } else {
       //when internal speedup >1.0, the buffer stall stats may not be accruate
-    // Originally it's this, but has since been changed, may need to reverify that this is correct
-    // (expanded_output == STALL_BUFFER_RESERVED) || !( _output_buffer_size==-1 || _output_buffer[expanded_output/_output_speedup].size()<size_t(_output_buffer_size)));
       assert((expanded_output == STALL_BUFFER_FULL) ||
 	     (expanded_output == STALL_BUFFER_RESERVED) || !( _output_buffer_size==-1 || _output_buffer[expanded_output].size()<size_t(_output_buffer_size)));
 

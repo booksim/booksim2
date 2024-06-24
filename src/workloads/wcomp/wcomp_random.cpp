@@ -6,12 +6,13 @@
 #include "wcomp_random.hpp"
 #include "random_utils.hpp"
 
-WorkloadComponent::Factory<RandomWorkloadGenerator> RandomWorkloadGenerator::_factory("random");
+PUBLISH_WORKLOAD_COMPONENT(RandomWorkloadGenerator, "random");
 
 RandomWorkloadGenerator::RandomWorkloadGenerator(int nodes, const vector<string> &options, Configuration const * config, WorkloadComponent *upstrm)
-  : GeneratorWorkloadMessage::Factory(config, gInjectorTrafficClass),
-    _wr_fraction(_get_float_by_class(config, "write_fraction", traffic_class)),
-    _use_rdwr(_get_int_by_class(config, "use_read_write", traffic_class)),
+  : WComp<RandomWorkloadGenerator>(upstrm),
+    GeneratorWorkloadMessage::Factory(config, gInjectorTrafficClass),
+    _wr_fraction(GetFloatIndexed(config, "write_fraction", traffic_class)),
+    _use_rdwr(GetIntIndexed(config, "use_read_write", traffic_class)),
     _injection_process(options[0]), _inject(0),  _pattern(0)
 {
     // injection rate is always in terms of packets
@@ -22,8 +23,8 @@ RandomWorkloadGenerator::RandomWorkloadGenerator(int nodes, const vector<string>
 
 void RandomWorkloadGenerator::Init(int pes, Configuration const *config)
 {
-    _inject = InjectionProcess::New(_injection_process, pes, config->GetFloatArray("injection_rate"), config);
-    _pattern = TrafficPattern::New(_get_str_by_class(config, "traffic", traffic_class), pes, config);
+    _inject = InjectionProcess::New(_injection_process, pes, vector<double>(pes, GetFloatIndexed(config, "injection_rate", traffic_class)), config);
+    _pattern = TrafficPattern::New(GetStrIndexed(config, "traffic", traffic_class), pes, config);
 }
 
 WorkloadMessagePtr RandomWorkloadGenerator::_get_new(int src)

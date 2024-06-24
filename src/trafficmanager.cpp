@@ -769,9 +769,9 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
             assert(head->head);
             assert(f->pid == head->pid);
         }
-        if (f->data) {
-            _injection_process[f->cl]->eject(f->data);
-        }
+        //if (f->data) {
+            //_injection_process[f->cl]->eject(f->data);
+        //}
         if ( f->watch ) {
             *gWatchOut << GetSimTime() << " | "
                        << "node" << dest << " | "

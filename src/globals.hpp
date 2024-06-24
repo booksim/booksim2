@@ -51,6 +51,7 @@ extern bool gTrace;
 extern std::ostream * gWatchOut;
 
 extern bool gSimEnabled;
+extern bool gClearStatk;
 extern bool gClearStats;
 extern int gLastClearStatTime;
 extern bool gShouldSkipDrain;
@@ -58,6 +59,10 @@ extern std::ofstream gOutfile;
 
 extern int gFlitSize;
 extern bool gSwm;
+extern bool gSm;
+extern bool gSmEnd;
 extern bool gSwmAppRunMode;
+
+extern bool gDebug;
 
 #endif

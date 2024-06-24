@@ -33,6 +33,7 @@
 #include "injection.hpp"
 
 #include "comp_inj.hpp"
+#include "sm_inj.hpp"
 #include "globals.hpp"
 
 using namespace std;
@@ -51,6 +52,7 @@ InjectionProcess::InjectionProcess(int nodes, vector<double> rate)
       exit(-1);
     }
   }
+  _last_get.resize(nodes, 0);
 }
 
 void InjectionProcess::reset()
@@ -113,9 +115,9 @@ InjectionProcess * InjectionProcess::New(string const & inject, int nodes,
       cout << "Missing parameters for injection process: " << inject << endl;
       exit(-1);
     }
-    if((alpha < 0.0 && beta < 0.0) ||
-       (alpha < 0.0 && r1 < 0.0) ||
-       (beta < 0.0 && r1 < 0.0) ||
+    if((alpha < 0.0 && beta < 0.0) || 
+       (alpha < 0.0 && r1 < 0.0) || 
+       (beta < 0.0 && r1 < 0.0) || 
        (alpha >= 0.0 && beta >= 0.0 && r1 >= 0.0)) {
 //      cout << "Invalid parameters for injection process: " << inject << endl;
 //      exit(-1);
@@ -133,6 +135,7 @@ InjectionProcess * InjectionProcess::New(string const & inject, int nodes,
     vector<double> beta_vec(nodes, beta);
     vector<double> r1_vec(nodes, r1);
     result = new OnOffInjectionProcess(nodes, load, alpha_vec, beta_vec, r1_vec, initial);
+  } else if(process_name == "debug") {
   } else if (process_name == "component") {
     result = new ComponentInjectionProcess(nodes, param_str, config);
   } else {
@@ -158,10 +161,10 @@ bool BernoulliInjectionProcess::test(int source)
 
 //=============================================================
 
-OnOffInjectionProcess::OnOffInjectionProcess(int nodes, vector<double> rate,
-					     vector<double> alpha, vector<double> beta,
+OnOffInjectionProcess::OnOffInjectionProcess(int nodes, vector<double> rate, 
+					     vector<double> alpha, vector<double> beta, 
 					     vector<double> r1, vector<int> initial)
-  : InjectionProcess(nodes, rate),
+  : InjectionProcess(nodes, rate), 
     _alpha(alpha), _beta(beta), _r1(r1), _initial(initial)
 {
   for (int i = 0; i < nodes; ++i){
@@ -196,7 +199,7 @@ bool OnOffInjectionProcess::test(int source)
   bool old_state = _state[source];
 
   // advance state
-  _state[source] =
+  _state[source] = 
     _state[source] ? (RandomFloat() >= _beta[source]) : (RandomFloat() < _alpha[source]);
 
   if ((!old_state) && _state[source]) {

@@ -49,9 +49,7 @@
  * \ingroup spmatgrp
  */
 SHARED int64_t * SwmSpmat::rand_permp_agp(int64_t N, int seed) {
-  //int64_t * ltarget, *lperm;
   int64_t * ltarget;
-  //int64_t r, i, j;
   int64_t r, i;
   int64_t pos, numdarts;
 
@@ -61,8 +59,7 @@ SHARED int64_t * SwmSpmat::rand_permp_agp(int64_t N, int seed) {
 
   SHARED int64_t * perm = (int64_t*)_lgp->lgp_all_alloc(N, sizeof(int64_t));
   if( perm == NULL ) return(NULL);
-  //lperm = lgp_local_part(int64_t, perm);
-  lgp_local_part(int64_t, perm);
+   lgp_local_part(int64_t, perm);
 
   int64_t l_N = (N + THREADS - MYTHREAD - 1)/THREADS;
   int64_t M = 2*N;
@@ -444,82 +441,13 @@ sparsemat_t * SwmSpmat::transpose_matrix_agp_nbi(sparsemat_t *A) {
   return(At);
 }
 
-SHARED int64_t * SwmSpmat::build_histogram(sparsemat_t * A){
-
-  int i;
-  SHARED int64_t * histogram = (int64_t*)_lgp->lgp_all_alloc( A->numcols + THREADS, sizeof(int64_t));
-  if( histogram == NULL ) return(NULL);
-
-  int64_t * l_histogram = lgp_local_part(int64_t, histogram);
-
-  int64_t lnc = (A->numcols + THREADS - MYTHREAD - 1)/THREADS;
-  for(i=0; i < lnc; i++) {
-    l_histogram[i] = 0;
-  }
-
-  T0_fprintf(stderr, "printing stats for initialization\n");
-  _lgp->lgp_barrier();
-
-
-  //if (MYTHREAD == 0){
-    //cout << "Matrix content: " << endl;
-
-    //cout << "numrows: " << A->numrows << endl;              //!< the total number of rows in the matrix
-    //cout << "lnumrows: " << A->lnumrows << endl;             //!< the number of rows on this PE
-    //cout << "numcols: " << A->numcols << endl;              //!< the nonzeros have values between 0 and numcols
-    //cout << "nnz: " << A->nnz << endl;                  //!< total number of nonzeros in the matrix
-  //}
-
-  //cout << "THREAD[" << MYTHREAD << "]" << endl;
-    //cout << "local: " << A->local << endl;                //!< 0/1 flag specifies whether this is a local or distributed matrix
-  //cout << "lnnz: " << A->lnnz << endl;                 //!< the number of nonzeros on this PE
-  //int cnt = 0;
-  //for (int i = 0 ; i < A->numrows / 2; i++){
-      //cout << "offset " << i << ": " << A->loffset[i] << "\t|" ;
-      //for(; cnt < A->lnnz &&  cnt < A->loffset[i + 1]; cnt++){
-          //cout << "[" << i * 2 + MYTHREAD << "," << A->lnonzero[cnt]<< "]" << "\t";
-      //}
-      //cout << endl;
-  //}
-  //cout << endl;
-
-  T0_fprintf(stderr, "Histogram is started...\n");
-
-  _lgp->getShmem()->getSimThread()->SwmMarker(1111);
-
-  //int64_t histo_loop_start = _lgp->getShmem()->getTime();
-
-  for( i=0; i< A->lnnz; i++) {                   // histogram the column counts of A
-    assert( A->lnonzero[i] < A->numcols );
-    assert( A->lnonzero[i] >= 0 );
-    _lgp->lgp_fetch_and_inc_nbi(histogram, A->lnonzero[i]);
-  }
-
-  _lgp->lgp_barrier();
-  _lgp->getShmem()->getSimThread()->SwmMarker(2222);
-  //int64_t histo_loop_stop = _lgp->getShmem()->getTime();
-  //cout << "start time: " << histo_loop_start << " end time: " << histo_loop_stop << endl;
-  //T0_fprintf(stderr, "Histogram is done...\n");
-  //int lnnz = 0;
-  //for( i = 0; i < lnc; i++) {
-    //lnnz += l_histogram[i];
-  //}
-  //int64_t reduction_start = _lgp->getShmem()->getTime();
-  //int64_t sum = _lgp->lgp_reduce_add_l(lnnz);      // check the histogram counted everything
-  //int64_t reduction_stop = _lgp->getShmem()->getTime();
-  //T0_fprintf(stderr, "Reduction is done...\n");
-  //assert( A->nnz == sum );
-  return histogram;
-}
 
 /*! \brief produce the transpose of a sparse matrix using UPC
  * \param A  pointer to the original matrix
  * \return a pointer to the matrix that has been produced or NULL if the model can't be used
  * \ingroup spmatgrp
  */
-
 sparsemat_t * SwmSpmat::transpose_matrix_agp(sparsemat_t *A) {
-  //int64_t lnnz, i, j, col, row, fromth, idx;
   int64_t lnnz, i, j, row;
   int64_t pos;
   sparsemat_t * At;

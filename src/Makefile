@@ -28,27 +28,36 @@ LEX = flex
 YACC   = bison -y
 DEBUG = 0
 DEFINE = -DDEBUG=$(DEBUG)
+#BOOST = /usr/boost/boost_1_84_0/stage
 BOOST_INC = /usr/local/include/boost/
 BOOST_LIB = /usr/local/lib
 INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower -Iworkloads \
 		  -Iworkloads/shmem -Iworkloads/bale -Iworkloads/workload_components \
 		  -Iworkloads/wcomp -Iboost -Ism $(DEFINE)
-CPPFLAGS += -fcf-protection=full -Wextra -Werror -Wno-unused-parameter -Wall $(INCPATH) -fPIE
-CPPFLAGS += -Wformat -Wformat-security -Werror=format-security -fPIC -D_FORTIFY_SOURCE=2
-CPPFLAGS += -mretpoline -fstack-protector-strong
+CPPFLAGS += $(INCPATH)
+#CPPFLAGS += -fcf-protection=full -Wextra -Werror -Wno-unused-parameter -Wall $(INCPATH) -fPIE
+#CPPFLAGS += -Wformat -Wformat-security -Werror=format-security -fPIC -D_FORTIFY_SOURCE=2
+#CPPFLAGS += -mretpoline -fstack-protector-strong
 CPPFLAGS += -O3
 CPPFLAGS += -g -Wno-vla 
 CFLAGS := $(CPPFLAGS)
-CPPFLAGS += -flto -fsanitize=cfi -fsanitize-ignorelist=cfi_ignorelist.txt  -fvisibility=hidden
-CPPFLAGS += -std=c++11
-LFLAGS += -static -pie -pthread -flto -fsanitize=cfi -fsanitize-ignorelist=cfi_ignorelist.txt -fvisibility=hidden -z noexecstack -L$(BOOST_LIB)\
+#CPPFLAGS += -flto -fsanitize=cfi -fsanitize-ignorelist=cfi_ignorelist.txt  -fvisibility=hidden
+CPPFLAGS += -std=c++14
+#LFLAGS += -static -pie -pthread -flto -fsanitize=cfi -fsanitize-ignorelist=cfi_ignorelist.txt -fvisibility=hidden -z noexecstack -L$(BOOST_LIB)\
+LFLAGS += -static -pie -pthread -flto -z noexecstack -L$(BOOST_LIB)
+LFLAGS += -L$(BOOST_LIB)\
 		  -lpthread -Wl,-z,relro,-z,now,-rpath=$(BOOST_LIB) \
 		  -lm -lstdc++ -lboost_coroutine -lpthread -lboost_filesystem -lboost_chrono -lboost_context -lboost_thread -lboost_system -lboost_contract -lboost_locale -lboost_exception $(DEFINE)
 
-LFLAGS += -flto -fvisibility=hidden
+CPPFLAGS += $(LFLAGS)
+CFLAGS += $(LFLAGS)
 
-CC=clang-18
-CXX=clang-18
+#LFLAGS += -flto -fvisibility=hidden
+
+CC=gcc
+CXX=g++
+#CC=clang-18
+#CXX=clang-18
 
 PROG := booksim
 

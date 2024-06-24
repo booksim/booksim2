@@ -77,12 +77,18 @@ Stats * GetStats(const std::string & name) {
 }
 
 bool gSwm = false;
+bool gSm = false;
+bool gSmEnd = true;
 bool gSwmAppRunMode = false;
 bool gSimEnabled;
 bool gClearStats;
 int gLastClearStatTime = 0;
 bool gShouldSkipDrain = false;
 int gFlitSize = 32; // in bytes
+
+bool gDebug = false;
+
+std::ofstream gOutfile;
 
 /* printing activity factor*/
 bool gPrintActivity;
@@ -183,6 +189,11 @@ int main( int argc, char **argv )
     cerr << "Usage: " << argv[0] << " configfile... [param=value...]" << endl;
     return 0;
  }
+
+    gOutfile.open("test.txt", std::ofstream::out | std::ofstream::trunc);
+    gOutfile.close();
+    gOutfile.open("test.txt", std::ios_base::app);
+
 
   /*initialize routing, traffic, injection functions
    */

@@ -12,16 +12,17 @@
 #include "swm_shmem.hpp"
 
 char ** _symmetric_mem = NULL;
-size_t _symmetric_mem_size = 128*1024*1024;
+size_t _symmetric_mem_size;
 
 
 
 
 void SwmShmem::shmem_init(SwmThread * thread, int me, int np) {
 
+  _thread = thread;
   shmem_internal_my_pe = me;
   shmem_internal_num_pes = np;
-  _thread = thread;
+  _symmetric_mem_size = thread->getConfig()->GetInt("swm_symmetric_heap_size");
 
   // Allocate memory for symmetric heap
   if(me == 0) {
@@ -148,17 +149,19 @@ void SwmShmem::shmem_long_sum_to_all(long *target, const long *source, int nredu
   // tree base collective implementation 
   shmem_internal_op_to_all(target, source, nreduce, sizeof(long), PE_start, logPE_stride, PE_size, pWrk, pSync); 
 
-
-  /* Functional part -- work with real data */
+  /*
+  * Functional part -- work with real data */
   long sum = 0;
   if(shmem_internal_my_pe == 0) {
-    for(int i=0; i<shmem_internal_num_pes; ++i) {
-      long * ptr = ((long *) get_remote_addr((void *)source, i));
-      sum += *ptr; 
-    }
-    for(int i=0; i<shmem_internal_num_pes; ++i) {
-      long * ptr = ((long *)get_remote_addr(target, i)); 
-      *ptr = sum;
+    for(int j=0; j<nreduce; j++) {
+      for(int i=0; i<shmem_internal_num_pes; ++i) {
+         long * ptr = ((long *) get_remote_addr((void *)&source[j], i));
+         sum += *ptr; 
+      }
+      for(int i=0; i<shmem_internal_num_pes; ++i) {
+         long * ptr = ((long *)get_remote_addr(&target[j], i)); 
+         *ptr = sum;
+      }
     }
   }
 }

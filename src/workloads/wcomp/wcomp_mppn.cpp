@@ -9,10 +9,8 @@
 
 //////////////////
 // multiple PEs per node - traffic modifier
-class MppnEndpoint : public WorkloadComponent
+class MppnEndpoint : public WComp<MppnEndpoint>
 {
-  static WorkloadComponent::Factory<MppnEndpoint> _factory;
-
   static int _pe_per_node; // configuration info, global to all objects
 
   static int _pe_begin(int s) { return s * _pe_per_node; }
@@ -44,12 +42,11 @@ class MppnEndpoint : public WorkloadComponent
     return pe_info;
   }
 
-  WorkloadComponent * _upstream;
   int _pe_ready;
   std::vector<std::list<std::pair<int,Message*>>> _pe_info_list;
-  public:
+ public:
   MppnEndpoint(int nodes, const vector<string> &options, Configuration const * const config, WorkloadComponent * upstrm)
-    : _upstream(upstrm), _pe_ready(-1), _pe_info_list(nodes)
+    : WComp<MppnEndpoint>(upstrm), _pe_ready(-1), _pe_info_list(nodes)
   {
     _pe_per_node = std::stoi(options[0]);
   }
@@ -104,4 +101,4 @@ class MppnEndpoint : public WorkloadComponent
 int MppnEndpoint::_pe_per_node = 1;
 
 // instantiate Mppn factory object
-WorkloadComponent::Factory<MppnEndpoint> MppnEndpoint::_factory("Mppn");
+PUBLISH_WORKLOAD_COMPONENT(MppnEndpoint, "Mppn");

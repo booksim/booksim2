@@ -4,23 +4,19 @@
  * H. Dogan (c) Intel, 2023
  * 
  */
+#pragma once
 
 #include "wkld_comp.hpp"
 
 //////////////////
 // Packetization Layer - traffic modifier
-class Packetize : public WorkloadComponent
+class Packetize : public WComp<Packetize>
 {
-    private:
-    static WorkloadComponent::Factory<Packetize> _factory;
- 
+   private:
     static float _flit_size;
     static int _fabric_overhead;
     static int _max_payload;
     static int _min_payload;
-    string _fabric;
- 
-    WorkloadComponent * _upstream;
  
     static int _flits(int bytes);
  

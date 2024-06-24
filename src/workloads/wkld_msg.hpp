@@ -1,5 +1,5 @@
 /*
- * workload message
+ * workload message 
  *
  * C. Beckmann (c) Intel, 2023
  * H. Dogan
@@ -49,8 +49,10 @@ class WorkloadMessage : public boost::intrusive_ref_counter<WorkloadMessage>
    virtual bool IsRead() const = 0;
    virtual bool IsWrite() const = 0;
    virtual bool IsDummy() const = 0;
+   virtual bool IsBlocking() const = 0;
    virtual WorkloadMessagePtr Reply() = 0;
    virtual WorkloadMessagePtr Contents() const = 0; // encapsulated message, if any
+   virtual std::ostream & Print(std::ostream &, bool deep = false) const;
 
    // get an encapsulated message of the given type (if none, return NULL)
    template <class T> T * ContentsOfType() {
@@ -78,8 +80,10 @@ class GeneratorWorkloadMessage : public WorkloadMessage
       Factory(Configuration const *config, int traffic_class);
    };
 
-  private:
+  protected:
    Factory *const factory; // needed to generate replies
+
+  private:
    const int src;
    const int dest;
    const msg_t type;
@@ -109,7 +113,6 @@ class GeneratorWorkloadMessage : public WorkloadMessage
                    :  data_payload_size + write_request_overhead[tc]);
    }
   public:
-   //GeneratorWorkloadMessage() = default;
    GeneratorWorkloadMessage() = delete;
    // data size is added to overheads, depending on message type
    GeneratorWorkloadMessage(Factory *f, int src_pe, int dest_pe, msg_t msg_type = AnyRequest, bool reply_msg = false, int data_size = 0) :
@@ -131,7 +134,18 @@ class GeneratorWorkloadMessage : public WorkloadMessage
       data_payload_size(payload_size),
       size(size)
    {}
-
+   // copy- and reply- constructor
+   GeneratorWorkloadMessage(const GeneratorWorkloadMessage &m, bool make_reply = false) :
+      factory(m.factory),
+      src(make_reply ? m.dest : m.src),
+      dest(make_reply ? m.src : m.dest),
+      type(m.type),
+      is_reply(make_reply || m.is_reply),
+      data_payload_size(m.data_payload_size),
+      // if we're making a reply, use same logic as first constructor form.  For copy constructor, just copy the size:
+      size(make_reply ? _get_size(IsDummy(), m.type == AnyRequest, true, IsRead(), m.factory->traffic_class) : m.size)
+   {}
+   
 
    virtual int Source() const { return src; }
    virtual int Dest() const { return dest; }
@@ -142,12 +156,11 @@ class GeneratorWorkloadMessage : public WorkloadMessage
    virtual bool IsRead() const { return type == GetRequest || type == NbGetRequest;  }
    virtual bool IsWrite() const { return type == PutRequest || type == SendRequest;  }
    virtual bool IsDummy() const { return type == DummyRequest;  }
+   virtual bool IsBlocking() const { return type == GetRequest || type == RecvRequest;  }
    virtual WorkloadMessagePtr Contents() const { return 0; }
 
    virtual WorkloadMessagePtr Reply() {
-      int reply_dest = src;
-      int reply_src = dest;
-      return new GeneratorWorkloadMessage(factory, reply_src, reply_dest, type, true, data_payload_size);
+      return new GeneratorWorkloadMessage(*this, true);
    }
 
 };
@@ -173,6 +186,7 @@ class ModifierWorkloadMessage : public WorkloadMessage
    bool  IsRead()      const { return Contents()->IsRead();      }
    bool  IsWrite()     const { return Contents()->IsWrite();     }
    bool  IsDummy()     const { return Contents()->IsDummy();     }
+   bool  IsBlocking()  const { return Contents()->IsBlocking();  }
 
    WorkloadMessagePtr Reply() {
       // generate and wrap the upstream reply
@@ -182,8 +196,5 @@ class ModifierWorkloadMessage : public WorkloadMessage
 
 inline std::ostream & operator << (std::ostream & os, const WorkloadMessage & msg)
 {
-    static const char *type2str[] = {"MSG", "GET", "PUT", "nbGET", "SEND", "RECV", "(dummy)"};
-    return os << msg.Source() << "->" << msg.Dest() << " "
-              << type2str[(int)msg.Type()] << (msg.IsReply() ? " (reply)" : "")
-              << " [" << msg.Size() << "]";
+    return msg.Print(os);
 }

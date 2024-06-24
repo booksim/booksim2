@@ -33,6 +33,8 @@ private:
 
   // Config
   int _cycles_before_standalone_ack;
+  // If that much time has elapsed, then we should just send a standalone ack before sending a packet
+  int _cycles_before_standalone_ack_has_priority;
   int _packets_before_standalone_ack;
   unsigned int _opb_max_pkt_occupancy;  // In packets
   unsigned int _opb_pkt_occupancy;
@@ -305,8 +307,8 @@ private:
     long pid;
     int size;
     int src;
-    int debug_seq_num;
     double remaining_process_size;
+    Flit * homa_flit;
   };
   struct load_balance_queue_record {
     Flit * flit;
@@ -349,11 +351,15 @@ private:
     //  Initiator states
     // -----------------------------------------------------------------------
 
+    int ecn_count;
+    int ecn_total;
+    double ecn_running_percent;
+
     int halt_active;
     int halt_state;
 
     // For controlling sending packet frequency
-    int send_allowance_counter;
+    int send_allowance_counter_size;
     bool must_retry_at_least_one_packet;
 
     // For timing out in halt state if havne't received ack for a long time
@@ -400,8 +406,6 @@ private:
       int acked_data_in_queue;
       int data_dequeued_but_need_acked;
 
-      int rget_get_allowance;
-
       int num_initiator_retransmitting;
 
       bool host_congestion_enabled;
@@ -437,10 +441,12 @@ private:
       //
       //
 
+      int ecn_next_check_period;
+
       Stats * latency;
   };
 
-  enum policy_type {HC_NO_POLICY = 0, HC_MY_POLICY, HC_TCP_LIKE_POLICY};
+  enum policy_type {HC_NO_POLICY = 0, HC_MY_POLICY, HC_TCP_LIKE_POLICY, HC_ECN_POLICY, HC_HOMA_POLICY};
   struct mypolicy_host_control_constant_record {
 
     // -----------------------------------------------------------------------
@@ -463,6 +469,13 @@ private:
     // This is the number of incremented acks, that we're going to skip all
     // duplicate acks in between. just a misnomer
     int suppress_duplicate_ack_max;
+
+    // Amount of time we wait until we assume the
+    // window reduced signal will not come
+    int ecn_period;
+    double ecn_param_g;
+    double ecn_threshold_percent;
+    int ecn_threshold;
 
     // Storing for TCP-like, not making a new struct for now
     unsigned int tcplikepolicy_MSS;
@@ -683,15 +696,17 @@ public:
       void increment_weighted_scheduler_tokens();
       void insert_flit_into_opb(Flit * flit);
     void insert_piggybacked_acks(Flit * flit);
+        void update_flit_ack_if_needed_for_ecn(Flit * flit);
     Flit * manufacture_standalone_ack(int subnet, BufferState * dest_buf);
+    bool has_priority_standalone_ack();
     Flit * inject_flit(BufferState * const dest_buf);
     void process_received_ack_queue();
       void process_received_acks(recvd_ack_record record);
       bool to_be_acked_packets_contain_put(int target, int seq_num_acked, bool nack_initiated = false);
-      int calculate_to_be_acked_packet_size(int target, int seq_num_acked, bool nack_initiated = false);
+      int calculate_to_be_acked_packet_size(int target, int seq_num_acked, bool nack_initiated = false, bool nack_non_zero = false);
       int calculate_to_be_acked_packet_size_by_index(int target, unsigned int opb_idx, unsigned int seq_num_acked, int & accum_packet_size);
       void target_reserve_put_space_for_initiator_if_needed(int initiator);
-        void mypolicy_update_initiator_state_with_ack(recvd_ack_record record);
+        void mypolicy_update_initiator_state_with_ack(recvd_ack_record record, int size);
         void mypolicy_update_periodic_occupancy(put_wait_queue_record * entrance, put_wait_queue_record * exit);
         void mypolicy_update_periodic_ack_occupancy(int source, int size);
         void mypolicy_update_target(put_wait_queue_record * entrance, put_wait_queue_record * exit);
@@ -708,7 +723,7 @@ public:
       void mark_response_received_in_opb(int target, int response_to_seq_num);
     void update_dequeued_state(put_wait_queue_record r);
     void update_host_bandwidth();
-
+    void sender_process_ecn();
 
     void process_put_queue();
     void process_delayed_ack_if_needed();
@@ -738,6 +753,10 @@ public:
     void UpdateAckAndReadResponseState(Flit * flit, int packet_size);
       void setupNackState(int source, int seq_num, Flit * flit, int packet_size);
       void QueueResponse(Flit * flit);
+    void HomaEnqueue(Flit * flit, int packet_size);
+    void HomaAckQueueRecord(put_wait_queue_record r);
+
+
 
   // Called by TrafficManager for quiesce/end-of-run
   bool _InjectionQueueDrained(int c);

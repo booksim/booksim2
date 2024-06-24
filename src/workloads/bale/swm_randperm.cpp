@@ -50,6 +50,7 @@ static struct argp_child children_parsers[] =
     {0,0,0,0}
   };
 
+static int total_put = 0, total_pe = 0;
 
 
 void SwmRandPerm::behavior(int argc, char * argv[])
@@ -134,7 +135,6 @@ void SwmRandPerm::behavior(int argc, char * argv[])
 
    if(_me == 0)
       printf("Done with throwing darts\n");
-   printf("%lu\n", lgp.getTime());
 
    SwmMarker(REGION1_END);
 
@@ -152,7 +152,6 @@ void SwmRandPerm::behavior(int argc, char * argv[])
 
    if(_me == 0)
       printf("Done with reduction\n");
-   printf("%d %lu\n", _me, lgp.getTime());
 
 
    // of elements produce by the smaller threads
@@ -160,8 +159,13 @@ void SwmRandPerm::behavior(int argc, char * argv[])
       if(ltarget[i] != -1L ) {
          lgp.lgp_put_int64(perm, pos, ltarget[i]);
          pos++;
+         total_put++;
       }
    }
+
+   total_pe++;
+   if (total_pe == _np)
+     printf("\nT=%d Randperm total_put=%d l_M=%ld\n",GetSimTime(),total_put,l_M);
 
    SwmMarker(REGION2_END);
 
@@ -169,7 +173,6 @@ void SwmRandPerm::behavior(int argc, char * argv[])
 
    if(_me == 0)
       printf("Application is completed\n");
-   printf("%d %lu\n", _me, lgp.getTime());
 
    DBGPRINT("DONE");
 

@@ -33,8 +33,10 @@ enum coll_type_t {
   LINEAR,
   TREE,
   DISSEM,
+  ALL2ALL,
   RING,
-  RECDBL
+  RECDBL,
+  HWACCEL
 };
 typedef enum coll_type_t coll_type_t;
 
@@ -140,6 +142,9 @@ class SwmShmem
   inline int shmem_internal_circular_iter_next(int curr, int PE_start, int PE_stride, int PE_size);
   int shmem_internal_build_kary_tree(int radix, int PE_start, int stride, int PE_size, int PE_root, int *parent, int *num_children, int *children);
   int shmem_internal_collectives_init(void);
+
+  int * build_tree(int radix, int nnodes, int shmem_local_pes, int *parent, int *num_children);
+
   
   // Broadcasts
   void shmem_internal_bcast(void *target, const void *source, size_t len, int PE_root, int PE_start, int PE_stride, int PE_size, long *pSync, int complete);
@@ -150,6 +155,10 @@ class SwmShmem
   void shmem_internal_op_to_all(void *target, const void *source, size_t count, size_t type_size, int PE_start, int PE_stride, int PE_size, void *pWrk, long *pSync);
   void shmem_internal_op_to_all_tree(void *target, const void *source, size_t count, size_t type_size, int PE_start, int PE_stride, int PE_size, void *pWrk, long *pSync); 
   void shmem_internal_op_to_all_linear(void *target, const void *source, size_t count, size_t type_size, int PE_start, int PE_stride, int PE_size, void *pWrk, long *pSync); 
+  void shmem_internal_op_to_all_ring(void *target, const void *source, size_t count, size_t type_size, int PE_start, int PE_stride, int PE_size, void *pWrk, long *pSync);
+  void shmem_internal_op_to_all_recdbl_sw(void *target, const void *source, size_t count, size_t type_size, int PE_start, int PE_stride, int PE_size, void *pWrk, long *pSync);
+
+  void shmem_internal_reduce_local(int count, int type_size);
   
   
   // Barriers 
@@ -157,9 +166,18 @@ class SwmShmem
   void shmem_internal_sync_linear(int PE_start, int PE_stride, int PE_size, long *pSync);
   void shmem_internal_sync_tree(int PE_start, int PE_stride, int PE_size, long *pSync);
   void shmem_internal_sync_dissem(int PE_start, int PE_stride, int PE_size, long *pSync);
+  void shmem_internal_sync_all2all(int PE_start, int PE_stride, int PE_size, long *pSync);
+  void shmem_internal_sync_all_linear(int root, int PE_size); 
+  void shmem_internal_sync_all_dissem(int root, int PE_size); 
+  void shmem_internal_sync_all_tree(int root, int PE_size); 
   void shmem_internal_sync_all(void);
   void shmem_internal_barrier_all(void);
 
+
+  // hardware accelerated collectives
+  void shmem_internal_bcast_xl(void *target, const void *source, size_t len, int PE_root, int PE_start, int PE_stride, int PE_size, long *pSync, int complete);
+  void shmem_internal_op_to_all_xl(void *target, const void *source, size_t count, size_t type_size, int PE_start, int PE_stride, int PE_size, void *pWrk, long *pSync);
+  void shmem_internal_sync_xl(int PE_start, int PE_stride, int PE_size, long *pSync);
 
 
   // Simulator related functions

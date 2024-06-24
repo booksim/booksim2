@@ -51,8 +51,7 @@ inline int RandomInt( int max ) {
 }
 
 // Returns a random floating-point value in the rage [0,1]
-inline double RandomFloat(  ) {
-  return ranf_next( );
+inline double RandomFloat(  ) { return ranf_next( );
 }
 
 // Returns a random floating-point value in the rage [0,max]

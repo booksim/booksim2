@@ -249,7 +249,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["packet_gen_attempts"] = 3;
   //  _int_map["retry_timer_timeout"] = 2000;
   _int_map["retry_timer_timeout"] = 400000;  // 1ms
-  _int_map["max_retry_attempts"] = 50;
+  _int_map["max_retry_attempts"] = 500;
   //  _int_map["response_timer_timeout"] = 200000;  // 500us
   _int_map["response_timer_timeout"] = 800000;  // 2ms
   //  _int_map["rget_req_pull_timeout"] = 300000;   // 750us
@@ -262,9 +262,14 @@ BookSimConfig::BookSimConfig( )
 //  _int_map["endpoint_rget_inbound_size_limit_per_dest"] = 2048; // RGET_RATE_LIMIT.data_size (in flits = 64KB)
 //  _int_map["endpoint_use_new_rget_metering"] = 0;
 
-// Venkat's latest configs:
+
   _int_map["endpoint_xaction_limit_per_dest"] = 50;             // RATE_LIMIT.num_reqs
   _int_map["endpoint_xaction_size_limit_per_dest_in_kb"] = 128;
+  _int_map["swm_active_nodes"] = -1;
+  _int_map["swm_chunk_size"] = 1;
+
+
+  _int_map["swm_symmetric_heap_size"] = 1 * 1024 * 1024; // 1 MB symmetric heap per PE
 
   AddStrField("host_congestion_active", "");
 
@@ -352,7 +357,7 @@ BookSimConfig::BookSimConfig( )
   _int_map["host_control_max_packet_send_per_ack"] = 1;
   _int_map["host_control_max_ack_before_send_packet"] = 1;
   _int_map["host_control_policy"] = 0;
-  _int_map["host_control_timeout"] = 16000;
+  _int_map["host_control_timeout"] = 26000;
   _float_map["host_control_fairness_diff_threshold"] = 0.025;
 
   _int_map["shared_ack_timeout"] = 8000;
@@ -371,6 +376,10 @@ BookSimConfig::BookSimConfig( )
   _int_map["host_control_fairness_reset_period"] = 100000;
 
   _int_map["suppress_duplicate_acks_between_n_incremental_acks"] = 1;
+
+  _float_map["ecn_threshold_percent"] = 0.5;
+  _int_map["ecn_period"] = 4000;
+  _float_map["ecn_param_g"] = 0.9;
 
   // tcp MMS = 1.5K -> 46 flits @ 32b/ flit
   // May won't work and will need to be increased if packet size is higher

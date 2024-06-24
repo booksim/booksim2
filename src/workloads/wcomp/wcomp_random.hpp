@@ -7,30 +7,15 @@
 #include "injection.hpp"
 #include "traffic.hpp"
 
-class RandomWorkloadGenerator : public WorkloadComponent,
+class RandomWorkloadGenerator : public WComp<RandomWorkloadGenerator>,
                                 private GeneratorWorkloadMessage::Factory
 {
-    static WorkloadComponent::Factory<RandomWorkloadGenerator> _factory;
-
     double const _wr_fraction;               // copy of key Booksim knobs
     bool   const _use_rdwr;
 
     string             _injection_process;
     InjectionProcess * _inject;              // Booksim injection process
     TrafficPattern *   _pattern;             // Booksim traffic pattern
-
-    // knob parsing helper functions
-    #define GET_BY_CLASS(TYPE, NAME, GETARRAY, GETITEM) \
-    TYPE NAME(  Configuration const *cfg, const char *n, int tc) { \
-        auto a = cfg->GETARRAY(n); \
-        if (a.empty()) return cfg->GETITEM(n); \
-        a.resize(tc+1, a.back()); \
-        return a[tc]; \
-    }
-    GET_BY_CLASS(string, _get_str_by_class,   GetStrArray,   GetStr);
-    GET_BY_CLASS(int,    _get_int_by_class,   GetIntArray,   GetInt);
-    GET_BY_CLASS(double, _get_float_by_class, GetFloatArray, GetFloat);
-    #undef GET_BY_CLASS
 
   public:
     // Options are:

@@ -91,5 +91,10 @@ bool ParseArgs(Configuration * cf, int argc, char **argv);
 vector<string> tokenize_str(string const & data);
 vector<int> tokenize_int(string const & data);
 vector<double> tokenize_float(string const & data);
+vector<string> str_comma_split(string const & data);
+
+string GetStrIndexed(Configuration const *, const char *, int);
+int GetIntIndexed(Configuration const *, const char *, int);
+double GetFloatIndexed(Configuration const *, const char *, int);
 
 #endif

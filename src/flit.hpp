@@ -83,6 +83,8 @@ public:
 
   bool non_duplicate_ack;
 
+  bool ecn_congestion_detected;
+
   // Need size so the dest can ensure entire packet was received.
   int size;
   int packet_seq_num;

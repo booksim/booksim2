@@ -445,3 +445,47 @@ vector<double> tokenize_float(string const & data)
 
   return values;
 }
+
+// split a string by commas "," but not within parentheses.
+// copied from tokenize_str in config_utils.cpp, and modified
+vector<string> str_comma_split(string const & data)
+{
+    vector<string> values;
+    if(data.empty())
+        return values;
+
+    size_t start = 0;
+    int nested = 0;
+
+    size_t curr = start;
+    while(string::npos != (curr = data.find_first_of("(,)", curr))) {
+        if(data[curr] == '(') {
+            ++nested;
+        } else if((data[curr] == ')') && nested) {
+            --nested;
+        } else if(!nested) {
+            if(curr > start)
+                values.push_back(data.substr(start, curr - start));
+            start = curr + 1;
+        }
+        ++curr;
+    }
+    assert(!nested);
+
+    if (start < data.length()) // last item
+        values.push_back(data.substr(start, string::npos));
+
+    return values;
+}
+
+// knob parsing helper functions - get a knob value indexed by traffic class
+#define GET_BY_CLASS(TYPE, NAME, GETARRAY, GETITEM) \
+TYPE NAME(  Configuration const *cfg, const char *n, int tc) { \
+    auto a = cfg->GETARRAY(n); \
+    if (a.empty()) return cfg->GETITEM(n); \
+    a.resize(tc+1, a.back()); \
+    return a[tc]; \
+}
+GET_BY_CLASS(string, GetStrIndexed,   GetStrArray,   GetStr);
+GET_BY_CLASS(int,    GetIntIndexed,   GetIntArray,   GetInt);
+GET_BY_CLASS(double, GetFloatIndexed, GetFloatArray, GetFloat);

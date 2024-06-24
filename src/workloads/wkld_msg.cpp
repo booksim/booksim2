@@ -39,3 +39,18 @@ GeneratorWorkloadMessage::Factory::Factory(Configuration const * config, int tcl
     _init_array(read_reply_overhead,    config, "read_reply_size",    tcls);
     _init_array(write_reply_overhead,   config, "write_reply_size",   tcls);
 }
+
+std::ostream & WorkloadMessage::Print(std::ostream & os, bool deep) const
+{
+    static const char *type2str[] = {"MSG", "GET", "PUT", "nbGET", "SEND", "RECV", "(dummy)"};
+    os << Source() << "->" << Dest() << " "
+       << type2str[(int)Type()] << (IsReply() ? " (reply)" : "")
+       << " [" << Size() << "]";
+    WorkloadMessagePtr c;
+    if (deep && (c = Contents()).get()) {
+        os << " {";
+        c->Print(os, deep);
+        os << '}';
+    }
+    return os;
+}
