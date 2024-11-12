@@ -2220,7 +2220,7 @@ string TrafficManager::_OverallStatsCSV(int c) const
 
 void TrafficManager::DisplayOverallStatsCSV(ostream & os) const {
     for(int c = 0; c < _classes; ++c) {
-        os << "results:" << c << ',' << _OverallStatsCSV() << endl;
+        os << "results:" << c << ',' << _OverallStatsCSV(c) << endl;
     }
 }
 
