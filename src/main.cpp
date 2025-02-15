@@ -115,7 +115,7 @@ bool Simulate( BookSimConfig const & config )
 
   assert(trafficManager == NULL);
   trafficManager = TrafficManager::New( config, net ) ;
-
+  cout << "trafficManager set" << endl;
   /*Start the simulation run
    */
 
@@ -123,9 +123,9 @@ bool Simulate( BookSimConfig const & config )
   struct timeval start_time, end_time; /* Time before/after user code */
   total_time = 0.0;
   gettimeofday(&start_time, NULL);
-
+  cout << "trafficManager start" << endl;
   bool result = trafficManager->Run() ;
-
+  cout << "trafficManager end" << endl;
 
   gettimeofday(&end_time, NULL);
   total_time = ((double)(end_time.tv_sec) + (double)(end_time.tv_usec)/1000000.0)

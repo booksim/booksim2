@@ -30,11 +30,11 @@
 // Topology
 
 topology = mesh;
-k = 8;
+k = 4;
 n = 2;
 
 // Routing
-routing_function = dor;
+routing_function = dim_order;
 
 // Flow control
 num_vcs     = 8;
@@ -66,3 +66,5 @@ sim_type = latency;
 
 injection_rate = 0.005;
 
+link_failures=10;
+fail_seed=time;

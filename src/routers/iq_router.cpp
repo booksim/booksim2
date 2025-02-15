@@ -299,7 +299,7 @@ bool IQRouter::_ReceiveFlits( )
   for(int input = 0; input < _inputs; ++input) { 
     Flit * const f = _input_channels[input]->Receive();
     if(f) {
-
+      cout << "IQrouter Receive flits router:" << this->GetID() << " id:" << f->pid << " src:" << f->src << " dest:" << f->dest << " vc:" << f->vc << endl;
 #ifdef TRACK_FLOWS
       ++_received_flits[f->cl][input];
 #endif
@@ -621,6 +621,7 @@ void IQRouter::_VCAllocEvaluate( )
 	vc_start = iset->vc_start;
 	vc_end = iset->vc_end;
       }
+      cout << "IQrouter id:" << f->pid << " vcstart:" << vc_start << " vcs:" << _vcs << endl;
       assert(vc_start >= 0 && vc_start < _vcs);
       assert(vc_end >= 0 && vc_end < _vcs);
       assert(vc_end >= vc_start);

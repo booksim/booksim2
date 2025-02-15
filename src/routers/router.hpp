@@ -118,7 +118,7 @@ public:
   void OutChannelFault( int c, bool fault = true );
   bool IsFaultyOutput( int c ) const;
 
-  inline int GetID( ) const {return _id;}
+  inline int GetID( ) const { return _id;}
 
 
   virtual int GetUsedCredit(int o) const = 0;

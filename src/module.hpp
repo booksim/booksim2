@@ -50,7 +50,6 @@ public:
   
   inline const string & Name() const { return _name; }
   inline const string & FullName() const { return _fullname; }
-
   void DisplayHierarchy( int level = 0, ostream & os = cout ) const;
 
   void Error( const string& msg ) const;

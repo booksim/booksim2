@@ -134,6 +134,7 @@ Router *Router::NewRouter( const Configuration& config,
   Router *r = NULL;
   if ( type == "iq" ) {
     r = new IQRouter( config, parent, name, id, inputs, outputs );
+    //cout << "New router id " << id << " name " << name << " parent " << parent->Name() << " input " << inputs << " output " << outputs << endl; 
   } else if ( type == "event" ) {
     r = new EventRouter( config, parent, name, id, inputs, outputs );
   } else if ( type == "chaos" ) {

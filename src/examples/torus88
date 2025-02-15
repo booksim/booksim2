@@ -29,12 +29,19 @@
 
 // Topology
 topology = torus;
-k = 8;
+k = 4;
 n = 2;
 // Routing
 routing_function = dim_order;
 // Flow control
-num_vcs = 2;
+num_vcs = 8;
+vc_buf_size = 8;
 // Traffic
 traffic = uniform;
 injection_rate = 0.15;
+
+//1: batch mode, 0: injection mode
+use_read_write = 1;
+
+//link_failures=10;
+//fail_seed=time;

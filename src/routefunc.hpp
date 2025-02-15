@@ -46,3 +46,6 @@ extern int gReadReplyBeginVC, gReadReplyEndVC;
 extern int gWriteReplyBeginVC, gWriteReplyEndVC;
 
 #endif
+
+#define bitmask(a,b) (a & ((1<<b) - 1))
+

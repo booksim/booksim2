@@ -39,6 +39,8 @@
 #include "network.hpp"
 
 #include "kncube.hpp"
+#include "hcube.hpp"
+#include "polarflyplus.hpp"
 #include "fly.hpp"
 #include "cmesh.hpp"
 #include "flatfly_onchip.hpp"
@@ -87,6 +89,9 @@ Network * Network::New(const Configuration & config, const string & name)
   } else if ( topo == "mesh" ) {
     KNCube::RegisterRoutingFunctions() ;
     n = new KNCube( config, name, true );
+  } else if ( topo == "hcube" ) {
+    HCube::RegisterRoutingFunctions() ;
+    n = new HCube( config, name, true );
   } else if ( topo == "cmesh" ) {
     CMesh::RegisterRoutingFunctions() ;
     n = new CMesh( config, name );
@@ -111,6 +116,9 @@ Network * Network::New(const Configuration & config, const string & name)
   } else if ( topo == "dragonflynew"){
     DragonFlyNew::RegisterRoutingFunctions() ;
     n = new DragonFlyNew(config, name);
+  } else if ( topo == "polarflyplus"){
+    PolarFlyplusNew::RegisterRoutingFunctions() ;
+    n = new PolarFlyplusNew(config, name);
   } else {
     cerr << "Unknown topology: " << topo << endl;
   }
@@ -181,9 +189,12 @@ void Network::_Alloc( )
 
 void Network::ReadInputs( )
 {
+	int cnt=0;
   for(deque<TimedModule *>::const_iterator iter = _timed_modules.begin();
       iter != _timed_modules.end();
       ++iter) {
+cnt++; 
+//cout << "      network ReadInputs() " << (*iter)->FullName() << "  Module type: " << typeid(**iter).name() << " #" << cnt << endl;
     (*iter)->ReadInputs( );
   }
 }

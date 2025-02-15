@@ -246,27 +246,7 @@ void KNCube::InsertRandomFaults( const Configuration &config )
     RandomSeed( fail_seed );
 
     vector<bool> fail_nodes(_size);
-
-    for ( int i = 0; i < _size; ++i ) {
-      int node = i;
-
-      // edge test
-      bool edge = false;
-      for ( int n = 0; n < _n; ++n ) {
-	if ( ( ( node % _k ) == 0 ) ||
-	     ( ( node % _k ) == _k - 1 ) ) {
-	  edge = true;
-	}
-	node /= _k;
-      }
-
-      if ( edge ) {
-	fail_nodes[i] = true;
-      } else {
-	fail_nodes[i] = false;
-      }
-    }
-
+    //vector<bool> edge_nodes(_size);
     for ( int i = 0; i < num_fails; ++i ) {
       int j = RandomInt( _size - 1 );
       bool available = false;
@@ -275,23 +255,22 @@ void KNCube::InsertRandomFaults( const Configuration &config )
       int t;
 
       for ( t = 0; ( t < _size ) && (!available); ++t ) {
-	int node = ( j + t ) % _size;
-       
-	if ( !fail_nodes[node] ) {
+	node = ( j + t ) % _size;
+        int c = RandomInt( 2*_n - 1 );
+//	if ( !edge_nodes[node] ) {
 	  // check neighbors
-	  int c = RandomInt( 2*_n - 1 );
 
 	  for ( int n = 0; ( n < 2*_n ) && (!available); ++n ) {
 	    chan = ( n + c ) % 2*_n;
 
-	    if ( chan % 1 ) {
+	    if ( chan % 2 ) {
 	      available = fail_nodes[_LeftNode( node, chan/2 )];
 	    } else {
 	      available = fail_nodes[_RightNode( node, chan/2 )];
 	    }
 	  }
-	}
-	
+//	}
+  //      else {available = true;chan = c % 2*_n;}	
 	if ( !available ) {
 	  cout << "skipping " << node << endl;
 	}
