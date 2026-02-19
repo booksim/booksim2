@@ -1,0 +1,9 @@
+{
+  "latency": 53.0107,
+  "min_latency": 7.0,
+  "max_latency": 114.0,
+  "hops": 10.1934,
+  "injected_rate": 0.00053157,
+  "accepted_rate": 0.000531556,
+  "saturated": false
+}

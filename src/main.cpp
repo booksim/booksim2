@@ -119,6 +119,8 @@ bool Simulate( BookSimConfig const & config )
   /*Start the simulation run
    */
 
+  cout << "Checkpoint 1" << endl;
+  
   double total_time; /* Amount of time we've run */
   struct timeval start_time, end_time; /* Time before/after user code */
   total_time = 0.0;
@@ -126,6 +128,7 @@ bool Simulate( BookSimConfig const & config )
 
   bool result = trafficManager->Run() ;
 
+  cout << "Checkpoint 2" << endl;
 
   gettimeofday(&end_time, NULL);
   total_time = ((double)(end_time.tv_sec) + (double)(end_time.tv_usec)/1000000.0)
@@ -134,7 +137,7 @@ bool Simulate( BookSimConfig const & config )
   cout<<"Total run time "<<total_time<<endl;
 
   for (int i=0; i<subnets; ++i) {
-
+    cout << "Checkpoint 3." << i << endl;
     ///Power analysis
     if(config.GetInt("sim_power") > 0){
       Power_Module pnet(net[i], config);
@@ -143,6 +146,8 @@ bool Simulate( BookSimConfig const & config )
 
     delete net[i];
   }
+
+  cout << "Checkpoint 4" << endl;
 
   delete trafficManager;
   trafficManager = NULL;
@@ -179,9 +184,13 @@ int main( int argc, char **argv )
     gWatchOut = new ofstream(watch_out_file.c_str());
   }
   
+  cout << "Checkpoint 0" << endl;
 
   /*configure and run the simulator
    */
   bool result = Simulate( config );
+
+  cout << "Final Checkpoint" << endl;
+
   return result ? -1 : 0;
 }

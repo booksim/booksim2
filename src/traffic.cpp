@@ -180,7 +180,7 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes,
     vector<int> hotspots = tokenize_int(params[0]);
     for(size_t i = 0; i < hotspots.size(); ++i) {
       if(hotspots[i] < 0) {
-	hotspots[i] = RandomInt(nodes - 1);
+	      hotspots[i] = RandomInt(nodes - 1);
       }
     }
     vector<int> rates;
@@ -191,7 +191,11 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes,
       rates.resize(hotspots.size(), 1);
     }
     result = new HotSpotTrafficPattern(nodes, hotspots, rates);
-  } else {
+  } 
+  else if (pattern_name == "netrace"){
+    cout << "Netrace Traffic Pattern Selected " << pattern << endl;
+  }
+  else {
     cout << "Error: Unknown traffic pattern: " << pattern << endl;
     exit(-1);
   }

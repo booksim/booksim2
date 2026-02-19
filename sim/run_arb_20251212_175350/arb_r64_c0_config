@@ -1,0 +1,24 @@
+topology = anynet;
+    routing_function = spanning_tree;
+    network_file = /Users/sidvetrivel/booksim2/sim/run_arb_20251212_175350/arb_r64_c0.5_file;
+    traffic = netrace;
+    netrace_file = ../src/netrace/testraces/shrtex.tra.bz2;
+
+    use_read_write = 0;
+
+    // Simulation - BATCH mode for fixed batch of packets
+    sim_type = batch;
+    batch_size = 1000;  // Will be overridden by trace if using NetTrace
+    batch_count = 1;
+    injection_rate = 0.01;
+
+    vc_allocator = separable_input_first;
+    sw_allocator = separable_input_first;
+    alloc_iters = 1;
+
+    num_vcs = 1;
+    vc_buf_size = 8;
+
+    use_read_write = 0;
+    packet_size = 1;
+    

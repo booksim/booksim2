@@ -44,6 +44,11 @@
 #include "outputset.hpp"
 #include "injection.hpp"
 
+//Include netrace
+extern "C" {
+  #include "netrace/netrace.h"
+}
+
 //register the requests to a node
 class PacketReplyInfo;
 
@@ -271,6 +276,7 @@ protected:
   
   virtual int  _IssuePacket( int source, int cl );
   void _GeneratePacket( int source, int size, int cl, int time );
+  void _GeneratePacket( int source, int size, int cl, int time, int dest );  
 
   virtual void _ClearStats( );
 

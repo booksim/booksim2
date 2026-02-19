@@ -1,0 +1,616 @@
+#!/usr/bin/env python3
+
+# Simplified NoC topology generation and testing for BookSim.
+
+import random
+import sys
+import os
+import subprocess
+import re
+import argparse
+from pathlib import Path
+import json
+import uuid
+from datetime import datetime
+
+# =============================================================================
+# Topology Generators
+# =============================================================================
+
+#Generate arbitrary graph topology
+class ArbitraryTopologyGenerator:
+    
+    def __init__(self, num_routers, nodes_per_router=2, connectivity=0.4, seed=42):
+        self.num_routers = num_routers
+        self.nodes_per_router = nodes_per_router
+        self.connectivity = connectivity
+        self.seed = seed
+        random.seed(seed)
+    
+    def generate(self):
+        output = []
+    
+        # Router definitions
+        node_id = 0
+        for router_id in range(self.num_routers):
+            nodes = []
+            for _ in range(self.nodes_per_router):
+                nodes.append(f"node {node_id}")
+                node_id += 1
+            output.append(f"router {router_id} {' '.join(nodes)}")
+        
+        output.append("")
+        
+        # Generate random connections
+        connections = []
+        for i in range(self.num_routers):
+            for j in range(i + 1, self.num_routers):
+                if random.random() < self.connectivity:
+                    connections.append((i, j))
+        
+        # Ensure connectivity with spanning tree
+        if not self._is_connected(connections):
+            connections = self._ensure_connected()
+        
+        # Write bidirectional connections
+        for src, dst in connections:
+            output.append(f"router {src} router {dst}")
+        
+        return "\n".join(output)
+    
+    def _is_connected(self, connections):
+        if not connections:
+            return False
+        adj = {i: [] for i in range(self.num_routers)}
+        for src, dst in connections:
+            adj[src].append(dst)
+            adj[dst].append(src)
+        visited = {0}
+        queue = [0]
+        while queue:
+            curr = queue.pop(0)
+            for neighbor in adj[curr]:
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
+        return len(visited) == self.num_routers
+    
+    def _ensure_connected(self):
+        connections = []
+        connected = [0]
+        unconnected = list(range(1, self.num_routers))
+        while unconnected:
+            src = random.choice(connected)
+            dst = unconnected.pop(random.randint(0, len(unconnected) - 1))
+            connections.append((src, dst))
+            connected.append(dst)
+        return connections
+
+
+# Generate 2D Mesh Topology
+class MeshTopologyGenerator:
+    
+    def __init__(self, width, height, nodes_per_router=1):
+        self.width = width
+        self.height = height
+        self.nodes_per_router = nodes_per_router
+    
+    def generate(self):
+        output = []
+
+        node_id = 0
+        for y in range(self.height):
+            for x in range(self.width):
+                router_id = y * self.width + x
+                nodes = [f"node {node_id + i}" for i in range(self.nodes_per_router)]
+                output.append(f"router {router_id} {' '.join(nodes)}")
+                node_id += self.nodes_per_router
+        
+        output.append("")
+        
+        # Horizontal links
+        for y in range(self.height):
+            for x in range(self.width - 1):
+                r1 = y * self.width + x
+                r2 = y * self.width + (x + 1)
+                output.append(f"router {r1} router {r2}")
+        
+        # Vertical links
+        for y in range(self.height - 1):
+            for x in range(self.width):
+                r1 = y * self.width + x
+                r2 = (y + 1) * self.width + x
+                output.append(f"router {r1} router {r2}")
+        
+        return "\n".join(output)
+
+# Generate 2D torus topology with wraparound
+class TorusTopologyGenerator:
+
+    def __init__(self, width, height, nodes_per_router=1):
+        self.width = width
+        self.height = height
+        self.nodes_per_router = nodes_per_router
+    
+    def generate(self):
+        output = []
+        
+        node_id = 0
+        for y in range(self.height):
+            for x in range(self.width):
+                router_id = y * self.width + x
+                nodes = [f"node {node_id + i}" for i in range(self.nodes_per_router)]
+                output.append(f"router {router_id} {' '.join(nodes)}")
+                node_id += self.nodes_per_router
+        
+        output.append("")
+        
+        # Horizontal links with wraparound
+        for y in range(self.height):
+            for x in range(self.width):
+                r1 = y * self.width + x
+                r2 = y * self.width + ((x + 1) % self.width)
+                if x < self.width - 1 or self.width > 2:
+                    output.append(f"router {r1} router {r2}")
+        
+        # Vertical links with wraparound
+        for y in range(self.height):
+            for x in range(self.width):
+                r1 = y * self.width + x
+                r2 = ((y + 1) % self.height) * self.width + x
+                if y < self.height - 1 or self.height > 2:
+                    output.append(f"router {r1} router {r2}")
+        
+        return "\n".join(output)
+
+#Generate pseudo-arbitrary topologies (mesh/torus clusters)
+class PseudoArbitraryTopologyGenerator:
+    
+    def __init__(self, num_clusters, cluster_type='mesh', cluster_size=4, 
+                 inter_cluster_links=6, nodes_per_router=1, seed=42):
+        self.num_clusters = num_clusters
+        self.cluster_type = cluster_type
+        self.cluster_size = cluster_size  # For simplicity, using NxN clusters
+        self.inter_cluster_links = inter_cluster_links
+        self.nodes_per_router = nodes_per_router
+        self.seed = seed
+        random.seed(seed)
+    
+    def generate(self):
+        output = []
+        output.append(f"# Pseudo-arbitrary topology")
+        output.append(f"# Clusters: {self.num_clusters}, Type: {self.cluster_type}, Size: {self.cluster_size}x{self.cluster_size}")
+        output.append(f"# Inter-cluster links: {self.inter_cluster_links}, Seed: {self.seed}")
+        output.append("")
+        
+        # Generate each cluster
+        clusters = []
+        router_offset = 0
+        node_offset = 0
+        
+        for cluster_id in range(self.num_clusters):
+            cluster = self._generate_cluster(cluster_id, router_offset, node_offset)
+            clusters.append(cluster)
+            
+            # Write cluster routers
+            for router_line in cluster['routers']:
+                output.append(router_line)
+            
+            router_offset += cluster['num_routers']
+            node_offset += cluster['num_nodes']
+        
+        output.append("")
+        output.append(f"# Intra-cluster connections")
+        
+        # Write intra-cluster connections
+        for cluster in clusters:
+            for link in cluster['links']:
+                output.append(link)
+        
+        output.append("")
+        output.append(f"# Inter-cluster connections")
+        
+        # Add random inter-cluster links
+        inter_links = self._generate_inter_cluster_links(clusters)
+        for link in inter_links:
+            output.append(link)
+        
+        return "\n".join(output)
+    
+    def _generate_cluster(self, cluster_id, router_offset, node_offset):
+        """Generate a single mesh or torus cluster."""
+        width = height = self.cluster_size
+        num_routers = width * height
+        num_nodes = num_routers * self.nodes_per_router
+        
+        routers = []
+        links = []
+        boundary_routers = []  # Routers on cluster boundary for inter-cluster links
+        
+        # Generate router definitions
+        for y in range(height):
+            for x in range(width):
+                local_id = y * width + x
+                router_id = router_offset + local_id
+                
+                nodes = [f"node {node_offset + local_id * self.nodes_per_router + i}" 
+                        for i in range(self.nodes_per_router)]
+                routers.append(f"router {router_id} {' '.join(nodes)}")
+                
+                # Mark boundary routers (edges of cluster)
+                if x == 0 or x == width - 1 or y == 0 or y == height - 1:
+                    boundary_routers.append(router_id)
+        
+        # Generate intra-cluster links
+        if self.cluster_type == 'mesh':
+            links = self._mesh_links(router_offset, width, height)
+        else:  # torus
+            links = self._torus_links(router_offset, width, height)
+        
+        return {
+            'id': cluster_id,
+            'routers': routers,
+            'links': links,
+            'boundary_routers': boundary_routers,
+            'num_routers': num_routers,
+            'num_nodes': num_nodes,
+            'offset': router_offset
+        }
+    
+    def _mesh_links(self, offset, width, height):
+        links = []
+        # Horizontal
+        for y in range(height):
+            for x in range(width - 1):
+                r1 = offset + y * width + x
+                r2 = offset + y * width + (x + 1)
+                links.append(f"router {r1} router {r2}")
+        # Vertical
+        for y in range(height - 1):
+            for x in range(width):
+                r1 = offset + y * width + x
+                r2 = offset + (y + 1) * width + x
+                links.append(f"router {r1} router {r2}")
+        return links
+    
+    def _torus_links(self, offset, width, height):
+        links = []
+        # Horizontal with wraparound
+        for y in range(height):
+            for x in range(width):
+                r1 = offset + y * width + x
+                r2 = offset + y * width + ((x + 1) % width)
+                if x < width - 1 or width > 2:
+                    links.append(f"router {r1} router {r2}")
+        # Vertical with wraparound
+        for y in range(height):
+            for x in range(width):
+                r1 = offset + y * width + x
+                r2 = offset + ((y + 1) % height) * width + x
+                if y < height - 1 or height > 2:
+                    links.append(f"router {r1} router {r2}")
+        return links
+    
+    def _generate_inter_cluster_links(self, clusters):
+        """Generate random links between cluster boundaries."""
+        links = []
+        added_links = set()
+        
+        for _ in range(self.inter_cluster_links):
+            # Pick two different clusters
+            c1, c2 = random.sample(clusters, 2)
+            
+            # Pick random boundary routers
+            r1 = random.choice(c1['boundary_routers'])
+            r2 = random.choice(c2['boundary_routers'])
+            
+            # Avoid duplicates
+            link = tuple(sorted([r1, r2]))
+            if link not in added_links:
+                added_links.add(link)
+                links.append(f"router {r1} router {r2}")
+        
+        return links
+
+# =============================================================================
+# BookSim Runner
+# =============================================================================
+
+class BookSimRunner:
+    """Run BookSim and parse results."""
+    
+    def __init__(self, booksim_path, routing, traffic, rate, num_vcs, vc_buf_size, netrace_file, sim_type=None):
+        self.booksim_path = booksim_path
+        self.routing = routing
+        self.traffic = traffic
+        self.rate = rate
+        self.num_vcs = num_vcs
+        self.vc_buf_size = vc_buf_size
+        self.ntfile = netrace_file
+        
+        # Auto-select sim_type if not provided
+        if sim_type is None:
+            self.sim_type = 'batch' if traffic == 'netrace' else 'latency'
+        else:
+            self.sim_type = sim_type
+    
+    def run(self, topology_file, output_file):
+        """Run BookSim simulation with existing config file."""
+        
+        #Generate config file from topology file
+        config_file = self.generate_config(str(topology_file))
+
+        try:
+            result = subprocess.run(
+                [self.booksim_path, config_file],
+                capture_output=True,
+                text=True,
+                timeout=5000
+            )
+            output = result.stdout + result.stderr
+            
+            if output_file:
+                with open(output_file, 'w') as f:
+                    f.write(output)
+            
+            return self.parse_results(output)
+        except subprocess.TimeoutExpired as e:
+            # Write any partial output so the user can inspect logs
+            print("  ERROR: Simulation timed out")
+            partial_out = ''
+            try:
+                partial_out = (e.stdout or '') + (e.stderr or '')
+            except Exception:
+                partial_out = ''
+            if output_file:
+                try:
+                    with open(output_file, 'w') as f:
+                        f.write(partial_out)
+                except Exception as ex:
+                    print(f"  WARNING: failed to write partial output: {ex}")
+            # Return whatever metrics we can parse from partial output
+            return self.parse_results(partial_out)
+        except Exception as e:
+            print(f"  ERROR: {e}")
+            return None
+
+    def generate_config(self, topology_file):
+        # Generate sim_config based on sim_type
+        if self.sim_type == 'batch':
+            sim_config = """// Simulation - BATCH mode for fixed batch of packets
+    sim_type = batch;
+    batch_size = 1000;  // Will be overridden by trace if using NetTrace
+    batch_count = 1;"""
+        elif self.sim_type == 'throughput':
+            sim_config = """// Simulation - THROUGHPUT mode for measuring saturation
+    sim_type = throughput;
+    sample_period = 10000;
+    warmup_periods = 3;
+    max_samples = 100;"""
+        else:  # latency (default for synthetic traffic)
+            sim_config = """// Simulation - LATENCY mode for measuring packet latency
+    sim_type = latency;
+    sample_period = 10000;
+    warmup_periods = 3;
+    max_samples = 100;"""
+
+        config_template = f"""topology = anynet;
+    routing_function = {self.routing};
+    network_file = {os.path.abspath(topology_file)};
+    traffic = {self.traffic};
+    netrace_file = {self.ntfile};
+
+    use_read_write = 0;
+
+    {sim_config}
+    injection_rate = {self.rate};
+
+    vc_allocator = separable_input_first;
+    sw_allocator = separable_input_first;
+    alloc_iters = 1;
+
+    num_vcs = {self.num_vcs};
+    vc_buf_size = {self.vc_buf_size};
+
+    use_read_write = 0;
+    packet_size = 1;
+    """
+        
+        config_file = Path(topology_file).with_name(f"{Path(topology_file).stem}_config")
+        with open(config_file, "w") as f:
+            f.write(config_template)
+        return str(config_file)
+
+    def parse_results(self, output):
+        """Extract metrics from BookSim output."""
+        if not output:
+            return None
+        
+        patterns = {
+            'latency': r'Packet latency average = ([\d.]+) \(1 samples\)',
+            'min_latency': r'minimum = ([\d]+) \(1 samples\)',
+            'max_latency': r'maximum = ([\d]+) \(1 samples\)',
+            'hops': r'Hops average = ([\d.]+)',
+            'injected_rate': r'Injected packet rate average = ([\d.]+) \(1 samples\)',
+            'accepted_rate': r'Accepted packet rate average = ([\d.]+) \(1 samples\)',
+        }
+        
+        metrics = {}
+        for key, pattern in patterns.items():
+            match = re.search(pattern, output)
+            metrics[key] = float(match.group(1)) if match else None
+        
+        if metrics['injected_rate'] and metrics['accepted_rate']:
+            metrics['saturated'] = metrics['accepted_rate'] < (metrics['injected_rate'] * 0.95)
+        
+        return metrics
+
+# =============================================================================
+# Main
+# =============================================================================
+
+def main():
+    parser = argparse.ArgumentParser(description='BookSim Topology Generator & Runner')
+
+
+    #General Topology Options
+    parser.add_argument('--type', choices=['arb', 'mesh', 'torus', 'pseudo'],
+                       required=True, help='Topology type')
+    parser.add_argument('--routing', default='spanning_tree',
+                       help='Routing algorithm')
+    parser.add_argument('--nodes-per-router', type=int, default=1 ,
+                       help='Terminal nodes per router')
+    
+    # Arbitrary topology options
+    parser.add_argument('--routers', type=int, default=8,
+                       help='Number of routers (arbitrary topology)')
+    parser.add_argument('--connectivity', type=float, default=0.5,
+                       help='Connection probability (arbitrary topology)')
+    parser.add_argument('--seed', type=int, default=None,
+                       help='Random seed (default: auto-generated from timestamp)')
+    
+    # Mesh/Torus options
+    parser.add_argument('--width', type=int, default=4,
+                       help='Width (mesh/torus)')
+    parser.add_argument('--height', type=int, default=4,
+                       help='Height (mesh/torus)')
+    
+    # Pseudo-arbitrary options
+    parser.add_argument('--clusters', type=int, default=3,
+                       help='Number of sub-topologies (pseudo)')
+    parser.add_argument('--cluster-type', choices=['mesh', 'torus'], default='mesh',
+                       help='Type of sub-topology (pseudo)')
+    parser.add_argument('--cluster-size', type=int, default=3,
+                       help='Size of each cluster NxN (pseudo)')
+    parser.add_argument('--inter-links', type=int, default=6,
+                       help='Inter-cluster links (pseudo)')
+    
+    # Traffic options
+    parser.add_argument('--traffic', default='netrace',
+                       choices=['netrace', 'uniform', 'transpose', 'bit_complement', 'bit_reverse', 'shuffle', 'tornado'],
+                       help='Traffic pattern')
+    parser.add_argument('--ntfile', default='../src/netrace/testraces/multiregion.tra.bz2',
+                       help='NetRace trace file')
+    
+    # Simulation options
+    parser.add_argument('--sim-type', choices=['batch', 'latency', 'throughput'], default=None,
+                       help='Simulation type (default: auto-select based on traffic)')
+    parser.add_argument('--rate', type=float, default=0.01,
+                       help='Injection rate')
+    parser.add_argument('--num-vcs', type=int, default=1,
+                       help='Number of virtual channels')
+    parser.add_argument('--vc-buf-size', type=int, default=8,
+                       help='Virtual channel buffer size')
+    parser.add_argument('--skip-sim', action='store_true',
+                       help='Generate topology only, skip simulation')
+    
+    args = parser.parse_args()
+    
+    # Auto-generate seed from timestamp if not provided
+    if args.seed is None:
+        args.seed = int(datetime.now().timestamp() * 1000) % (2**31)
+    
+    # Create timestamped output directory
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir = Path('../sim') / f"run_{args.type}_{timestamp}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    
+    print(f"\n{'='*70}")
+    print(f"NoC Topology Generation & Simulation")
+    print(f"{'='*70}")
+    print(f"Output directory: {run_dir}\n")
+    
+    # Generate topology
+    print(f"Generating {args.type} topology...")
+    
+    if args.type == 'arb':
+        gen = ArbitraryTopologyGenerator(
+            args.routers, args.nodes_per_router, args.connectivity, args.seed
+        )
+        topo_name = f"arb_r{args.routers}_c{args.connectivity}"
+    
+    elif args.type == 'mesh':
+        gen = MeshTopologyGenerator(args.width, args.height, args.nodes_per_router)
+        topo_name = f"mesh_{args.width}x{args.height}"
+    
+    elif args.type == 'torus':
+        gen = TorusTopologyGenerator(args.width, args.height, args.nodes_per_router)
+        topo_name = f"torus_{args.width}x{args.height}"
+    
+    elif args.type == 'pseudo':
+        gen = PseudoArbitraryTopologyGenerator(
+            args.clusters, args.cluster_type, args.cluster_size,
+            args.inter_links, args.nodes_per_router, args.seed
+        )
+        topo_name = f"pseudo_{args.clusters}x{args.cluster_type}{args.cluster_size}"
+    
+    # Write topology file
+    topology_file = run_dir / f"{topo_name}_file"
+    topology_content = gen.generate()
+    with open(topology_file, 'w') as f:
+        f.write(topology_content)
+    
+    print(f"Topology file saved to: {topology_file}")
+    
+    # Run simulation
+    if not args.skip_sim:
+        print(f"\nRunning BookSim simulation...")
+        print(f"  Routing: {args.routing}")
+        print(f"  Traffic: {args.traffic}")
+        print(f"  Injection rate: {args.rate}")
+        
+        output_file = run_dir / f"{topo_name}_{args.routing}_{args.traffic}_{args.rate}_out"
+        
+        runner = BookSimRunner('./booksim', 
+                               args.routing, 
+                               args.traffic,
+                               args.rate, 
+                               args.num_vcs, 
+                               args.vc_buf_size, 
+                               args.ntfile,
+                               args.sim_type)
+        
+        metrics = runner.run(
+            str(topology_file),
+            str(output_file)
+        )
+
+        # Metrics collection
+
+        REQUIRED_METRICS = [
+            "latency", "min_latency", "max_latency", "hops",
+            "accepted_rate", "injected_rate"
+        ]
+
+        def missing_metrics(metrics, required=REQUIRED_METRICS):
+            missing = [k for k in required if metrics.get(k) is None]
+            return missing  # empty list if all present
+
+        if not missing_metrics(metrics):
+            print(f"\n{'='*70}")
+            print(f"RESULTS")
+            print(f"{'='*70}")
+            print(f"Latency (avg): {metrics['latency']:.2f} cycles")
+            print(f"Latency (min): {metrics['min_latency']}")
+            print(f"Latency (max): {metrics['max_latency']}")
+            print(f"Average hops:  {metrics['hops']:.2f}")
+            print(f"Throughput:    {metrics['accepted_rate']:.4f}")
+            print(f"Saturated:     {'Yes' if metrics['saturated'] else 'No'}")
+            
+            # Save metrics JSON
+            metrics_file = run_dir / f"{topo_name}_{args.num_vcs}_{args.rate}_{timestamp}_metrics.json"
+            with open(metrics_file, 'w') as f:
+                json.dump(metrics, f, indent=2)
+            
+            print(f"\n{'='*70}")
+            print("Simulation PASSED")
+            print(f"{'='*70}")
+        else:
+            print(f"\n{'='*70}")
+            print("Simulation FAILED")
+            print(f"{'='*70}")
+    
+    print(f"\n All files in: {run_dir}")
+
+if __name__ == "__main__":
+    main()

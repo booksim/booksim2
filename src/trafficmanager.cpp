@@ -791,9 +791,31 @@ void TrafficManager::_GeneratePacket( int source, int stype,
     int size = _GetNextPacketSize(cl); //input size 
     int pid = _cur_pid++;
     assert(_cur_pid);
-    int packet_destination = _traffic_pattern[cl]->dest(source);
+
+    int packet_destination = -1;
+
+    
+    #ifdef USE_NETRACE
+    BatchTrafficManager* btm = dynamic_cast<BatchTrafficManager*>(this);
+    if(btm && btm->_use_netrace && btm->_netrace_next_dest >= 0) {
+        // Use NetTrace destination
+        packet_destination = btm->_netrace_next_dest;
+        cout << "DEBUG _GeneratePacket: Using NetTrace dest=" << packet_destination 
+             << " for packet from src=" << source << endl;
+    } else
+    #endif
+    {
+        // Use regular synthetic traffic pattern (default)
+        if(_traffic_pattern[cl] == NULL) {
+            cerr << "ERROR: _traffic_pattern[" << cl << "] is NULL!" << endl;
+            Error("Traffic pattern not initialized");
+        }
+        packet_destination = _traffic_pattern[cl]->dest(source);
+    }
+
     bool record = false;
     bool watch = gWatchOut && (_packets_to_watch.count(pid) > 0);
+
     if(_use_read_write[cl]){
         if(stype > 0) {
             if (stype == 1) {
@@ -920,6 +942,94 @@ void TrafficManager::_GeneratePacket( int source, int stype,
 }
 
 void TrafficManager::_Inject(){
+
+    #ifdef USE_NETRACE
+        // Check if we're using NetTrace with BatchTrafficManager
+        BatchTrafficManager* btm = dynamic_cast<BatchTrafficManager*>(this);
+        if(btm && btm->_use_netrace) {
+            // Try to fill buffer if it's empty and we haven't reached EOF
+            if(btm->_netrace_packet_buffer.empty() && !btm->_netrace_eof) {
+                
+                nt_packet_t* pkt = NULL;
+                int read_count = 0;
+                
+                // Read a batch of packets (up to 1000) or until we hit a future cycle
+                while(read_count < 1000) {
+                    pkt = nt_read_packet(btm->_trace_ctx);
+                    
+                    if(pkt == NULL) {
+                        break;
+                    }
+                    
+                    read_count++;
+                    btm->_netrace_packet_buffer.push(pkt);
+                }
+                
+                if(pkt == NULL) {
+                    btm->_netrace_eof = true;
+                }
+            }
+            
+            // Process packets from buffer for current cycle
+            int processed = 0;
+            while(!btm->_netrace_packet_buffer.empty()) {
+                nt_packet_t* pkt = btm->_netrace_packet_buffer.front();
+                
+                // Check if packet is for current cycle
+                if(pkt->cycle > (unsigned long long)_time) {
+                    break;
+                }
+                
+                if(pkt->cycle < (unsigned long long)_time) {
+                    btm->_netrace_packet_buffer.pop();
+                    nt_clear_dependencies_free_packet(btm->_trace_ctx, pkt);
+                    continue;
+                }
+                
+                // Packet ready for current cycle
+                btm->_netrace_packet_buffer.pop();
+                
+                int source = pkt->src;
+                int dest = pkt->dst;
+                int cl = 0;  // Use class 0
+
+                // Validate node IDs
+                if(source < 0 || source >= _nodes) {
+                    cerr << "ERROR: Invalid source " << source << " in trace" << endl;
+                    nt_clear_dependencies_free_packet(btm->_trace_ctx, pkt);
+                    continue;
+                }
+                if(dest < 0 || dest >= _nodes) {
+                    cerr << "ERROR: Invalid dest " << dest << " in trace" << endl;
+                    nt_clear_dependencies_free_packet(btm->_trace_ctx, pkt);
+                    continue;
+                }
+                
+                cout << "DEBUG _Inject: Processing packet from " << source << " to " << dest << endl;
+                cout.flush();
+                
+                // Generate packet if source queue is empty
+                if(_partial_packets[source][cl].empty()) {
+                    btm->_netrace_next_dest = dest;
+                    _GeneratePacket(source, 1, cl, _time);
+                    btm->_netrace_next_dest = -1;
+                    processed++;
+                    cout << "DEBUG _Inject: Injected packet, _packet_seq_no[" << source << "]=" << _packet_seq_no[source] << endl;
+                    cout.flush();
+                }
+                else {
+                    cout << "WARNING: Cannot inject packet at this time, source queue not empty" << endl;
+                }
+                _packet_seq_no[source]++;
+                nt_clear_dependencies_free_packet(btm->_trace_ctx, pkt);
+            }
+            
+            cout << "DEBUG _Inject: Processed " << processed << " packets at time " << _time << endl;
+            cout.flush();
+            return; 
+        }
+
+    #endif
 
     for ( int input = 0; input < _nodes; ++input ) {
         for ( int c = 0; c < _classes; ++c ) {
@@ -1634,48 +1744,156 @@ bool TrafficManager::Run( )
         // converge
         // draing, wait until all packets finish
         _sim_state    = warming_up;
-  
         _ClearStats( );
 
         for(int c = 0; c < _classes; ++c) {
-            _traffic_pattern[c]->reset();
-            _injection_process[c]->reset();
-        }
-
-        if ( !_SingleSim( ) ) {
-            cout << "Simulation unstable, ending ..." << endl;
-            return false;
-        }
-
-        // Empty any remaining packets
-        cout << "Draining remaining packets ..." << endl;
-        _empty_network = true;
-        int empty_steps = 0;
-
-        bool packets_left = false;
-        for(int c = 0; c < _classes; ++c) {
-            packets_left |= !_total_in_flight_flits[c].empty();
-        }
-
-        while( packets_left ) { 
-            _Step( ); 
-
-            ++empty_steps;
-
-            if ( empty_steps % 1000 == 0 ) {
-                _DisplayRemaining( ); 
+            if(_traffic_pattern[c]) {
+                _traffic_pattern[c]->reset();
             }
-      
-            packets_left = false;
+            if(_injection_process[c]) {
+                _injection_process[c]->reset();
+            }
+        }
+
+        #ifdef USE_NETRACE
+        // Check if we're using NetTrace mode
+        BatchTrafficManager* btm = dynamic_cast<BatchTrafficManager*>(this);
+        if(btm && btm->_use_netrace) {
+            cout << "=== NetTrace Mode ===" << endl;
+            cout << "Running trace-driven simulation..." << endl;
+            
+            // For NetTrace, just run until all packets are injected and drained
+            _sim_state = running;
+            
+            // Run until EOF and buffer is empty (all packets injected)
+            int packets_injected = 0;
+            while(!btm->_netrace_eof || !btm->_netrace_packet_buffer.empty()) {
+                _Step();
+                
+                // Count total packets injected
+                int total_seq = 0;
+                for(int n = 0; n < _nodes; ++n) {
+                    total_seq += _packet_seq_no[n];
+                }
+                
+                if(total_seq > packets_injected) {
+                    packets_injected = total_seq;
+                }
+                
+                if(_time % 1000 == 0) {
+                    cout << "Cycle " << _time 
+                         << ": buffer=" << btm->_netrace_packet_buffer.size() 
+                         << ", eof=" << btm->_netrace_eof 
+                         << ", injected=" << packets_injected << endl;
+                }
+            }
+            
+            cout << "All trace packets injected by cycle " << _time << endl;
+            cout << "Total packets injected: " << packets_injected << endl;
+            
+            // Now drain the network of all in-flight packets
+            cout << "Draining network..." << endl;
+            _sim_state = draining;
+            _drain_time = _time;
+            _empty_network = true;
+            
+            int empty_steps = 0;
+            bool packets_left = false;
             for(int c = 0; c < _classes; ++c) {
                 packets_left |= !_total_in_flight_flits[c].empty();
             }
+            
+            while(packets_left) {
+                _Step();
+                empty_steps++;
+                
+                if(empty_steps % 1000 == 0) {
+                    int total_in_flight = 0;
+                    for(int c = 0; c < _classes; ++c) {
+                        total_in_flight += _total_in_flight_flits[c].size();
+                    }
+                    cout << "Draining step " << empty_steps 
+                         << " (cycle " << _time << "): " 
+                         << total_in_flight << " flits in flight" << endl;
+                    _DisplayRemaining(cout);
+                }
+                
+                // Safety check for draining
+                if(empty_steps > 50000) {
+                    cerr << "ERROR: Network drain timeout after 50k steps!" << endl;
+                    cerr << "Possible deadlock or routing issue." << endl;
+                    _DisplayRemaining(cerr);
+                    break;
+                }
+                
+                packets_left = false;
+                for(int c = 0; c < _classes; ++c) {
+                    packets_left |= !_total_in_flight_flits[c].empty();
+                }
+            }
+            
+            // Wait until all credits are drained
+            cout << "Waiting for credits to drain..." << endl;
+            int credit_steps = 0;
+            while(Credit::OutStanding() != 0) {
+                _Step();
+                credit_steps++;
+                
+                if(credit_steps > 10000) {
+                    cerr << "WARNING: Credit drain timeout!" << endl;
+                    break;
+                }
+            }
+            
+            _empty_network = false;
+            
+            cout << "=== NetTrace Simulation Complete ===" << endl;
+            cout << "Total simulation time: " << _time << " cycles" << endl;
+            cout << "Injection phase: " << _drain_time << " cycles" << endl;
+            cout << "Drain phase: " << empty_steps << " steps" << endl;
+            
+        } else
+        #endif
+        {
+            // Normal synthetic traffic simulation
+            cout << "=== Synthetic Traffic Mode ===" << endl;
+            
+            if ( !_SingleSim( ) ) {
+                cout << "Simulation unstable, ending ..." << endl;
+                return false;
+            }
+
+            // Empty any remaining packets
+            cout << "Draining remaining packets ..." << endl;
+            _empty_network = true;
+            int empty_steps = 0;
+
+            bool packets_left = false;
+            for(int c = 0; c < _classes; ++c) {
+                packets_left |= !_total_in_flight_flits[c].empty();
+            }
+
+            while( packets_left ) { 
+                _Step( ); 
+
+                ++empty_steps;
+
+                if ( empty_steps % 1000 == 0 ) {
+                    _DisplayRemaining(cout); 
+                }
+      
+                packets_left = false;
+                for(int c = 0; c < _classes; ++c) {
+                    packets_left |= !_total_in_flight_flits[c].empty();
+                }
+            }
+            
+            //wait until all the credits are drained as well
+            while(Credit::OutStanding()!=0){
+                _Step();
+            }
+            _empty_network = false;
         }
-        //wait until all the credits are drained as well
-        while(Credit::OutStanding()!=0){
-            _Step();
-        }
-        _empty_network = false;
 
         //for the love of god don't ever say "Time taken" anywhere else
         //the power script depend on it

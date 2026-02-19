@@ -54,12 +54,76 @@ BatchTrafficManager::BatchTrafficManager( const Configuration &config,
   } else {
     _sent_packets_out = new ofstream(sent_packets_out_file.c_str());
   }
+
+  #ifdef USE_NETRACE
+    _use_netrace = false;
+    _trace_ctx = NULL;
+    _trace_header = NULL;
+    _netrace_next_dest = -1;
+    _netrace_eof = false;
+    
+    string traffic = config.GetStr("traffic");
+    if(traffic == "netrace") {
+      _use_netrace = true;
+      _trace_file = config.GetStr("netrace_file");
+      
+      if(_trace_file.empty()) {
+        Error("NetTrace traffic specified but no netrace_file parameter provided");
+      }
+      
+      cout << "Opening NetTrace file: " << _trace_file << endl;
+      
+      _trace_ctx = (nt_context_t*)calloc(1, sizeof(nt_context_t));
+      nt_open_trfile(_trace_ctx, _trace_file.c_str());
+      
+      _trace_header = nt_get_trheader(_trace_ctx);
+      
+      if(_trace_header == NULL) {
+        Error("Failed to read NetTrace header");
+      }
+      
+      //Disable dependencies for network simulation
+      nt_disable_dependencies(_trace_ctx);
+      
+      cout << "NetTrace initialized:" << endl;
+      cout << "  Nodes: " << (int)_trace_header->num_nodes << endl;
+      cout << "  Packets: " << _trace_header->num_packets << endl;
+      cout << "  Cycles: " << _trace_header->num_cycles << endl;
+      cout << "  Regions: " << _trace_header->num_regions << endl;
+      
+      if(_trace_header->num_regions > 0) {
+        cout << "Seeking to first region..." << endl;
+        nt_seek_region(_trace_ctx, &_trace_header->regions[0]);
+      }
+      
+      if((int)_trace_header->num_nodes != _nodes) {
+        ostringstream err;
+        err << "Trace has " << (int)_trace_header->num_nodes 
+            << " nodes but topology has " << _nodes << " nodes";
+        Error(err.str());
+      }
+      
+      // Override batch settings for NetTrace
+      _batch_size = _trace_header->num_packets;
+      _batch_count = 1;
+      
+      cout << "NetTrace batch size set to " << _batch_size << " packets" << endl;
+    }
+  #endif
 }
 
 BatchTrafficManager::~BatchTrafficManager( )
 {
   delete _batch_time;
   if(_sent_packets_out) delete _sent_packets_out;
+
+  //extra netrace cleanup
+  #ifdef USE_NETRACE
+    if(_use_netrace && _trace_ctx) {
+      nt_close_trfile(_trace_ctx);
+      free(_trace_ctx);
+    }
+  #endif
 }
 
 void BatchTrafficManager::_RetireFlit( Flit *f, int dest )
@@ -71,6 +135,15 @@ void BatchTrafficManager::_RetireFlit( Flit *f, int dest )
 
 int BatchTrafficManager::_IssuePacket( int source, int cl )
 {
+  // defer if netrace is used
+  #ifdef USE_NETRACE
+    if(_use_netrace) {
+      // NetTrace handles packet generation in _Inject()
+      cout << "Inject packet into network";
+      return 0;
+    }
+  #endif
+
   int result = 0;
   if(_use_read_write[cl]) { //read write packets
     //check queue for waiting replies.

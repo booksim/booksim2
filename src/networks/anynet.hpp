@@ -34,6 +34,7 @@
 #include <string>
 #include <map>
 #include <list>
+#include <vector>
 
 class AnyNet : public Network {
 
@@ -46,10 +47,16 @@ class AnyNet : public Network {
   //[router][dest_node]=port
   vector<map<int, int> > routing_table;
 
+  //For MST Routing Suport
+  vector<map<int,int> > _routing_table_tree;   // per-router: dest_node -> outport
+  vector<int> _tree_parent;                    // parent[router] in oriented tree 
+  vector<map<int,int> > _outport_to_neighbor; // per-router: outport -> neighbor router id
+
   void _ComputeSize( const Configuration &config );
   void _BuildNet( const Configuration &config );
   void readFile();
   void buildRoutingTable();
+  void buildSpanningTreeRoutingTable();
   void route(int r_start);
 
 public:
@@ -66,4 +73,8 @@ public:
 
 void min_anynet( const Router *r, const Flit *f, int in_channel, 
 		      OutputSet *outputs, bool inject );
+
+void spanning_tree_anynet(const Router *r, const Flit *f, 
+                         int in_channel, OutputSet *outputs, bool inject);
+
 #endif

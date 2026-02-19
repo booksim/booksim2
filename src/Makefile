@@ -31,7 +31,10 @@ INCPATH = -I. -Iarbiters -Iallocators -Irouters -Inetworks -Ipower
 CPPFLAGS += -Wall $(INCPATH) $(DEFINE)
 CPPFLAGS += -O3
 CPPFLAGS += -g
+CPPFLAGS += -DUSE_NETRACE
 LFLAGS +=
+
+LIBS += -lbz2 -lz
 
 PROG := booksim
 
@@ -48,14 +51,21 @@ YACC_SRCS = y.tab.c
 YACC_HDRS = y.tab.h
 YACC_OBJS = y.tab.o
 
-OBJS :=  $(CPP_OBJS) $(LEX_OBJS) $(YACC_OBJS)
+# netrace source files
+NETRACE_DIR := netrace
+INCPATH += -I$(NETRACE_DIR)
+NETRACE_SRCS := $(NETRACE_DIR)/netrace.c
+NETRACE_OBJS := $(NETRACE_SRCS:.c=.o)
+
+# final netrace link
+OBJS :=  $(CPP_OBJS) $(LEX_OBJS) $(YACC_OBJS) $(NETRACE_OBJS)
 
 .PHONY: clean
 
 all: $(PROG)
 
 $(PROG): $(OBJS)
-	 $(CXX) $(LFLAGS) $^ -o $@
+	 $(CXX) $(LFLAGS) $^ $(LIBS) -o $@
 
 $(LEX_SRCS): config.l
 	$(LEX) $<
@@ -71,6 +81,9 @@ $(YACC_OBJS): $(YACC_SRCS)
 
 %.o: %.cpp
 	$(CXX) $(CPPFLAGS) -MMD -c $< -o $@
+
+%.o: %.c
+	$(CC) $(CPPFLAGS) -MMD -c $< -o $@
 
 clean:
 	rm -f $(YACC_SRCS) $(YACC_HDRS)

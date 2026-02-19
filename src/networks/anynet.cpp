@@ -55,8 +55,14 @@
 #include <sstream>
 #include <limits>
 #include <algorithm>
+#include <queue>
+
 //this is a hack, I can't easily get the routing talbe out of the network
 map<int, int>* global_routing_table;
+map<int, int>* global_tree_routing_table = NULL;
+map<int, int>* global_outport_to_neighbor = NULL;
+int*           global_tree_parent = NULL;
+
 
 AnyNet::AnyNet( const Configuration &config, const string & name )
   :  Network( config, name ){
@@ -76,6 +82,8 @@ AnyNet::~AnyNet(){
     }
   }
 }
+
+//=====================================================================================================================
 
 void AnyNet::_ComputeSize( const Configuration &config ){
   file_name = config.GetStr("network_file");
@@ -128,10 +136,9 @@ void AnyNet::_ComputeSize( const Configuration &config ){
 
 }
 
-
+//=====================================================================================================================
 
 void AnyNet::_BuildNet( const Configuration &config ){
-  
 
   //I need to keep track the output ports for each router during build
   int * outport = (int*)malloc(sizeof(int)*_size);
@@ -203,13 +210,18 @@ void AnyNet::_BuildNet( const Configuration &config ){
   }
 
   buildRoutingTable();
+  buildSpanningTreeRoutingTable();
 
 }
 
+//=====================================================================================================================
 
 void AnyNet::RegisterRoutingFunctions() {
   gRoutingFunctionMap["min_anynet"] = &min_anynet;
+  gRoutingFunctionMap["spanning_tree_anynet"] = &spanning_tree_anynet;
 }
+
+//=====================================================================================================================
 
 void min_anynet( const Router *r, const Flit *f, int in_channel, 
 		 OutputSet *outputs, bool inject ){
@@ -240,6 +252,76 @@ void min_anynet( const Router *r, const Flit *f, int in_channel,
   outputs->AddRange( out_port , vcBegin, vcEnd );
 }
 
+//=====================================================================================================================
+// Spanning Tree Routing - deadlock-free on arbitrary graphs
+//=====================================================================================================================
+
+static inline void _get_message_vc_range(const Flit *f, int &b, int &e) {
+  b = 0; e = gNumVCs - 1;
+  if      (f->type == Flit::READ_REQUEST ) { b = gReadReqBeginVC;    e = gReadReqEndVC;    }
+  else if (f->type == Flit::WRITE_REQUEST) { b = gWriteReqBeginVC;   e = gWriteReqEndVC;   }
+  else if (f->type == Flit::READ_REPLY   ) { b = gReadReplyBeginVC;  e = gReadReplyEndVC;  }
+  else if (f->type == Flit::WRITE_REPLY  ) { b = gWriteReplyBeginVC; e = gWriteReplyEndVC; }
+}
+
+static inline void _split_vc_range_up_down(int b, int e, bool is_down, int &o_b, int &o_e) {
+  int count = e - b + 1;
+  if (count >= 2) {
+    int mid = b + (count / 2);
+    if (!is_down) { o_b = b;   o_e = mid - 1; }
+    else          { o_b = mid; o_e = e;       }
+  } else {
+    o_b = b; o_e = e; // fallback if only one VC in the class
+  }
+}
+
+void spanning_tree_anynet( const Router *r, const Flit *f, int in_channel,
+                           OutputSet *outputs, bool inject ) {
+  int out_port = -1;
+
+  int base_b = 0, base_e = gNumVCs - 1;
+  _get_message_vc_range(f, base_b, base_e);
+
+  bool is_down = false; // phase for this hop
+
+  if (!inject) {
+    // 1) Next hop outport from MST routing table
+    assert(global_tree_routing_table != NULL);
+    assert(global_tree_routing_table[r->GetID()].count(f->dest) != 0);
+    out_port = global_tree_routing_table[r->GetID()][f->dest];
+
+    // 2) Determine neighbor and direction (UP vs DOWN)
+    assert(global_outport_to_neighbor != NULL);
+    const map<int,int> &port2nbr = global_outport_to_neighbor[r->GetID()];
+    map<int,int>::const_iterator it = port2nbr.find(out_port);
+
+    if(it != port2nbr.end()){
+      //Inter-router hop
+      assert(global_tree_parent != NULL);
+      int neighbor = it->second;
+      int r_parent = global_tree_parent[r->GetID()];
+      int n_parent = global_tree_parent[neighbor];
+
+      bool is_up_edge   = (r_parent == neighbor);
+      bool is_down_edge = (n_parent == r->GetID());
+
+      assert(is_up_edge || is_down_edge);
+      is_down = is_down_edge;
+
+    } else {
+      is_down = true;
+    }
+  }
+
+  int vcBegin = base_b, vcEnd = base_e;
+  _split_vc_range_up_down(base_b, base_e, is_down, vcBegin, vcEnd);
+
+  outputs->Clear();
+  outputs->AddRange(out_port, vcBegin, vcEnd);
+}
+
+//=====================================================================================================================
+
 void AnyNet::buildRoutingTable(){
   cout<<"========================== Routing table  =====================\n";  
   routing_table.resize(_size);
@@ -248,7 +330,6 @@ void AnyNet::buildRoutingTable(){
   }
   global_routing_table = &routing_table[0];
 }
-
 
 //11/7/2012
 //basically djistra's, tested on a large dragonfly anynet configuration
@@ -320,6 +401,196 @@ void AnyNet::route(int r_start){
   }
 }
 
+//=====================================================================================================================
+// Build Spanning Tree Routing Table (MST)
+//=====================================================================================================================
+
+void AnyNet::buildSpanningTreeRoutingTable() {
+  cout << "===================== MST (Up*/Down*) Routing table ====================\n";
+
+  //Map outport -> neighbor for every router 
+  _outport_to_neighbor.clear();
+  _outport_to_neighbor.resize(_size);
+  for (int u = 0; u < _size; ++u) {
+    for (map<int, pair<int,int> >::iterator it = router_list[1][u].begin();
+         it != router_list[1][u].end(); ++it) {
+      int v = it->first;
+      int outport = it->second.first;
+      _outport_to_neighbor[u][outport] = v;
+    }
+  }
+
+  int best_root = 0;
+  int min_total_dist = numeric_limits<int>::max();
+  
+  //Pick central router as root 
+  // for (int candidate = 0; candidate < _size; ++candidate) {
+  //   vector<int> dist(_size, numeric_limits<int>::max());
+  //   queue<int> q;
+  //   dist[candidate] = 0;
+  //   q.push(candidate);
+    
+  //   while (!q.empty()) {
+  //     int u = q.front(); q.pop();
+  //     for (map<int, pair<int,int> >::iterator it = router_list[1][u].begin();
+  //          it != router_list[1][u].end(); ++it) {
+  //       int v = it->first;
+  //       if (dist[v] > dist[u] + 1) {  // Use hop count, not latency
+  //         dist[v] = dist[u] + 1;
+  //         q.push(v);
+  //       }
+  //     }
+  //   }
+    
+  //   int total = 0;
+  //   for (int i = 0; i < _size; ++i) {
+  //     if (dist[i] < numeric_limits<int>::max()) {
+  //       total += dist[i];
+  //     }
+  //   }
+    
+  //   if (total < min_total_dist) {
+  //     min_total_dist = total;
+  //     best_root = candidate;
+  //   }
+  // }
+  
+  // cout << "Selected router " << best_root << " as MST root (centrality = " 
+  //      << min_total_dist << ")" << endl;
+
+  //Minimum Spanning Tree (Prim's Algorithm)
+  vector<vector<int> > tree_adj(_size);
+  vector<char> in_tree(_size, 0);
+
+  struct Edge {
+    int w, u, v;
+    Edge(int ww, int uu, int vv) : w(ww), u(uu), v(vv) {}
+  };
+  struct Cmp {
+    bool operator()(const Edge &a, const Edge &b) const { return a.w > b.w; }
+  };
+
+  //start from central router
+  for (int start = 0; start < _size; ++start) {
+    if (in_tree[start]) continue;
+
+    int actual_start = (start == 0) ? best_root : start;
+    if (in_tree[actual_start]) continue;
+
+    in_tree[actual_start] = 1;
+    priority_queue<Edge, vector<Edge>, Cmp> pq;
+
+    for (map<int, pair<int,int> >::iterator it = router_list[1][actual_start].begin();
+         it != router_list[1][actual_start].end(); ++it) {
+      pq.push(Edge(it->second.second /*latency*/, start, it->first));
+    }
+
+    while (!pq.empty()) {
+      Edge e = pq.top(); pq.pop();
+      if (in_tree[e.v]) continue;
+
+      in_tree[e.v] = 1;
+      tree_adj[e.u].push_back(e.v);
+      tree_adj[e.v].push_back(e.u);
+
+      for (map<int, pair<int,int> >::iterator it = router_list[1][e.v].begin();
+           it != router_list[1][e.v].end(); ++it) {
+        int nxt = it->first;
+        if (!in_tree[nxt]) {
+          pq.push(Edge(1, e.v, nxt)); //use hop count
+        }
+      }
+    }
+  }
+
+  // Print MST statistics
+  int total_tree_edges = 0;
+  for (int i = 0; i < _size; ++i) {
+    total_tree_edges += tree_adj[i].size();
+  }
+  cout << "MST has " << total_tree_edges/2 << " edges" << endl;
+
+  //Orient each tree with BFS
+  _tree_parent.assign(_size, -1);
+  vector<char> visited(_size, 0);
+
+  for (int root = 0; root < _size; ++root) {
+    if (visited[root]) continue;
+
+    int actual_root = (root == 0) ? best_root : root;
+    if (visited[actual_root]) continue;
+
+    queue<int> q;
+    visited[actual_root] = 1;
+    _tree_parent[actual_root] = -1;
+    q.push(actual_root);
+
+    while (!q.empty()) {
+      int u = q.front(); q.pop();
+      for (size_t k = 0; k < tree_adj[u].size(); ++k) {
+        int v = tree_adj[u][k];
+        if (visited[v]) continue;
+        visited[v] = 1;
+        _tree_parent[v] = u;
+        q.push(v);
+      }
+    }
+  }
+
+  //Build MST-based routing table: from each source router s to all nodes
+  _routing_table_tree.clear();
+  _routing_table_tree.resize(_size);
+
+  for (int s = 0; s < _size; ++s) {
+    vector<int> first_hop(_size, -1);
+    vector<char> vis(_size, 0);
+    queue<int> q;
+    vis[s] = 1; q.push(s);
+
+    while (!q.empty()) {
+      int u = q.front(); q.pop();
+      for (size_t k = 0; k < tree_adj[u].size(); ++k) {
+        int v = tree_adj[u][k];
+        if (vis[v]) continue;
+        vis[v] = 1;
+        first_hop[v] = (u == s) ? v : first_hop[u];
+        q.push(v);
+      }
+    }
+
+    // Local nodes at s
+    for (map<int, pair<int,int> >::iterator it = router_list[0][s].begin();
+         it != router_list[0][s].end(); ++it) {
+      int node_id = it->first;
+      int local_port = it->second.first;
+      _routing_table_tree[s][node_id] = local_port;
+    }
+
+    // Remote nodes: route to the router that hosts them
+    for (int t = 0; t < _size; ++t) {
+      if (t == s) continue;
+      if (first_hop[t] == -1) continue; // disconnected components => no route
+
+      int nh = first_hop[t];
+      int out_port = router_list[1][s][nh].first;
+
+      for (map<int, pair<int,int> >::iterator it = router_list[0][t].begin();
+           it != router_list[0][t].end(); ++it) {
+        int node_id = it->first;
+        _routing_table_tree[s][node_id] = out_port;
+      }
+    }
+  }
+
+  //Publish pointers for the free routing function
+  global_tree_routing_table  = (_size > 0) ? &_routing_table_tree[0]  : NULL;
+  global_outport_to_neighbor = (_size > 0) ? &_outport_to_neighbor[0] : NULL;
+  global_tree_parent         = (_size > 0) ? &_tree_parent[0]         : NULL;
+
+  cout << "MST routing table built successfully" << endl;
+}
+
+//=====================================================================================================================
 
 void AnyNet::readFile(){
 
