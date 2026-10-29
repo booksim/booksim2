@@ -1,0 +1,37 @@
+// History-Aware Congestion Routing (HACR), 4x4 Torus smoke configuration.
+// This uses four VCs; inspect VC constraints before changing the count.
+// Run from repository root: ./src/booksim runfiles/hacrtorusconfig
+topology = torus;
+k = 4;
+n = 2;
+
+routing_function = hacr_min_adapt_torus;
+hacr_alpha = 0.60;
+hacr_lambda = 0.80;
+
+num_vcs = 4;
+vc_buf_size = 8;
+wait_for_tail_credit = 1;
+
+vc_allocator = islip;
+sw_allocator = islip;
+alloc_iters = 2;
+
+credit_delay = 2;
+routing_delay = 0;
+vc_alloc_delay = 1;
+sw_alloc_delay = 1;
+st_final_delay = 1;
+
+input_speedup = 1;
+output_speedup = 1;
+internal_speedup = 1.0;
+
+sim_type = latency;
+warmup_periods = 3;
+sample_period = 1000;
+sim_count = 1;
+
+packet_size = 1;
+traffic = uniform;
+injection_rate = 0.02;

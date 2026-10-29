@@ -421,6 +421,39 @@ routing algorithms can be added with minimal changes to the overall
 simulator (see the \texttt{routefunc.cpp} file in the simulator's
 source code). 
 
+\subsubsection{History-aware congestion routing (HACR)}
+
+The experimental routing functions \texttt{hacr\_min\_adapt\_mesh} and
+\texttt{hacr\_min\_adapt\_torus} rank eligible minimal productive
+outputs using current used-credit occupancy and a smoothed history per
+router/output-port pair. For output port $p$, the history and score are
+
+\[
+H_p(t) = \lambda H_p(t-1) + (1-\lambda)U_p(t),
+\]
+\[
+S_p(t) = \alpha U_p(t) + (1-\alpha)H_p(t),
+\]
+
+where $U_p(t)$ is the current used-credit measurement. The candidate
+with the smallest score is selected; equal scores are resolved by output
+port number. The configurable parameters \texttt{hacr\_alpha} and
+\texttt{hacr\_lambda} default to 0.60 and 0.80, respectively, and must
+lie between 0 and 1.
+
+HACR is experimental. Its history is updated when a routing request
+evaluates a candidate, rather than by a separate cycle-synchronous
+monitor. The current implementation stores history in process-global
+state keyed by router ID and output port. The Mesh and Torus functions
+use topology-specific escape routing and virtual-channel assignments;
+these constraints must be reviewed before changing the VC count or
+using the algorithm with another topology. Successful compilation and
+smoke tests do not constitute a formal proof of deadlock freedom, and
+no universal performance improvement is claimed.
+
+Example low-load configurations are provided in
+\texttt{runfiles/hacrmeshconfig} and \texttt{runfiles/hacrtorusconfig}.
+
 \subsection{Flow control}
 
 The simulator supports basic virtual-channel flow control with

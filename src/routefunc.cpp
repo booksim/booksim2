@@ -53,6 +53,9 @@
 
 
 map<string, tRoutingFunction> gRoutingFunctionMap;
+map<pair<int, int>, double> gHacrHistory;
+double gHacrAlpha = 0.60;
+double gHacrLambda = 0.80;
 
 /* Global information used by routing functions */
 
@@ -1795,6 +1798,159 @@ void min_adapt_torus( const Router *r, const Flit *f, int in_channel, OutputSet 
 
 //=============================================================
 
+static double hacr_score(const Router *r, int port)
+{
+  const double current = max(r->GetUsedCredit(port), 0);
+  const pair<int, int> key(r->GetID(), port);
+  const double previous = gHacrHistory[key];
+  const double history = gHacrLambda * previous +
+                         (1.0 - gHacrLambda) * current;
+  gHacrHistory[key] = history;
+  return gHacrAlpha * current + (1.0 - gHacrAlpha) * history;
+}
+
+static int hacr_select_port(const Router *r, vector<int> const &ports)
+{
+  assert(!ports.empty());
+  int selected = ports[0];
+  double selected_score = hacr_score(r, selected);
+  for (size_t i = 1; i < ports.size(); ++i) {
+    const int candidate = ports[i];
+    const double score = hacr_score(r, candidate);
+    if (score < selected_score ||
+        (score == selected_score && candidate < selected)) {
+      selected = candidate;
+      selected_score = score;
+    }
+  }
+  return selected;
+}
+
+void hacr_min_adapt_mesh(const Router *r, const Flit *f, int in_channel,
+                        OutputSet *outputs, bool inject)
+{
+  int vcBegin = 0, vcEnd = gNumVCs - 1;
+  if (f->type == Flit::READ_REQUEST) {
+    vcBegin = gReadReqBeginVC; vcEnd = gReadReqEndVC;
+  } else if (f->type == Flit::WRITE_REQUEST) {
+    vcBegin = gWriteReqBeginVC; vcEnd = gWriteReqEndVC;
+  } else if (f->type == Flit::READ_REPLY) {
+    vcBegin = gReadReplyBeginVC; vcEnd = gReadReplyEndVC;
+  } else if (f->type == Flit::WRITE_REPLY) {
+    vcBegin = gWriteReplyBeginVC; vcEnd = gWriteReplyEndVC;
+  }
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) ||
+         (inject && (f->vc < 0)));
+  outputs->Clear();
+  if (inject) {
+    outputs->AddRange(-1, vcBegin, vcEnd);
+    return;
+  }
+  if (r->GetID() == f->dest) {
+    outputs->AddRange(2 * gN, vcBegin, vcEnd);
+    return;
+  }
+
+  const int in_vc = (in_channel == 2 * gN) ? vcEnd : f->vc;
+  const int escape = dor_next_mesh(r->GetID(), f->dest);
+  outputs->AddRange(escape, vcBegin, vcBegin, 0);
+
+  // Once a flit enters the escape VC, keep it on the escape route.
+  if (in_vc == vcBegin || vcEnd <= vcBegin) {
+    return;
+  }
+
+  vector<int> candidates;
+  int cur = r->GetID();
+  int dest = f->dest;
+  for (int n = 0; n < gN; ++n) {
+    if ((cur % gK) != (dest % gK)) {
+      candidates.push_back((cur % gK < dest % gK) ? 2 * n : 2 * n + 1);
+    }
+    cur /= gK;
+    dest /= gK;
+  }
+  if (!candidates.empty()) {
+    outputs->AddRange(hacr_select_port(r, candidates), vcBegin + 1, vcEnd, 1);
+  }
+}
+
+void hacr_min_adapt_torus(const Router *r, const Flit *f, int in_channel,
+                          OutputSet *outputs, bool inject)
+{
+  int vcBegin = 0, vcEnd = gNumVCs - 1;
+  if (f->type == Flit::READ_REQUEST) {
+    vcBegin = gReadReqBeginVC; vcEnd = gReadReqEndVC;
+  } else if (f->type == Flit::WRITE_REQUEST) {
+    vcBegin = gWriteReqBeginVC; vcEnd = gWriteReqEndVC;
+  } else if (f->type == Flit::READ_REPLY) {
+    vcBegin = gReadReplyBeginVC; vcEnd = gReadReplyEndVC;
+  } else if (f->type == Flit::WRITE_REPLY) {
+    vcBegin = gWriteReplyBeginVC; vcEnd = gWriteReplyEndVC;
+  }
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) ||
+         (inject && (f->vc < 0)));
+  outputs->Clear();
+  if (inject) {
+    outputs->AddRange(-1, vcBegin, vcEnd);
+    return;
+  }
+  if (r->GetID() == f->dest) {
+    outputs->AddRange(2 * gN, vcBegin, vcEnd);
+    return;
+  }
+
+  const int in_vc = (in_channel == 2 * gN) ? vcEnd : f->vc;
+  int escape_port;
+  int escape_phase = f->ph;
+
+  // For adaptive input VCs, compute an escape route as if the flit had
+  // entered the current router. For escape VCs, preserve the existing
+  // Torus phase using the actual input channel.
+  if (in_vc > vcBegin + 1) {
+    dor_next_torus(r->GetID(), f->dest, 2 * gN, &escape_port,
+                   &escape_phase, false);
+  } else {
+    dor_next_torus(r->GetID(), f->dest, in_channel, &escape_port,
+                   &escape_phase, false);
+  }
+
+  outputs->AddRange(escape_port, vcBegin + escape_phase,
+                    vcBegin + escape_phase, 0);
+
+  // Match BookSim's minimal-adaptive Torus VC partition: VCs 0-1 are
+  // escape VCs; adaptive inputs use VC 3 for productive adaptive outputs.
+  if (in_vc <= vcBegin + 1 || vcEnd < vcBegin + 3) {
+    return;
+  }
+
+  vector<int> candidates;
+  int cur = r->GetID();
+  int dest = f->dest;
+  for (int n = 0; n < gN; ++n) {
+    if ((cur % gK) != (dest % gK)) {
+      const int distance = gK - 2 *
+        (((dest % gK) - (cur % gK) + gK) % gK);
+      if (distance > 0) {
+        candidates.push_back(2 * n);
+      } else if (distance < 0) {
+        candidates.push_back(2 * n + 1);
+      } else {
+        candidates.push_back(2 * n);
+        candidates.push_back(2 * n + 1);
+      }
+    }
+    cur /= gK;
+    dest /= gK;
+  }
+  if (!candidates.empty()) {
+    outputs->AddRange(hacr_select_port(r, candidates), vcBegin + 3,
+                      vcBegin + 3, 1);
+  }
+}
+
+//=============================================================
+
 void dest_tag_fly( const Router *r, const Flit *f, int in_channel, 
 		   OutputSet *outputs, bool inject )
 {
@@ -1918,6 +2074,11 @@ void InitializeRoutingMap( const Configuration & config )
 {
 
   gNumVCs = config.GetInt( "num_vcs" );
+  gHacrAlpha = config.GetFloat("hacr_alpha");
+  gHacrLambda = config.GetFloat("hacr_lambda");
+  assert(gHacrAlpha >= 0.0 && gHacrAlpha <= 1.0);
+  assert(gHacrLambda >= 0.0 && gHacrLambda <= 1.0);
+  gHacrHistory.clear();
 
   //
   // traffic class partitions
@@ -1982,6 +2143,8 @@ void InitializeRoutingMap( const Configuration & config )
 
   gRoutingFunctionMap["min_adapt_mesh"]   = &min_adapt_mesh;
   gRoutingFunctionMap["min_adapt_torus"]  = &min_adapt_torus;
+  gRoutingFunctionMap["hacr_min_adapt_mesh"] = &hacr_min_adapt_mesh;
+  gRoutingFunctionMap["hacr_min_adapt_torus"] = &hacr_min_adapt_torus;
 
   gRoutingFunctionMap["planar_adapt_mesh"] = &planar_adapt_mesh;
 

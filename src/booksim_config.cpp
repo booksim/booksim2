@@ -164,6 +164,10 @@ BookSimConfig::BookSimConfig( )
   AddStrField("perm_seed", ""); // workaround to allow special "time" value
 
   _float_map["injection_rate"]       = 0.1;
+
+  // History-Aware Congestion Routing (HACR) parameters.
+  _float_map["hacr_alpha"]  = 0.60;
+  _float_map["hacr_lambda"] = 0.80;
   AddStrField("injection_rate", ""); // workaraound to allow for vector specification
   
   _int_map["injection_rate_uses_flits"] = 0;
