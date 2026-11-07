@@ -35,6 +35,7 @@
 #include "roundrobin_arb.hpp"
 #include "matrix_arb.hpp"
 #include "tree_arb.hpp"
+#include "hop_age_arb.hpp"
 
 #include <limits>
 #include <cassert>
@@ -60,6 +61,14 @@ void Arbiter::AddRequest( int input, int id, int pri )
   _request[input].valid = true ;
   _request[input].id = id ;
   _request[input].pri = pri ;
+  _request[input].itime = -1;
+}
+
+void Arbiter::SetRequestTime(int input, int itime)
+{
+  assert(input >= 0 && input < _size && _request[input].valid);
+  assert(itime >= 0);
+  _request[input].itime = itime;
 }
 
 int Arbiter::Arbitrate( int* id, int* pri )
@@ -94,6 +103,8 @@ Arbiter *Arbiter::NewArbiter( Module *parent, const string& name,
   Arbiter *a = NULL;
   if(arb_type == "round_robin") {
     a = new RoundRobinArbiter( parent, name, size );
+  } else if(arb_type == "hop_age") {
+    a = new HopAgeArbiter(parent, name, size);
   } else if(arb_type == "matrix") {
     a = new MatrixArbiter( parent, name, size );
   } else if(arb_type.substr(0, 5) == "tree(") {

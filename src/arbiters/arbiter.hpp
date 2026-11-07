@@ -46,6 +46,7 @@ protected:
     bool valid ;
     int id ;
     int pri ;
+    int itime; // injection time; -1 when not supplied
   } entry_t ;
   
   vector<entry_t> _request ;
@@ -74,6 +75,7 @@ public:
   virtual int Arbitrate( int* id = 0, int* pri = 0 ) ;
 
   virtual void Clear();
+  virtual void SetRequestTime(int input, int itime);
 
   inline int LastWinner() const {
     return _selected;

@@ -162,6 +162,14 @@ void DenseAllocator::AddRequest( int in, int out, int label,
   _request[in][out].label   = label;
   _request[in][out].in_pri  = in_pri;
   _request[in][out].out_pri = out_pri;
+  _request[in][out].itime = -1;
+}
+
+void DenseAllocator::SetRequestTime(int in, int out, int itime)
+{
+  assert(in >= 0 && in < _inputs && out >= 0 && out < _outputs);
+  assert(_request[in][out].label >= 0 && itime >= 0);
+  _request[in][out].itime = itime;
 }
 
 void DenseAllocator::RemoveRequest( int in, int out, int label )
@@ -340,6 +348,14 @@ void SparseAllocator::AddRequest( int in, int out, int label,
   req.port  = in;
 
   _out_req[out][in] = req;
+}
+
+void SparseAllocator::SetRequestTime(int in, int out, int itime)
+{
+  assert(in >= 0 && in < _inputs && out >= 0 && out < _outputs);
+  assert(_in_req[in].count(out) && _out_req[out].count(in) && itime >= 0);
+  _in_req[in][out].itime = itime;
+  _out_req[out][in].itime = itime;
 }
 
 void SparseAllocator::RemoveRequest( int in, int out, int label )

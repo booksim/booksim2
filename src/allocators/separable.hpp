@@ -43,6 +43,7 @@ class Arbiter;
 class SeparableAllocator : public SparseAllocator {
   
 protected:
+  bool _age_tiebreak;
 
   vector<Arbiter*> _input_arb ;
   vector<Arbiter*> _output_arb ;
@@ -55,6 +56,7 @@ public:
   virtual ~SeparableAllocator() ;
 
   virtual void Clear() ;
+  virtual bool UsesAgeTieBreak() const { return _age_tiebreak; }
 
 } ;
 

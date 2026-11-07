@@ -53,6 +53,8 @@ public:
     int label;
     int in_pri;
     int out_pri;
+    int itime;
+    sRequest() : port(-1), label(-1), in_pri(0), out_pri(0), itime(-1) {}
   };
 
   Allocator( Module *parent, const string& name,
@@ -68,6 +70,8 @@ public:
   virtual void RemoveRequest( int in, int out, int label = 1 ) = 0;
   
   virtual void Allocate( ) = 0;
+  virtual bool UsesAgeTieBreak() const { return false; }
+  virtual void SetRequestTime(int in, int out, int itime) = 0;
 
   int OutputAssigned( int in ) const;
   int InputAssigned( int out ) const;
@@ -101,6 +105,7 @@ public:
 		  int inputs, int outputs );
 
   void Clear( );
+  virtual void SetRequestTime(int in, int out, int itime);
   
   int  ReadRequest( int in, int out ) const;
   bool ReadRequest( sRequest &req, int in, int out ) const;
@@ -137,6 +142,7 @@ public:
 		   int inputs, int outputs );
 
   void Clear( );
+  virtual void SetRequestTime(int in, int out, int itime);
   
   int  ReadRequest( int in, int out ) const;
   bool ReadRequest( sRequest &req, int in, int out ) const;

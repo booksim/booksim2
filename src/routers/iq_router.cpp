@@ -43,6 +43,7 @@
 #include "buffer.hpp"
 #include "buffer_state.hpp"
 #include "roundrobin_arb.hpp"
+#include "hop_age_arb.hpp"
 #include "allocator.hpp"
 #include "switch_monitor.hpp"
 #include "buffer_monitor.hpp"
@@ -100,6 +101,9 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
 
   // Alloc allocators
   string vc_alloc_type = config.GetStr( "vc_allocator" );
+  if(vc_alloc_type.find("hop_age") != string::npos) {
+    Error("hop_age is supported for switch allocation only.");
+  }
   if(vc_alloc_type == "piggyback") {
     if(!_speculative) {
       Error("Piggyback VC allocation requires speculative switch allocation to be enabled.");
@@ -118,6 +122,13 @@ IQRouter::IQRouter( Configuration const & config, Module *parent,
   }
   
   string sw_alloc_type = config.GetStr( "sw_allocator" );
+  if(sw_alloc_type.find("hop_age") != string::npos &&
+     (config.GetStr("priority") != "hop_count" ||
+      config.GetInt("vc_priority_donation") != 0 ||
+      _speculative || config.GetInt("hold_switch_for_packet") != 0)) {
+    Error("hop_age requires priority=hop_count, vc_priority_donation=0, "
+          "speculative=0 and hold_switch_for_packet=0.");
+  }
   _sw_allocator = Allocator::NewAllocator( this, "sw_allocator",
 					   sw_alloc_type,
 					   _inputs*_input_speedup, 
@@ -1261,8 +1272,14 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
     Allocator::sRequest req;
     
     if(allocator->ReadRequest(req, expanded_input, expanded_output)) {
-      if(RoundRobinArbiter::Supersedes(vc, prio, req.label, req.in_pri, 
-				       _sw_rr_offset[expanded_input], _vcs)) {
+      // Do not discard the older equal-hop VC before it reaches the allocator.
+      bool supersedes = allocator->UsesAgeTieBreak()
+        ? HopAgeArbiter::Supersedes(vc, prio, f->itime,
+                                   req.label, req.in_pri, req.itime,
+                                   _sw_rr_offset[expanded_input], _vcs)
+        : RoundRobinArbiter::Supersedes(vc, prio, req.label, req.in_pri,
+                                      _sw_rr_offset[expanded_input], _vcs);
+      if(supersedes) {
 	if(f->watch) {
 	  *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		     << "  Replacing earlier request from VC " << req.label
@@ -1277,6 +1294,8 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 	}
 	allocator->RemoveRequest(expanded_input, expanded_output, req.label);
 	allocator->AddRequest(expanded_input, expanded_output, vc, prio, prio);
+        if(allocator->UsesAgeTieBreak())
+          allocator->SetRequestTime(expanded_input, expanded_output, f->itime);
 	return true;
       }
       if(f->watch) {
@@ -1301,6 +1320,8 @@ bool IQRouter::_SWAllocAddReq(int input, int vc, int output)
 		 << ")." << endl;
     }
     allocator->AddRequest(expanded_input, expanded_output, vc, prio, prio);
+    if(allocator->UsesAgeTieBreak())
+      allocator->SetRequestTime(expanded_input, expanded_output, f->itime);
     return true;
   }
   if(f->watch) {

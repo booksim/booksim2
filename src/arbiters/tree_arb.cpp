@@ -85,6 +85,12 @@ void TreeArbiter::AddRequest( int input, int id, int pri )
   ++_group_reqs[group_index];
 }
 
+void TreeArbiter::SetRequestTime(int input, int itime)
+{
+  Arbiter::SetRequestTime(input, itime);
+  _group_arbiters[input / _group_size]->SetRequestTime(input % _group_size, itime);
+}
+
 int TreeArbiter::Arbitrate( int* id, int* pri ) {
   if(!_num_reqs) {
     return -1;
@@ -94,6 +100,9 @@ int TreeArbiter::Arbitrate( int* id, int* pri ) {
       int group_id, group_pri;
       _group_arbiters[i]->Arbitrate(&group_id, &group_pri);
       _global_arbiter->AddRequest(i, group_id, group_pri);
+      int winner = i * _group_size + _group_arbiters[i]->LastWinner();
+      if(_request[winner].itime >= 0)
+        _global_arbiter->SetRequestTime(i, _request[winner].itime);
     }
   }
   int group = _global_arbiter->Arbitrate(NULL, NULL);

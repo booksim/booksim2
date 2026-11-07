@@ -40,7 +40,8 @@
 SeparableAllocator::SeparableAllocator( Module* parent, const string& name,
 					int inputs, int outputs,
 					const string& arb_type )
-  : SparseAllocator( parent, name, inputs, outputs )
+  : SparseAllocator( parent, name, inputs, outputs ),
+    _age_tiebreak(arb_type.find("hop_age") != string::npos)
 {
   
   _input_arb.resize(inputs);

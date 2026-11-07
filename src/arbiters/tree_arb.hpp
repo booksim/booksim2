@@ -65,6 +65,7 @@ public:
   virtual void AddRequest( int input, int id, int pri ) ;
 
   virtual void Clear();
+  virtual void SetRequestTime(int input, int itime);
 
 } ;
 
